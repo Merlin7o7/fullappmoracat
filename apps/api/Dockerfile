@@ -1,7 +1,8 @@
 # ── Moraqat API — multi-stage production image ───────────────────────────
 # Build from the REPO ROOT:  docker build -f apps/api/Dockerfile .
 FROM node:20-alpine AS build
-RUN corepack enable
+# openssl: Prisma engine detection/runtime on alpine (linux-musl targets).
+RUN apk add --no-cache openssl && corepack enable
 WORKDIR /repo
 
 # Install the full workspace (cached until lockfile changes). A frozen install
@@ -26,14 +27,15 @@ RUN pnpm --filter @moraqat/db build \
 # Produce a pruned, production-only bundle of the API + its workspace deps.
 RUN pnpm --filter @moraqat/api --prod deploy /app \
  && cp -r packages/db/prisma /app/prisma
-# Regenerate the Prisma client inside the deployed tree so the engine binary
-# and generated client land where /app/node_modules resolves them.
+# Regenerate the Prisma client inside the deployed tree using the CLI already
+# installed in the workspace (npx would try to npm-install into the pruned
+# tree and fail). Output resolves to /app/node_modules/.prisma with musl engines.
 WORKDIR /app
-RUN npx prisma@5.22.0 generate --schema=prisma/schema.prisma
+RUN /repo/packages/db/node_modules/.bin/prisma generate --schema=prisma/schema.prisma
 
 # ── Runtime ───────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
-RUN addgroup -S app && adduser -S app -G app
+RUN apk add --no-cache openssl && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build --chown=app:app /app /app
