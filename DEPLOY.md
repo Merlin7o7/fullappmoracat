@@ -26,9 +26,11 @@ Do these in order. You log into the accounts; the repo is pre-configured
    note it for the DNS step.
 5. Create the tables: **Shell** tab → `npx prisma db push`. (App also works empty.)
 
-### 3. Web — Vercel (reads `vercel.json`)
+### 3. Web — Vercel (reads `apps/web/vercel.json`)
 1. vercel.com → sign up → **Add New → Project** → import `Merlin7o7/fullappmoracat`.
-2. Leave build settings (they come from `vercel.json`). Add **Environment Variables**:
+2. **Set Root Directory to `apps/web`** (Settings → General, or in the import screen).
+   This is required so Vercel detects Next.js; `apps/web/vercel.json` then builds the
+   shared `@moraqat/core` package before the app. Add **Environment Variables**:
    - `NEXT_PUBLIC_API_BASE_URL` = `https://api.moracat.co`
    - `NEXT_PUBLIC_SITE_URL` = `https://moracat.co`
    - `NEXT_PUBLIC_CAT_ID_BASE` = `https://moracat.co/c`
