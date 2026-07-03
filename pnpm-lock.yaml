@@ -191,6 +191,9 @@ importers:
       '@types/bcryptjs':
         specifier: ^3.0.0
         version: 3.0.0
+      '@types/node':
+        specifier: ^20.16.10
+        version: 20.19.43
       embedded-postgres:
         specifier: 18.4.0-beta.17
         version: 18.4.0-beta.17
