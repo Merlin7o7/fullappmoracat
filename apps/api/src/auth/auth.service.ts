@@ -1,14 +1,24 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { randomUUID, createHash, timingSafeEqual } from "node:crypto";
+import { randomUUID, randomInt, randomBytes, createHash, timingSafeEqual } from "node:crypto";
 import * as bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
 import { PrismaService } from "../prisma/prisma.service";
-import type { LoginDto, RegisterDto } from "./dto/auth.dto";
+import { NotificationsService } from "../notifications/notifications.service";
+import type {
+  GoogleAuthDto,
+  LoginDto,
+  OtpPurpose,
+  PhoneLoginDto,
+  RegisterDto,
+  RequestOtpDto,
+} from "./dto/auth.dto";
 
 interface RequestMeta {
   ipAddress?: string;
@@ -23,44 +33,85 @@ interface TokenPair {
 
 const ACCESS_TTL = Number(process.env.JWT_ACCESS_TTL ?? 900); // 15 min
 const REFRESH_TTL = Number(process.env.JWT_REFRESH_TTL ?? 1_209_600); // 14 days
+// "Remember me" trades a longer-lived session for fewer re-logins (R002 —
+// effort is the enemy). Default 60 days.
+const REMEMBER_TTL = Number(process.env.JWT_REMEMBER_TTL ?? 5_184_000);
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "change-me-access-secret";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? "change-me-refresh-secret";
+const OTP_TTL_MS = Number(process.env.OTP_TTL_SECONDS ?? 300) * 1000; // 5 min
+const OTP_MAX_ATTEMPTS = 5;
+const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
+const IS_PROD = process.env.NODE_ENV === "production";
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger("Auth");
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwt: JwtService
+    private readonly jwt: JwtService,
+    private readonly notifications: NotificationsService
   ) {}
 
   // ── Registration ────────────────────────────────────────────────────────
   async register(dto: RegisterDto, meta: RequestMeta) {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (existing) throw new ConflictException("Email is already registered");
+    if (!dto.acceptTerms) {
+      throw new BadRequestException("You must accept the Terms & Privacy Policy");
+    }
 
+    const email = dto.email.toLowerCase().trim();
+    const phone = normalizePhone(dto.phone, dto.dialCode);
+
+    const [emailClash, phoneClash] = await Promise.all([
+      this.prisma.user.findUnique({ where: { email }, select: { id: true } }),
+      this.prisma.user.findUnique({ where: { phone }, select: { id: true } }),
+    ]);
+    if (emailClash) throw new ConflictException("Email is already registered");
+    if (phoneClash) throw new ConflictException("Mobile number is already registered");
+
+    // Frictionless, secure: password OR a completed SMS verification (Google
+    // sign-ups arrive through googleAuth, not here).
+    if (!dto.password) {
+      throw new BadRequestException("A password is required");
+    }
+
+    // If an OTP was supplied, treat the phone as verified on the spot.
+    let phoneVerified: Date | null = null;
+    if (dto.otp) {
+      const ok = await this.consumeOtp(phone, "REGISTER", dto.otp);
+      if (!ok) throw new UnauthorizedException("Invalid or expired verification code");
+      phoneVerified = new Date();
+    }
+
+    const { firstName, lastName } = splitName(dto.fullName, dto.firstName, dto.lastName);
     const passwordHash = await bcrypt.hash(dto.password, 12);
+
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
+        phone,
+        dialCode: dto.dialCode ?? "+966",
         passwordHash,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        phone: dto.phone,
+        firstName,
+        lastName,
+        gender: dto.gender ?? "UNSPECIFIED",
         status: "ACTIVE",
+        phoneVerified,
+        termsAcceptedAt: new Date(),
         // Provision wallet + loyalty on signup.
         wallet: { create: {} },
         loyalty: { create: {} },
       },
     });
 
-    const tokens = await this.issueSession(user.id, user.email, user.isStaff, meta);
+    const tokens = await this.issueSession(user.id, user.email, user.isStaff, meta, REFRESH_TTL);
     return { user: this.publicUser(user), ...tokens };
   }
 
-  // ── Login ────────────────────────────────────────────────────────────────
+  // ── Login (email + password) ──────────────────────────────────────────────
   async login(dto: LoginDto, meta: RequestMeta) {
     const user = await this.prisma.user.findFirst({
-      where: { email: dto.email, deletedAt: null },
+      where: { email: dto.email.toLowerCase().trim(), deletedAt: null },
       include: { twoFactor: true },
     });
 
@@ -84,13 +135,171 @@ export class AuthService {
       if (!valid) throw new UnauthorizedException("Invalid 2FA code");
     }
 
-    await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }),
-      this.prisma.loginHistory.create({ data: { userId: user.id, success: true, ...meta } }),
-    ]);
+    return this.completeLogin(user.id, user.email, user.isStaff, this.publicUser(user), dto.rememberMe, meta);
+  }
 
-    const tokens = await this.issueSession(user.id, user.email, user.isStaff, meta);
-    return { user: this.publicUser(user), ...tokens };
+  // ── Login (mobile number + OTP) ───────────────────────────────────────────
+  async phoneLogin(dto: PhoneLoginDto, meta: RequestMeta) {
+    const phone = normalizePhone(dto.phone);
+    const ok = await this.consumeOtp(phone, "LOGIN", dto.otp);
+    if (!ok) throw new UnauthorizedException("Invalid or expired code");
+
+    const user = await this.prisma.user.findFirst({ where: { phone, deletedAt: null } });
+    if (!user) throw new UnauthorizedException("No account found for this number");
+
+    if (!user.phoneVerified) {
+      await this.prisma.user.update({ where: { id: user.id }, data: { phoneVerified: new Date() } });
+    }
+    return this.completeLogin(user.id, user.email, user.isStaff, this.publicUser(user), dto.rememberMe, meta);
+  }
+
+  // ── Continue with Google ──────────────────────────────────────────────────
+  async googleAuth(dto: GoogleAuthDto, meta: RequestMeta) {
+    const profile = decodeGoogleIdToken(dto.idToken);
+    if (!profile?.email) throw new UnauthorizedException("Invalid Google credential");
+    // SECURITY: production MUST verify the token signature + audience against
+    // Google's JWKS (e.g. google-auth-library). Decoding-only is dev scaffolding.
+    if (IS_PROD && !process.env.GOOGLE_CLIENT_ID) {
+      throw new BadRequestException("Google sign-in is not configured");
+    }
+
+    const email = profile.email.toLowerCase();
+    let user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          firstName: profile.given_name ?? null,
+          lastName: profile.family_name ?? null,
+          avatarUrl: profile.picture ?? null,
+          emailVerified: new Date(),
+          status: "ACTIVE",
+          termsAcceptedAt: new Date(),
+          wallet: { create: {} },
+          loyalty: { create: {} },
+        },
+      });
+    }
+
+    await this.prisma.oAuthAccount.upsert({
+      where: { provider_providerAccountId: { provider: "google", providerAccountId: profile.sub } },
+      update: {},
+      create: { userId: user.id, provider: "google", providerAccountId: profile.sub },
+    });
+
+    return this.completeLogin(user.id, user.email, user.isStaff, this.publicUser(user), dto.rememberMe, meta);
+  }
+
+  private async completeLogin(
+    userId: string,
+    email: string,
+    isStaff: boolean,
+    publicUser: ReturnType<AuthService["publicUser"]>,
+    rememberMe: boolean | undefined,
+    meta: RequestMeta
+  ) {
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } }),
+      this.prisma.loginHistory.create({ data: { userId, success: true, ...meta } }),
+    ]);
+    const ttl = rememberMe ? REMEMBER_TTL : REFRESH_TTL;
+    const tokens = await this.issueSession(userId, email, isStaff, meta, ttl);
+    return { user: publicUser, ...tokens };
+  }
+
+  // ── SMS one-time passcodes ────────────────────────────────────────────────
+  async requestOtp(dto: RequestOtpDto) {
+    const phone = normalizePhone(dto.phone);
+    const purpose = (dto.purpose ?? "LOGIN") as OtpPurpose;
+
+    // For LOGIN, don't reveal whether an account exists — always claim "sent".
+    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    await this.prisma.otpChallenge.create({
+      data: {
+        phone,
+        purpose,
+        codeHash: this.hashToken(code),
+        expiresAt: new Date(Date.now() + OTP_TTL_MS),
+      },
+    });
+
+    await this.sendSms(phone, `Moracat code: ${code} — valid for 5 minutes.`);
+    this.logger.log(`OTP[${purpose}] issued for ${maskPhone(phone)}`);
+    // Dev convenience so the flow is testable without a live SMS provider.
+    return { sent: true, ...(IS_PROD ? {} : { devCode: code }) };
+  }
+
+  /** Verify + burn an OTP. Returns false on any failure (never throws). */
+  private async consumeOtp(phone: string, purpose: OtpPurpose, code: string): Promise<boolean> {
+    const challenge = await this.prisma.otpChallenge.findFirst({
+      where: { phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!challenge) return false;
+    if (challenge.attempts >= OTP_MAX_ATTEMPTS) return false;
+
+    const matches =
+      challenge.codeHash.length === this.hashToken(code).length &&
+      timingSafeEqual(Buffer.from(this.hashToken(code)), Buffer.from(challenge.codeHash));
+
+    if (!matches) {
+      await this.prisma.otpChallenge.update({
+        where: { id: challenge.id },
+        data: { attempts: { increment: 1 } },
+      });
+      return false;
+    }
+
+    await this.prisma.otpChallenge.update({
+      where: { id: challenge.id },
+      data: { consumedAt: new Date() },
+    });
+    return true;
+  }
+
+  // ── Forgot / reset password ───────────────────────────────────────────────
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+    // Never leak whether the email exists (R006 — honest, but no enumeration).
+    if (!user) return { sent: true };
+
+    const token = randomBytes(32).toString("hex");
+    await this.prisma.passwordReset.create({
+      data: {
+        userId: user.id,
+        tokenHash: this.hashToken(token),
+        expiresAt: new Date(Date.now() + RESET_TTL_MS),
+      },
+    });
+    await this.notifications.notify(user.id, {
+      category: "SYSTEM",
+      title: "إعادة تعيين كلمة المرور",
+      body: "طلبت إعادة تعيين كلمة المرور. الرابط صالح لمدة ساعة.",
+    });
+    this.logger.log(`Password reset requested for ${user.email}`);
+    return { sent: true, ...(IS_PROD ? {} : { devToken: token }) };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const reset = await this.prisma.passwordReset.findFirst({
+      where: { tokenHash: this.hashToken(token), usedAt: null, expiresAt: { gt: new Date() } },
+    });
+    if (!reset) throw new BadRequestException("Invalid or expired reset link");
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: reset.userId }, data: { passwordHash } }),
+      this.prisma.passwordReset.update({ where: { id: reset.id }, data: { usedAt: new Date() } }),
+      // Revoke all sessions on reset.
+      this.prisma.deviceSession.updateMany({
+        where: { userId: reset.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { success: true };
   }
 
   // ── Refresh (rotation + reuse detection) ─────────────────────────────────
@@ -121,7 +330,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException("User not found");
 
     // Rotate the refresh token in place.
-    return this.rotateSession(session.id, user.id, user.email, user.isStaff, meta);
+    return this.rotateSession(session.id, user.id, user.email, user.isStaff, meta, REFRESH_TTL);
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────
@@ -164,7 +373,7 @@ export class AuthService {
       throw new UnauthorizedException("Invalid 2FA code");
     }
     const backupCodes = Array.from({ length: 8 }, () =>
-      Math.random().toString(36).slice(2, 10).toUpperCase()
+      randomBytes(5).toString("hex").toUpperCase()
     );
     await this.prisma.twoFactor.update({
       where: { userId },
@@ -178,23 +387,32 @@ export class AuthService {
     return { enabled: false };
   }
 
+  // ── SMS delivery (pluggable) ──────────────────────────────────────────────
+  private async sendSms(phone: string, message: string) {
+    // Real providers (Unifonic/Twilio) plug in here behind SMS_MODE. Until then
+    // we log so the flow works end-to-end in dev.
+    if (!IS_PROD) this.logger.debug(`SMS → ${maskPhone(phone)}: ${message}`);
+    return { queued: true };
+  }
+
   // ── Session helpers ───────────────────────────────────────────────────────
   private async issueSession(
     userId: string,
     email: string,
     isStaff: boolean,
-    meta: RequestMeta
+    meta: RequestMeta,
+    ttl: number
   ): Promise<TokenPair> {
     const session = await this.prisma.deviceSession.create({
       data: {
         userId,
         refreshHash: "pending",
-        expiresAt: new Date(Date.now() + REFRESH_TTL * 1000),
+        expiresAt: new Date(Date.now() + ttl * 1000),
         userAgent: meta.userAgent,
         ipAddress: meta.ipAddress,
       },
     });
-    return this.rotateSession(session.id, userId, email, isStaff, meta, true);
+    return this.rotateSession(session.id, userId, email, isStaff, meta, ttl, true);
   }
 
   private async rotateSession(
@@ -203,6 +421,7 @@ export class AuthService {
     email: string,
     isStaff: boolean,
     meta: RequestMeta,
+    ttl: number,
     isNew = false
   ): Promise<TokenPair> {
     const accessToken = await this.jwt.signAsync(
@@ -214,7 +433,7 @@ export class AuthService {
       // same second (JWT `iat` is second-granular) — critical for reliable
       // rotation and reuse detection.
       { sub: userId, sid: sessionId, jti: randomUUID() },
-      { secret: REFRESH_SECRET, expiresIn: REFRESH_TTL }
+      { secret: REFRESH_SECRET, expiresIn: ttl }
     );
     // NOTE: refresh tokens are hashed with SHA-256, NOT bcrypt. bcrypt silently
     // truncates input at 72 bytes; JWTs share a >72-byte prefix, so bcrypt would
@@ -227,7 +446,7 @@ export class AuthService {
       data: {
         refreshHash,
         lastActiveAt: new Date(),
-        ...(isNew ? {} : { expiresAt: new Date(Date.now() + REFRESH_TTL * 1000) }),
+        ...(isNew ? {} : { expiresAt: new Date(Date.now() + ttl * 1000) }),
         userAgent: meta.userAgent,
         ipAddress: meta.ipAddress,
       },
@@ -254,6 +473,10 @@ export class AuthService {
     firstName: string | null;
     lastName: string | null;
     phone: string | null;
+    dialCode?: string;
+    gender?: string;
+    avatarUrl?: string | null;
+    primaryCatId?: string | null;
     locale: string;
     isStaff: boolean;
     status: string;
@@ -264,9 +487,59 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
+      dialCode: user.dialCode ?? "+966",
+      gender: user.gender ?? "UNSPECIFIED",
+      avatarUrl: user.avatarUrl ?? null,
+      primaryCatId: user.primaryCatId ?? null,
       locale: user.locale,
       isStaff: user.isStaff,
       status: user.status,
     };
+  }
+}
+
+// ── Module-local helpers ────────────────────────────────────────────────────
+
+/** Normalise a phone to E.164-ish digits with a leading '+'. */
+function normalizePhone(raw: string, dialCode?: string): string {
+  let p = raw.replace(/[\s-]/g, "");
+  if (p.startsWith("00")) p = "+" + p.slice(2);
+  if (!p.startsWith("+")) {
+    // A local number (leading 0 dropped) gets the chosen dial code, default +966.
+    const cc = dialCode ?? "+966";
+    p = cc + p.replace(/^0+/, "");
+  }
+  return p;
+}
+
+function splitName(fullName?: string, firstName?: string, lastName?: string) {
+  if (firstName || lastName) return { firstName: firstName ?? null, lastName: lastName ?? null };
+  const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: null, lastName: null };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") || null };
+}
+
+function maskPhone(phone: string): string {
+  return phone.length > 4 ? `${phone.slice(0, 4)}••••${phone.slice(-2)}` : "••••";
+}
+
+interface GoogleProfile {
+  email?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+  sub: string;
+}
+
+/** Decode (NOT verify) a Google ID token's payload. Prod must verify signature. */
+function decodeGoogleIdToken(idToken: string): GoogleProfile | null {
+  try {
+    const [, payload] = idToken.split(".");
+    if (!payload) return null;
+    const json = Buffer.from(payload, "base64url").toString("utf8");
+    const claims = JSON.parse(json) as GoogleProfile;
+    return claims.sub ? claims : null;
+  } catch {
+    return null;
   }
 }

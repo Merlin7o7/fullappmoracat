@@ -23,9 +23,13 @@ export class AccountService {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
+      dialCode: user.dialCode,
+      gender: user.gender,
       avatarUrl: user.avatarUrl,
       locale: user.locale,
       status: user.status,
+      primaryCatId: user.primaryCatId,
+      phoneVerified: !!user.phoneVerified,
       twoFactorEnabled: user.twoFactor?.enabled ?? false,
       createdAt: user.createdAt,
     };
@@ -56,15 +60,20 @@ export class AccountService {
 
   /** Dashboard aggregate — one call powers the portal overview. */
   async overview(userId: string) {
-    const [activeSub, ordersCount, catsCount, wallet, loyalty, recentOrders, unreadNotifs, savings, firstCat] =
+    const [user, activeSub, ordersCount, wallet, loyalty, recentOrders, unreadNotifs, savings, cats] =
       await Promise.all([
+        // The greeting is built from the owner's gender + their primary cat
+        // (Recognition first, Principle 01). Both travel on the user record.
+        this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, gender: true, primaryCatId: true },
+        }),
         this.prisma.subscription.findFirst({
           where: { userId, status: "ACTIVE" },
           orderBy: { nextDeliveryAt: "asc" },
           include: { plan: { select: { nameEn: true, nameAr: true, tier: true } } },
         }),
         this.prisma.order.count({ where: { userId } }),
-        this.prisma.cat.count({ where: { userId, deletedAt: null } }),
         this.prisma.wallet.findUnique({ where: { userId } }),
         this.prisma.loyaltyAccount.findUnique({ where: { userId } }),
         this.prisma.order.findMany({
@@ -79,15 +88,49 @@ export class AccountService {
           _sum: { discountTotal: true },
           where: { userId, status: { notIn: ["CANCELLED", "FAILED"] } },
         }),
-        // Recognition first (Principle 01): greet the cat, not just the user.
-        this.prisma.cat.findFirst({
+        // The whole roster — the dashboard must stay clean at 1, 2, 5 or 20 cats,
+        // so it needs the full (lightweight) list to render the cat rail + counts.
+        this.prisma.cat.findMany({
           where: { userId, deletedAt: null },
-          orderBy: { createdAt: "asc" },
-          select: { name: true, catIdNumber: true },
+          orderBy: [{ status: "asc" }, { createdAt: "asc" }],
+          select: {
+            id: true,
+            name: true,
+            catIdNumber: true,
+            photoUrl: true,
+            status: true,
+            membershipStatus: true,
+          },
         }),
       ]);
 
+    // Resolve the featured (primary) cat, self-healing to the first active one.
+    let primaryId = user?.primaryCatId ?? null;
+    const activeCats = cats.filter((c) => c.status === "ACTIVE");
+    if (!activeCats.some((c) => c.id === primaryId)) {
+      primaryId = activeCats[0]?.id ?? null;
+    }
+    const primaryCat = cats.find((c) => c.id === primaryId) ?? null;
+
+    const counts = {
+      total: cats.length,
+      active: activeCats.length,
+      archived: cats.filter((c) => c.status === "ARCHIVED").length,
+      deceased: cats.filter((c) => c.status === "DECEASED").length,
+    };
+
     return {
+      // Everything the greeting needs, resolved server-side (يبو/أم {primary}).
+      owner: { firstName: user?.firstName ?? null, gender: user?.gender ?? "UNSPECIFIED" },
+      primaryCat: primaryCat
+        ? {
+            id: primaryCat.id,
+            name: primaryCat.name,
+            catIdNumber: primaryCat.catIdNumber,
+            photoUrl: primaryCat.photoUrl,
+          }
+        : null,
+      cats: cats.map((c) => ({ ...c, isPrimary: c.id === primaryId })),
       activeSubscription: activeSub
         ? {
             id: activeSub.id,
@@ -100,14 +143,16 @@ export class AccountService {
         : null,
       stats: {
         orders: ordersCount,
-        cats: catsCount,
+        cats: counts.active,
+        catCounts: counts,
         walletBalance: wallet ? Number(wallet.balance) : 0,
         totalSaved: Number(savings._sum.discountTotal ?? 0),
         loyaltyPoints: loyalty?.points ?? 0,
         loyaltyTier: loyalty?.tier ?? "BRONZE",
         unreadNotifications: unreadNotifs,
       },
-      firstCat,
+      // Back-compat alias for the previous overview shape.
+      firstCat: primaryCat ? { name: primaryCat.name, catIdNumber: primaryCat.catIdNumber } : null,
       recentOrders: recentOrders.map((o) => ({
         orderNumber: o.orderNumber,
         status: o.status,

@@ -10,7 +10,17 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import type { Request } from "express";
 import { AuthService } from "./auth.service";
-import { LoginDto, RefreshDto, RegisterDto, Verify2faDto } from "./dto/auth.dto";
+import {
+  ForgotPasswordDto,
+  GoogleAuthDto,
+  LoginDto,
+  PhoneLoginDto,
+  RefreshDto,
+  RegisterDto,
+  RequestOtpDto,
+  ResetPasswordDto,
+  Verify2faDto,
+} from "./dto/auth.dto";
 import { Public } from "../common/decorators/public.decorator";
 import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
 
@@ -36,9 +46,49 @@ export class AuthController {
   @Public()
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Authenticate and receive access + refresh tokens" })
+  @ApiOperation({ summary: "Authenticate with email + password" })
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.auth.login(dto, meta(req));
+  }
+
+  @Public()
+  @Post("otp/request")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Send an SMS one-time passcode" })
+  requestOtp(@Body() dto: RequestOtpDto) {
+    return this.auth.requestOtp(dto);
+  }
+
+  @Public()
+  @Post("otp/login")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Authenticate with mobile number + OTP" })
+  phoneLogin(@Body() dto: PhoneLoginDto, @Req() req: Request) {
+    return this.auth.phoneLogin(dto, meta(req));
+  }
+
+  @Public()
+  @Post("google")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Continue with Google" })
+  google(@Body() dto: GoogleAuthDto, @Req() req: Request) {
+    return this.auth.googleAuth(dto, meta(req));
+  }
+
+  @Public()
+  @Post("password/forgot")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Request a password-reset link" })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.auth.forgotPassword(dto.email);
+  }
+
+  @Public()
+  @Post("password/reset")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Reset a password using a reset token" })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.auth.resetPassword(dto.token, dto.newPassword);
   }
 
   @Public()

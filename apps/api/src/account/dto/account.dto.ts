@@ -8,6 +8,8 @@ import {
   MinLength,
 } from "class-validator";
 
+export const GENDERS = ["MALE", "FEMALE", "UNSPECIFIED"] as const;
+
 export class UpdateProfileDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -25,6 +27,17 @@ export class UpdateProfileDto {
   @IsOptional()
   @Matches(/^\+?[0-9]{9,15}$/, { message: "Invalid phone number" })
   phone?: string;
+
+  @ApiPropertyOptional({ example: "+966" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\+[0-9]{1,4}$/, { message: "Invalid country code" })
+  dialCode?: string;
+
+  @ApiPropertyOptional({ enum: GENDERS, description: "Drives the Najdi greeting (يبو/أم)" })
+  @IsOptional()
+  @IsIn(GENDERS)
+  gender?: (typeof GENDERS)[number];
 
   @ApiPropertyOptional({ enum: ["ar", "en"] })
   @IsOptional()

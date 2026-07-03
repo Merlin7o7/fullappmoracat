@@ -48,6 +48,37 @@ enum CatGender {
   UNKNOWN
 }
 
+/// Account-owner gender — drives the warm Najdi greeting (يبو / أم) (R001, R087).
+enum Gender {
+  MALE
+  FEMALE
+  UNSPECIFIED
+}
+
+/// Lifecycle of a cat within a household. Removal is soft (deletedAt); a
+/// deceased cat is *archived with dignity*, never deleted — the record and the
+/// Cat ID are kept forever (R010 "leaving is easy", P09 "the cat is the hero").
+enum CatStatus {
+  ACTIVE
+  ARCHIVED
+  DECEASED
+}
+
+/// Per-cat membership standing. Each cat carries its own identity and benefits,
+/// so membership is tracked per cat, not only per account.
+enum CatMembershipStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+/// One-time-passcode purposes (SMS). Kept coarse; the code itself is hashed.
+enum OtpPurpose {
+  REGISTER
+  LOGIN
+  VERIFY_PHONE
+}
+
 enum ActivityLevel {
   LOW
   MODERATE
@@ -261,10 +292,18 @@ model User {
   firstName     String?
   lastName      String?
   avatarUrl     String?
+  gender        Gender     @default(UNSPECIFIED)
+  /// Dial code, defaulting to Saudi Arabia (+966). `phone` is stored in full
+  /// E.164 form; this records the chosen country for a frictionless re-entry.
+  dialCode      String     @default("+966")
   locale        Locale     @default(ar)
   status        UserStatus @default(PENDING)
   emailVerified DateTime?
   phoneVerified DateTime?
+  /// The chosen "face" of the household — powers the greeting, the featured
+  /// Cat ID, quick actions and default context (multi-cat requirement).
+  primaryCatId  String?    @unique
+  termsAcceptedAt DateTime?
   isStaff       Boolean    @default(false)
   lastLoginAt   DateTime?
   createdAt     DateTime   @default(now())
@@ -282,6 +321,7 @@ model User {
 
   // Domain relations
   cats           Cat[]
+  primaryCat     Cat?                     @relation("PrimaryCat", fields: [primaryCatId], references: [id])
   addresses      Address[]
   paymentMethods PaymentMethod[]
   subscriptions  Subscription[]
@@ -385,6 +425,24 @@ model PasswordReset {
 
   @@index([userId])
   @@map("password_resets")
+}
+
+/// SMS one-time-passcode challenge. The code is hashed; challenges are
+/// single-use, short-lived, and attempt-limited. Supports both passwordless
+/// login and phone verification during registration.
+model OtpChallenge {
+  id          String     @id @default(cuid())
+  phone       String
+  purpose     OtpPurpose
+  codeHash    String
+  attempts    Int        @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@index([phone, purpose])
+  @@index([expiresAt])
+  @@map("otp_challenges")
 }
 
 model Role {
@@ -557,19 +615,85 @@ model Cat {
   microchipNo    String?
   favoriteFoods  String[]
   preferredBrand String[]
+  /// Household lifecycle. A cat is never silently dropped: removal soft-deletes,
+  /// and a passing is archived as DECEASED so the record and Cat ID endure.
+  status           CatStatus           @default(ACTIVE)
+  membershipStatus CatMembershipStatus @default(ACTIVE)
+  archivedAt       DateTime?
+  deceasedAt       DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
 
   user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryOfUser   User?                   @relation("PrimaryCat")
   breed           Breed?                  @relation(fields: [breedId], references: [id])
   healthConds     CatHealthCondition[]
   allergies       CatAllergy[]
+  vaccinations    CatVaccination[]
+  vetVisits       CatVetVisit[]
+  documents       CatDocument[]
   recommendations FeedingRecommendation[]
   subscriptions   SubscriptionCat[]
 
   @@index([userId])
+  @@index([userId, status])
   @@map("cats")
+}
+
+/// A single vaccination event — part of every cat's health record.
+model CatVaccination {
+  id             String    @id @default(cuid())
+  catId          String
+  name           String // "Tricat", "Rabies", ...
+  administeredAt DateTime
+  dueAt          DateTime? // next dose reminder
+  vetName        String?
+  clinic         String?
+  batchNo        String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId, administeredAt])
+  @@map("cat_vaccinations")
+}
+
+/// A vet visit in the cat's history.
+model CatVetVisit {
+  id        String   @id @default(cuid())
+  catId     String
+  visitedAt DateTime
+  reason    String
+  clinic    String?
+  vetName   String?
+  diagnosis String?
+  notes     String?
+  weightKg  Float?
+  cost      Decimal? @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId, visitedAt])
+  @@map("cat_vet_visits")
+}
+
+/// A document attached to a cat (adoption papers, pedigree, lab results, ...).
+model CatDocument {
+  id        String   @id @default(cuid())
+  catId     String
+  title     String
+  kind      String // adoption, pedigree, lab, insurance, other
+  url       String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId])
+  @@map("cat_documents")
 }
 
 model CatHealthCondition {

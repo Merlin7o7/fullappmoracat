@@ -15,10 +15,12 @@ import {
 export const GENDERS = ["MALE", "FEMALE", "UNKNOWN"] as const;
 export const ACTIVITY_LEVELS = ["LOW", "MODERATE", "HIGH"] as const;
 export const LIFE_STAGES = ["KITTEN", "ADULT", "SENIOR"] as const;
+export const CAT_STATUSES = ["ACTIVE", "ARCHIVED", "DECEASED"] as const;
 
 export type CatGender = (typeof GENDERS)[number];
 export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
 export type LifeStage = (typeof LIFE_STAGES)[number];
+export type CatStatus = (typeof CAT_STATUSES)[number];
 
 export class CreateCatDto {
   @ApiProperty({ example: "Simba" })
@@ -109,3 +111,23 @@ export class CreateCatDto {
 }
 
 export class UpdateCatDto extends PartialType(CreateCatDto) {}
+
+export class ListCatsQueryDto {
+  @ApiPropertyOptional({ description: "Search by name or Cat ID number" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  search?: string;
+
+  @ApiPropertyOptional({ enum: CAT_STATUSES, description: "Filter by lifecycle status" })
+  @IsOptional()
+  @IsIn(CAT_STATUSES)
+  status?: CatStatus;
+}
+
+export class MarkDeceasedDto {
+  @ApiPropertyOptional({ example: "2026-06-30" })
+  @IsOptional()
+  @IsDateString()
+  deceasedAt?: string;
+}

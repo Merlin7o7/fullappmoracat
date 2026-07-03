@@ -5,11 +5,18 @@ import * as React from "react";
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 const STORAGE_KEY = "moraqat.auth";
 
+export type Gender = "MALE" | "FEMALE" | "UNSPECIFIED";
+
 export interface AuthUser {
   id: string;
   email: string;
   firstName?: string | null;
   lastName?: string | null;
+  phone?: string | null;
+  dialCode?: string | null;
+  gender?: Gender;
+  avatarUrl?: string | null;
+  primaryCatId?: string | null;
   locale?: string;
   status?: string;
   isStaff?: boolean;
@@ -26,20 +33,32 @@ interface AuthState {
   ready: boolean; // hydrated from storage
 }
 
-interface AuthContextValue extends AuthState {
-  login: (email: string, password: string, totp?: string) => Promise<void>;
-  register: (input: RegisterInput) => Promise<void>;
-  logout: () => Promise<void>;
-  /** Authenticated fetch against the API that refreshes on 401. */
-  authedFetch: <T = unknown>(path: string, init?: RequestInit) => Promise<T>;
-}
-
-interface RegisterInput {
+export interface RegisterInput {
   email: string;
-  password: string;
+  password?: string;
+  fullName?: string;
   firstName?: string;
   lastName?: string;
-  phone?: string;
+  phone: string;
+  dialCode?: string;
+  gender?: Gender;
+  acceptTerms: boolean;
+  otp?: string;
+}
+
+interface AuthContextValue extends AuthState {
+  login: (email: string, password: string, opts?: { totp?: string; rememberMe?: boolean }) => Promise<void>;
+  loginWithPhone: (phone: string, otp: string, rememberMe?: boolean) => Promise<void>;
+  loginWithGoogle: (idToken: string, rememberMe?: boolean) => Promise<void>;
+  register: (input: RegisterInput) => Promise<void>;
+  requestOtp: (phone: string, purpose?: "LOGIN" | "REGISTER") => Promise<{ devCode?: string }>;
+  forgotPassword: (email: string) => Promise<{ devToken?: string }>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  logout: () => Promise<void>;
+  /** Patch the cached user (e.g. after changing the primary cat). */
+  updateUser: (patch: Partial<AuthUser>) => void;
+  /** Authenticated fetch against the API that refreshes on 401. */
+  authedFetch: <T = unknown>(path: string, init?: RequestInit) => Promise<T>;
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -63,6 +82,8 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
   }
   return json as T;
 }
+
+type AuthResponse = { user: AuthUser; accessToken: string; refreshToken: string };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<AuthState>({ user: null, tokens: null, ready: false });
@@ -94,11 +115,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = React.useCallback<AuthContextValue["login"]>(
-    async (email, password, totp) => {
-      const data = await apiPost<{ user: AuthUser; accessToken: string; refreshToken: string }>(
-        "/auth/login",
-        { email, password, ...(totp ? { totp } : {}) }
-      );
+    async (email, password, opts) => {
+      const data = await apiPost<AuthResponse>("/auth/login", {
+        email,
+        password,
+        ...(opts?.totp ? { totp: opts.totp } : {}),
+        ...(opts?.rememberMe ? { rememberMe: true } : {}),
+      });
+      persist(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
+    },
+    [persist]
+  );
+
+  const loginWithPhone = React.useCallback<AuthContextValue["loginWithPhone"]>(
+    async (phone, otp, rememberMe) => {
+      const data = await apiPost<AuthResponse>("/auth/otp/login", { phone, otp, rememberMe });
+      persist(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
+    },
+    [persist]
+  );
+
+  const loginWithGoogle = React.useCallback<AuthContextValue["loginWithGoogle"]>(
+    async (idToken, rememberMe) => {
+      const data = await apiPost<AuthResponse>("/auth/google", { idToken, rememberMe });
       persist(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
     },
     [persist]
@@ -106,14 +145,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = React.useCallback<AuthContextValue["register"]>(
     async (input) => {
-      const data = await apiPost<{ user: AuthUser; accessToken: string; refreshToken: string }>(
-        "/auth/register",
-        input
-      );
+      const data = await apiPost<AuthResponse>("/auth/register", input);
       persist(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
     },
     [persist]
   );
+
+  const requestOtp = React.useCallback<AuthContextValue["requestOtp"]>(async (phone, purpose = "LOGIN") => {
+    return apiPost<{ devCode?: string }>("/auth/otp/request", { phone, purpose });
+  }, []);
+
+  const forgotPassword = React.useCallback<AuthContextValue["forgotPassword"]>(async (email) => {
+    return apiPost<{ devToken?: string }>("/auth/password/forgot", { email });
+  }, []);
+
+  const resetPassword = React.useCallback<AuthContextValue["resetPassword"]>(async (token, newPassword) => {
+    await apiPost("/auth/password/reset", { token, newPassword });
+  }, []);
 
   const logout = React.useCallback<AuthContextValue["logout"]>(async () => {
     const refreshToken = tokensRef.current?.refreshToken;
@@ -122,6 +170,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     persist(null, null);
   }, [persist]);
+
+  const updateUser = React.useCallback<AuthContextValue["updateUser"]>((patch) => {
+    setState((s) => {
+      if (!s.user) return s;
+      const nextUser = { ...s.user, ...patch };
+      if (typeof window !== "undefined" && s.tokens) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: nextUser, tokens: s.tokens }));
+      }
+      return { ...s, user: nextUser };
+    });
+  }, []);
 
   const authedFetch = React.useCallback<AuthContextValue["authedFetch"]>(
     async (path, init = {}) => {
@@ -135,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
         });
 
-      let tokens = tokensRef.current;
+      const tokens = tokensRef.current;
       if (!tokens) throw new Error("Not authenticated");
 
       let res = await doFetch(tokens.accessToken);
@@ -167,8 +226,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = React.useMemo<AuthContextValue>(
-    () => ({ ...state, login, register, logout, authedFetch }),
-    [state, login, register, logout, authedFetch]
+    () => ({
+      ...state,
+      login,
+      loginWithPhone,
+      loginWithGoogle,
+      register,
+      requestOtp,
+      forgotPassword,
+      resetPassword,
+      logout,
+      updateUser,
+      authedFetch,
+    }),
+    [state, login, loginWithPhone, loginWithGoogle, register, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
