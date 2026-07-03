@@ -33,9 +33,14 @@ const rotated = (await call("/auth/refresh", "POST", { refreshToken: reg.refresh
 ok(rotated.refreshToken && rotated.refreshToken !== reg.refreshToken, "refresh rotates");
 ok((await call("/auth/refresh", "POST", { refreshToken: reg.refreshToken })).status === 401, "old refresh rejected");
 
-console.log("━━ cats + feeding ━━");
+console.log("━━ cats + Cat ID + feeding ━━");
 const cat = (await call("/cats", "POST", { name: "Smokey", weightKg: 4.5, activityLevel: "MODERATE", isIndoor: true }, C)).json;
 ok(!!cat.id, "cat created");
+// The Cat ID (Dossier §05): unique, human-readable, issued instantly (R032).
+ok(/^MRC-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/.test(cat.catIdNumber ?? ""), `Cat ID issued: ${cat.catIdNumber}`);
+ok(!!cat.idIssuedAt, "issue date stamped");
+const cat2 = (await call("/cats", "POST", { name: "Luna", activityLevel: "LOW", isIndoor: true }, C)).json;
+ok(cat2.catIdNumber !== cat.catIdNumber, "Cat IDs are unique per cat");
 const recommendation = (await call(`/feeding/cats/${cat.id}`, "POST", {}, C)).json;
 ok(recommendation.dailyCalories > 200 && recommendation.estimatedMonthlyCostSar > 0, `feeding rec (${recommendation.dailyCalories} kcal)`);
 
@@ -50,6 +55,10 @@ ok(cart.totals.discountTotal > 0, "coupon applied");
 const order = (await call("/checkout", "POST", { cartId: cart.id, provider: "MADA" }, C)).json;
 ok(order.status === "CONFIRMED" && order.invoice?.status === "PAID", `order ${order.orderNumber} confirmed+paid`);
 ok(Math.abs(order.grandTotal / 1.15 + order.taxTotal - order.grandTotal) < 0.05, "15% VAT broken out");
+// Value made visible (R041): the savings tally reflects the coupon discount.
+const ov = (await call("/account/overview", "GET", undefined, C)).json;
+ok(ov.stats.totalSaved > 0, `savings tally visible (${ov.stats.totalSaved} SAR saved)`);
+ok(ov.firstCat?.name === "Smokey" && !!ov.firstCat?.catIdNumber, "overview greets the cat by name + ID");
 
 console.log("━━ pending flow + webhook ━━");
 // Admin creates a product priced to trigger the mock PENDING path (total .77).

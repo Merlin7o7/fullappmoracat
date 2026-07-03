@@ -56,7 +56,7 @@ export class AccountService {
 
   /** Dashboard aggregate — one call powers the portal overview. */
   async overview(userId: string) {
-    const [activeSub, ordersCount, catsCount, wallet, loyalty, recentOrders, unreadNotifs] =
+    const [activeSub, ordersCount, catsCount, wallet, loyalty, recentOrders, unreadNotifs, savings, firstCat] =
       await Promise.all([
         this.prisma.subscription.findFirst({
           where: { userId, status: "ACTIVE" },
@@ -74,6 +74,17 @@ export class AccountService {
           select: { orderNumber: true, status: true, grandTotal: true, placedAt: true },
         }),
         this.prisma.notification.count({ where: { userId, readAt: null } }),
+        // Value made visible (R041): the cumulative member savings tally.
+        this.prisma.order.aggregate({
+          _sum: { discountTotal: true },
+          where: { userId, status: { notIn: ["CANCELLED", "FAILED"] } },
+        }),
+        // Recognition first (Principle 01): greet the cat, not just the user.
+        this.prisma.cat.findFirst({
+          where: { userId, deletedAt: null },
+          orderBy: { createdAt: "asc" },
+          select: { name: true, catIdNumber: true },
+        }),
       ]);
 
     return {
@@ -91,10 +102,12 @@ export class AccountService {
         orders: ordersCount,
         cats: catsCount,
         walletBalance: wallet ? Number(wallet.balance) : 0,
+        totalSaved: Number(savings._sum.discountTotal ?? 0),
         loyaltyPoints: loyalty?.points ?? 0,
         loyaltyTier: loyalty?.tier ?? "BRONZE",
         unreadNotifications: unreadNotifs,
       },
+      firstCat,
       recentOrders: recentOrders.map((o) => ({
         orderNumber: o.orderNumber,
         status: o.status,

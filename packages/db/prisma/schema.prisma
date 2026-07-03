@@ -539,6 +539,10 @@ model Breed {
 model Cat {
   id             String        @id @default(cuid())
   userId         String
+  /// The Cat ID — a unique, human-readable membership number (R032).
+  /// The soul of the product: issued with ceremony, never a silent DB row.
+  catIdNumber    String?       @unique
+  idIssuedAt     DateTime?
   name           String
   photoUrl       String?
   breedId        String?

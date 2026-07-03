@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Cat, Wallet, Award, Truck, ArrowRight, CreditCard } from "lucide-react";
-import { Card, Badge, Button, Skeleton } from "@moraqat/ui";
+import { Package, Cat, Wallet, PiggyBank, Truck, ArrowRight, CreditCard } from "lucide-react";
+import { Card, Badge, Button, Skeleton, AnimatedCounter } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { OrderStatusBadge } from "@/components/order-status-badge";
@@ -16,7 +16,8 @@ interface Overview {
     nextDeliveryAt: string | null;
     nextBillingAt: string | null;
   };
-  stats: { orders: number; cats: number; walletBalance: number; loyaltyPoints: number; loyaltyTier: string; unreadNotifications: number };
+  stats: { orders: number; cats: number; walletBalance: number; totalSaved: number; loyaltyPoints: number; loyaltyTier: string; unreadNotifications: number };
+  firstCat: { name: string; catIdNumber: string | null } | null;
   recentOrders: { orderNumber: string; status: string; grandTotal: number; placedAt: string }[];
 }
 
@@ -34,11 +35,12 @@ export default function OverviewPage() {
   const fmtDate = (d: string | null) =>
     d ? new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
+  // Value stays visible (R041/R048); no points-scheme framing (Dossier §04).
   const stats = [
-    { icon: Package, label: isAr ? "الطلبات" : "Orders", value: data?.stats.orders ?? 0 },
-    { icon: Cat, label: isAr ? "القطط" : "Cats", value: data?.stats.cats ?? 0 },
-    { icon: Wallet, label: isAr ? "المحفظة" : "Wallet", value: `${data?.stats.walletBalance ?? 0} SAR` },
-    { icon: Award, label: isAr ? "النقاط" : "Points", value: data?.stats.loyaltyPoints ?? 0 },
+    { icon: PiggyBank, label: isAr ? "إجمالي التوفير" : "Total saved", num: data?.stats.totalSaved ?? 0, suffix: " SAR", highlight: true },
+    { icon: Package, label: isAr ? "الطلبات" : "Orders", num: data?.stats.orders ?? 0 },
+    { icon: Cat, label: isAr ? "القطط" : "Cats", num: data?.stats.cats ?? 0 },
+    { icon: Wallet, label: isAr ? "المحفظة" : "Wallet", num: data?.stats.walletBalance ?? 0, suffix: " SAR" },
   ];
 
   return (
@@ -47,17 +49,30 @@ export default function OverviewPage() {
         <h1 className="font-display text-2xl font-bold tracking-tight">
           {isAr ? `أهلاً${user?.firstName ? " " + user.firstName : ""}` : `Welcome back${user?.firstName ? ", " + user.firstName : ""}`}
         </h1>
-        <p className="text-sm text-muted-foreground">{isAr ? "إليك ملخص حسابك" : "Here's your account at a glance"}</p>
+        {/* Recognition first (Principle 01): the cat is greeted, not just the user. */}
+        <p className="text-sm text-muted-foreground">
+          {data?.firstCat
+            ? isAr
+              ? `عضوية ${data.firstCat.name} بين يديك`
+              : `${data.firstCat.name}'s membership, at a glance`
+            : isAr ? "إليك ملخص حسابك" : "Here's your account at a glance"}
+        </p>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s) => (
           <Card key={s.label} className="p-5">
-            <span className="mb-3 grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <span className={`mb-3 grid size-10 place-items-center rounded-xl ${s.highlight ? "bg-accent/15 text-accent-foreground" : "bg-primary/10 text-primary"}`}>
               <s.icon className="size-5" />
             </span>
-            {isLoading ? <Skeleton className="h-7 w-16" /> : <p className="font-display text-2xl font-bold">{s.value}</p>}
+            {isLoading ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <p className="font-display text-2xl font-bold tabular">
+                <AnimatedCounter value={s.num} suffix={s.suffix ?? ""} />
+              </p>
+            )}
             <p className="text-sm text-muted-foreground">{s.label}</p>
           </Card>
         ))}

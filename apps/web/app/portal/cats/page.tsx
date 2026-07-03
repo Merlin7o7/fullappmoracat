@@ -3,14 +3,19 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Cat as CatIcon, Plus, Sparkles, Loader2, X } from "lucide-react";
-import { Card, Badge, Button, Skeleton, useToast } from "@moraqat/ui";
+import { Card, Badge, Button, Skeleton, Drawer, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
+import { CatIdCard } from "@/components/cat-id-card";
+import { CatIdCeremony } from "@/components/cat-id-ceremony";
 
 interface Cat {
   id: string;
   name: string;
+  catIdNumber: string | null;
+  idIssuedAt: string | null;
+  photoUrl: string | null;
   weightKg: number | null;
   activityLevel: string;
   isIndoor: boolean;
@@ -35,6 +40,8 @@ export default function CatsPage() {
   const qc = useQueryClient();
   const [showForm, setShowForm] = React.useState(false);
   const [rec, setRec] = React.useState<{ catId: string; data: Recommendation } | null>(null);
+  const [ceremonyCat, setCeremonyCat] = React.useState<Cat | null>(null);
+  const [idCardCat, setIdCardCat] = React.useState<Cat | null>(null);
 
   const { data: cats, isLoading } = useQuery({
     queryKey: ["cats", user?.id],
@@ -43,13 +50,14 @@ export default function CatsPage() {
   });
 
   const create = useMutation({
-    mutationFn: (body: Record<string, unknown>) => authedFetch<{ name: string }>("/cats", { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: (body: Record<string, unknown>) => authedFetch<Cat>("/cats", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: (cat) => {
       qc.invalidateQueries({ queryKey: ["cats"] });
       setShowForm(false);
-      toast({ title: isAr ? `تمت إضافة ${cat.name}` : `${cat.name} added`, variant: "success" });
+      // The reveal IS the confirmation — a ceremony, not a toast (R031, R080).
+      setCeremonyCat(cat);
     },
-    onError: (e) => toast({ title: isAr ? "تعذّرت الإضافة" : "Couldn't add cat", description: e.message, variant: "error" }),
+    onError: (e) => toast({ title: isAr ? "تعذّر إصدار الهوية" : "Couldn't issue the Cat ID", description: e.message, variant: "error" }),
   });
 
   const feed = useMutation({
@@ -77,10 +85,12 @@ export default function CatsPage() {
             <Card key={cat.id} className="p-5">
               <div className="mb-3 flex items-center gap-3">
                 <span className="grid size-11 place-items-center rounded-xl bg-accent/15 text-accent-foreground"><CatIcon className="size-5" /></span>
-                <div>
+                <div className="min-w-0">
                   <p className="font-display font-semibold">{cat.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : (isAr ? "سلالة غير محددة" : "Unknown breed")}
+                    {cat.catIdNumber && <span className="font-mono tracking-wider tabular" dir="ltr">{cat.catIdNumber}</span>}
+                    {cat.catIdNumber && (cat.breed || cat.weightKg) ? " · " : ""}
+                    {cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : ""}
                     {cat.weightKg ? ` · ${cat.weightKg} ${isAr ? "كجم" : "kg"}` : ""}
                   </p>
                 </div>
@@ -89,10 +99,15 @@ export default function CatsPage() {
                 <Badge variant="secondary">{cat.isIndoor ? (isAr ? "داخلي" : "Indoor") : (isAr ? "خارجي" : "Outdoor")}</Badge>
                 <Badge variant="secondary">{activityLabel(cat.activityLevel, isAr)}</Badge>
               </div>
-              <Button variant="outline" size="sm" className="w-full" onClick={() => feed.mutate(cat.id)} disabled={feed.isPending}>
-                {feed.isPending && feed.variables === cat.id ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-                {isAr ? "توصية التغذية" : "Feeding recommendation"}
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIdCardCat(cat)} disabled={!cat.catIdNumber}>
+                  <CatIcon className="size-4" /> {isAr ? "الهوية" : "Cat ID"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => feed.mutate(cat.id)} disabled={feed.isPending}>
+                  {feed.isPending && feed.variables === cat.id ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                  {isAr ? "التغذية" : "Feeding"}
+                </Button>
+              </div>
 
               {rec?.catId === cat.id && <RecCard rec={rec.data} isAr={isAr} />}
             </Card>
@@ -101,9 +116,40 @@ export default function CatsPage() {
       ) : (
         <Card className="flex flex-col items-center gap-3 p-10 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-muted"><CatIcon className="size-7 text-muted-foreground" /></span>
-          <p className="text-sm text-muted-foreground">{isAr ? "لم تُضف أي قط بعد" : "No cats added yet"}</p>
+          <p className="text-sm text-muted-foreground">
+            {isAr ? "أول قط تضيفه يحصل على هويته الرسمية فوراً" : "The first cat you add gets an official Cat ID, instantly"}
+          </p>
         </Card>
       )}
+
+      {/* The reveal ceremony — the peak moment (Dossier Stage 4). */}
+      {ceremonyCat?.catIdNumber && (
+        <CatIdCeremony
+          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl }}
+          isAr={isAr}
+          onClose={() => setCeremonyCat(null)}
+        />
+      )}
+
+      {/* The card, always in reach (Dossier §04 "always in reach"). */}
+      <Drawer open={!!idCardCat} onClose={() => setIdCardCat(null)} title={isAr ? "هوية القط" : "Cat ID"}>
+        {idCardCat?.catIdNumber && (
+          <div className="flex flex-col items-center gap-5 pt-2">
+            <CatIdCard
+              catName={idCardCat.name}
+              catIdNumber={idCardCat.catIdNumber}
+              issuedAt={idCardCat.idIssuedAt}
+              photoUrl={idCardCat.photoUrl}
+              isAr={isAr}
+            />
+            <p className="max-w-xs text-center text-xs leading-relaxed text-muted-foreground">
+              {isAr
+                ? `رقم ${idCardCat.name} الدائم. سجلّه الغذائي وتوصياته محفوظة تحت هذه الهوية.`
+                : `${idCardCat.name}'s permanent number. Their feeding record and recommendations live under this identity.`}
+            </p>
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }
@@ -151,7 +197,11 @@ function CatForm({ isAr, onSubmit, pending, error, onClose }: { isAr: boolean; o
           options={[{ value: "true", label: isAr ? "داخلي" : "Indoor" }, { value: "false", label: isAr ? "خارجي" : "Outdoor" }]} />
         {error && <p className="text-sm text-destructive sm:col-span-2">{error}</p>}
         <div className="sm:col-span-2">
-          <Button type="submit" disabled={pending || !f.name}>{pending && <Loader2 className="size-4 animate-spin" />} {isAr ? "حفظ" : "Save cat"}</Button>
+          <Button type="submit" loading={pending} disabled={!f.name}>
+            {pending
+              ? (isAr ? (f.name ? `جارٍ إصدار هوية ${f.name}…` : "جارٍ إصدار الهوية…") : (f.name ? `Issuing ${f.name}'s Cat ID…` : "Issuing the Cat ID…"))
+              : (isAr ? "أصدر هوية القط" : "Issue the Cat ID")}
+          </Button>
         </div>
       </form>
     </Card>

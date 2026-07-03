@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Moracat Membership Dossier — UX &amp; CX Strategy Handbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4EFE4; --paper-2:#ECE4D3; --paper-3:#E4DAC4;
+  --ink:#17130E; --ink-soft:#3B332A; --ink-mute:#6C6153;
+  --brass:#A97C36; --brass-2:#8A6529; --brass-tint:#EBDDBE;
+  --pine:#1E4A43; --pine-2:#2C6B60; --pine-tint:#D8E4DF;
+  --amber:#D19A2E; --amber-tint:#F5E6C2;
+  --rust:#9E4326; --rust-tint:#EDD6CB;
+  --line:#D8CDB6; --line-soft:#E4DBC8;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:"Fraunces",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --maxread:70ch; --rail:300px;
+  --shadow:0 1px 0 rgba(23,19,14,.04), 0 18px 40px -28px rgba(23,19,14,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:17px; line-height:1.68; font-weight:400;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(169,124,54,.05), transparent 42%),
+    radial-gradient(circle at 88% 78%, rgba(30,74,67,.05), transparent 46%);
+  background-attachment:fixed;
+}
+/* subtle paper grain */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");}
+::selection{background:var(--amber-tint);color:var(--ink)}
+
+/* ---------- Reading progress ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:120;
+  background:linear-gradient(90deg,var(--brass),var(--amber));transition:width .12s linear}
+
+/* ---------- Layout ---------- */
+.wrap{display:grid;grid-template-columns:var(--rail) 1fr;min-height:100vh;position:relative;z-index:1}
+
+/* ---------- Sidebar / the index rail ---------- */
+.rail{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+  border-right:1px solid var(--line);background:linear-gradient(180deg,#F6F1E7,#F0E9DA);
+  padding:30px 22px 40px;scrollbar-width:thin}
+.rail::-webkit-scrollbar{width:7px}.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.brandmark{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.seal{width:44px;height:44px;flex:0 0 44px}
+.brand-t{font-family:var(--serif);font-weight:600;font-size:20px;letter-spacing:.01em;line-height:1;color:var(--ink)}
+.brand-s{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass-2);margin-top:5px}
+.rail-file{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-mute);
+  border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin:20px 0 18px;background:rgba(255,255,255,.35)}
+.rail-file b{color:var(--pine-2)}
+.toc-label{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 10px}
+.toc{list-style:none;margin:0;padding:0}
+.toc li{margin:1px 0}
+.toc a{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:baseline;
+  text-decoration:none;color:var(--ink-soft);padding:6px 8px;border-radius:7px;
+  font-size:13.5px;line-height:1.3;transition:background .15s,color .15s;border:1px solid transparent}
+.toc a .n{font-family:var(--mono);font-size:11px;color:var(--brass-2);font-weight:500}
+.toc a:hover{background:rgba(169,124,54,.09);color:var(--ink)}
+.toc a.active{background:#fff;border-color:var(--line);color:var(--ink);box-shadow:0 1px 0 rgba(23,19,14,.03)}
+.toc a.active .n{color:var(--pine)}
+.toc .grp{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-mute);padding:14px 8px 5px;border-top:1px solid var(--line-soft);margin-top:8px}
+.rail-foot{margin-top:26px;font-size:11px;color:var(--ink-mute);line-height:1.5}
+
+/* ---------- Mobile top bar ---------- */
+.topbar{display:none;position:sticky;top:0;z-index:100;background:rgba(244,239,228,.92);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 16px;
+  align-items:center;justify-content:space-between}
+.topbar .brand-t{font-size:17px}
+.menu-btn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:8px;
+  width:42px;height:42px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.menu-btn svg{width:20px;height:20px}
+.scrim{display:none;position:fixed;inset:0;background:rgba(23,19,14,.5);z-index:99}
+
+/* ---------- Main column ---------- */
+.main{min-width:0;padding:0 clamp(20px,5vw,84px)}
+.doc{max-width:940px;margin:0 auto;padding-bottom:120px}
+
+/* ---------- Cover ---------- */
+.cover{padding:clamp(56px,10vh,120px) 0 64px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass-2);margin:0 0 22px;display:flex;gap:12px;align-items:center}
+.eyebrow::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--brass),transparent)}
+h1.cover-t{font-family:var(--serif);font-weight:600;font-size:clamp(40px,7vw,82px);line-height:.98;
+  letter-spacing:-.02em;margin:0 0 8px;color:var(--ink);font-optical-sizing:auto}
+h1.cover-t em{font-style:italic;font-weight:500;color:var(--pine)}
+.cover-sub{font-family:var(--serif);font-style:italic;font-weight:400;font-size:clamp(19px,2.6vw,27px);color:var(--ink-soft);margin:14px 0 0;max-width:30ch;line-height:1.3}
+.cover-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:36px}
+.chipmeta{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-soft);border:1px solid var(--line);border-radius:100px;padding:8px 14px;background:rgba(255,255,255,.4)}
+.cover-lede{font-size:clamp(18px,2.2vw,21px);line-height:1.6;color:var(--ink-soft);max-width:60ch;margin:40px 0 0}
+.cover-lede strong{color:var(--ink);font-weight:600}
+
+/* ---------- Section scaffolding ---------- */
+.section{padding:76px 0 8px;scroll-margin-top:24px}
+.sec-head{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start;margin-bottom:8px}
+.sec-num{font-family:var(--serif);font-weight:600;font-size:clamp(40px,6vw,68px);line-height:.9;
+  color:transparent;-webkit-text-stroke:1.4px var(--brass);letter-spacing:-.02em;padding-top:4px}
+.sec-eye{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--pine-2);margin:2px 0 8px}
+h2.sec-t{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4.2vw,46px);line-height:1.04;
+  letter-spacing:-.015em;margin:0;color:var(--ink)}
+.sec-lede{font-size:clamp(17px,2vw,20px);line-height:1.58;color:var(--ink-soft);max-width:var(--maxread);margin:18px 0 0}
+.sec-lede strong{color:var(--ink);font-weight:600}
+
+/* prose */
+.prose{max-width:var(--maxread)}
+.prose p{margin:18px 0}
+.prose h3{font-family:var(--serif);font-weight:600;font-size:23px;letter-spacing:-.01em;margin:40px 0 6px;color:var(--ink)}
+.prose h4{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass-2);margin:30px 0 4px}
+.prose strong{font-weight:600;color:var(--ink)}
+.prose em{font-style:italic}
+.prose a{color:var(--pine);text-underline-offset:3px;text-decoration-thickness:1px}
+.lead-in{font-family:var(--serif);font-size:20px;line-height:1.5;color:var(--ink-soft);font-weight:400;border-left:2px solid var(--brass);padding-left:20px;margin:6px 0 24px}
+
+hr.rule{border:0;height:1px;background:var(--line);margin:60px 0}
+.divrule{display:flex;align-items:center;gap:16px;margin:64px 0 12px}
+.divrule::before,.divrule::after{content:"";height:1px;flex:1;background:var(--line)}
+.divrule span{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-mute)}
+
+/* ---------- Principle / callout blocks ---------- */
+.principle{border:1px solid var(--line);border-left:3px solid var(--pine);border-radius:12px;
+  background:rgba(255,255,255,.42);padding:20px 22px;margin:22px 0}
+.principle .k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--pine-2);display:block;margin-bottom:8px}
+.principle p{margin:0;font-size:16px;line-height:1.6;color:var(--ink-soft)}
+.principle p strong{color:var(--ink)}
+
+.challenge{border:1px dashed var(--rust);border-radius:12px;background:var(--rust-tint);
+  padding:20px 22px;margin:26px 0;max-width:var(--maxread)}
+.challenge .k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--rust);font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.challenge .k svg{width:15px;height:15px}
+.challenge p{margin:8px 0 0;font-size:15.5px;line-height:1.6;color:#5c3221}
+.challenge p:first-of-type{margin-top:0}
+.challenge strong{color:var(--rust)}
+
+.beyond{border:1px solid var(--brass);border-radius:12px;background:var(--amber-tint);
+  padding:18px 22px;margin:24px 0;max-width:var(--maxread)}
+.beyond .k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass-2);font-weight:600;display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.beyond .k svg{width:15px;height:15px}
+.beyond p{margin:6px 0 0;font-size:15.5px;line-height:1.6;color:#5a4416}
+.beyond strong{color:var(--brass-2)}
+
+.pull{font-family:var(--serif);font-weight:500;font-size:clamp(22px,3.2vw,32px);line-height:1.24;
+  letter-spacing:-.01em;color:var(--ink);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:34px 0;margin:44px 0;max-width:26ch}
+.pull em{font-style:italic;color:var(--pine)}
+
+/* ---------- Cards / grids ---------- */
+.grid{display:grid;gap:16px;margin:26px 0}
+.grid.two{grid-template-columns:repeat(2,1fr)}
+.grid.three{grid-template-columns:repeat(3,1fr)}
+.card{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.5);padding:20px 20px 18px}
+.card .ct{font-family:var(--serif);font-weight:600;font-size:19px;margin:0 0 4px;color:var(--ink);letter-spacing:-.01em}
+.card .cs{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass-2);margin:0 0 10px}
+.card p{margin:8px 0 0;font-size:15px;line-height:1.55;color:var(--ink-soft)}
+.card ul{margin:8px 0 0;padding-left:18px}
+.card li{font-size:14.5px;line-height:1.5;color:var(--ink-soft);margin:4px 0}
+
+/* definition rows */
+.deflist{margin:22px 0;border-top:1px solid var(--line)}
+.defrow{display:grid;grid-template-columns:190px 1fr;gap:20px;padding:16px 0;border-bottom:1px solid var(--line-soft)}
+.defrow dt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--pine-2);padding-top:3px}
+.defrow dd{margin:0;font-size:15.5px;line-height:1.58;color:var(--ink-soft)}
+.defrow dd strong{color:var(--ink)}
+@media (max-width:640px){.defrow{grid-template-columns:1fr;gap:5px}}
+
+/* ---------- Journey stage ---------- */
+.stage{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.46);
+  padding:0;margin:22px 0;overflow:hidden}
+.stage-h{display:flex;align-items:baseline;gap:14px;padding:18px 22px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.2));border-bottom:1px solid var(--line)}
+.stage-n{font-family:var(--mono);font-size:12px;font-weight:600;color:#fff;background:var(--pine);
+  border-radius:7px;padding:5px 9px;letter-spacing:.06em;flex:0 0 auto}
+.stage-t{font-family:var(--serif);font-weight:600;font-size:22px;letter-spacing:-.01em;color:var(--ink);margin:0}
+.stage-arc{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute);margin-left:auto;text-align:right}
+.stage-body{display:grid;grid-template-columns:repeat(2,1fr);gap:0}
+.sb{padding:16px 22px;border-bottom:1px solid var(--line-soft)}
+.sb:nth-child(odd){border-right:1px solid var(--line-soft)}
+.sb .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 7px;display:flex;gap:7px;align-items:center}
+.sb .lbl svg{width:13px;height:13px}
+.sb.goal .lbl{color:var(--pine-2)} .sb.emo .lbl{color:var(--brass-2)}
+.sb.con .lbl{color:var(--rust)} .sb.out .lbl{color:var(--pine-2)}
+.sb.trust .lbl{color:var(--pine-2)} .sb.delight .lbl{color:var(--amber)}
+.sb.avoid{grid-column:1/-1;background:var(--rust-tint);border-right:0}
+.sb.avoid .lbl{color:var(--rust)}
+.sb p{margin:0;font-size:14.5px;line-height:1.55;color:var(--ink-soft)}
+.sb.avoid p{color:#5c3221}
+@media (max-width:720px){.stage-body{grid-template-columns:1fr}.sb:nth-child(odd){border-right:0}}
+
+/* ---------- Rules ---------- */
+.rules-controls{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 8px;align-items:center}
+.rf-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin-right:4px}
+.chip{appearance:none;font-family:var(--mono);font-size:11px;letter-spacing:.03em;
+  border:1px solid var(--line);background:rgba(255,255,255,.5);color:var(--ink-soft);
+  border-radius:100px;padding:7px 13px;cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--brass);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.rules-count{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-left:auto}
+.cluster{margin:34px 0}
+.cluster-h{display:flex;align-items:baseline;gap:12px;margin:0 0 4px}
+.cluster-id{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--brass-2)}
+.cluster-t{font-family:var(--serif);font-weight:600;font-size:22px;letter-spacing:-.01em;color:var(--ink);margin:0}
+.cluster-d{font-size:14.5px;color:var(--ink-mute);margin:2px 0 16px;max-width:var(--maxread)}
+.rlist{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.ritem{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:11px 12px;border-radius:9px;align-items:baseline;transition:background .15s}
+.ritem:hover{background:rgba(169,124,54,.06)}
+.rid{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--pine-2);letter-spacing:.02em}
+.rtext{font-size:15.5px;line-height:1.5;color:var(--ink-soft)}
+.rtext b{color:var(--ink);font-weight:600}
+
+/* ---------- Priority matrix ---------- */
+.tiergrid{display:grid;gap:14px;margin:28px 0}
+.tier{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:rgba(255,255,255,.4)}
+.tier-h{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.tier-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto}
+.tier-t{font-family:var(--serif);font-weight:600;font-size:20px;color:var(--ink);margin:0}
+.tier-tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin-left:auto}
+.t-crit .tier-dot{background:var(--rust)} .t-high .tier-dot{background:var(--brass)}
+.t-med .tier-dot{background:var(--pine-2)} .t-fut .tier-dot{background:var(--ink-mute)}
+.tier-body{padding:6px 20px 16px}
+.tier-why{font-size:14.5px;color:var(--ink-mute);font-style:italic;margin:12px 0 10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.tier-item{display:grid;grid-template-columns:1fr;gap:2px;padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.tier-item:last-child{border-bottom:0}
+.ti-t{font-weight:600;font-size:15.5px;color:var(--ink)}
+.ti-d{font-size:14.5px;line-height:1.5;color:var(--ink-soft)}
+
+/* ---------- Table (psych) ---------- */
+.tablewrap{overflow-x:auto;margin:24px 0;border:1px solid var(--line);border-radius:12px}
+table.psy{border-collapse:collapse;width:100%;min-width:720px;font-size:14px}
+table.psy th,table.psy td{text-align:left;padding:13px 15px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.45}
+table.psy thead th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--pine-2);background:rgba(255,255,255,.55);position:sticky;left:0}
+table.psy tbody th{font-family:var(--serif);font-weight:600;font-size:15px;color:var(--ink);white-space:nowrap}
+table.psy td{color:var(--ink-soft)}
+table.psy tr:last-child td,table.psy tr:last-child th{border-bottom:0}
+
+/* footer */
+.colophon{border-top:1px solid var(--line);margin-top:80px;padding:40px 0 60px;max-width:var(--maxread)}
+.colophon .k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:12px}
+.colophon p{font-size:14px;color:var(--ink-mute);line-height:1.6;margin:8px 0}
+
+/* responsive */
+@media (max-width:920px){
+  :root{--rail:0px}
+  .wrap{grid-template-columns:1fr}
+  .rail{position:fixed;top:0;left:0;width:300px;max-width:86vw;height:100vh;z-index:100;
+    transform:translateX(-102%);transition:transform .28s ease;box-shadow:0 0 60px rgba(23,19,14,.3)}
+  .rail.open{transform:translateX(0)}
+  .topbar{display:flex}
+  .grid.three,.grid.two{grid-template-columns:1fr}
+}
+@media print{
+  .rail,.topbar,#progress,.rules-controls,.scrim{display:none!important}
+  .wrap{grid-template-columns:1fr}
+  body{background:#fff;font-size:11pt}
+  body::before{display:none}
+  .section{page-break-inside:auto}
+  .stage,.card,.tier,.principle{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<!-- MOBILE TOP BAR -->
+<header class="topbar">
+  <div class="brandmark" style="margin:0">
+    <span class="brand-t">Moracat</span>
+  </div>
+  <button class="menu-btn" id="menuBtn" aria-label="Open contents" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg>
+  </button>
+</header>
+<div class="scrim" id="scrim"></div>
+
+<div class="wrap">
+<!-- ============ SIDEBAR ============ -->
+<nav class="rail" id="rail" aria-label="Document contents">
+  <div class="brandmark">
+    <svg class="seal" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <circle cx="32" cy="32" r="30.5" stroke="#A97C36" stroke-width="1.4"/>
+      <circle cx="32" cy="32" r="26" stroke="#A97C36" stroke-width=".6" opacity=".55"/>
+      <!-- cat head crest -->
+      <path d="M20 30c0-7 5-12 12-12s12 5 12 12c0 6-4 9-4 12 0 2-4 4-8 4s-8-2-8-4c0-3-4-6-4-12Z" fill="#1E4A43"/>
+      <path d="M20 30l-3-9 8 3M44 30l3-9-8 3" stroke="#1E4A43" stroke-width="2.4" stroke-linejoin="round" fill="#1E4A43"/>
+      <ellipse cx="27" cy="30" rx="2" ry="3" fill="#D19A2E"/>
+      <ellipse cx="37" cy="30" rx="2" ry="3" fill="#D19A2E"/>
+      <path d="M30 38h4M26 39l-6 1M38 39l6 1M27 41l-6 3M37 41l6 3" stroke="#F4EFE4" stroke-width="1" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="brand-t">Moracat</div>
+      <div class="brand-s">Membership Dossier</div>
+    </div>
+  </div>
+
+  <div class="rail-file">
+    FILE&nbsp;·&nbsp;<b>MRC-UX-001</b><br>
+    CLASS&nbsp;·&nbsp;UX / CX STRATEGY<br>
+    STATUS&nbsp;·&nbsp;<b>BLUEPRINT — PRE-DESIGN</b>
+  </div>
+
+  <p class="toc-label">Contents</p>
+  <ul class="toc" id="toc">
+    <li><a href="#cover"><span class="n">00</span><span>North Star &amp; how to read this</span></a></li>
+    <li class="grp">Part I · Strategy</li>
+    <li><a href="#philosophy"><span class="n">01</span><span>UX Philosophy</span></a></li>
+    <li><a href="#journey"><span class="n">02</span><span>The Member Journey</span></a></li>
+    <li><a href="#onboarding"><span class="n">03</span><span>Onboarding Strategy</span></a></li>
+    <li><a href="#membership"><span class="n">04</span><span>Membership Experience</span></a></li>
+    <li><a href="#catid"><span class="n">05</span><span>The Cat ID Strategy</span></a></li>
+    <li class="grp">Part II · Trust &amp; Mind</li>
+    <li><a href="#trust"><span class="n">06</span><span>Trust &amp; Credibility</span></a></li>
+    <li><a href="#retention"><span class="n">07</span><span>Retention Strategy</span></a></li>
+    <li><a href="#psychology"><span class="n">08</span><span>Behavioral Psychology</span></a></li>
+    <li class="grp">Part III · Execution</li>
+    <li><a href="#rules"><span class="n">09</span><span>The 120 UX Rules</span></a></li>
+    <li><a href="#bestpractice"><span class="n">10</span><span>What to Steal (Best-in-class)</span></a></li>
+    <li><a href="#priorities"><span class="n">11</span><span>Prioritized Recommendations</span></a></li>
+    <li class="grp">Appendix</li>
+    <li><a href="#local"><span class="n">A</span><span>The Saudi Market Layer</span></a></li>
+    <li><a href="#metrics"><span class="n">B</span><span>Metrics &amp; Guardrails</span></a></li>
+  </ul>
+
+  <div class="rail-foot">
+    A strategy handbook — not a product design.<br>Every page describes an <em>experience</em> to build, never a screen.
+  </div>
+</nav>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+<div class="doc">
+
+<!-- ===== COVER / 00 ===== -->
+<section id="cover" class="cover">
+  <p class="eyebrow">Moracat · UX &amp; Customer Experience Strategy</p>
+  <h1 class="cover-t">The Membership<br><em>Dossier</em></h1>
+  <p class="cover-sub">The trusted identity every cat owner wants to carry.</p>
+
+  <div class="cover-meta">
+    <span class="chipmeta">Blueprint · Pre-Design</span>
+    <span class="chipmeta">11 Sections</span>
+    <span class="chipmeta">120 UX Rules</span>
+    <span class="chipmeta">Experience-first</span>
+    <span class="chipmeta">Bilingual · AR/EN</span>
+  </div>
+
+  <p class="cover-lede">
+    This document is a <strong>design brief for the people who will build Moracat</strong> — human or AI. It defines
+    the feeling, the psychology, the sequence, and the standards of the experience, and leaves every pixel,
+    component, and line of code to the team that implements it. It contains <strong>no wireframes, no screens, no code</strong>.
+    It answers a harder question first: <em>what should it feel like to belong to Moracat, and why would someone stay for years?</em>
+  </p>
+
+  <div class="prose" style="margin-top:52px">
+    <div class="divrule"><span>00 · Orientation</span></div>
+
+    <h3>The one sentence this whole document defends</h3>
+    <p class="lead-in">Moracat is not a discount app with a cat theme. It is a <strong>membership identity</strong> for the modern cat owner — where the savings are proof of value, and belonging is the product.</p>
+
+    <p>Read that carefully, because it is the fork in the road that decides whether Moracat becomes a beloved institution or a coupon wallet people cancel in month three. Every recommendation in this handbook flows from it. When a future decision is ambiguous, the tie-breaker is always: <em>does this make a person feel like a recognised, cared-for member — or like someone hunting for a code?</em></p>
+
+    <h3>Who this is for, and how to use it</h3>
+    <p>Written for the product, design, and engineering team (and any AI agent) that will build the Moracat web and mobile experience. You have <strong>complete freedom over visual design, components, stack, and architecture</strong>. What you do not have freedom over is the <em>intent</em>: the emotional outcomes, the trust sequence, the friction budget, and the rules in Section 09. Treat those as constraints. Treat everything else as invitation.</p>
+
+    <div class="principle">
+      <span class="k">How to read the callouts</span>
+      <p><strong>Principle</strong> blocks (green) are non-negotiable design intents. <strong>Challenge</strong> blocks (dashed red) are places where I push back on the brief or a common assumption — read these closely; they are where the real strategy lives. <strong>Beyond the brief</strong> blocks (gold) are opportunities the original request didn't ask for but that would meaningfully improve the experience.</p>
+    </div>
+
+    <h3>Three assumptions I am challenging up front</h3>
+    <div class="challenge">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg> Challenge 1 · "Discounts are the value."</span>
+      <p>Discounts are the <strong>easiest thing to copy and the fastest way to feel cheap</strong>. A store can hand out a free loyalty card tomorrow. If Moracat's headline is "save money," it will be compared on price and lose. The durable value is <strong>portable identity + curated trust + effortless convenience</strong> across the whole cat-owner life. Savings should feel like a member <em>perk</em>, never the pitch.</p>
+    </div>
+    <div class="challenge">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg> Challenge 2 · "The Cat ID is a nice card."</span>
+      <p>A beautiful card that <strong>does nothing sits unused, and unused things get cancelled</strong>. The Cat ID must be given a <em>job</em> people actually need: recovering a lost cat, checking in at the vet in one tap, redeeming instantly at a partner, and holding the cat's health record. Utility is what turns a card into a habit, and habit is what turns a subscriber into a member for life. Section 05 rebuilds the Cat ID around this.</p>
+    </div>
+    <div class="challenge">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg> Challenge 3 · "Members will feel the value."</span>
+      <p>People cancel what they <strong>cannot feel</strong>. A subscription's value is invisible by default — the money leaves quietly every month while the benefits stay abstract. Moracat must make value <em>legible</em>: surfaced savings totals, benefits used, moments of care remembered. If a member can't answer "what did this give me lately?" in two seconds, renewal is already at risk.</p>
+    </div>
+
+    <p style="margin-top:34px">With that framing set, the rest of the handbook builds the experience — philosophy first, then the journey, then the machinery of trust, psychology, rules, and priorities.</p>
+  </div>
+</section>
+
+<!-- ===== 01 · UX PHILOSOPHY ===== -->
+<section id="philosophy" class="section">
+  <div class="sec-head">
+    <div class="sec-num">01</div>
+    <div>
+      <p class="sec-eye">Part I · The Feeling</p>
+      <h2 class="sec-t">UX Philosophy</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Before a single feature is designed, agree on the <strong>emotional and ethical contract</strong> Moracat makes with a person. Features change; this contract shouldn't. It is the spine every future decision hangs from.</p>
+
+  <div class="prose">
+    <p class="lead-in">The experience Moracat should deliver, in one line: <strong>the quiet confidence of belonging to something that takes your cat as seriously as you do.</strong></p>
+
+    <p>Cat owners are not casual about their animals — they are <em>devoted</em>, often quietly, sometimes fiercely. The category they live in (pet stores, clinics, random online tips) treats them transactionally. Moracat's opportunity is to be the one relationship that feels the opposite: recognising, competent, warm, and unhurried. Not loud. Not gamified into exhaustion. Membership should feel like being <em>known</em>.</p>
+
+    <h3>The emotions to design for</h3>
+    <p>Design is emotion management. Every screen either adds or subtracts from how a person feels. Moracat should reliably produce six feelings, in this order of importance:</p>
+    <div class="deflist">
+      <div class="defrow"><dt>Belonging</dt><dd><strong>"I'm part of this."</strong> The core emotion. Membership, identity, recognition. A person should feel inside a circle, not outside a paywall. Everything else is downstream of belonging.</dd></div>
+      <div class="defrow"><dt>Trust / safety</dt><dd><strong>"These people are careful, and my cat and my data are safe with them."</strong> The permission slip for everything — payment, health records, referrals to real clinics.</dd></div>
+      <div class="defrow"><dt>Pride</dt><dd><strong>"My cat has an identity."</strong> A gentle, shareable pride. The kind that makes someone show the Cat ID to a friend without being asked.</dd></div>
+      <div class="defrow"><dt>Ease / relief</dt><dd><strong>"That was effortless."</strong> The feeling of a burden lifted — finding a good vet, redeeming a benefit, remembering a vaccination date without trying.</dd></div>
+      <div class="defrow"><dt>Delight</dt><dd><strong>"Oh — that's lovely."</strong> Small, unexpected warmth. Used sparingly so it stays real. Delight is the seasoning, not the meal.</dd></div>
+      <div class="defrow"><dt>Smart value</dt><dd><strong>"This is clearly worth it."</strong> Not "I got a bargain" but "I'm a savvy owner who made a good decision." Value as self-image, not price.</dd></div>
+    </div>
+
+    <div class="principle">
+      <span class="k">Emotion before feature</span>
+      <p>When two designs are equally functional, choose the one that produces <strong>belonging and trust</strong> first, ease second, delight third. Never trade trust for delight, and never trade ease for cleverness.</p>
+    </div>
+
+    <h3>Brand personality</h3>
+    <p>If Moracat were a person at the door of a members' club, they would be the calm, impeccably competent host who remembers your cat's name, never rushes you, and quietly handles the hard things. Concretely, the personality is:</p>
+    <div class="grid two">
+      <div class="card"><p class="cs">Is</p><p class="ct">Warm &amp; composed</p><p>Kind without being saccharine. Confident without being cold. Speaks plainly, like a trusted friend who happens to be an expert.</p></div>
+      <div class="card"><p class="cs">Is</p><p class="ct">Quietly premium</p><p>Premium through <em>restraint and craft</em>, not gold gradients and the word "luxury." The confidence to leave white space and say less.</p></div>
+      <div class="card"><p class="cs">Is not</p><p class="ct">Not a coupon barker</p><p>Never shouty, never "LIMITED TIME!!", never manipulative countdowns. Urgency is earned by real events, not manufactured.</p></div>
+      <div class="card"><p class="cs">Is not</p><p class="ct">Not a cutesy toy</p><p>Cats invite kitsch; resist it. Affectionate, yes; infantilising, no. The owner is an adult making a considered choice.</p></div>
+    </div>
+
+    <div class="pull">The best membership feels less like <em>access</em> and more like <em>recognition.</em></div>
+
+    <h3>What users expect (and what will surprise them)</h3>
+    <p>People arrive with a mental model borrowed from other subscriptions — some helpful, some to be gently corrected.</p>
+    <h4>They expect</h4>
+    <p>Instant access after paying. A card or number they can actually use. Clear, honest pricing with no surprise renewals. Real, redeemable benefits — not "up to 50%*" fine print. To be treated like a paying customer, not a lead. Fast, human help when something goes wrong.</p>
+    <h4>They will be surprised (in a good way) by</h4>
+    <p>How <em>fast</em> the Cat ID appears and how good it feels to have one. How the membership remembers their cat and speaks to it by name. How genuinely useful the ID is beyond discounts. How the brand proactively cares (reminders, check-ins) instead of only extracting. How easy it is to leave — which, paradoxically, is why they'll stay.</p>
+
+    <h3>The experience principles</h3>
+    <p>Ten principles that govern how every interaction should behave. Treat these as the constitution.</p>
+    <div class="deflist">
+      <div class="defrow"><dt>01 · Recognition first</dt><dd>Greet the member and their cat by name. The product should feel like it knows who it's talking to from the second interaction onward.</dd></div>
+      <div class="defrow"><dt>02 · Effort is the enemy</dt><dd>Ruthlessly minimise steps, fields, taps, and decisions. Every unit of effort is a small tax on belonging.</dd></div>
+      <div class="defrow"><dt>03 · Value stays visible</dt><dd>Never let the benefits go abstract. Savings, perks, and care are surfaced, tallied, and remembered.</dd></div>
+      <div class="defrow"><dt>04 · Trust precedes ask</dt><dd>Earn confidence <em>before</em> requesting money, data, or commitment — in that sequence, every time.</dd></div>
+      <div class="defrow"><dt>05 · One clear action</dt><dd>Each moment has a single obvious next step. Secondary options recede; they never compete.</dd></div>
+      <div class="defrow"><dt>06 · Honest by default</dt><dd>No dark patterns, no hidden terms, no fake scarcity. If a partner isn't in their city yet, say so.</dd></div>
+      <div class="defrow"><dt>07 · Calm over clever</dt><dd>Prefer the quiet, obvious solution to the impressive one. Delight is rationed so it stays meaningful.</dd></div>
+      <div class="defrow"><dt>08 · Care, don't extract</dt><dd>The relationship gives before it takes — reminders, tips, warmth — so asks feel fair.</dd></div>
+      <div class="defrow"><dt>09 · The cat is the hero</dt><dd>The emotional centre is always the animal, never the app. Design in service of the bond between owner and cat.</dd></div>
+      <div class="defrow"><dt>10 · Leaving is easy</dt><dd>Cancelling, pausing, and exporting are simple and dignified. Freedom is what makes membership feel safe to enter.</dd></div>
+    </div>
+
+    <h3>Trust principles</h3>
+    <p>Trust in this category is fragile and specific. It is not one thing — it is four promises kept simultaneously.</p>
+    <div class="grid two">
+      <div class="card"><p class="cs">Promise</p><p class="ct">Financial honesty</p><p>You will always know exactly what you pay, when you'll be charged again, and how to stop. No renewal ambushes, ever.</p></div>
+      <div class="card"><p class="cs">Promise</p><p class="ct">Data stewardship</p><p>What we collect, why, and who sees it is plain and minimal. The cat's health data especially is treated as sacred.</p></div>
+      <div class="card"><p class="cs">Promise</p><p class="ct">Partner integrity</p><p>Every recommended vet and store is vetted. A member's trust in Moracat is only as strong as its weakest partner.</p></div>
+      <div class="card"><p class="cs">Promise</p><p class="ct">Competent care</p><p>When something breaks — a failed redemption, a billing error — it's fixed fast, by someone who acts like they care.</p></div>
+    </div>
+
+    <div class="challenge">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg> Assumption to retire · "Premium means adding more."</span>
+      <p>Premium is a <strong>subtraction discipline</strong>, not an addition one. The instinct will be to pack the experience with tiers, badges, points, streaks, and features to "justify the price." Resist it. The most premium experiences feel <em>empty</em> in the best way — spacious, certain, uncluttered. Complexity is the tell of a cheap product trying to look expensive.</p>
+    </div>
+
+    <h3>Simplicity principles</h3>
+    <p>Simplicity is not the absence of features — it's the absence of <em>friction and doubt</em>. Enforce it with these rules:</p>
+    <div class="deflist">
+      <div class="defrow"><dt>Default, don't ask</dt><dd>Pre-fill, pre-select, and infer wherever possible. Every question the product answers itself is a question the member doesn't have to.</dd></div>
+      <div class="defrow"><dt>Progressive depth</dt><dd>Show the simple path to everyone; reveal advanced options only to those who reach for them. Never front-load complexity.</dd></div>
+      <div class="defrow"><dt>One idea per moment</dt><dd>Each step teaches or asks for exactly one thing. If a moment needs a paragraph to explain, it's doing too much.</dd></div>
+      <div class="defrow"><dt>Recognise over recall</dt><dd>Never make people remember something the product could show them. The Cat ID number, the renewal date, the benefits — always in reach.</dd></div>
+      <div class="defrow"><dt>Make the right thing easy</dt><dd>The healthiest, safest, most valuable action should also be the most obvious and lowest-effort one.</dd></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 02 · THE MEMBER JOURNEY ===== -->
+<section id="journey" class="section">
+  <div class="sec-head">
+    <div class="sec-num">02</div>
+    <div>
+      <p class="sec-eye">Part I · The Arc</p>
+      <h2 class="sec-t">The Member Journey</h2>
+    </div>
+  </div>
+  <p class="sec-lede">The journey mapped as <strong>experiences and emotions, not screens</strong>. Each stage names what the person is trying to do, how they feel, what they fear, what success looks like, and the two levers that matter most everywhere: a chance to <em>build trust</em> and a chance to <em>delight</em>. The build team decides the screens; this defines what those screens must accomplish emotionally.</p>
+
+  <div class="prose">
+    <p class="lead-in">A membership isn't bought once — it's re-bought every month in the member's mind. The journey below is a loop, not a line: the goal of every stage is to earn the next renewal without ever mentioning renewal.</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">01</span><h3 class="stage-t">First Impression</h3><span class="stage-arc">Awareness →<br>Curiosity</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Understand in seconds what Moracat is and whether it's "for someone like me and my cat."</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>Mild curiosity mixed with reflexive skepticism — "is this just another discount thing?"</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>Feels gimmicky; unclear what I actually get; suspicion of a catch or hidden cost.</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>A clear, confident "I get it — this is a membership for cat owners" and enough intrigue to look closer.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>Lead with identity and care, not price. Show real partner names/logos and a plain one-line promise. Credibility signals visible immediately.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>Speak to the cat, not just the owner ("Give your cat a name the world will recognise"). Warmth in the very first words.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>Leading with "SAVE 50%." Vague hero copy that could describe any app. A wall of features before the person understands the one idea. Fake urgency on first contact.</p></div>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">02</span><h3 class="stage-t">Consideration</h3><span class="stage-arc">Evaluating →<br>Deciding</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Answer "is this worth it for me?" — weigh cost against benefits I'll actually use.</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>Calculating and slightly guarded. Wants to feel smart, fears being upsold or locked in.</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>Will I use it enough? Are the partners near me? Can I cancel? Is my data/payment safe? What's the real total?</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>Confident "this pays for itself and I can leave anytime" — enough certainty to commit without anxiety.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>Transparent pricing with the renewal terms shown <em>before</em> signup. "Cancel anytime" stated plainly. A break-even framing ("most members cover the fee in one vet visit"). Partner coverage shown honestly by city.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>Let them preview what their Cat ID could look like with their cat's name <em>before</em> paying — a taste of belonging that makes the decision emotional, not just rational.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>Hiding the renewal price or auto-renew terms. Overwhelming with tiers. Implying nationwide coverage that doesn't exist. Making "cancel" feel hard or unmentioned. Pressuring with countdown timers.</p></div>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">03</span><h3 class="stage-t">The Commitment</h3><span class="stage-arc">Signing up →<br>Paying</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Join and pay with as little effort and doubt as possible, then get in.</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>A small leap of faith. Hopeful but alert — the payment moment is peak vulnerability.</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>Is my card safe? Am I about to be trapped in auto-renew? Did I just make a mistake? Too many fields = second thoughts.</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>"That was quick and safe" — payment done in a few taps with total clarity on what happens next.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>Show the exact charge, the exact next-charge date, and the cancel path <em>on the payment moment itself</em>. Offer trusted local payment (mada, Apple Pay, STC Pay). Security cues that are real, not decorative padlock theatre.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>The instant after payment is the single most important delight moment in the entire product — see Stage 4. Make the confirmation feel like a welcome, not a receipt.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>Long forms. Asking for anything not strictly needed to charge and greet them. Surprise fees at the last step. A cold "Payment successful" with no emotional payoff. Pre-ticked add-ons.</p></div>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">04</span><h3 class="stage-t">Welcome &amp; First Value</h3><span class="stage-arc">Activation →<br>"I'm in"</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Receive the thing I paid for — my cat's identity — and feel it was worth it, immediately.</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>Anticipation flipping to pride and relief. This is the emotional peak; get it right and retention starts here.</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>"Now what?" Confusion about how to actually use the benefits. Fear the value was hype.</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>The Cat ID exists, feels special, and the member knows the one thing to do next. First benefit understood within minutes.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>Deliver exactly what was promised, instantly — the Cat ID Number and digital card, ready to use. A confirmation of the terms they agreed to, in writing, warmly worded.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>Reveal the Cat ID as a small ceremony — the cat's name, a unique number, a moment of "this is real." Invite adding to the phone wallet and sharing. This is Moracat's "Spotify Wrapped" moment: engineer it deliberately.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>Dumping the member into a generic dashboard. A boring, instant, ceremony-free ID. Ten setup tasks before any payoff. Hiding the ID behind more forms. Wasting the highest-emotion moment on admin.</p></div>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">05</span><h3 class="stage-t">Everyday Membership</h3><span class="stage-arc">Habit →<br>Belonging</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Get ongoing value between big moments — feel the membership is "on" even when I'm not buying anything.</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>Quiet reassurance. Ideally a low hum of "I'm taken care of," punctuated by occasional warmth.</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>"Am I actually using this?" The silent-value problem: money leaves monthly, benefit feels abstract. This is where churn is seeded.</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>The member feels the membership is quietly working — reminders, care, and easy access to benefits keep it present without nagging.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>Proactive, useful care that expects nothing back: a vaccination reminder, a seasonal tip, a check-in. Give before you take. Keep the running savings/benefits tally visible so value never goes silent.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>Remember the cat's birthday. A warm note on a member anniversary. An occasional, genuinely useful surprise perk. Presence without pressure.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>Going silent for weeks (out of sight = cancelled). Over-notifying (nagging = muted, then cancelled). Only ever contacting them to sell or renew. Letting the value become invisible.</p></div>
+    </div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">06</span><h3 class="stage-t">Redemption in the Wild</h3><span class="stage-arc">The truth →<br>moment</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Actually use a benefit — a discount at a clinic or store — smoothly, in front of a cashier or vet, without awkwardness.</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>Slight social risk ("will this work, or will I look foolish?") resolving into satisfaction when it does.</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>Will the partner honour it? Will I fumble at the counter? Is my card/ID ready offline if there's no signal?</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>Redemption is instant and dignified — a glance, a tap, done. The member feels the savings were real and effortless.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>This is the moment that proves the whole product. It <em>must</em> work every time. Make the ID accessible offline. Ensure partners are briefed so staff recognise it instantly. Confirm the saving afterward so the value is banked in memory.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>A gentle "you just saved SAR 45 — that's SAR 320 this year" right after redemption. The saving, made vivid at the exact moment of relief, is worth ten marketing emails.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>A redemption that fails or confuses partner staff — this is catastrophic and churns members instantly. Requiring signal at the counter. Making the member explain what Moracat is to a blank-faced cashier. Never confirming the saving.</p></div>
+    </div>
+  </div>
+
+  <!-- STAGE 7 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">07</span><h3 class="stage-t">The Renewal Moment</h3><span class="stage-arc">Recommitting →<br>Staying</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Decide (consciously or not) whether the last period was worth it and the next one will be too.</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>Quiet evaluation, sometimes anxiety about "am I wasting money?" A charge notice can trigger a cancel reflex.</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>"Did I get my money's worth?" If the answer isn't obvious and positive, the default drifts toward cancelling.</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>Renewal feels obvious and earned — the member sees clear proof of value and re-commits with confidence, or renews without even thinking about it.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>Notify <em>before</em> charging, never after ("you'll renew in 3 days — here's the year you had"). Show a value recap: saved, benefits used, care received. Radical honesty at renewal builds a member who trusts you for years and tells others.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>A personalised year-in-review of their cat's membership — savings, milestones, "Muezza's first year as a member." Turn a billing event into a moment of pride.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>Silent auto-charges that feel sneaky (the #1 trust-killer and refund-driver, especially in KSA). Making cancellation hard or hidden — it backfires into resentment and chargebacks. Renewing without ever reminding them of the value they got.</p></div>
+    </div>
+  </div>
+
+  <!-- STAGE 8 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">08</span><h3 class="stage-t">Advocacy</h3><span class="stage-arc">Loving it →<br>Sharing it</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Share something they're proud of — their cat's identity, a good deal, a brand they believe in.</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>Pride and generosity. People share things that make <em>them</em> look good and help people they like.</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>Feeling like an unpaid salesperson. Referral mechanics that feel spammy or transactional cheapen the pride.</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>Sharing feels natural and flattering, not like a chore or a hustle — an extension of the pride they already feel.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>Make the shareable artifact (the Cat ID, the year-in-review) inherently proud-making. Referral rewards that benefit the <em>friend</em> too, so it feels like a gift, not a pitch. Never pressure.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>A beautiful, shareable Cat ID card and a gifting flow ("give a friend's cat a membership") that carries the same ceremony as the member's own welcome. Belonging that can be given away.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>Aggressive "REFER 5 FRIENDS" nagging. Rewards that only benefit the referrer (feels selfish to share). Making advocacy a task instead of a natural overflow of pride. Interrupting good moments to beg for shares.</p></div>
+    </div>
+  </div>
+
+  <!-- STAGE 9 -->
+  <div class="stage">
+    <div class="stage-h"><span class="stage-n">09</span><h3 class="stage-t">Doubt, Lapse &amp; Win-back</h3><span class="stage-arc">Drifting →<br>Returning</span></div>
+    <div class="stage-body">
+      <div class="sb goal"><p class="lbl">◎ Goal</p><p>Either stop paying for something unused, or be reminded why it mattered — and leave/return with dignity.</p></div>
+      <div class="sb emo"><p class="lbl">♥ Emotion</p><p>Fading engagement, mild guilt, or frustration. At cancellation: wanting it to be quick and painless.</p></div>
+      <div class="sb con"><p class="lbl">△ Concerns</p><p>"Will they make cancelling a fight?" A hard exit turns a quiet lapse into a public grievance and a lost future member.</p></div>
+      <div class="sb out"><p class="lbl">✓ Desired outcome</p><p>If they leave, they leave respected and might return. If they were wavering, an honest reminder of real value earns them back.</p></div>
+      <div class="sb trust"><p class="lbl">⛨ Build trust</p><p>Make cancelling genuinely easy and gracious — offer a pause instead of only "cancel." A dignified exit is the strongest reason a lapsed member comes back and recommends you anyway. Keep their Cat ID and records safe in case they return.</p></div>
+      <div class="sb delight"><p class="lbl">✦ Delight</p><p>An honest, warm win-back: "your cat's ID is still here, and here's what you'd be getting again." Preserve their history so returning feels like coming home, not starting over.</p></div>
+      <div class="sb avoid"><p class="lbl">✕ Mistakes to avoid</p><p>Cancellation mazes, guilt-tripping, or hiding the button. Deleting their data/ID punitively. Desperate discount-spam that signals the product wasn't worth full price. Treating a leaver as an enemy instead of a future returner.</p></div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <div class="principle" style="margin-top:34px">
+      <span class="k">The two moments that decide everything</span>
+      <p>If resources are constrained, over-invest in exactly two stages: <strong>Stage 4 (Welcome &amp; First Value)</strong> and <strong>Stage 6 (Redemption in the Wild)</strong>. The first sets whether the member ever bonds; the second proves the product is real. Nail these two and the rest of the loop largely takes care of itself.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 03 · ONBOARDING ===== -->
+<section id="onboarding" class="section">
+  <div class="sec-head">
+    <div class="sec-num">03</div>
+    <div>
+      <p class="sec-eye">Part I · The First Five Minutes</p>
+      <h2 class="sec-t">Onboarding Strategy</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Onboarding is where trust is won or forfeited and where most drop-off happens. The governing rule: <strong>ask for the least, deliver value the soonest, and postpone everything that isn't required to greet the member and charge them.</strong></p>
+
+  <div class="prose">
+    <p class="lead-in">Every field is a small act of taking; the member has given you money and now wants you to give first. Design onboarding as a gift being handed over, not a form being processed.</p>
+
+    <h3>What to request — and only this</h3>
+    <p>The bar for any onboarding field is brutal: <em>"Is this required to charge them, greet them, or issue the Cat ID right now?"</em> If not, it waits. The minimum viable identity is small.</p>
+    <div class="deflist">
+      <div class="defrow"><dt>Ask now</dt><dd><strong>The cat's name.</strong> This is the emotional core and the thing that makes the Cat ID feel real. It is the one field that gives more than it takes.</dd></div>
+      <div class="defrow"><dt>Ask now</dt><dd><strong>The owner's name + one contact (phone or email).</strong> Enough to greet them, send the card, and reach them. Phone verification suits the Saudi market.</dd></div>
+      <div class="defrow"><dt>Ask now</dt><dd><strong>Payment.</strong> Via a trusted, familiar method. As few fields as the processor allows — let Apple Pay / mada / STC Pay carry the details.</dd></div>
+      <div class="defrow"><dt>Ask now (optional, one tap)</dt><dd><strong>A cat photo.</strong> Offered, never required. A photo dramatically increases attachment to the Cat ID — but it must be skippable in one tap and easy to add later.</dd></div>
+    </div>
+
+    <h3>What to never request</h3>
+    <p>Some asks don't just add friction — they actively damage trust or signal the wrong intent. These are off-limits at onboarding, and most are off-limits entirely.</p>
+    <div class="grid two">
+      <div class="card"><p class="cs">Never</p><p class="ct">National ID / Iqama number</p><p>Deeply sensitive in KSA, unnecessary for a pet membership, and instantly triggers "why do they need this?" Requesting it would nuke trust.</p></div>
+      <div class="card"><p class="cs">Never</p><p class="ct">Home address up front</p><p>Not needed to issue a digital card. Collect only if/when a physical item ships, and only then.</p></div>
+      <div class="card"><p class="cs">Never</p><p class="ct">Detailed medical history at signup</p><p>Valuable later, overwhelming now. It turns a joyful welcome into a vet intake form. Invite it gradually.</p></div>
+      <div class="card"><p class="cs">Never</p><p class="ct">Demographics, income, surveys</p><p>Nothing that feels like data-harvesting. Every non-essential question at the door reads as extraction, not care.</p></div>
+    </div>
+
+    <div class="challenge">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg> Challenge · "Collect it now while we have their attention."</span>
+      <p>The instinct to grab data during onboarding "while they're here" is exactly backwards. Attention at onboarding is <strong>fragile and expensive</strong>; spend it on delivering value, not extracting data. Data given <em>after</em> the member trusts you is more complete, more accurate, and freely offered. Rich cat profiles should be earned over weeks of goodwill, never demanded in minute one.</p>
+    </div>
+
+    <h3>What can be postponed (and invited later)</h3>
+    <p>These build a richer, stickier membership — but every one of them can wait until the member has already felt value. Invite them contextually, as enhancements, framed as benefits to the cat.</p>
+    <p>Breed, age, and weight (frame: "so we can send the right reminders"). Vaccination records and vet details (frame: "keep everything in one place / one-tap check-in"). Microchip number and emergency contact (frame: "so we can help if your cat is ever lost"). Additional cats. Home address (only when something ships). Notification and communication preferences. Each is offered as <em>"want to add this?"</em> — never as a blocking step.</p>
+
+    <h3>How to reduce friction</h3>
+    <div class="deflist">
+      <div class="defrow"><dt>Value before ask</dt><dd>Show the person their emergent Cat ID <em>as they type the cat's name</em>. Let them feel the payoff building before payment, so the ask feels justified.</dd></div>
+      <div class="defrow"><dt>Fewer fields, smarter defaults</dt><dd>Every removable field, removed. Every inferable value, inferred. Lean on native payment sheets, autofill, and single-tap options over typed forms.</dd></div>
+      <div class="defrow"><dt>One decision per step</dt><dd>Never present two questions at once. A clean, single-focus rhythm feels effortless; a dense form feels like work.</dd></div>
+      <div class="defrow"><dt>No dead ends</dt><dd>Every optional step has a visible, guilt-free skip. Every error is forgiving and explains the fix in plain words, next to the field.</dd></div>
+      <div class="defrow"><dt>Respect the payment moment</dt><dd>Keep the charge screen calm and certain: exact amount, exact next date, cancel path — nothing else competing for attention.</dd></div>
+      <div class="defrow"><dt>Never lose progress</dt><dd>If they drop off mid-flow, save what they entered and let them resume exactly where they left. Losing a half-finished signup is losing a paying member.</dd></div>
+    </div>
+
+    <h3>How to increase completion rates</h3>
+    <p>Completion is an emotional outcome, not a UX trick. People finish what feels rewarding and safe.</p>
+    <div class="grid two">
+      <div class="card"><p class="cs">Lever</p><p class="ct">Front-load the payoff</p><p>Deliver the emotional reward (the Cat ID reveal) as early as possible. The closer the reward, the higher the completion.</p></div>
+      <div class="card"><p class="cs">Lever</p><p class="ct">Show the finish line</p><p>Make it obvious the process is short and how much is left. Perceived length kills completion more than actual length.</p></div>
+      <div class="card"><p class="cs">Lever</p><p class="ct">Reassure at the risky step</p><p>At payment, place trust cues (security, cancel-anytime, exact terms) right where the anxiety spikes.</p></div>
+      <div class="card"><p class="cs">Lever</p><p class="ct">Celebrate the moment done</p><p>End on warmth and pride, not a plain confirmation — so the last feeling is "I'm glad I did this."</p></div>
+    </div>
+
+    <div class="principle">
+      <span class="k">The onboarding north star</span>
+      <p>A person should be able to go from "curious" to "holding my cat's ID with pride" in <strong>under two minutes and under six inputs</strong>. If the flow can't hit that, cut scope until it can. Everything else is an enhancement invited later.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 04 · MEMBERSHIP EXPERIENCE ===== -->
+<section id="membership" class="section">
+  <div class="sec-head">
+    <div class="sec-num">04</div>
+    <div>
+      <p class="sec-eye">Part I · The Feeling of Belonging</p>
+      <h2 class="sec-t">Membership Experience</h2>
+    </div>
+  </div>
+  <p class="sec-lede">A subscription is a transaction. A <strong>membership is a relationship</strong>. The difference is entirely in how it feels — and Moracat must feel unmistakably like the second. This section defines the felt qualities the experience must carry.</p>
+
+  <div class="prose">
+    <p class="lead-in">People don't renew subscriptions; they renew <em>identities</em>. "I'm a Moracat member" should feel like a small, true statement about the kind of cat owner someone is.</p>
+
+    <h3>Premium perception</h3>
+    <p>Premium is not decoration — it's <em>certainty, craft, and restraint</em>. It's the feeling that competent, tasteful people made careful decisions on your behalf. It comes from what's absent as much as what's present.</p>
+    <div class="deflist">
+      <div class="defrow"><dt>Through restraint</dt><dd>Generous space, few elements, one clear action. Clutter reads as cheap; calm reads as expensive. The confidence to say less.</dd></div>
+      <div class="defrow"><dt>Through craft</dt><dd>Considered typography, smooth motion, precise copy, zero broken states. Premium is a thousand small things done right, felt as one seamless whole.</dd></div>
+      <div class="defrow"><dt>Through certainty</dt><dd>Nothing ever confuses, glitches, or surprises unpleasantly. Reliability is the most premium feeling of all.</dd></div>
+      <div class="defrow"><dt>Through care</dt><dd>The product notices things — the cat's name, birthday, a reminder that mattered. Being remembered is the essence of premium service.</dd></div>
+    </div>
+
+    <div class="challenge">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg> Challenge · Premium vs. the discount mechanic.</span>
+      <p>There's a real tension: discounts feel <strong>transactional and coupon-y</strong>, which fights the premium feeling. Resolve it by <em>reframing savings as recognition</em>, not couponing. A member isn't "using a coupon"; a partner is "honouring a member." The saving is presented with the dignity of a members' rate, confirmed quietly, and tallied as accumulated care — never as flashing "DEAL!" badges. Same economics, opposite emotion.</p>
+    </div>
+
+    <h3>Exclusivity — the right kind</h3>
+    <p>Exclusivity does not mean hard to get. Moracat should be easy to join and feel special to belong to. The exclusivity is <em>identity-based</em>, not scarcity-based: you're inside a circle of people who take their cats seriously, and you carry a mark of it.</p>
+    <p>Signals of belonging: a unique Cat ID that's <em>yours</em>. Member-only rates and offers that non-members visibly don't get. Recognition by name. Access to a vetted network outsiders have to find on their own. The feeling that Moracat is "for people like me and my cat." Avoid false scarcity ("only 100 spots!") — it's manipulative and beneath the brand. Real exclusivity is about the quality of the circle, not the size of the door.</p>
+
+    <h3>Convenience — the everyday proof</h3>
+    <p>Convenience is where a membership earns its keep between emotional peaks. It's the quiet removal of friction from the cat-owner's life.</p>
+    <div class="grid three">
+      <div class="card"><p class="ct">Always in reach</p><p>The Cat ID, benefits, and records available instantly — in the wallet, offline, one glance away. Never hunt for what you paid for.</p></div>
+      <div class="card"><p class="ct">The thinking, done for you</p><p>Reminders that arrive without being set. The right vet, already vetted. The next thing, already surfaced. Cognitive load lifted.</p></div>
+      <div class="card"><p class="ct">Effortless redemption</p><p>Using a benefit is a tap, not a negotiation. Convenience at the counter is the most persuasive feature there is.</p></div>
+    </div>
+
+    <div class="pull">Convenience is the rent a membership pays every single day; delight is the gift it gives on occasion.</div>
+
+    <h3>Long-term value — compounding, not flat</h3>
+    <p>A great membership gets <em>better the longer you're in it</em>. Design value to compound so leaving feels like losing something built up, not just switching off a service.</p>
+    <p>The Cat ID accrues history — records, milestones, a first-year, a photo timeline. Savings accumulate into a visible, satisfying total. The product learns the cat and gets more useful over time. Longevity earns recognition (a quiet anniversary acknowledgement, not a points scheme). By year two, a member isn't paying for discounts — they're maintaining an identity and a record they don't want to abandon. <em>That</em> is the moat.</p>
+
+    <h3>Renewal motivation</h3>
+    <p>The best renewal is the one the member never questions — because the value is obvious and the trust is total. Motivation to renew is built continuously, not at the renewal moment.</p>
+    <div class="deflist">
+      <div class="defrow"><dt>Accumulated value</dt><dd>By renewal, they can see what they saved and gained. The math makes renewal feel like keeping a good decision, not making a new risky one.</dd></div>
+      <div class="defrow"><dt>Sunk identity</dt><dd>Their cat's ID, history, and records live here. Renewing preserves an identity; cancelling abandons one. This is the strongest, most ethical retention force.</dd></div>
+      <div class="defrow"><dt>Trust dividend</dt><dd>A year of honest billing and real care means renewal carries no anxiety. Trust removes the friction that makes people cancel "just in case."</dd></div>
+      <div class="defrow"><dt>Forward pull</dt><dd>A gentle sense of what's coming next — new partners, a new season, the cat's next milestone. A reason to stay for the future, not just the past.</dd></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 05 · CAT ID STRATEGY ===== -->
+<section id="catid" class="section">
+  <div class="sec-head">
+    <div class="sec-num">05</div>
+    <div>
+      <p class="sec-eye">Part I · The Signature Artifact</p>
+      <h2 class="sec-t">The Cat ID Strategy</h2>
+    </div>
+  </div>
+  <p class="sec-lede">The Cat ID is Moracat's soul made tangible — the one artifact that turns an abstract subscription into a possession people are proud of. Treated as decoration, it's a gimmick. Treated as <strong>identity with a job to do</strong>, it becomes the reason the whole thing works.</p>
+
+  <div class="prose">
+    <p class="lead-in">The membership card is the product you can hold. Everything else Moracat does is invisible; the Cat ID is where belonging becomes something a person can see, carry, use, and show.</p>
+
+    <div class="challenge">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg> The central reframe · from vanity card to indispensable identity.</span>
+      <p>A digital card that only displays a number and a discount will be admired once and forgotten. <strong>An unused artifact is a cancellation waiting to happen.</strong> The strategic move is to give the Cat ID real jobs the owner genuinely needs — so it earns a place in daily life. The four jobs below transform it from "nice" to "can't cancel."</p>
+    </div>
+
+    <h3>The four jobs of the Cat ID</h3>
+    <div class="grid two">
+      <div class="card"><p class="cs">Job 1 · Safety</p><p class="ct">Bring my cat home</p><p>If a cat is lost, the ID becomes a recovery tool — a scannable identity linking finder to owner, with microchip and contact details. This single use-case can justify the entire membership emotionally. For a cat owner, "we'll help bring your cat home" is worth more than any discount.</p></div>
+      <div class="card"><p class="cs">Job 2 · Health</p><p class="ct">Hold my cat's record</p><p>The ID is the home for vaccination history, vet notes, weight, and reminders — the thing owners are always losing track of. One-tap check-in at partner clinics with the record attached. Now the ID is used at every vet visit, for years.</p></div>
+      <div class="card"><p class="cs">Job 3 · Value</p><p class="ct">Unlock my member rate</p><p>The ID <em>is</em> the redemption token — show or tap it at partners for member pricing. Frictionless benefit access at the counter, working offline, confirming the saving after. The daily proof that membership pays.</p></div>
+      <div class="card"><p class="cs">Job 4 · Identity</p><p class="ct">Say who my cat is</p><p>A beautiful, personal object bearing the cat's name, photo, and unique number — a source of pride, shareable, giftable. The emotional anchor that makes all three practical jobs feel like belonging rather than admin.</p></div>
+    </div>
+
+    <h3>What the Cat ID represents</h3>
+    <p>Symbolically, the Cat ID says three things at once: <strong>"your cat is real and recognised"</strong> (an identity, a name in the world, a number that's uniquely theirs); <strong>"your cat is cared for"</strong> (safety net, health record, a responsible owner's mark); and <strong>"you belong"</strong> (proof of membership in a circle that takes cats seriously). It is equal parts passport, health card, membership badge, and keepsake. Design it to feel like all four.</p>
+
+    <h3>How important it should feel</h3>
+    <p>It should feel like the <em>most valuable thing</em> the membership gives — more central than any discount. The mental hierarchy for a member should be: "Moracat is where my cat's identity lives, <em>and</em> it saves me money," never the reverse. The ID is the headline; savings are a supporting benefit. If a member describes Moracat to a friend and mentions the discounts first, the design has failed to elevate the ID.</p>
+
+    <div class="principle">
+      <span class="k">Ceremony, not issuance</span>
+      <p>Receiving the Cat ID must be a <strong>moment, not a transaction</strong>. Reveal it with a small sense of occasion — the name, the number, the cat becoming "official." First impressions of the ID set the emotional value of the entire membership. Never let it appear as a bland row in a settings screen.</p>
+    </div>
+
+    <h3>How members should interact with it</h3>
+    <p>Interaction should be frequent, effortless, and rewarding. The ID earns habit by being genuinely useful in small ways: glanced at with a flicker of pride, tapped to redeem at a store, shown at the vet to check in, opened to log or check a record, added to the phone wallet for instant access, and occasionally shared or gifted. The more natural reasons to open it, the more the membership stays present in the member's life — and presence is the antidote to churn.</p>
+
+    <h3>When it should be shown</h3>
+    <div class="deflist">
+      <div class="defrow"><dt>At the peak moment</dt><dd>The instant after joining — the reveal. The single most important appearance; the emotional foundation of the membership.</dd></div>
+      <div class="defrow"><dt>At the point of use</dt><dd>At partner clinics and stores for check-in and redemption. Must be reachable in one action and work without signal.</dd></div>
+      <div class="defrow"><dt>At home base</dt><dd>Prominent whenever the member opens Moracat — the ID (or its essence) is the front door, not buried in a menu.</dd></div>
+      <div class="defrow"><dt>In the wallet</dt><dd>Available as a phone-wallet pass, so it's accessible without even opening the app — the ultimate convenience.</dd></div>
+      <div class="defrow"><dt>In moments of pride</dt><dd>When sharing, gifting, or at milestones (birthday, anniversary, first year) — occasions to bring the ID forward warmly.</dd></div>
+      <div class="defrow"><dt>In an emergency</dt><dd>When a cat is lost — the ID becomes the recovery tool, instantly and without friction, exactly when it matters most.</dd></div>
+    </div>
+
+    <h3>How it builds trust</h3>
+    <p>The ID is proof the member got something real for their money — a tangible artifact defeats the "what am I even paying for?" doubt that sinks subscriptions. Its usefulness in high-stakes moments (a lost cat, a vet visit) proves Moracat shows up when it counts, which is the deepest form of trust. And because it holds sensitive health data, how respectfully that data is handled becomes a daily, visible demonstration of Moracat's stewardship. The ID is where trust is both earned and displayed.</p>
+
+    <h3>How it becomes part of daily membership</h3>
+    <p>Daily relevance is engineered by giving the ID standing jobs and gentle, useful reasons to return — never by nagging. A reminder that opens to the record. A member rate that's used on the weekly pet-store run. A wallet pass glanced at in passing. A birthday that surfaces the ID with warmth. The goal is a membership that feels quietly <em>on</em> — woven into the ordinary rhythm of caring for a cat, so that by the time renewal arrives, cancelling the ID is unthinkable because it has become part of how the owner looks after their animal.</p>
+
+    <div class="beyond">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 2.09 6.26L20.5 9.5l-5 3.87L17.5 20 12 16.5 6.5 20l2-6.63-5-3.87 6.41-.24L12 3Z" stroke-linejoin="round"/></svg> Beyond the brief · the physical Cat ID as a premium moment</span>
+      <p>Consider offering an optional <strong>physical Cat ID</strong> — a beautifully made card or a collar tag with the cat's name and number — as a delight upgrade or gift. Amex proved a physical artifact can carry enormous identity weight. A tangible tag also strengthens the lost-cat recovery use-case in the real world. Kept optional and premium, it deepens attachment without adding required friction — and becomes a natural gifting product.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 06 · TRUST & CREDIBILITY ===== -->
+<section id="trust" class="section">
+  <div class="sec-head">
+    <div class="sec-num">06</div>
+    <div>
+      <p class="sec-eye">Part II · The Permission Slip</p>
+      <h2 class="sec-t">Trust &amp; Credibility</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Trust is the currency Moracat spends on every ask — payment, data, health records, referrals. It is earned slowly and lost instantly. This section is the discipline that protects it, across seven fronts.</p>
+
+  <div class="prose">
+    <p class="lead-in">In this category, one broken promise costs more than ten kept ones earn. Design as if every member is quietly asking "should I trust these people?" — because they are.</p>
+
+    <h3>Transparency</h3>
+    <p>Transparency is not a policy page; it's a default posture. The member should never have to dig for the truth, and should never be surprised by it.</p>
+    <div class="deflist">
+      <div class="defrow"><dt>No hidden anything</dt><dd>Costs, terms, renewal dates, and what's included are stated plainly, up front, in the member's own language. If a benefit has limits, the limits are shown with the benefit — not in fine print.</dd></div>
+      <div class="defrow"><dt>Honest coverage</dt><dd>If there are few partners in someone's city, say so and show what's coming. Overpromising coverage is the fastest way to a betrayed member. Honesty about gaps builds more trust than pretending they don't exist.</dd></div>
+      <div class="defrow"><dt>Plain language</dt><dd>No legalese, no dark-pattern phrasing, no "by continuing you agree to…" buried consent. Say what's true in words a person actually understands.</dd></div>
+    </div>
+
+    <h3>Pricing clarity</h3>
+    <p>Money is the highest-anxiety part of any subscription, and the single biggest driver of refunds, disputes, and distrust in the Saudi market where auto-renew wariness runs high. Over-communicate here.</p>
+    <div class="grid two">
+      <div class="card"><p class="cs">Rule</p><p class="ct">Show the whole truth</p><p>Exact price, exact billing cycle, exact next-charge date — before they pay and always available after. No surprise totals at the last step.</p></div>
+      <div class="card"><p class="cs">Rule</p><p class="ct">Warn before every charge</p><p>Notify ahead of each renewal, never after. A charge a member forgot about is a refund request and a lost customer. A heads-up is a trust deposit.</p></div>
+      <div class="card"><p class="cs">Rule</p><p class="ct">Cancel is always visible</p><p>State "cancel anytime" plainly and make the path easy. Hiding it converts quiet churn into public anger and chargebacks.</p></div>
+      <div class="card"><p class="cs">Rule</p><p class="ct">Frame value, not just price</p><p>Anchor the fee against tangible value ("often covered in one vet visit") so the price feels like an obvious yes, honestly earned.</p></div>
+    </div>
+
+    <h3>Privacy</h3>
+    <p>Moracat holds two sensitive things: the member's contact/payment details and the cat's health data. Both must be treated as if the member is watching how you handle them — because trust in privacy is felt, not read.</p>
+    <p>Collect the minimum. State plainly what's collected and why, in benefit terms ("we keep vaccination dates so we can remind you"). Never share or sell member or cat data — and say so clearly, as a promise, not buried in a policy. Give members visible control: see it, edit it, export it, delete it. In KSA, respect PDPL expectations and cultural sensitivity around personal information. Privacy handled visibly well becomes a feature people notice and trust.</p>
+
+    <h3>Security</h3>
+    <p>Security must be real and <em>feel</em> real — but through competence, not theatre. Use trusted, familiar payment methods so members never hand raw card details to an unknown party. Protect accounts and health data properly. Communicate security in calm, concrete terms at the moments anxiety peaks (payment, sharing records) — not as a scattering of decorative padlock icons that erode credibility by trying too hard. The most reassuring security signal is a product that simply never feels risky to use.</p>
+
+    <h3>Membership confidence</h3>
+    <p>Beyond trusting the company, the member needs to feel confident in their own decision to join — that they didn't make a mistake. Confidence is built by proof, not persuasion.</p>
+    <div class="deflist">
+      <div class="defrow"><dt>Tangible proof of value</dt><dd>The Cat ID and visible savings prove "I got something real." A concrete artifact defeats buyer's remorse better than any reassurance.</dd></div>
+      <div class="defrow"><dt>Early wins</dt><dd>Deliver a real benefit fast — the sooner a member experiences value, the more confident and committed they become. Front-load the payoff.</dd></div>
+      <div class="defrow"><dt>Reliable competence</dt><dd>Nothing breaks, everything works, help is fast and human. Consistent reliability quietly compounds into deep confidence over months.</dd></div>
+      <div class="defrow"><dt>A safe exit</dt><dd>Paradoxically, knowing they can leave easily makes members more confident to stay. Freedom removes the "what if I'm trapped?" fear that drives premature cancellation.</dd></div>
+    </div>
+
+    <h3>Partner credibility</h3>
+    <div class="challenge">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg> Partners <em>are</em> the product — and its biggest risk.</span>
+      <p>A membership's credibility is capped by its <strong>worst partner</strong>. If Moracat refers a member to a clinic that treats their cat poorly, or a store that doesn't honour the member rate, the damage lands on <em>Moracat</em>, not the partner. Curate ruthlessly — quality over quantity, every time. Brief partners so their staff recognise and honour the ID instantly. Give members a way to flag a bad experience, and act on it. Better to have five excellent partners than fifty unvetted ones. Every partner is Moracat wearing someone else's uniform.</p>
+    </div>
+
+    <h3>Customer reassurance</h3>
+    <p>Reassurance is trust delivered at the exact moment of doubt. Anticipate where anxiety spikes and place calm, human reassurance right there: at payment (safe, cancellable, exact terms), at first use (how it works, what to expect), at redemption (it'll work, here's how), when sharing data (why, and it's safe), and when something goes wrong (fast, warm, competent help that fixes it and follows up). Reassurance isn't a support page you visit; it's a feeling the product proactively provides, precisely when it's needed.</p>
+
+    <div class="principle">
+      <span class="k">The trust ledger</span>
+      <p>Treat trust as an account with a running balance. Every honest disclosure, kept promise, and proactive bit of care is a <strong>deposit</strong>; every surprise charge, hidden term, broken redemption, or bad partner is a <strong>large withdrawal</strong>. Deposits are small and slow; withdrawals are sudden and huge. Design to keep the balance always climbing, because renewal is simply the moment the member checks their balance.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 07 · RETENTION ===== -->
+<section id="retention" class="section">
+  <div class="sec-head">
+    <div class="sec-num">07</div>
+    <div>
+      <p class="sec-eye">Part II · Staying for Years</p>
+      <h2 class="sec-t">Retention Strategy</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Retention is not a feature you add; it's the <strong>accumulated result of every emotion the product created</strong>. This section is deliberately about psychology, not mechanics — because members don't stay for features, they stay for how the membership makes them feel about themselves and their cat.</p>
+
+  <div class="prose">
+    <p class="lead-in">The question that governs retention isn't "how do we stop them leaving?" It's "how do we make staying the obvious, effortless, emotionally-right thing to do?"</p>
+
+    <h3>Retention is built long before renewal</h3>
+    <p>By the time a renewal notice appears, the stay-or-go decision is largely already made — in the hundreds of small moments before it. A member who felt recognised, saved real money, was never surprised by a charge, and built up a record of their cat will renew almost without thinking. A member who felt ignored, saw abstract value, and got a silent charge will cancel almost without thinking. Retention is a <em>lagging indicator of the whole experience</em>. Fix retention upstream, not at the exit.</p>
+
+    <h3>The psychological forces that keep members</h3>
+    <div class="deflist">
+      <div class="defrow"><dt>Identity &amp; belonging</dt><dd>The strongest force. "I'm a Moracat member" becomes part of how the person sees themselves as a good cat owner. People don't cancel their identity. Reinforce belonging constantly and gently.</dd></div>
+      <div class="defrow"><dt>Accumulated investment</dt><dd>Records, history, savings totals, milestones — the member has <em>built something</em> here. Leaving means abandoning it. The more they've accrued, the more staying feels like protecting an asset. (Use this ethically, by making the accrual genuinely valuable — never as a hostage.)</dd></div>
+      <div class="defrow"><dt>Habit &amp; presence</dt><dd>A membership woven into weekly routine (the vet visit, the store run, the reminder) is barely a decision anymore. Habits are stickier than intentions. Earn small, recurring reasons to engage.</dd></div>
+      <div class="defrow"><dt>Trust &amp; safety</dt><dd>A year of honest billing and real care means the member has no reason to flee "just in case." Removing anxiety removes the impulse to cancel defensively.</dd></div>
+      <div class="defrow"><dt>Care received</dt><dd>Feeling looked-after creates reciprocity and loyalty. A member who's been genuinely helped feels a bond that a spreadsheet of features can't explain.</dd></div>
+      <div class="defrow"><dt>Loss aversion, gently</dt><dd>People fear losing what they have more than they value gaining something new. Make it clear (kindly) what would be lost — the ID, the record, the rates — without ever weaponising it.</dd></div>
+    </div>
+
+    <div class="pull">Members don't renew a service. They decline to abandon an <em>identity</em> they've quietly built.</div>
+
+    <h3>The forces that make members leave</h3>
+    <p>Understand the churn drivers to design them out. Members leave when: <strong>value goes invisible</strong> (they can't feel what they're paying for), <strong>a charge surprises them</strong> (broken trust, the classic cancel trigger), <strong>a key moment fails</strong> (a redemption that didn't work, a bad partner), <strong>the product goes silent</strong> (out of sight, out of mind, out of subscription), <strong>it nags</strong> (over-notification breeds resentment and muting), or <strong>life changes</strong> (the cat passes, finances tighten — handle these with grace, not desperation). Every one of these is preventable or softenable by design.</p>
+
+    <h3>Retention by making value undeniable</h3>
+    <p>The most important, most ethical retention lever is simply <em>making the real value visible</em>. A member who can see "you've saved SAR 420 and used 9 benefits this year" doesn't need to be convinced to stay — the evidence convinces them. Surface cumulative savings. Recap benefits used. Remember moments of care given. Turn the renewal notice into a proud year-in-review rather than a bill. If the value is real, the job of retention is mostly to <em>reveal it</em>. If the value isn't real, no retention tactic will save it — and that's a product problem, not a design one.</p>
+
+    <div class="principle">
+      <span class="k">Retain by deserving it</span>
+      <p>The only durable retention strategy is to <strong>be worth keeping and make that obvious</strong>. Reject every retention "trick" that survives on friction, confusion, or fear — hidden cancel buttons, guilt walls, dark patterns. They boost a metric this quarter and destroy the brand's trust over years. A member kept by manipulation is a detractor in waiting. A member kept by genuine value is an advocate for life.</p>
+    </div>
+
+    <div class="beyond">
+      <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 2.09 6.26L20.5 9.5l-5 3.87L17.5 20 12 16.5 6.5 20l2-6.63-5-3.87 6.41-.24L12 3Z" stroke-linejoin="round"/></svg> Beyond the brief · offer "pause," not just "cancel"</span>
+      <p>Many cancellations are temporary — a tight month, travel, a life event. Offering a graceful <strong>pause</strong> (keep the Cat ID and records, stop billing, resume anytime) retains the relationship without extracting money the member can't justify right now. It's honest, it's kind, and it converts a permanent loss into a temporary gap. Pausing preserves the accumulated identity that brings them back.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 08 · BEHAVIORAL PSYCHOLOGY ===== -->
+<section id="psychology" class="section">
+  <div class="sec-head">
+    <div class="sec-num">08</div>
+    <div>
+      <p class="sec-eye">Part II · The Mind of the Member</p>
+      <h2 class="sec-t">Behavioral Psychology</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Every phase of the membership is governed by predictable human psychology. Design with it, not against it. The matrix below maps, for each phase, why people continue, why they leave, what builds confidence, what reduces anxiety, what raises perceived value, and what creates emotional attachment.</p>
+
+  <div class="prose">
+    <p class="lead-in">People are not rational subscribers optimising a spreadsheet. They are emotional creatures seeking belonging, avoiding loss, fearing being fooled, and quietly wanting to feel like good owners. Design for that person.</p>
+  </div>
+
+  <div class="tablewrap">
+    <table class="psy">
+      <thead>
+        <tr>
+          <th>Phase</th>
+          <th>Why they continue</th>
+          <th>Why they leave</th>
+          <th>Builds confidence</th>
+          <th>Reduces anxiety</th>
+          <th>Raises perceived value</th>
+          <th>Creates attachment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Acquisition<br><span style="font-weight:400;color:var(--ink-mute);font-family:var(--mono);font-size:10px">first contact</span></th>
+          <td>Clear, credible promise that speaks to them and their cat.</td>
+          <td>Confusion, skepticism, "just a discount app," fear of a catch.</td>
+          <td>Real partner names, plain promise, social proof, honesty.</td>
+          <td>Transparent pricing, "cancel anytime," no fake urgency.</td>
+          <td>Framing membership as identity, not couponing.</td>
+          <td>Speaking to the cat by concept; previewing the Cat ID.</td>
+        </tr>
+        <tr>
+          <th>Activation<br><span style="font-weight:400;color:var(--ink-mute);font-family:var(--mono);font-size:10px">first value</span></th>
+          <td>Fast, tangible payoff — the Cat ID exists and feels special.</td>
+          <td>"Now what?" confusion; anticlimax; value felt like hype.</td>
+          <td>Getting exactly what was promised, instantly.</td>
+          <td>Knowing the one next step; warm confirmation of terms.</td>
+          <td>The ID reveal ceremony; an early real benefit.</td>
+          <td>The cat named and "official"; a photo; a moment of pride.</td>
+        </tr>
+        <tr>
+          <th>Habit<br><span style="font-weight:400;color:var(--ink-mute);font-family:var(--mono);font-size:10px">everyday use</span></th>
+          <td>The membership is quietly useful and present in routine.</td>
+          <td>Silence, invisibility, "am I using this?", or nagging.</td>
+          <td>Reliability; proactive care that expects nothing back.</td>
+          <td>Visible running value; gentle, useful (not pushy) contact.</td>
+          <td>Accumulating savings tally; useful reminders and tips.</td>
+          <td>Being remembered — birthday, name, a note that mattered.</td>
+        </tr>
+        <tr>
+          <th>Redemption<br><span style="font-weight:400;color:var(--ink-mute);font-family:var(--mono);font-size:10px">truth moment</span></th>
+          <td>The benefit worked, instantly and without awkwardness.</td>
+          <td>A failed or confusing redemption; partner didn't honour it.</td>
+          <td>It works every time; partner staff recognise it instantly.</td>
+          <td>Offline access; clear how-to; no fumbling at the counter.</td>
+          <td>Seeing the exact saving confirmed at the moment of relief.</td>
+          <td>Feeling savvy and cared-for; the saving banked in memory.</td>
+        </tr>
+        <tr>
+          <th>Renewal<br><span style="font-weight:400;color:var(--ink-mute);font-family:var(--mono);font-size:10px">recommitment</span></th>
+          <td>Obvious, proven value; total trust; no anxiety to flee.</td>
+          <td>Silent charge; "did I get my money's worth?"; forgotten value.</td>
+          <td>A clear value recap; a year of honest billing behind them.</td>
+          <td>Warning before charging; easy, visible cancel path.</td>
+          <td>The year-in-review: saved, used, cared-for, milestones.</td>
+          <td>Pride in the cat's "first year"; a record worth keeping.</td>
+        </tr>
+        <tr>
+          <th>Advocacy<br><span style="font-weight:400;color:var(--ink-mute);font-family:var(--mono);font-size:10px">sharing</span></th>
+          <td>Pride in the cat and the brand; wanting to help friends.</td>
+          <td>Feeling like an unpaid salesperson; spammy mechanics.</td>
+          <td>A shareable artifact that makes them look good.</td>
+          <td>No pressure; sharing is optional and natural.</td>
+          <td>Gifting that carries the same ceremony as their own welcome.</td>
+          <td>Belonging that can be given; the friend benefits too.</td>
+        </tr>
+        <tr>
+          <th>Churn risk<br><span style="font-weight:400;color:var(--ink-mute);font-family:var(--mono);font-size:10px">lapse / win-back</span></th>
+          <td>An honest reminder of real value; a low-friction return.</td>
+          <td>Hard cancel; guilt-trips; life change handled coldly.</td>
+          <td>A dignified exit that respects them as a future returner.</td>
+          <td>Easy cancel/pause; records kept safe, not held hostage.</td>
+          <td>Preserved history so returning feels like coming home.</td>
+          <td>Warmth even at the exit; "your cat's ID is still here."</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>Six psychological principles to encode everywhere</h3>
+    <div class="grid two">
+      <div class="card"><p class="cs">Principle</p><p class="ct">Peak–end rule</p><p>People judge an experience by its emotional peak and its ending. Engineer a high peak (the Cat ID reveal) and warm endings to every flow — including cancellation.</p></div>
+      <div class="card"><p class="cs">Principle</p><p class="ct">Loss aversion</p><p>Losing hurts ~twice as much as gaining feels good. Make accumulated value (records, savings, identity) visible so leaving registers as a loss — never weaponised, only revealed.</p></div>
+      <div class="card"><p class="cs">Principle</p><p class="ct">Endowment effect</p><p>People value what feels like theirs. The Cat ID, named and personalised, becomes "my cat's identity" — owned, not rented. Personalisation is attachment.</p></div>
+      <div class="card"><p class="cs">Principle</p><p class="ct">Reciprocity</p><p>Give first — care, reminders, warmth — and asks feel fair. A membership that gives before it takes earns loyalty that price alone never buys.</p></div>
+      <div class="card"><p class="cs">Principle</p><p class="ct">Cognitive ease</p><p>Effort and confusion feel like risk; fluency feels like trust. The easier something is to do and understand, the more people like and believe it.</p></div>
+      <div class="card"><p class="cs">Principle</p><p class="ct">Identity consistency</p><p>People act in line with how they see themselves. Help members adopt the identity "I'm a devoted cat owner / a Moracat member," and staying becomes self-expression.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================= 09 · RULES -->
+<section class="section" id="rules">
+  <div class="sec-head">
+    <p class="sec-eye">Section 09 · The Working Code</p>
+    <div class="sec-num">09</div>
+    <h2 class="sec-t">120 UX Rules for Moracat</h2>
+    <p class="sec-lede">The brief asked for at least one hundred. Here are 120, grouped into twelve clusters and written as one-line imperatives a designer, writer, or engineer can act on today. They are opinionated on purpose — a rule that could mean anything changes nothing.</p>
+  </div>
+
+  <p class="lead-in">Filter by cluster to focus. Every rule is numbered (R001–R120) so it can be cited in a ticket, a review, or a design critique. When two rules conflict, the one that protects <em>trust</em> wins.</p>
+
+  <div class="rules-controls" role="group" aria-label="Filter rules by cluster">
+    <span class="rf-label">Filter</span>
+    <button class="chip" data-filter="all" aria-pressed="true">All 120</button>
+    <button class="chip" data-filter="A" aria-pressed="false">A · Clarity</button>
+    <button class="chip" data-filter="B" aria-pressed="false">B · Onboarding</button>
+    <button class="chip" data-filter="C" aria-pressed="false">C · Money &amp; Trust</button>
+    <button class="chip" data-filter="D" aria-pressed="false">D · Cat ID</button>
+    <button class="chip" data-filter="E" aria-pressed="false">E · Value</button>
+    <button class="chip" data-filter="F" aria-pressed="false">F · Redemption</button>
+    <button class="chip" data-filter="G" aria-pressed="false">G · Retention</button>
+    <button class="chip" data-filter="H" aria-pressed="false">H · Motion</button>
+    <button class="chip" data-filter="I" aria-pressed="false">I · Voice</button>
+    <button class="chip" data-filter="J" aria-pressed="false">J · Access</button>
+    <button class="chip" data-filter="K" aria-pressed="false">K · Saudi</button>
+    <button class="chip" data-filter="L" aria-pressed="false">L · Edge states</button>
+    <span class="rules-count" id="rulesCount">Showing all 120 rules</span>
+  </div>
+
+  <!-- CLUSTER A -->
+  <div class="cluster" data-cluster="A">
+    <div class="cluster-h"><span class="cluster-id">A</span><h3 class="cluster-t">Cognitive Load &amp; Clarity</h3></div>
+    <p class="cluster-d">Every screen should answer three questions instantly: where am I, what can I do, what happens next. Confusion reads as risk.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R001</span><span class="rtext">Show <b>one</b> primary action per screen; demote everything else to secondary or tertiary weight.</span></li>
+      <li class="ritem"><span class="rid">R002</span><span class="rtext">Never present more than <b>five to seven</b> choices at one decision point; group or progressively disclose the rest.</span></li>
+      <li class="ritem"><span class="rid">R003</span><span class="rtext">Lead every screen with a plain-language title that names the outcome, not the feature.</span></li>
+      <li class="ritem"><span class="rid">R004</span><span class="rtext">Prefer recognition over recall — surface options rather than asking members to remember them.</span></li>
+      <li class="ritem"><span class="rid">R005</span><span class="rtext">State the benefit before the mechanism; people commit to outcomes, not steps.</span></li>
+      <li class="ritem"><span class="rid">R006</span><span class="rtext">Use whitespace as a feature — a calm screen signals a premium, trustworthy product.</span></li>
+      <li class="ritem"><span class="rid">R007</span><span class="rtext">Cap body copy at ~70 characters per line so it stays effortless to read.</span></li>
+      <li class="ritem"><span class="rid">R008</span><span class="rtext">Make the most important number on any screen the largest thing on it.</span></li>
+      <li class="ritem"><span class="rid">R009</span><span class="rtext">Kill every field, tap, and sentence that doesn't change the member's decision.</span></li>
+      <li class="ritem"><span class="rid">R010</span><span class="rtext">If a screen needs a tutorial to be understood, redesign the screen — not the tutorial.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER B -->
+  <div class="cluster" data-cluster="B">
+    <div class="cluster-h"><span class="cluster-id">B</span><h3 class="cluster-t">Onboarding &amp; Friction</h3></div>
+    <p class="cluster-d">The goal of onboarding is not to collect data — it is to deliver the first moment of value before doubt sets in.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R011</span><span class="rtext">Deliver a visible win — the Cat ID — <b>before</b> asking for anything optional.</span></li>
+      <li class="ritem"><span class="rid">R012</span><span class="rtext">Ask only for what issuing the membership genuinely requires; postpone the rest to context.</span></li>
+      <li class="ritem"><span class="rid">R013</span><span class="rtext">Never request National ID, Iqama, or passport numbers — a cat membership has no reason to hold them.</span></li>
+      <li class="ritem"><span class="rid">R014</span><span class="rtext">Show a step count or progress bar so members always know how much is left.</span></li>
+      <li class="ritem"><span class="rid">R015</span><span class="rtext">Pre-fill everything you can (city, dialing code, payment wallet) and let members correct, not enter.</span></li>
+      <li class="ritem"><span class="rid">R016</span><span class="rtext">Make the cat's name the first thing you ask — it's emotional, easy, and sets the tone.</span></li>
+      <li class="ritem"><span class="rid">R017</span><span class="rtext">Let people explore the benefit before committing; gate value behind trust, not behind signup walls.</span></li>
+      <li class="ritem"><span class="rid">R018</span><span class="rtext">Explain <b>why</b> beside any field that feels personal — a one-line reason removes the flinch.</span></li>
+      <li class="ritem"><span class="rid">R019</span><span class="rtext">Never force account creation before showing what membership looks like.</span></li>
+      <li class="ritem"><span class="rid">R020</span><span class="rtext">Treat photo upload as a delight, never a requirement — a placeholder cat should look intentional and warm.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER C -->
+  <div class="cluster" data-cluster="C">
+    <div class="cluster-h"><span class="cluster-id">C</span><h3 class="cluster-t">Money, Payment &amp; Trust</h3></div>
+    <p class="cluster-d">This is where memberships live or die. Every ambiguity about money is read as a trap. Radical clarity is the strategy.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R021</span><span class="rtext">State the full price, the cycle, and the renewal date on one line, in plain words, before payment.</span></li>
+      <li class="ritem"><span class="rid">R022</span><span class="rtext">Never hide the total behind a "start" button — the number people pay is the number they must see first.</span></li>
+      <li class="ritem"><span class="rid">R023</span><span class="rtext">Show the cancel and pause path <b>before</b> asking for card details, not buried after.</span></li>
+      <li class="ritem"><span class="rid">R024</span><span class="rtext">Email a receipt and a plain-language summary the instant a charge succeeds.</span></li>
+      <li class="ritem"><span class="rid">R025</span><span class="rtext">Warn before every renewal charge — a surprise charge is the fastest way to lose trust and earn a chargeback.</span></li>
+      <li class="ritem"><span class="rid">R026</span><span class="rtext">Support mada, Apple Pay, and STC Pay — locally trusted rails lower the fear of entering a card.</span></li>
+      <li class="ritem"><span class="rid">R027</span><span class="rtext">Show trust cues at the payment step (secure badge, refund terms) exactly where anxiety peaks.</span></li>
+      <li class="ritem"><span class="rid">R028</span><span class="rtext">Say what happens at renewal, not just that it renews — amount, date, and how to stop it.</span></li>
+      <li class="ritem"><span class="rid">R029</span><span class="rtext">If a price ever changes, tell every existing member first, in advance, and in their own words.</span></li>
+      <li class="ritem"><span class="rid">R030</span><span class="rtext">Make refunds and disputes feel safe to raise — a fair, fast resolution buys more loyalty than a perfect flow.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER D -->
+  <div class="cluster" data-cluster="D">
+    <div class="cluster-h"><span class="cluster-id">D</span><h3 class="cluster-t">The Cat ID &amp; Identity</h3></div>
+    <p class="cluster-d">The Cat ID is the product's soul. It must feel earned, useful, and personal — never a decorative gimmick.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R031</span><span class="rtext">Reveal the Cat ID as a small ceremony — a moment of pride, not a silent database entry.</span></li>
+      <li class="ritem"><span class="rid">R032</span><span class="rtext">Give every Cat ID a unique, human-readable number the owner can read aloud with pride.</span></li>
+      <li class="ritem"><span class="rid">R033</span><span class="rtext">Make the ID <b>do real jobs</b> — vet check-in, lost-cat recovery, redemption — so it's used, not just admired.</span></li>
+      <li class="ritem"><span class="rid">R034</span><span class="rtext">Let the card live in Apple Wallet / Google Wallet so it's one swipe away, always.</span></li>
+      <li class="ritem"><span class="rid">R035</span><span class="rtext">Personalise the card with the cat's name, photo, and join date — details create ownership.</span></li>
+      <li class="ritem"><span class="rid">R036</span><span class="rtext">Make the card work offline — it must render at a vet counter with no signal.</span></li>
+      <li class="ritem"><span class="rid">R037</span><span class="rtext">Offer a scannable code on the ID that a finder or a partner can use in seconds.</span></li>
+      <li class="ritem"><span class="rid">R038</span><span class="rtext">Let members share the card image proudly — it is your best organic marketing.</span></li>
+      <li class="ritem"><span class="rid">R039</span><span class="rtext">Offer a physical Cat ID tag as an optional keepsake — the tangible object deepens the bond.</span></li>
+      <li class="ritem"><span class="rid">R040</span><span class="rtext">Never let the ID feel fake — if it can't yet do a job, don't claim the job; earn the claim.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER E -->
+  <div class="cluster" data-cluster="E">
+    <div class="cluster-h"><span class="cluster-id">E</span><h3 class="cluster-t">Making Value Visible</h3></div>
+    <p class="cluster-d">A subscription's greatest enemy is invisibility. If members can't see what they're getting, they conclude they're getting nothing.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R041</span><span class="rtext">Keep a running, cumulative tally of money saved — the single most powerful anti-churn number you own.</span></li>
+      <li class="ritem"><span class="rid">R042</span><span class="rtext">Confirm the exact amount saved <b>at the moment</b> each benefit is used.</span></li>
+      <li class="ritem"><span class="rid">R043</span><span class="rtext">Compare savings-to-date against the price paid, so the membership visibly pays for itself.</span></li>
+      <li class="ritem"><span class="rid">R044</span><span class="rtext">Surface unused benefits gently — "you haven't tried this yet" recovers dormant value.</span></li>
+      <li class="ritem"><span class="rid">R045</span><span class="rtext">Send a periodic value recap (monthly nudge, annual review) — remembered value renews.</span></li>
+      <li class="ritem"><span class="rid">R046</span><span class="rtext">Translate abstract perks into concrete outcomes ("free grooming" → "a clean, calm cat").</span></li>
+      <li class="ritem"><span class="rid">R047</span><span class="rtext">Show what's new since a member last opened the app so it always feels alive.</span></li>
+      <li class="ritem"><span class="rid">R048</span><span class="rtext">Make the home screen a value dashboard, not a marketing billboard.</span></li>
+      <li class="ritem"><span class="rid">R049</span><span class="rtext">Count non-monetary value too — reminders honoured, records kept, a cat's history preserved.</span></li>
+      <li class="ritem"><span class="rid">R050</span><span class="rtext">Never let a month pass with zero evidence of value delivered; silence is perceived as waste.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER F -->
+  <div class="cluster" data-cluster="F">
+    <div class="cluster-h"><span class="cluster-id">F</span><h3 class="cluster-t">Partner &amp; Redemption Experience</h3></div>
+    <p class="cluster-d">The redemption counter is the moment of truth. The partner <em>is</em> the product in that instant — curate and orchestrate it ruthlessly.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R051</span><span class="rtext">Curate partners on quality, not quantity — one embarrassing partner taints the whole membership.</span></li>
+      <li class="ritem"><span class="rid">R052</span><span class="rtext">Make redemption a single, obvious action — show the ID, tap, done. No fumbling.</span></li>
+      <li class="ritem"><span class="rid">R053</span><span class="rtext">Ensure partner staff can recognise and honour the membership instantly — train the counter, not just the app.</span></li>
+      <li class="ritem"><span class="rid">R054</span><span class="rtext">Show partner offers on a map with honest, city-level coverage — never imply reach you don't have.</span></li>
+      <li class="ritem"><span class="rid">R055</span><span class="rtext">State each offer's terms up front — expiry, limits, exclusions — so nobody is embarrassed at the till.</span></li>
+      <li class="ritem"><span class="rid">R056</span><span class="rtext">Give a graceful fallback when a partner fails to honour an offer — recover the member's dignity immediately.</span></li>
+      <li class="ritem"><span class="rid">R057</span><span class="rtext">Let members rate a redemption so you can prune weak partners with evidence.</span></li>
+      <li class="ritem"><span class="rid">R058</span><span class="rtext">Confirm redemption visibly to both sides — a shared "done" state removes doubt and disputes.</span></li>
+      <li class="ritem"><span class="rid">R059</span><span class="rtext">Present partners as curated recommendations from a trusted friend, not as ad inventory.</span></li>
+      <li class="ritem"><span class="rid">R060</span><span class="rtext">Design the counter interaction for a noisy, one-handed, low-signal real-world moment.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER G -->
+  <div class="cluster" data-cluster="G">
+    <div class="cluster-h"><span class="cluster-id">G</span><h3 class="cluster-t">Retention, Renewal &amp; Lifecycle</h3></div>
+    <p class="cluster-d">Retention is not a save-offer at the exit — it is a hundred small proofs of value delivered long before renewal day.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R061</span><span class="rtext">Earn renewal across the whole year, not with a discount panic in the final week.</span></li>
+      <li class="ritem"><span class="rid">R062</span><span class="rtext">Offer <b>pause</b>, not only cancel — a paused member is a kept relationship; a cancelled one is a loss.</span></li>
+      <li class="ritem"><span class="rid">R063</span><span class="rtext">Make cancellation honest and one-tap — a dignified exit is the strongest reason to return.</span></li>
+      <li class="ritem"><span class="rid">R064</span><span class="rtext">Preserve the cat's records after cancellation so returning feels like coming home, not starting over.</span></li>
+      <li class="ritem"><span class="rid">R065</span><span class="rtext">Celebrate the membership anniversary with a year-in-review the owner wants to keep and share.</span></li>
+      <li class="ritem"><span class="rid">R066</span><span class="rtext">Recognise and reward tenure — longstanding members should feel their status, not just repay it.</span></li>
+      <li class="ritem"><span class="rid">R067</span><span class="rtext">Detect the drift toward churn (no logins, no redemptions) and re-engage with value, not guilt.</span></li>
+      <li class="ritem"><span class="rid">R068</span><span class="rtext">Never guilt-trip a leaver ("are you sure you want to abandon your cat?") — manipulation poisons advocacy.</span></li>
+      <li class="ritem"><span class="rid">R069</span><span class="rtext">Win back with a genuine reason to return — new partners, restored value — not a desperate coupon.</span></li>
+      <li class="ritem"><span class="rid">R070</span><span class="rtext">Make renewal a proud recommitment moment, framed by everything the past year delivered.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER H -->
+  <div class="cluster" data-cluster="H">
+    <div class="cluster-h"><span class="cluster-id">H</span><h3 class="cluster-t">Micro-interactions, Motion &amp; Feedback</h3></div>
+    <p class="cluster-d">Polish is not decoration — responsive, tasteful feedback is how an interface earns the word "premium."</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R071</span><span class="rtext">Acknowledge every tap within ~100ms — instant feedback is the baseline of feeling trustworthy.</span></li>
+      <li class="ritem"><span class="rid">R072</span><span class="rtext">Keep transitions in the 150–300ms range — fast enough to feel responsive, slow enough to feel considered.</span></li>
+      <li class="ritem"><span class="rid">R073</span><span class="rtext">Reserve your richest animation for the Cat ID reveal — spend delight where it converts to memory.</span></li>
+      <li class="ritem"><span class="rid">R074</span><span class="rtext">Use motion to explain, not to impress — animation should clarify what changed and where it went.</span></li>
+      <li class="ritem"><span class="rid">R075</span><span class="rtext">Always honour <code>prefers-reduced-motion</code> — accessibility and calm over spectacle.</span></li>
+      <li class="ritem"><span class="rid">R076</span><span class="rtext">Show progress for anything over a second — a skeleton or spinner turns waiting into patience.</span></li>
+      <li class="ritem"><span class="rid">R077</span><span class="rtext">Make success states feel warm — a small, tasteful moment of celebration, never a confetti cannon.</span></li>
+      <li class="ritem"><span class="rid">R078</span><span class="rtext">Give buttons real pressed, loading, and done states so actions never feel ignored.</span></li>
+      <li class="ritem"><span class="rid">R079</span><span class="rtext">Use subtle haptics at meaningful moments (issued, redeemed) where the platform allows.</span></li>
+      <li class="ritem"><span class="rid">R080</span><span class="rtext">Never animate the same element twice for no reason — restraint is what separates premium from busy.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER I -->
+  <div class="cluster" data-cluster="I">
+    <div class="cluster-h"><span class="cluster-id">I</span><h3 class="cluster-t">Content, Voice &amp; Language</h3></div>
+    <p class="cluster-d">Words are interface. The voice is warm, composed, and quietly premium — a knowledgeable friend, never a coupon barker.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R081</span><span class="rtext">Write like a trusted friend who knows cats — warm, plain, and never salesy.</span></li>
+      <li class="ritem"><span class="rid">R082</span><span class="rtext">Use the cat's name in copy wherever you can — it turns a UI into a relationship.</span></li>
+      <li class="ritem"><span class="rid">R083</span><span class="rtext">Replace jargon and legalese with plain language everywhere a human will read it.</span></li>
+      <li class="ritem"><span class="rid">R084</span><span class="rtext">Make every error message say what happened and exactly what to do next.</span></li>
+      <li class="ritem"><span class="rid">R085</span><span class="rtext">Never shout discounts — frame savings as a benefit of belonging, not the reason to belong.</span></li>
+      <li class="ritem"><span class="rid">R086</span><span class="rtext">Label buttons with the action they perform ("Issue my Cat ID"), never vague verbs ("Submit," "OK").</span></li>
+      <li class="ritem"><span class="rid">R087</span><span class="rtext">Keep a consistent lexicon — a "member," a "Cat ID," a "benefit" — and never drift between synonyms.</span></li>
+      <li class="ritem"><span class="rid">R088</span><span class="rtext">Front-load the point of every sentence; nobody reads to the end of a paragraph on a phone.</span></li>
+      <li class="ritem"><span class="rid">R089</span><span class="rtext">Let the brand's warmth toward cats show — this affection is the product's true differentiator.</span></li>
+      <li class="ritem"><span class="rid">R090</span><span class="rtext">Proofread in both languages by a native speaker — one clumsy phrase undermines the premium promise.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER J -->
+  <div class="cluster" data-cluster="J">
+    <div class="cluster-h"><span class="cluster-id">J</span><h3 class="cluster-t">Accessibility &amp; Inclusivity</h3></div>
+    <p class="cluster-d">A premium membership is one everyone can use with dignity. Accessibility is not a checklist — it is respect made visible.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R091</span><span class="rtext">Meet at least 4.5:1 text contrast — legibility is the first courtesy of a trustworthy interface.</span></li>
+      <li class="ritem"><span class="rid">R092</span><span class="rtext">Give every touch target at least ~44×44px — thumbs, not styluses, use this product.</span></li>
+      <li class="ritem"><span class="rid">R093</span><span class="rtext">Never carry meaning by colour alone — pair it with text, icon, or shape.</span></li>
+      <li class="ritem"><span class="rid">R094</span><span class="rtext">Support dynamic type — the layout must survive a member doubling the font size.</span></li>
+      <li class="ritem"><span class="rid">R095</span><span class="rtext">Label every control and image for screen readers — the Cat ID must be announced, not silent.</span></li>
+      <li class="ritem"><span class="rid">R096</span><span class="rtext">Make the entire flow completable one-handed — most sessions happen on the move.</span></li>
+      <li class="ritem"><span class="rid">R097</span><span class="rtext">Ensure visible focus states for keyboard and switch-control users.</span></li>
+      <li class="ritem"><span class="rid">R098</span><span class="rtext">Don't rely on hover — the primary device is a touchscreen with no hover state.</span></li>
+      <li class="ritem"><span class="rid">R099</span><span class="rtext">Test with real assistive technology, not just an automated audit.</span></li>
+      <li class="ritem"><span class="rid">R100</span><span class="rtext">Design for one-handed reach zones — keep primary actions in the lower third of the screen.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER K -->
+  <div class="cluster" data-cluster="K">
+    <div class="cluster-h"><span class="cluster-id">K</span><h3 class="cluster-t">Bilingual, Cultural &amp; Saudi Market</h3></div>
+    <p class="cluster-d">Beyond the brief, but decisive for this market. Moracat is a Saudi product for Saudi cat owners — it must feel born here, not translated into here.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R101</span><span class="rtext">Design Arabic-first and RTL-native — Arabic is the default experience, not a mirrored afterthought.</span></li>
+      <li class="ritem"><span class="rid">R102</span><span class="rtext">Let members switch language instantly, at any point, without losing their place.</span></li>
+      <li class="ritem"><span class="rid">R103</span><span class="rtext">Choose an Arabic typeface with the same care as the Latin one — Arabic must look premium, not default.</span></li>
+      <li class="ritem"><span class="rid">R104</span><span class="rtext">Mirror layouts, icons, and motion direction correctly for RTL — a lazy flip reads as foreign.</span></li>
+      <li class="ritem"><span class="rid">R105</span><span class="rtext">Honour local payment habits (mada, STC Pay, Apple Pay) as first-class, not fallback, options.</span></li>
+      <li class="ritem"><span class="rid">R106</span><span class="rtext">Comply with PDPL — store data in-region, minimise collection, and say so plainly to build trust.</span></li>
+      <li class="ritem"><span class="rid">R107</span><span class="rtext">Time notifications around prayer times and local rhythms — respect for context is respect for the member.</span></li>
+      <li class="ritem"><span class="rid">R108</span><span class="rtext">Draw on the affection for cats in Arab and Islamic culture — it is the emotional soul of this brand.</span></li>
+      <li class="ritem"><span class="rid">R109</span><span class="rtext">Support the household, not just the individual — families and majlis circles share care of a cat.</span></li>
+      <li class="ritem"><span class="rid">R110</span><span class="rtext">Localise real content — SAR pricing, Saudi cities, Hijri-aware dates — never a token currency swap.</span></li>
+    </ul>
+  </div>
+
+  <!-- CLUSTER L -->
+  <div class="cluster" data-cluster="L">
+    <div class="cluster-h"><span class="cluster-id">L</span><h3 class="cluster-t">Errors, Emptiness &amp; Edge States</h3></div>
+    <p class="cluster-d">Trust is built in the unhappy path. How the product behaves when things go wrong is what members actually remember.</p>
+    <ul class="rlist">
+      <li class="ritem"><span class="rid">R111</span><span class="rtext">Design the empty state as a first impression — a new member's home is never truly empty, it's a welcome.</span></li>
+      <li class="ritem"><span class="rid">R112</span><span class="rtext">Turn every error into a recovery — say what went wrong, why, and the one tap that fixes it.</span></li>
+      <li class="ritem"><span class="rid">R113</span><span class="rtext">Never blame the member for a failure — the system's tone stays calm and takes responsibility.</span></li>
+      <li class="ritem"><span class="rid">R114</span><span class="rtext">Handle no-signal gracefully — the Cat ID and core value must survive an offline vet visit.</span></li>
+      <li class="ritem"><span class="rid">R115</span><span class="rtext">Prevent errors before catching them — sensible defaults and validation beat apologetic dialogs.</span></li>
+      <li class="ritem"><span class="rid">R116</span><span class="rtext">Confirm destructive actions (cancel, delete) clearly, but never trap people to prevent them.</span></li>
+      <li class="ritem"><span class="rid">R117</span><span class="rtext">Preserve entered data through any interruption — a dropped connection must never erase progress.</span></li>
+      <li class="ritem"><span class="rid">R118</span><span class="rtext">Show a payment failure honestly and offer an immediate, dignified retry — don't lock the member out.</span></li>
+      <li class="ritem"><span class="rid">R119</span><span class="rtext">Give every loading state a purpose ("issuing your Cat ID…") so waiting feels like progress.</span></li>
+      <li class="ritem"><span class="rid">R120</span><span class="rtext">Make the support path always one tap away — reachable help is itself a feature of trust.</span></li>
+    </ul>
+  </div>
+
+  <div class="challenge">
+    <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18" stroke-linecap="round"/></svg>Don't ship all 120 at once</span>
+    <p>A rulebook is a compass, not a launch checklist. Trying to satisfy every rule before shipping guarantees you ship nothing. Use Section 11's priority tiers to decide the order — the <strong>Critical</strong> rules make or break trust and belong in v1; the rest earn their way in as the product matures.</p>
+  </div>
+</section>
+
+
+
+<!-- ============================================================= 10 · BEST PRACTICE -->
+<section class="section" id="bestpractice">
+  <div class="sec-head">
+    <p class="sec-eye">Section 10 · Stolen With Pride</p>
+    <div class="sec-num">10</div>
+    <h2 class="sec-t">Best Practices Worth Stealing</h2>
+    <p class="sec-lede">The best membership and subscription products in the world have already spent billions learning what earns loyalty. Here is what each does exceptionally, and precisely how Moracat should adapt it — never copy the mechanic, steal the <em>principle</em> beneath it.</p>
+  </div>
+
+  <p class="lead-in">Each card names the company, the single lesson to take, and its translation into a Moracat decision. The through-line: great memberships sell <em>identity and belonging</em>, and let savings arrive as proof.</p>
+
+  <div class="divrule"><span>Identity &amp; the physical object</span></div>
+
+  <div class="grid two">
+    <div class="card">
+      <p class="cs">Apple — Apple One</p>
+      <p class="ct">Make the object feel inevitable</p>
+      <p>Apple wraps hardware, packaging, and Wallet passes in a ceremony that makes ownership feel special. <b>For Moracat:</b> treat the Cat ID reveal and the Wallet pass as the "unboxing" moment — the digital object should feel as considered as an Apple box.</p>
+    </div>
+    <div class="card">
+      <p class="cs">American Express</p>
+      <p class="ct">The card <em>is</em> the status</p>
+      <p>Amex turned a payment card into an identity people display. Members stay for what the card says about them. <b>For Moracat:</b> the Cat ID is the equivalent artifact — make it beautiful, shareable, and quietly prestigious, and offer a physical tag for members who want the tangible symbol.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Costco</p>
+      <p class="ct">Membership legitimises the price</p>
+      <p>People trust Costco's low prices <em>because</em> they paid to get in — the fee reframes savings as an earned privilege, not a gimmick. <b>For Moracat:</b> position partner discounts as a members-only privilege, which makes them feel premium rather than cheap, and makes the fee feel like the key to a club.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Sephora — Beauty Insider</p>
+      <p class="ct">Tiers people want to climb</p>
+      <p>A free, visible tier ladder gives members a status to earn and protect. <b>For Moracat:</b> when the base membership is proven, introduce tenure or engagement tiers that recognise devoted owners — status is a renewal reason that costs nothing to deliver.</p>
+    </div>
+  </div>
+
+  <div class="divrule"><span>Value made visible</span></div>
+
+  <div class="grid two">
+    <div class="card">
+      <p class="cs">Amazon Prime</p>
+      <p class="ct">Bundle until leaving feels costly</p>
+      <p>Prime layers shipping, video, and perks so members can't mentally separate what they'd lose. <b>For Moracat:</b> accumulate visible, varied value — savings, records, reminders, identity — so cancelling registers as losing many things at once, not one.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Spotify — Wrapped</p>
+      <p class="ct">Give data back as a gift</p>
+      <p>Wrapped turns a year of usage into a shareable, emotional story — free marketing and a loyalty spike every December. <b>For Moracat:</b> build a "Cat's Year in Review" — savings, milestones, care moments — that owners are proud to share and that lands right before renewal.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Uber One</p>
+      <p class="ct">Show the saving at the moment</p>
+      <p>Uber One states "you saved X on this order" at checkout, making an invisible subscription tangible on every use. <b>For Moracat:</b> confirm the exact riyals saved at each redemption and keep a lifetime tally — the running number is your strongest retention asset.</p>
+    </div>
+    <div class="card">
+      <p class="cs">IKEA Family</p>
+      <p class="ct">Free belonging that still feels special</p>
+      <p>A no-cost membership with members-only prices and perks builds a huge, loyal base and habituates the swipe. <b>For Moracat:</b> consider a free identity tier (the Cat ID itself) that delivers belonging first — then let paid benefits deepen a relationship that already exists.</p>
+    </div>
+  </div>
+
+  <div class="divrule"><span>Emotion, care &amp; the pet bond</span></div>
+
+  <div class="grid two">
+    <div class="card">
+      <p class="cs">Chewy</p>
+      <p class="ct">Care that expects nothing back</p>
+      <p>Chewy sends handwritten cards, surprise pet portraits, and flowers when a pet dies — unscalable warmth that creates fanatical loyalty and word of mouth. <b>For Moracat:</b> this is the north star. Remember the cat's name and birthday; mark milestones; respond to loss with humanity. Reciprocity, not discounts, is the moat.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Calm / Peloton</p>
+      <p class="ct">Sell an identity, track a streak</p>
+      <p>Members don't buy features — they become "a person who meditates," "a runner." Streaks and gentle accountability reinforce that self-image. <b>For Moracat:</b> help members adopt the identity "a devoted cat owner." Reflect their care back to them so membership becomes self-expression, and cancelling feels off-brand for who they are.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Disney+ / Netflix</p>
+      <p class="ct">A reason to return on a cadence</p>
+      <p>Regular new content creates a rhythm of re-engagement that keeps the subscription alive between big moments. <b>For Moracat:</b> establish a predictable cadence — new partners, seasonal offers, care tips — so the app is worth opening monthly, not just at renewal.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Sam's Club — Scan &amp; Go</p>
+      <p class="ct">Remove friction at the moment of truth</p>
+      <p>Scan &amp; Go lets members skip the checkout line entirely — the perk people feel every single visit. <b>For Moracat:</b> make redemption at the counter frictionless and fast; the smoothness of that ten-second interaction is what members will describe to their friends.</p>
+    </div>
+  </div>
+
+  <div class="beyond">
+    <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21l2.3-7.4-6-4.6h7.6z"/></svg>The pattern beneath all of them</span>
+    <p>Notice what none of these leaders lead with: a bigger discount. They lead with <strong>identity</strong> (Amex, Calm), <strong>unscalable care</strong> (Chewy), <strong>visible proof of value</strong> (Uber One, Spotify), and <strong>frictionless moments of truth</strong> (Sam's Club). Discounts are table stakes; belonging is the product. Moracat's advantage is that its subject — a beloved cat — is already the most emotional bond a subscription could be built on. Most brands manufacture that feeling. Moracat only has to honour it.</p>
+  </div>
+</section>
+
+
+
+<!-- ============================================================= 11 · PRIORITIES -->
+<section class="section" id="priorities">
+  <div class="sec-head">
+    <p class="sec-eye">Section 11 · What To Build, In What Order</p>
+    <div class="sec-num">11</div>
+    <h2 class="sec-t">Prioritised Recommendations</h2>
+    <p class="sec-lede">A strategy is only as good as its sequencing. These recommendations are sorted into four tiers by impact on trust, activation, and retention — the three things that decide whether Moracat survives its first year. Build the Critical tier before anything else; it is the foundation everything above rests on.</p>
+  </div>
+
+  <p class="lead-in">Each tier opens with the question it answers. Within a tier, order is roughly the order to build. Resist the pull of the shiny Future items — <em>trust and first value are what turn a signup into a member.</em></p>
+
+  <div class="tiergrid">
+
+    <!-- CRITICAL -->
+    <div class="tier t-crit">
+      <div class="tier-h"><span class="tier-dot"></span><h3 class="tier-t">Critical — Non-negotiable for v1</h3><span class="tier-tag">Trust &amp; first value</span></div>
+      <div class="tier-body">
+        <p class="tier-why">Answers: "Can a stranger trust us with their money and their cat in the first five minutes?" Without these, nothing else matters — members never form.</p>
+        <div class="tier-item"><span class="ti-t">Radical payment &amp; renewal transparency</span><span class="ti-d">Full price, cycle, renewal date, and cancel path shown before payment; receipt and renewal warnings always. This single discipline prevents the chargebacks and betrayal that kill young subscriptions.</span></div>
+        <div class="tier-item"><span class="ti-t">Arabic-first, RTL-native experience</span><span class="ti-d">Not a translation layer — the default, premium-quality Arabic experience with instant language switching. This is a Saudi product; it must feel born here.</span></div>
+        <div class="tier-item"><span class="ti-t">Instant digital Cat ID issuance with ceremony</span><span class="ti-d">The first moment of value, delivered before any optional ask. The emotional peak that converts a signup into a member proud of their cat's identity.</span></div>
+        <div class="tier-item"><span class="ti-t">A Cat ID that does at least one real job</span><span class="ti-d">Ship lost-cat recovery (scannable code) and/or one-tap vet check-in from day one. Utility is what separates an identity from a gimmick.</span></div>
+        <div class="tier-item"><span class="ti-t">Wallet pass + offline card</span><span class="ti-d">The card must live in Apple/Google Wallet and render with no signal at a vet counter. Availability at the moment of truth is the product working.</span></div>
+        <div class="tier-item"><span class="ti-t">Cumulative savings visibility</span><span class="ti-d">Confirm riyals saved at each redemption and keep a lifetime tally. The number that makes an invisible subscription feel indispensable.</span></div>
+        <div class="tier-item"><span class="ti-t">Ruthless partner curation + one-tap redemption</span><span class="ti-d">A small set of quality partners, a frictionless counter interaction, and staff who honour it instantly. In redemption, the partner is the product.</span></div>
+        <div class="tier-item"><span class="ti-t">Honest, one-tap cancel &amp; pause</span><span class="ti-d">A dignified exit that preserves records. Counter-intuitively, the easiest cancellation builds the trust that drives the most renewals and returns.</span></div>
+      </div>
+    </div>
+
+    <!-- HIGH -->
+    <div class="tier t-high">
+      <div class="tier-h"><span class="tier-dot"></span><h3 class="tier-t">High — Shortly after launch</h3><span class="tier-tag">Deepen &amp; retain</span></div>
+      <div class="tier-body">
+        <p class="tier-why">Answers: "Now that they've joined, how do we make the value undeniable and the membership personal?" These convert new members into renewing ones.</p>
+        <div class="tier-item"><span class="ti-t">A savings &amp; value dashboard as the home screen</span><span class="ti-d">Make the home a running proof of value — saved, used, cared-for — not a marketing billboard. Directly attacks the invisibility that kills subscriptions.</span></div>
+        <div class="tier-item"><span class="ti-t">Cat-profile personalisation</span><span class="ti-d">Name, photo, breed, birthday woven through the experience. Personalisation drives the endowment effect — "my cat's membership," owned not rented.</span></div>
+        <div class="tier-item"><span class="ti-t">Partner map with honest city-level coverage</span><span class="ti-d">Show real reach per city, never implied national coverage. Honesty about limits builds more trust than exaggerated scale.</span></div>
+        <div class="tier-item"><span class="ti-t">Referral &amp; gifting with the same ceremony</span><span class="ti-d">Let proud members share belonging; make a gifted membership arrive with the full welcome ritual. Advocacy is cheaper and stronger than acquisition ads.</span></div>
+        <div class="tier-item"><span class="ti-t">Milestone &amp; anniversary celebrations</span><span class="ti-d">Mark the cat's join-date, first year, and care milestones. Peak-end moments that make renewal an emotional recommitment, not a silent charge.</span></div>
+        <div class="tier-item"><span class="ti-t">Prayer-aware, well-timed notifications</span><span class="ti-d">Contact that respects local rhythms and always carries value. Respect for context earns the right to keep notifying.</span></div>
+        <div class="tier-item"><span class="ti-t">Optional physical Cat ID tag</span><span class="ti-d">A tangible keepsake for members who want the object. Deepens the bond and doubles as real-world marketing on every collar.</span></div>
+      </div>
+    </div>
+
+    <!-- MEDIUM -->
+    <div class="tier t-med">
+      <div class="tier-h"><span class="tier-dot"></span><h3 class="tier-t">Medium — As the base matures</h3><span class="tier-tag">Habit &amp; expansion</span></div>
+      <div class="tier-body">
+        <p class="tier-why">Answers: "How do we turn a proven membership into a daily habit and a broader relationship?" Valuable, but only once the core loop is loved.</p>
+        <div class="tier-item"><span class="ti-t">Care content &amp; a reason to return monthly</span><span class="ti-d">Seasonal tips, new-partner reveals, cat-care guidance. Establishes the cadence that keeps the app alive between renewals.</span></div>
+        <div class="tier-item"><span class="ti-t">Gentle streaks &amp; care habits</span><span class="ti-d">Light, non-nagging reinforcement of the "devoted owner" identity. Habit formation without the manipulation that breeds resentment.</span></div>
+        <div class="tier-item"><span class="ti-t">Tiered plans &amp; status recognition</span><span class="ti-d">Reward tenure and engagement with earned status. A renewal reason that costs little to deliver and flatters loyal members.</span></div>
+        <div class="tier-item"><span class="ti-t">Multi-cat &amp; household support</span><span class="ti-d">Multiple Cat IDs per account and shared family access. Matches how Saudi households actually care for cats — collectively.</span></div>
+        <div class="tier-item"><span class="ti-t">Community &amp; owner-to-owner belonging</span><span class="ti-d">Lightweight ways for members to connect around their cats. Belonging to a community is stickier than belonging to a brand.</span></div>
+      </div>
+    </div>
+
+    <!-- FUTURE -->
+    <div class="tier t-fut">
+      <div class="tier-h"><span class="tier-dot"></span><h3 class="tier-t">Future — The long horizon</h3><span class="tier-tag">Platform &amp; ambition</span></div>
+      <div class="tier-body">
+        <p class="tier-why">Answers: "What could Moracat become once it owns the trusted cat identity in the Kingdom?" Powerful, but dangerous to chase before the core is beloved.</p>
+        <div class="tier-item"><span class="ti-t">Concierge &amp; premium services</span><span class="ti-d">Vet booking, grooming, sitting, and travel help built on the trusted identity. Expands value once the membership has earned the right to sell more.</span></div>
+        <div class="tier-item"><span class="ti-t">Vet telehealth &amp; digital health records</span><span class="ti-d">The Cat ID becomes a portable medical record and a route to remote care. Turns identity into indispensable infrastructure.</span></div>
+        <div class="tier-item"><span class="ti-t">Insurance &amp; financial-care tie-ins</span><span class="ti-d">Partner products underwritten on a known, verified cat identity. A natural monetisation of trust — introduced only once trust is unquestioned.</span></div>
+        <div class="tier-item"><span class="ti-t">A curated marketplace &amp; premium physical goods</span><span class="ti-d">Essentials and a Palm-and-Pearl-grade product line for members. The membership becomes a storefront people want to shop.</span></div>
+        <div class="tier-item"><span class="ti-t">The identity layer for the Saudi cat economy</span><span class="ti-d">Every vet, store, and service recognising the Moracat Cat ID. The endgame: Moracat as the default passport every cat owner carries.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="principle">
+    <span class="k">The sequencing principle</span>
+    <p><strong>Trust before value, value before growth, growth before expansion.</strong> Each tier earns the right to the next. A Future-tier feature shipped on a foundation that hasn't earned trust doesn't accelerate Moracat — it exposes it. Build downward from Critical, and let the ambition of the Future tier be the reason to get the Critical tier exactly right.</p>
+  </div>
+</section>
+
+
+
+<!-- ============================================================= APPENDIX A · LOCAL -->
+<section class="section" id="local">
+  <div class="sec-head">
+    <p class="sec-eye">Appendix A · Beyond the Brief</p>
+    <div class="sec-num">A</div>
+    <h2 class="sec-t">The Saudi Market Layer</h2>
+    <p class="sec-lede">The brief did not ask for this. It is included because a UX strategy for a Saudi cat membership that ignores its market would be professionally incomplete. This is the layer that makes Moracat feel <em>of</em> Saudi Arabia, not merely available in it.</p>
+  </div>
+
+  <div class="beyond">
+    <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21l2.3-7.4-6-4.6h7.6z"/></svg>Why this belongs in the strategy</span>
+    <p>Cats hold a genuinely warm place in Arab and Islamic culture — a rare case where a product's subject is already loved by the society it launches into. That affection is not a marketing angle to bolt on; it is the <strong>emotional foundation</strong> the entire membership should be built upon. Most brands spend fortunes manufacturing the feeling Moracat inherits for free.</p>
+  </div>
+
+  <div class="deflist">
+    <div class="defrow"><dt>Cultural soul</dt><dd>Let the brand's affection for cats echo their positive cultural and religious status. This is the differentiator no aggregator or discount app can copy — <strong>warmth toward the animal is the product's heart.</strong></dd></div>
+    <div class="defrow"><dt>Arabic-first</dt><dd>Arabic is the default, premium experience — RTL-native, beautifully typeset, instantly switchable. Members should never feel they're using a foreign product that was translated as an afterthought.</dd></div>
+    <div class="defrow"><dt>Local payment trust</dt><dd>mada, STC Pay, and Apple Pay as first-class options. Familiar rails dramatically lower the fear of entering payment details with a new brand.</dd></div>
+    <div class="defrow"><dt>Privacy &amp; PDPL</dt><dd>Store data in-region, collect the minimum, and say so plainly. In a market increasingly conscious of data rights, visible restraint is a trust advantage — and never ask for National ID or Iqama.</dd></div>
+    <div class="defrow"><dt>Rhythm &amp; timing</dt><dd>Time communications around prayer times and local daily rhythms. Respect for when and how people live is respect for the member.</dd></div>
+    <div class="defrow"><dt>The household</dt><dd>Support families and majlis circles who share a cat's care — multiple carers, shared access, collective belonging. Membership here is rarely a solo act.</dd></div>
+    <div class="defrow"><dt>Vision 2030 fit</dt><dd>A homegrown, quality-of-life brand that dignifies pet care aligns naturally with the national direction — a story worth telling to partners and members alike.</dd></div>
+  </div>
+
+  <div class="challenge">
+    <span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18" stroke-linecap="round"/></svg>The temptation to globalise too early</span>
+    <p>It is tempting to design a "market-neutral" product that could scale anywhere. Resist it. <strong>Winning Saudi Arabia deeply</strong> — being unmistakably the local cat membership — is a stronger foundation than being a generic one that fits everywhere and belongs nowhere. Depth first; breadth is a later chapter.</p>
+  </div>
+</section>
+
+<!-- ============================================================= APPENDIX B · METRICS -->
+<section class="section" id="metrics">
+  <div class="sec-head">
+    <p class="sec-eye">Appendix B · Knowing It's Working</p>
+    <div class="sec-num">B</div>
+    <h2 class="sec-t">Metrics &amp; Guardrails</h2>
+    <p class="sec-lede">A strategy needs a way to know it's working — and guardrails to ensure the numbers are earned honestly, not gamed. Measure the emotional truths this document argues for, not just the vanity counts.</p>
+  </div>
+
+  <div class="grid two">
+    <div class="card">
+      <p class="cs">Activation</p>
+      <p class="ct">The first-value rate</p>
+      <p>% of signups who reach the issued Cat ID and their first real value moment. This — not raw signups — is the number that predicts everything downstream.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Redemption</p>
+      <p class="ct">The truth-moment success rate</p>
+      <p>% of attempted redemptions that succeed smoothly, and average members who redeem at least once a month. A membership that's never used is already churning.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Value realised</p>
+      <p class="ct">Savings-to-price ratio</p>
+      <p>Cumulative member savings versus fee paid. When this visibly crosses 1×, renewal becomes rational as well as emotional. Track how many members see it.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Retention</p>
+      <p class="ct">Renewal, pause, and return rates</p>
+      <p>Renewal rate, plus the share who pause rather than cancel, plus win-back returns. Pause and return are signs the dignified-exit strategy is working.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Advocacy</p>
+      <p class="ct">Referrals &amp; shares per member</p>
+      <p>Cat IDs and year-in-reviews shared, and memberships gifted. Organic sharing is the clearest proof that belonging — not discount — is landing.</p>
+    </div>
+    <div class="card">
+      <p class="cs">Trust</p>
+      <p class="ct">Chargebacks, complaints, support ease</p>
+      <p>Chargeback rate, billing complaints, and how quickly support resolves. Low numbers here mean the transparency discipline is genuinely working.</p>
+    </div>
+  </div>
+
+  <div class="principle">
+    <span class="k">The guardrail</span>
+    <p><strong>Never optimise a metric by breaking a promise in this document.</strong> Retention bought by making cancellation hard, activation inflated by forcing signups, or engagement driven by nagging — all move a number and destroy the trust the number was meant to represent. If improving a metric requires a dark pattern, the metric is wrong, not the principle. Measure the belonging; never fake it.</p>
+  </div>
+
+  <div class="pull">Signups are a rented number.<br><em>Belonging</em> is the only one that compounds.</div>
+</section>
+
+<!-- ============================================================= COLOPHON -->
+<footer class="colophon">
+  <p class="k">Colophon</p>
+  <p><strong>The Moracat Membership Dossier</strong> — a UX &amp; CX strategy handbook. Document reference MRC-UX-001. Prepared as a strategy artifact: it contains the thinking, principles, journeys, rules, and priorities that should govern the member experience — and deliberately no product screens, wireframes, or code, so that the strategy leads the design rather than the reverse.</p>
+  <p>Set in Fraunces, IBM Plex Sans, and IBM Plex Mono. Structured for reading front-to-back or by section via the index. The green blocks are non-negotiable intents, the dashed red blocks are challenges to conventional assumptions, and the gold blocks are value beyond the brief.</p>
+  <p style="margin-top:18px;color:var(--ink-soft)">The one line to remember: <em style="font-family:var(--serif)">Moracat is not a discount app with a cat theme — it is a membership identity where savings are proof of value and belonging is the product.</em></p>
+</footer>
+
+</div><!-- /.doc -->
+</main>
+</div><!-- /.wrap -->
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- Reading progress bar ---------- */
+  var bar = document.getElementById('progress');
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop || document.body.scrollTop) / max : 0;
+    bar.style.width = (pct * 100).toFixed(2) + '%';
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  /* ---------- Scrollspy: highlight active TOC entry ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+  var map = {};
+  links.forEach(function(a){
+    var id = a.getAttribute('href').slice(1);
+    var sec = document.getElementById(id);
+    if (sec) map[id] = a;
+  });
+  var sections = Object.keys(map).map(function(id){ return document.getElementById(id); });
+
+  function setActive(id){
+    links.forEach(function(a){ a.classList.remove('active'); a.removeAttribute('aria-current'); });
+    if (map[id]){ map[id].classList.add('active'); map[id].setAttribute('aria-current','true'); }
+  }
+
+  if ('IntersectionObserver' in window){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) visible[e.target.id] = e.intersectionRatio;
+        else delete visible[e.target.id];
+      });
+      // choose the section nearest the top that is visible
+      var best = null, bestTop = Infinity;
+      Object.keys(visible).forEach(function(id){
+        var top = document.getElementById(id).getBoundingClientRect().top;
+        if (top < 140 + 1 && top > -window.innerHeight){
+          if (Math.abs(top) < bestTop){ bestTop = Math.abs(top); best = id; }
+        }
+      });
+      if (!best){
+        // fallback: first visible
+        var keys = Object.keys(visible);
+        if (keys.length) best = keys[0];
+      }
+      if (best) setActive(best);
+    }, { rootMargin: '-120px 0px -55% 0px', threshold: [0, .25, .5, 1] });
+    sections.forEach(function(s){ io.observe(s); });
+  }
+
+  /* ---------- Mobile drawer ---------- */
+  var rail = document.getElementById('rail');
+  var btn  = document.getElementById('menuBtn');
+  var scrim= document.getElementById('scrim');
+  function openNav(){
+    rail.classList.add('open');
+    scrim.style.display = 'block';
+    btn.setAttribute('aria-expanded','true');
+  }
+  function closeNav(){
+    rail.classList.remove('open');
+    scrim.style.display = 'none';
+    btn.setAttribute('aria-expanded','false');
+  }
+  if (btn){
+    btn.addEventListener('click', function(){
+      if (rail.classList.contains('open')) closeNav(); else openNav();
+    });
+  }
+  if (scrim) scrim.addEventListener('click', closeNav);
+  // close drawer after choosing a destination on mobile
+  links.forEach(function(a){
+    a.addEventListener('click', function(){
+      if (window.innerWidth <= 920) closeNav();
+    });
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && rail.classList.contains('open')) closeNav();
+  });
+
+  /* ---------- Rules cluster filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-filter]'));
+  var clusters = Array.prototype.slice.call(document.querySelectorAll('.cluster[data-cluster]'));
+  var countEl = document.getElementById('rulesCount');
+  var TOTAL = document.querySelectorAll('.ritem').length;
+
+  function applyFilter(f){
+    var shown = 0;
+    clusters.forEach(function(c){
+      var match = (f === 'all') || (c.getAttribute('data-cluster') === f);
+      c.style.display = match ? '' : 'none';
+      if (match) shown += c.querySelectorAll('.ritem').length;
+    });
+    chips.forEach(function(ch){
+      var on = ch.getAttribute('data-filter') === f;
+      ch.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    if (countEl){
+      countEl.textContent = (f === 'all')
+        ? ('Showing all ' + TOTAL + ' rules')
+        : ('Showing ' + shown + ' of ' + TOTAL + ' rules');
+    }
+  }
+  chips.forEach(function(ch){
+    ch.addEventListener('click', function(){ applyFilter(ch.getAttribute('data-filter')); });
+  });
+})();
+</script>
+</body>
+</html>
