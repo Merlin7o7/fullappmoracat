@@ -4,8 +4,10 @@ FROM node:20-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
+# A frozen install needs EVERY workspace manifest present.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 COPY apps/web/package.json apps/web/
+COPY apps/api/package.json apps/api/
 COPY packages/ui/package.json packages/ui/
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/

@@ -4,9 +4,11 @@ FROM node:20-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
-# Install the full workspace (cached until lockfile changes).
+# Install the full workspace (cached until lockfile changes). A frozen install
+# needs EVERY workspace manifest present — including apps we don't build here.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
 COPY packages/db/package.json packages/db/
 COPY packages/core/package.json packages/core/
 COPY packages/ui/package.json packages/ui/
