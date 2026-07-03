@@ -39,7 +39,9 @@ async function bootstrap() {
     swaggerOptions: { persistAuthorization: true },
   });
 
-  const port = Number(process.env.API_PORT ?? 4000);
+  // Honour the platform-provided PORT (Render/Railway/Heroku set it) before our
+  // own API_PORT, so the same image runs unchanged on managed hosts.
+  const port = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
   await app.listen(port);
   Logger.log(`🚀 Moraqat API on http://localhost:${port} — docs at /api/docs`, "Bootstrap");
 }

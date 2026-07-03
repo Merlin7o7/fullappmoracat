@@ -8,6 +8,51 @@ Throughout, replace `example.com` with your real domain.
 
 ---
 
+## ⭐ Your setup: moracat.co on GoDaddy (Vercel + Render + Neon, $0)
+
+Do these in order. You log into the accounts; the repo is pre-configured
+(`vercel.json`, `render.yaml`) so the connect step is near-automatic.
+
+### 1. Database — Neon
+1. neon.tech → sign up (free) → **New Project** (region: Frankfurt/EU).
+2. Copy the connection string (looks like `postgresql://…@…neon.tech/…?sslmode=require`).
+
+### 2. API — Render (reads `render.yaml`)
+1. render.com → sign up → **New → Blueprint** → connect `Merlin7o7/fullappmoracat`.
+2. Render finds `render.yaml` and proposes **moracat-api**. Before/after first deploy,
+   set env var **`DATABASE_URL`** = your Neon string. (JWT secrets auto-generate.)
+3. Deploy. When live it's at `https://moracat-api.onrender.com`.
+4. **Settings → Custom Domain** → add `api.moracat.co`. Render shows a CNAME target —
+   note it for the DNS step.
+5. Create the tables: **Shell** tab → `npx prisma db push`. (App also works empty.)
+
+### 3. Web — Vercel (reads `vercel.json`)
+1. vercel.com → sign up → **Add New → Project** → import `Merlin7o7/fullappmoracat`.
+2. Leave build settings (they come from `vercel.json`). Add **Environment Variables**:
+   - `NEXT_PUBLIC_API_BASE_URL` = `https://api.moracat.co`
+   - `NEXT_PUBLIC_SITE_URL` = `https://moracat.co`
+   - `NEXT_PUBLIC_CAT_ID_BASE` = `https://moracat.co/c`
+3. Deploy. Then **Settings → Domains** → add `moracat.co` **and** `www.moracat.co`.
+
+### 4. GoDaddy DNS — add these records
+GoDaddy → your product → **Domain → Manage DNS** → add:
+
+| Type  | Name  | Value                          | Purpose            |
+|-------|-------|--------------------------------|--------------------|
+| A     | `@`   | `76.76.21.21`                  | moracat.co → Vercel |
+| CNAME | `www` | `cname.vercel-dns.com`         | www → Vercel        |
+| CNAME | `api` | `moracat-api.onrender.com`     | api → Render (use the exact target Render showed you) |
+
+Delete any conflicting existing `@`/`www` records (e.g. GoDaddy parking).
+DNS + TLS propagate in ~5–30 min. Then **https://moracat.co** is your live site
+and **https://api.moracat.co** the API. Push to `main` → both auto-redeploy.
+
+> ⚠️ Free-tier note: the Render API sleeps after ~15 min idle, so the first request
+> after a lull takes ~30–50s (then it's fast). Upgrading the API to Render's paid
+> Starter (~$7/mo) removes the cold start; the DB + web stay free.
+
+---
+
 ## Path A — One VPS + Docker (recommended, full control)
 
 **What you need:** a small Linux server with a public IP and SSH access.
