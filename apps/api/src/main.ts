@@ -5,13 +5,36 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 
+/** Build the CORS allow-list: the site URL, its www/apex twin, extras, + dev. */
+function buildAllowedOrigins(): string[] {
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const origins = new Set<string>([site, "http://localhost:3000"]);
+  for (const extra of (process.env.CORS_ORIGINS ?? "").split(",")) {
+    const v = extra.trim();
+    if (v) origins.add(v);
+  }
+  try {
+    const u = new URL(site);
+    const twin = u.host.startsWith("www.")
+      ? `${u.protocol}//${u.host.slice(4)}`
+      : `${u.protocol}//www.${u.host}`;
+    origins.add(twin);
+  } catch {
+    /* NEXT_PUBLIC_SITE_URL not a URL — ignore */
+  }
+  return [...origins];
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
 
   // ── Security headers ──────────────────────────────────────────────────
   app.use(helmet());
   app.enableCors({
-    origin: [process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"],
+    // Allow the site origin plus its www/apex counterpart, plus any extra
+    // origins from CORS_ORIGINS (comma-separated). This way both
+    // https://moracat.co and https://www.moracat.co work.
+    origin: buildAllowedOrigins(),
     credentials: true,
   });
 
