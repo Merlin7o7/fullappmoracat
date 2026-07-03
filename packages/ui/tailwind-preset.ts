@@ -15,6 +15,9 @@ const preset: Partial<Config> = {
       screens: { "2xl": "1280px" },
     },
     extend: {
+      // 13 is absent from Tailwind's default scale; the design system relies on
+      // it for large controls (h-13 buttons/inputs). Define it once → craft.
+      spacing: { 13: "3.25rem" },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

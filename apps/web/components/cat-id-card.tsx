@@ -9,6 +9,8 @@ interface CatIdCardProps {
   issuedAt?: string | null;
   photoUrl?: string | null;
   isAr: boolean;
+  /** A not-yet-issued preview (e.g. the landing hero) — honest labelling (R040). */
+  preview?: boolean;
   className?: string;
 }
 
@@ -17,7 +19,7 @@ interface CatIdCardProps {
  * Designed like an object, not a UI panel: quiet, precise, proud (R035).
  * Pure CSS/SVG so it renders instantly and offline (R036 groundwork).
  */
-export function CatIdCard({ catName, catIdNumber, issuedAt, photoUrl, isAr, className }: CatIdCardProps) {
+export function CatIdCard({ catName, catIdNumber, issuedAt, photoUrl, isAr, preview, className }: CatIdCardProps) {
   const since = issuedAt
     ? new Date(issuedAt).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { month: "short", year: "numeric" })
     : null;
@@ -81,7 +83,7 @@ export function CatIdCard({ catName, catIdNumber, issuedAt, photoUrl, isAr, clas
             {catIdNumber}
           </p>
           <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[hsl(32_92%_62%)]">
-            {isAr ? "هوية رسمية" : "Official ID"}
+            {preview ? (isAr ? "معاينة" : "Preview") : isAr ? "هوية رسمية" : "Official ID"}
           </p>
         </div>
       </div>

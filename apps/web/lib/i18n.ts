@@ -1,39 +1,86 @@
-/** Minimal, type-safe bilingual dictionary (ar default, en). */
+/**
+ * Bilingual dictionary (ar default, en). Voice per the Design Authority:
+ * warm, plain, membership-first — never "subscription/box/coupon" framing.
+ * Lexicon is fixed: member, Cat ID, benefit (R087). The cat is the hero (P09).
+ */
 export type Locale = "ar" | "en";
 
 export const dict = {
   ar: {
     dir: "rtl" as const,
     brand: "مرقط",
-    nav: { how: "كيف يعمل", plans: "الباقات", products: "المنتجات", about: "من نحن", login: "تسجيل الدخول" },
-    announce: "توصيل مجاني في جدة والرياض على أول صندوق 🐾",
+    nav: { how: "كيف تعمل", plans: "العضوية", products: "المتجر", about: "من نحن", login: "تسجيل الدخول" },
+    // Honest, warm, no discount-shouting and no fake urgency (R085, R006).
+    announce: "العضوية متاحة الآن في جدة والرياض — نرحّب بالقطط الجديدة 🐾",
     hero: {
-      badge: "اشتراك شهري للقطط",
-      title: "كل ما يحتاجه قطك،",
-      titleAccent: "يصل تلقائياً كل شهر",
-      subtitle: "طعام ورمل ومكافآت مختارة بذكاء حسب وزن قطك وعمره وسلالته — يصل إلى بابك في جدة والرياض.",
-      cta: "ابدأ اشتراكك",
-      ctaSecondary: "كيف يعمل",
+      badge: "عضوية لمحبي القطط",
+      title: "امنح قطك",
+      titleAccent: "هويةً تخصه وحده",
+      subtitle:
+        "مرقط عضوية لمن يهتمون بقططهم حقاً. هوية رسمية لقطك، وسجلٌّ صحي يرافقه أينما ذهب، وأسعار عضوية لدى العيادات والمتاجر في جدة والرياض.",
+      namePrompt: "ما اسم قطك؟",
+      namePlaceholder: "مثال: سمسم",
+      cta: "أنشئ هوية قطك",
+      ctaSecondary: "كيف تعمل العضوية",
+      trust: "معاينة مجانية · ألغِ في أي وقت · بلا رسوم خفية",
+      previewNote: "هذه معاينة — تُصدر هوية قطك الحقيقية لحظة انضمامك.",
     },
-    plans: { title: "باقات تناسب كل قط", subtitle: "أسعار شفافة بالريال السعودي. ألغِ في أي وقت.", month: "/ شهرياً", popular: "الأكثر اختياراً", choose: "اختر الباقة" },
-    features: { title: "لماذا مرقط؟" },
+    features: {
+      title: "ماذا تعني العضوية",
+      lede: "ليست صندوقاً شهرياً — بل علاقة تجعل الاعتناء بقطك أسهل، وتجعله معروفاً.",
+      items: [
+        { title: "هوية رسمية", body: "لكل قط هوية فريدة تحمل اسمه وصورته ورقمه — الهوية نفسها التي يحملها مدى الحياة." },
+        { title: "نتعرّف على قطك", body: "الوزن والعمر والسلالة تُشكّل تغذية ذكية وتذكيرات، فيصبح الاعتناء به أقل عناءً." },
+        { title: "قيمة تراها بعينك", body: "أسعار عضوية على الطعام والرمل والأساسيات، مع احتساب كل ريال تُوفّره — دليلٌ لا وعود." },
+        { title: "لا نفاد بعد اليوم", body: "يصل الطعام والرمل المناسبان في موعدهما كل شهر. أوقف أو تخطَّ أو غيّر متى تغيّرت حياتك." },
+      ],
+    },
+    plans: {
+      title: "اختر عضوية قطك",
+      subtitle: "سعر واحد واضح. ألغِ في أي وقت بلا رسوم خفية — التوفير ميزة عضوية، لا الغاية.",
+      month: "/ شهرياً",
+      popular: "الأكثر اختياراً",
+      choose: "ابدأ العضوية",
+    },
+    voices: { title: "من أعضاء يهتمون فعلاً" },
     footer: "© 2026 مرقط. جميع الحقوق محفوظة.",
   },
   en: {
     dir: "ltr" as const,
     brand: "Moraqat",
-    nav: { how: "How it works", plans: "Plans", products: "Products", about: "About", login: "Log in" },
-    announce: "Free delivery in Jeddah & Riyadh on your first box 🐾",
+    nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in" },
+    announce: "Membership is live in Jeddah & Riyadh — welcoming new cats 🐾",
     hero: {
-      badge: "Monthly cat subscription",
-      title: "Everything your cat needs,",
-      titleAccent: "delivered every month",
-      subtitle: "Food, litter and treats — intelligently sized to your cat's weight, age and breed. Delivered to your door in Jeddah and Riyadh.",
-      cta: "Start your box",
-      ctaSecondary: "How it works",
+      badge: "The membership for cat people",
+      title: "Give your cat",
+      titleAccent: "an identity of their own",
+      subtitle:
+        "Moraqat is a membership for people who take their cats seriously. An official Cat ID, a health record that follows them anywhere, and member rates at vets and stores across Jeddah & Riyadh.",
+      namePrompt: "What's your cat's name?",
+      namePlaceholder: "e.g. Simba",
+      cta: "Create your cat's ID",
+      ctaSecondary: "How membership works",
+      trust: "Free to preview · Cancel anytime · No hidden fees",
+      previewNote: "This is a preview — your cat's real ID is issued the moment you join.",
     },
-    plans: { title: "A plan for every cat", subtitle: "Transparent SAR pricing. Cancel anytime.", month: "/ month", popular: "Most popular", choose: "Choose plan" },
-    features: { title: "Why Moraqat?" },
+    features: {
+      title: "What membership means",
+      lede: "Not a monthly box — a relationship that makes caring for your cat easier, and makes them known.",
+      items: [
+        { title: "An identity, officially", body: "Every cat gets a unique Cat ID with their name, photo and number — the same one they'll carry for life." },
+        { title: "We learn your cat", body: "Weight, age and breed shape smart feeding and reminders, so caring for them takes less thinking." },
+        { title: "Value you can see", body: "Member rates on food, litter and essentials, with every riyal saved tallied for you — proof, not a pitch." },
+        { title: "Never run out", body: "The right food and litter arrive on time each month. Pause, skip or change whenever life does." },
+      ],
+    },
+    plans: {
+      title: "Choose your cat's membership",
+      subtitle: "One clear price. Cancel anytime, no hidden fees — the savings are a member perk, not the pitch.",
+      month: "/ month",
+      popular: "Most chosen",
+      choose: "Start membership",
+    },
+    voices: { title: "From members who mean it" },
     footer: "© 2026 Moraqat. All rights reserved.",
   },
 } as const;

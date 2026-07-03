@@ -54,6 +54,15 @@ export interface Faq {
   category: string | null;
 }
 
+export interface Testimonial {
+  id: string;
+  authorName: string;
+  role: string | null;
+  quoteEn: string;
+  quoteAr: string;
+  rating: number;
+}
+
 export const api = {
   products(params: { type?: string; brand?: string; search?: string; sort?: string; page?: number } = {}) {
     const q = new URLSearchParams();
@@ -69,6 +78,9 @@ export const api = {
   },
   faqs() {
     return get<Faq[]>("/content/faqs");
+  },
+  testimonials() {
+    return get<Testimonial[]>("/content/testimonials");
   },
 };
 
