@@ -387,10 +387,39 @@ export class AuthService {
     return { enabled: false };
   }
 
-  // ── SMS delivery (pluggable) ──────────────────────────────────────────────
+  // ── SMS delivery (Twilio REST API — no SDK dependency) ────────────────────
   private async sendSms(phone: string, message: string) {
-    // Real providers (Unifonic/Twilio) plug in here behind SMS_MODE. Until then
-    // we log so the flow works end-to-end in dev.
+    const sid = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_FROM_NUMBER;
+
+    if (sid && token && from) {
+      try {
+        const res = await fetch(
+          `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+              "content-type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({ To: phone, From: from, Body: message }).toString(),
+          }
+        );
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          this.logger.error(`Twilio SMS failed (${res.status}) to ${maskPhone(phone)}: ${detail.slice(0, 200)}`);
+          return { queued: false };
+        }
+        this.logger.log(`SMS sent to ${maskPhone(phone)} via Twilio`);
+        return { queued: true };
+      } catch (e) {
+        this.logger.error(`Twilio SMS error: ${(e as Error).message}`);
+        return { queued: false };
+      }
+    }
+
+    // No provider configured — log in dev so the flow still works locally.
     if (!IS_PROD) this.logger.debug(`SMS → ${maskPhone(phone)}: ${message}`);
     return { queued: true };
   }
