@@ -5,12 +5,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Repeat, Cat, Package, MapPin, Settings,
-  LifeBuoy, Bell, LogOut, PawPrint, Loader2,
+  LifeBuoy, Bell, LogOut, Loader2,
 } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { ThemeToggle, LangToggle } from "@/components/toggles";
+import { Logo } from "@/components/logo";
 
 const NAV = [
   { href: "/portal", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة", exact: true },
@@ -47,11 +48,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e border-border bg-card p-4 md:flex">
-        <Link href="/" className="mb-8 flex items-center gap-2 px-2 font-display text-lg font-bold">
-          <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-foreground">
-            <PawPrint className="size-4" />
-          </span>
-          {isAr ? "مرقط" : "Moraqat"}
+        <Link href="/" aria-label="Moracat" className="mb-8 flex px-2">
+          <Logo className="h-9" priority />
         </Link>
         <nav className="flex flex-1 flex-col gap-1">
           {NAV.map((item) => {

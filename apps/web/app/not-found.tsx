@@ -1,16 +1,13 @@
 import Link from "next/link";
-import { PawPrint, Home } from "lucide-react";
+import { Home } from "lucide-react";
 import { Button } from "@moraqat/ui";
+import { Logo } from "@/components/logo";
 
 export default function NotFound() {
   return (
     <div className="mesh-bg grid min-h-dvh place-items-center px-4">
       <div className="flex max-w-md flex-col items-center text-center">
-        <div className="relative mb-6">
-          <span className="grid size-20 place-items-center rounded-3xl bg-primary/10 text-primary animate-float">
-            <PawPrint className="size-10" />
-          </span>
-        </div>
+        <Logo className="mb-8 h-10 animate-float" />
         <p className="font-display text-6xl font-bold tracking-tight text-gradient">404</p>
         <h1 className="mt-3 font-display text-xl font-semibold">This page wandered off</h1>
         <p className="mt-2 text-sm text-muted-foreground">

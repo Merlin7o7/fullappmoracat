@@ -4,57 +4,59 @@
 
 /*
  * ════════════════════════════════════════════════════════════════════════
- *  Moraqat Design System — tokens
- *  Warm Saudi sand + deep teal ("Moraqat" = the tabby's spotted coat) with a
- *  saffron accent. Light and dark are both first-class, tuned for WCAG AA+.
+ *  Moracat Design System — brand tokens
+ *  Palette: Deep Green #045b46 (dominant brand), Orange #f86c2f (CTAs/
+ *  highlights), Pink #ffb7b8 (soft accent), Cream #f7dec9 (background),
+ *  Black (text/contrast). Light + dark both first-class, tuned for WCAG AA+.
  *  All values are HSL so theming/contrast stay controllable.
  * ════════════════════════════════════════════════════════════════════════
  */
 @layer base {
   :root {
-    /* Surfaces */
-    --background: 40 38% 97%;
-    --foreground: 200 24% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 200 24% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 200 24% 11%;
+    /* Surfaces — warm cream ground, near-white cards, near-black ink */
+    --background: 28 74% 88%;
+    --foreground: 165 45% 7%;
+    --card: 40 60% 96%;
+    --card-foreground: 165 45% 7%;
+    --popover: 40 62% 97%;
+    --popover-foreground: 165 45% 7%;
 
-    /* Brand — deep teal */
-    --primary: 187 74% 26%;
-    --primary-foreground: 40 40% 98%;
-    --primary-hover: 187 74% 22%;
+    /* Brand — deep green #045b46 (dominant chrome, nav, seals, links) */
+    --primary: 166 91% 19%;
+    --primary-foreground: 40 60% 96%;
+    --primary-hover: 166 92% 14%;
 
-    /* Warm sand — secondary surface */
-    --secondary: 36 44% 93%;
-    --secondary-foreground: 200 22% 18%;
+    /* Pink #ffb7b8 — soft supporting surface */
+    --secondary: 359 100% 86%;
+    --secondary-foreground: 165 42% 14%;
 
-    --muted: 40 24% 93%;
-    --muted-foreground: 200 10% 40%;
+    --muted: 30 40% 84%;
+    --muted-foreground: 165 14% 30%;
 
-    /* Saffron / amber accent */
-    --accent: 32 92% 52%;
-    --accent-foreground: 30 40% 12%;
+    /* Orange #f86c2f — primary CTAs + highlights */
+    --accent: 18 93% 58%;
+    --accent-foreground: 165 45% 8%;
+    --accent-hover: 18 93% 50%;
 
     /* Semantic states */
-    --success: 152 58% 36%;
+    --success: 150 66% 30%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 48%;
-    --warning-foreground: 30 40% 12%;
-    --info: 210 80% 46%;
+    --warning: 38 92% 46%;
+    --warning-foreground: 30 45% 10%;
+    --info: 200 82% 40%;
     --info-foreground: 0 0% 100%;
-    --destructive: 0 74% 48%;
+    --destructive: 0 74% 47%;
     --destructive-foreground: 0 0% 100%;
 
     /* Lines + focus */
-    --border: 40 18% 87%;
-    --input: 40 18% 84%;
-    --ring: 187 74% 32%;
+    --border: 30 34% 80%;
+    --input: 30 34% 78%;
+    --ring: 166 91% 24%;
 
     --radius: 0.9rem;
 
-    /* Elevation ladder — consistent shadow scale */
-    --shadow-color: 200 30% 20%;
+    /* Elevation ladder — warm green-black shadow */
+    --shadow-color: 165 45% 12%;
     --elevation-1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.10), 0 2px 6px -2px hsl(var(--shadow-color) / 0.08);
     --elevation-2: 0 2px 4px -2px hsl(var(--shadow-color) / 0.10), 0 8px 20px -6px hsl(var(--shadow-color) / 0.12);
     --elevation-3: 0 6px 12px -6px hsl(var(--shadow-color) / 0.14), 0 20px 44px -10px hsl(var(--shadow-color) / 0.18);
@@ -66,44 +68,47 @@
     /* Fonts (wired by next/font) */
     --font-sans: "Inter", system-ui, sans-serif;
     --font-display: "Sora", var(--font-sans);
-    --font-arabic: "IBM Plex Sans Arabic", var(--font-sans);
+    /* Overridden at runtime by next/font local (Lyon Arabic Display). */
+    --font-arabic: var(--font-sans);
   }
 
   .dark {
-    --background: 200 28% 6%;
-    --foreground: 40 24% 96%;
-    --card: 200 24% 9%;
-    --card-foreground: 40 24% 96%;
-    --popover: 200 26% 8%;
-    --popover-foreground: 40 24% 96%;
+    /* Deep green-black ground with cream ink; brand accents brightened. */
+    --background: 168 44% 6%;
+    --foreground: 36 55% 92%;
+    --card: 168 32% 9%;
+    --card-foreground: 36 55% 92%;
+    --popover: 168 34% 8%;
+    --popover-foreground: 36 55% 92%;
 
-    --primary: 185 68% 46%;
-    --primary-foreground: 200 28% 6%;
-    --primary-hover: 185 68% 52%;
+    --primary: 158 56% 46%;
+    --primary-foreground: 168 45% 6%;
+    --primary-hover: 158 56% 54%;
 
-    --secondary: 200 16% 15%;
-    --secondary-foreground: 40 24% 96%;
+    --secondary: 359 30% 26%;
+    --secondary-foreground: 36 55% 92%;
 
-    --muted: 200 14% 15%;
-    --muted-foreground: 200 10% 64%;
+    --muted: 168 18% 15%;
+    --muted-foreground: 36 20% 66%;
 
-    --accent: 32 92% 56%;
-    --accent-foreground: 200 28% 6%;
+    --accent: 18 93% 58%;
+    --accent-foreground: 168 45% 6%;
+    --accent-hover: 18 94% 64%;
 
-    --success: 152 54% 44%;
-    --success-foreground: 200 28% 6%;
-    --warning: 38 92% 55%;
-    --warning-foreground: 200 28% 6%;
-    --info: 210 84% 60%;
-    --info-foreground: 200 28% 6%;
-    --destructive: 0 68% 55%;
+    --success: 150 55% 46%;
+    --success-foreground: 168 45% 6%;
+    --warning: 38 92% 56%;
+    --warning-foreground: 168 45% 6%;
+    --info: 200 84% 62%;
+    --info-foreground: 168 45% 6%;
+    --destructive: 0 70% 57%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 200 14% 19%;
-    --input: 200 14% 22%;
-    --ring: 185 68% 50%;
+    --border: 168 16% 18%;
+    --input: 168 16% 20%;
+    --ring: 158 56% 50%;
 
-    --shadow-color: 200 60% 2%;
+    --shadow-color: 168 65% 2%;
     --elevation-1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.5), 0 2px 8px -2px hsl(var(--shadow-color) / 0.4);
     --elevation-2: 0 2px 6px -2px hsl(var(--shadow-color) / 0.5), 0 10px 28px -6px hsl(var(--shadow-color) / 0.5);
     --elevation-3: 0 8px 18px -6px hsl(var(--shadow-color) / 0.6), 0 28px 56px -12px hsl(var(--shadow-color) / 0.7);
@@ -132,9 +137,16 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* RTL: Arabic gets its own font stack; layout flips via the dir attribute. */
+  /* RTL: Arabic uses the Lyon Arabic Display face; Latin glyphs (numbers, SAR,
+   * ID codes) fall back to the sans. Applies to body AND headings/labels so the
+   * display face never leaks Latin (Sora) into Arabic text. */
   [dir="rtl"] {
-    font-family: var(--font-arabic);
+    font-family: var(--font-arabic), var(--font-sans);
+  }
+  [dir="rtl"] .font-display,
+  [dir="rtl"] .font-sans,
+  [dir="rtl"] .font-arabic {
+    font-family: var(--font-arabic), var(--font-sans);
   }
 
   ::selection {

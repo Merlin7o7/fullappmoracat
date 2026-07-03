@@ -29,18 +29,18 @@ export function CatIdCeremony({ cat, isAr, onClose }: { cat: CeremonyCat; isAr: 
 
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-      <div className="absolute inset-0 animate-fade-in bg-[hsl(200_45%_6%/0.86)] backdrop-blur-md" aria-hidden />
+      <div className="absolute inset-0 animate-fade-in bg-[hsl(168_50%_5%/0.88)] backdrop-blur-md" aria-hidden />
 
       <div className="relative flex w-full max-w-sm flex-col items-center text-center">
-        <p className="animate-fade-up font-mono text-[10px] uppercase tracking-[0.28em] text-[hsl(32_92%_62%)]">
-          {isAr ? "لحظة رسمية" : "It's official"}
+        <p className="animate-fade-up font-mono text-[10px] uppercase tracking-[0.28em] text-[hsl(18_93%_62%)]">
+          {isAr ? "صارت رسمية" : "It's official"}
         </p>
         <h2 id={titleId} className="mt-3 animate-fade-up animate-delay-150 font-display text-3xl font-semibold tracking-tight text-white">
-          {isAr ? `${cat.name} أصبح عضواً` : `${cat.name} is a member`}
+          {isAr ? `${cat.name} صار عضو` : `${cat.name} is a member`}
         </h2>
         <p className="mt-2 animate-fade-up animate-delay-300 text-sm leading-relaxed text-white/65">
           {isAr
-            ? "هوية باسمه، ورقم يخصه وحده."
+            ? "هوية على اسمه، ورقم يخصّه هو بس."
             : "An identity in their name, and a number that's theirs alone."}
         </p>
 
@@ -58,7 +58,7 @@ export function CatIdCeremony({ cat, isAr, onClose }: { cat: CeremonyCat; isAr: 
 
         <div className="mt-9 w-full animate-fade-up [animation-delay:800ms]">
           <Button size="lg" className="w-full" onClick={onClose}>
-            {isAr ? `ابدأ رحلة ${cat.name}` : `Begin ${cat.name}'s journey`}
+            {isAr ? `يلا نبدأ مع ${cat.name}` : `Begin ${cat.name}'s journey`}
           </Button>
         </div>
       </div>

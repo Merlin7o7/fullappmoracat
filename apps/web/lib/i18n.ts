@@ -1,7 +1,8 @@
 /**
- * Bilingual dictionary (ar default, en). Voice per the Design Authority:
- * warm, plain, membership-first — never "subscription/box/coupon" framing.
- * Lexicon is fixed: member, Cat ID, benefit (R087). The cat is the hero (P09).
+ * Bilingual dictionary. Arabic voice = Najdi Saudi dialect — warm, premium,
+ * a little playful, never stiff MSA nor slang-heavy. Voice per the Design
+ * Authority: membership-first (member / Cat ID / benefit, R087); the cat is
+ * the hero (P09). Latin brand is "Moracat"; Arabic brand is "مرقط".
  */
 export type Locale = "ar" | "en";
 
@@ -9,45 +10,44 @@ export const dict = {
   ar: {
     dir: "rtl" as const,
     brand: "مرقط",
-    nav: { how: "كيف تعمل", plans: "العضوية", products: "المتجر", about: "من نحن", login: "تسجيل الدخول" },
-    // Honest, warm, no discount-shouting and no fake urgency (R085, R006).
-    announce: "العضوية متاحة الآن في جدة والرياض — نرحّب بالقطط الجديدة 🐾",
+    nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول" },
+    announce: "عضويتنا صارت في جدة والرياض — حيّا الله قطّطكم 🐾",
     hero: {
-      badge: "عضوية لمحبي القطط",
-      title: "امنح قطك",
-      titleAccent: "هويةً تخصه وحده",
+      badge: "عضوية خاصة لأهل القطط",
+      title: "قطك يستاهل",
+      titleAccent: "هوية تخصّه وحده",
       subtitle:
-        "مرقط عضوية لمن يهتمون بقططهم حقاً. هوية رسمية لقطك، وسجلٌّ صحي يرافقه أينما ذهب، وأسعار عضوية لدى العيادات والمتاجر في جدة والرياض.",
-      namePrompt: "ما اسم قطك؟",
-      namePlaceholder: "مثال: سمسم",
-      cta: "أنشئ هوية قطك",
-      ctaSecondary: "كيف تعمل العضوية",
-      trust: "معاينة مجانية · ألغِ في أي وقت · بلا رسوم خفية",
-      previewNote: "هذه معاينة — تُصدر هوية قطك الحقيقية لحظة انضمامك.",
+        "مرقط عضوية لكل واحد ياخذ قطه على محمل الجد. هوية رسمية لقطك، وملف صحي يمشي معاه وين ما راح، وأسعار عضوية عند العيادات والمتاجر في جدة والرياض.",
+      namePrompt: "وش اسم قطك؟",
+      namePlaceholder: "مثلاً: سمسم",
+      cta: "سوِّ هوية قطك",
+      ctaSecondary: "كيف تشتغل العضوية",
+      trust: "معاينة مجانية · ألغِ متى ما تبي · بدون رسوم خفية",
+      previewNote: "هذي معاينة — هوية قطك الحقيقية تطلع أول ما تشترك.",
     },
     features: {
-      title: "ماذا تعني العضوية",
-      lede: "ليست صندوقاً شهرياً — بل علاقة تجعل الاعتناء بقطك أسهل، وتجعله معروفاً.",
+      title: "وش تعني العضوية؟",
+      lede: "مو مجرد صندوق شهري — علاقة تسهّل عليك العناية بقطك وتخلّيه معروف.",
       items: [
-        { title: "هوية رسمية", body: "لكل قط هوية فريدة تحمل اسمه وصورته ورقمه — الهوية نفسها التي يحملها مدى الحياة." },
-        { title: "نتعرّف على قطك", body: "الوزن والعمر والسلالة تُشكّل تغذية ذكية وتذكيرات، فيصبح الاعتناء به أقل عناءً." },
-        { title: "قيمة تراها بعينك", body: "أسعار عضوية على الطعام والرمل والأساسيات، مع احتساب كل ريال تُوفّره — دليلٌ لا وعود." },
-        { title: "لا نفاد بعد اليوم", body: "يصل الطعام والرمل المناسبان في موعدهما كل شهر. أوقف أو تخطَّ أو غيّر متى تغيّرت حياتك." },
+        { title: "هوية رسمية", body: "كل قط له هوية خاصة فيها اسمه وصورته ورقمه — نفس الهوية اللي يحملها طول عمره." },
+        { title: "نعرف قطك", body: "الوزن والعمر والفصيلة نسوّي منها تغذية ذكية وتذكيرات، فالعناية فيه تصير أسهل." },
+        { title: "قيمة تشوفها بعينك", body: "أسعار عضوية على الأكل والرمل والأساسيات، ونحسب لك كل ريال توفّره — دليل مو وعود." },
+        { title: "ما يخلص عليك شي", body: "الأكل والرمل المناسبين يوصلونك بوقتهم كل شهر. أوقف أو تخطّى أو غيّر متى ما احتجت." },
       ],
     },
     plans: {
       title: "اختر عضوية قطك",
-      subtitle: "سعر واحد واضح. ألغِ في أي وقت بلا رسوم خفية — التوفير ميزة عضوية، لا الغاية.",
+      subtitle: "سعر واحد واضح. ألغِ متى ما تبي وبدون رسوم خفية — التوفير ميزة للعضو، مو هدفنا.",
       month: "/ شهرياً",
-      popular: "الأكثر اختياراً",
-      choose: "ابدأ العضوية",
+      popular: "الأكثر طلباً",
+      choose: "ابدأ عضويتك",
     },
-    voices: { title: "من أعضاء يهتمون فعلاً" },
-    footer: "© 2026 مرقط. جميع الحقوق محفوظة.",
+    voices: { title: "كلام أعضائنا" },
+    footer: "© 2026 مرقط. كل الحقوق محفوظة.",
   },
   en: {
     dir: "ltr" as const,
-    brand: "Moraqat",
+    brand: "Moracat",
     nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in" },
     announce: "Membership is live in Jeddah & Riyadh — welcoming new cats 🐾",
     hero: {
@@ -55,7 +55,7 @@ export const dict = {
       title: "Give your cat",
       titleAccent: "an identity of their own",
       subtitle:
-        "Moraqat is a membership for people who take their cats seriously. An official Cat ID, a health record that follows them anywhere, and member rates at vets and stores across Jeddah & Riyadh.",
+        "Moracat is a membership for people who take their cats seriously. An official Cat ID, a health record that follows them anywhere, and member rates at vets and stores across Jeddah & Riyadh.",
       namePrompt: "What's your cat's name?",
       namePlaceholder: "e.g. Simba",
       cta: "Create your cat's ID",
@@ -81,7 +81,7 @@ export const dict = {
       choose: "Start membership",
     },
     voices: { title: "From members who mean it" },
-    footer: "© 2026 Moraqat. All rights reserved.",
+    footer: "© 2026 Moracat. All rights reserved.",
   },
 } as const;
 

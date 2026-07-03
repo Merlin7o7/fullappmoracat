@@ -4,11 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, PawPrint,
+  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2,
 } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { ThemeToggle } from "@/components/toggles";
+import { Logo } from "@/components/logo";
 
 const NAV = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
@@ -49,9 +50,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen bg-muted/30">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-e border-border bg-card p-4 md:flex">
-        <div className="mb-8 flex items-center gap-2 px-2 font-display text-lg font-bold">
-          <span className="grid size-8 place-items-center rounded-full bg-foreground text-background"><PawPrint className="size-4" /></span>
-          Moraqat <span className="text-xs font-normal text-muted-foreground">Admin</span>
+        <div className="mb-8 flex items-center gap-2 px-2">
+          <Logo className="h-8" priority />
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Admin</span>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {NAV.map((item) => {

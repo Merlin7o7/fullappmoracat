@@ -1,13 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Sora, IBM_Plex_Sans_Arabic } from "next/font/google";
+import { Inter, Sora } from "next/font/google";
+import localFont from "next/font/local";
 import { Providers } from "./providers";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const sora = Sora({ subsets: ["latin"], variable: "--font-display", display: "swap" });
-const arabic = IBM_Plex_Sans_Arabic({
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+
+// Brand Arabic face — Lyon Arabic Display (licensed; provided by the brand).
+const arabic = localFont({
+  src: "./fonts/lyon-arabic-display-regular.otf",
   variable: "--font-arabic",
   display: "swap",
 });
@@ -17,28 +19,28 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Moraqat — Cat Essentials Subscription | مرقط",
-    template: "%s · Moraqat",
+    default: "Moracat — The cat membership | مرقط",
+    template: "%s · Moracat",
   },
   description:
-    "Moraqat delivers intelligently-sized cat food, litter and treats to your door every month across Jeddah and Riyadh.",
-  keywords: ["cat subscription", "cat food Saudi Arabia", "اشتراك قطط", "طعام قطط", "Jeddah", "Riyadh"],
+    "Moracat is a membership for people who take their cats seriously — an official Cat ID, a health record that follows them anywhere, and member rates across Jeddah & Riyadh.",
+  keywords: ["cat membership", "Cat ID", "cat care Saudi Arabia", "عضوية قطط", "هوية قط", "Jeddah", "Riyadh"],
   openGraph: {
     type: "website",
-    siteName: "Moraqat",
-    title: "Moraqat — Cat Essentials Subscription",
-    description: "Everything your cat needs, delivered every month. Jeddah & Riyadh.",
+    siteName: "Moracat",
+    title: "Moracat — The cat membership",
+    description: "Give your cat an identity of their own. Jeddah & Riyadh.",
     url: siteUrl,
   },
-  twitter: { card: "summary_large_image", title: "Moraqat", description: "Cat essentials, delivered monthly." },
+  twitter: { card: "summary_large_image", title: "Moracat", description: "The cat membership — an identity of their own." },
   alternates: { canonical: "/", languages: { "ar-SA": "/", "en-SA": "/en" } },
   robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf8f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1417" },
+    { media: "(prefers-color-scheme: light)", color: "#f7dec9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a1712" },
   ],
 };
 

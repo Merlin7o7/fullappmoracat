@@ -8,12 +8,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Primary CTA = brand orange (Moracat brand: orange for primary actions).
         primary:
-          "bg-gradient-to-b from-primary to-[hsl(var(--primary-hover))] text-primary-foreground shadow-e1 ring-hairline hover:shadow-glow hover:brightness-[1.06]",
+          "bg-gradient-to-b from-accent to-[hsl(var(--accent-hover))] text-accent-foreground shadow-e1 ring-hairline hover:shadow-e2 hover:brightness-[1.04]",
+        // Brand green — dominant chrome buttons where green is wanted.
+        brand:
+          "bg-gradient-to-b from-primary to-[hsl(var(--primary-hover))] text-primary-foreground shadow-e1 ring-hairline hover:shadow-glow hover:brightness-[1.08]",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-e1 hover:bg-secondary/80",
+          "bg-secondary text-secondary-foreground shadow-e1 hover:brightness-[0.97]",
         accent:
-          "bg-gradient-to-b from-accent to-[hsl(32_92%_46%)] text-accent-foreground shadow-e1 ring-hairline hover:brightness-[1.05]",
+          "bg-gradient-to-b from-accent to-[hsl(var(--accent-hover))] text-accent-foreground shadow-e1 ring-hairline hover:brightness-[1.04]",
         outline:
           "border border-border bg-background/40 hover:border-primary/40 hover:bg-muted",
         ghost: "hover:bg-muted",

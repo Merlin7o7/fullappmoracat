@@ -34,7 +34,7 @@ export function CatIdCard({ catName, catIdNumber, issuedAt, photoUrl, isAr, prev
       }
       className={cn(
         "relative aspect-[1.586] w-full max-w-sm select-none overflow-hidden rounded-2xl p-5 text-white shadow-e3 ring-hairline",
-        "bg-[linear-gradient(135deg,hsl(187_74%_22%),hsl(193_60%_14%)_55%,hsl(200_45%_10%))]",
+        "bg-[linear-gradient(135deg,hsl(166_82%_16%),hsl(168_80%_10%)_55%,hsl(170_74%_6%))]",
         className
       )}
     >
@@ -51,10 +51,10 @@ export function CatIdCard({ catName, catIdNumber, issuedAt, photoUrl, isAr, prev
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             <span className="grid size-7 place-items-center rounded-full bg-white/10 ring-1 ring-white/20">
-              <PawPrint className="size-3.5 text-[hsl(32_92%_62%)]" />
+              <PawPrint className="size-3.5 text-[hsl(18_93%_60%)]" />
             </span>
             <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/70">
-              {isAr ? "مرقط · عضوية" : "Moraqat · Member"}
+              {isAr ? "مرقط · عضوية" : "Moracat · Member"}
             </span>
           </div>
           {photoUrl ? (
@@ -73,7 +73,7 @@ export function CatIdCard({ catName, catIdNumber, issuedAt, photoUrl, isAr, prev
           </p>
           {since && (
             <p className="mt-0.5 text-[11px] text-white/55">
-              {isAr ? `عضو منذ ${since}` : `Member since ${since}`}
+              {isAr ? `عضو من ${since}` : `Member since ${since}`}
             </p>
           )}
         </div>
@@ -82,7 +82,7 @@ export function CatIdCard({ catName, catIdNumber, issuedAt, photoUrl, isAr, prev
           <p className="font-mono text-sm tracking-[0.18em] text-white/90 tabular" dir="ltr">
             {catIdNumber}
           </p>
-          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[hsl(32_92%_62%)]">
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[hsl(18_93%_60%)]">
             {preview ? (isAr ? "معاينة" : "Preview") : isAr ? "هوية رسمية" : "Official ID"}
           </p>
         </div>

@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PawPrint } from "lucide-react";
 import { Button } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { ThemeToggle, LangToggle } from "./toggles";
+import { Logo } from "./logo";
 
 export function SiteHeader() {
   const { t } = useLocale();
@@ -34,11 +34,8 @@ export function SiteHeader() {
             scrolled ? "glass shadow-soft-lg" : "bg-transparent"
           }`}
         >
-          <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold">
-            <span className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground">
-              <PawPrint className="size-5" />
-            </span>
-            {t.brand}
+          <Link href="/" aria-label="Moracat" className="flex items-center">
+            <Logo className="h-9" priority />
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">

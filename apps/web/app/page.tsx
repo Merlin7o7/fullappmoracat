@@ -4,10 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Fingerprint, HeartPulse, PiggyBank, RefreshCw, Check, Star, ArrowRight, PawPrint } from "lucide-react";
+import { Fingerprint, HeartPulse, PiggyBank, RefreshCw, Check, Star, ArrowRight } from "lucide-react";
 import { Button, Card, Badge } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { CatIdCard } from "@/components/cat-id-card";
+import { Logo } from "@/components/logo";
 import { useLocale } from "./providers";
 import { PLANS } from "@/lib/plans";
 import { api } from "@/lib/api";
@@ -196,15 +197,11 @@ export default function HomePage() {
       <MemberVoices isAr={isAr} title={t.voices.title} />
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer id="about" className="border-t border-border py-12">
-        <div className="container flex flex-col items-center gap-4 text-center">
-          <div className="flex items-center gap-2 font-display text-lg font-bold">
-            <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-foreground">
-              <PawPrint className="size-4" />
-            </span>
-            {t.brand}
-          </div>
-          <p className="text-sm text-muted-foreground">{t.footer}</p>
+      <footer id="about" className="border-t border-border bg-secondary/30 py-14">
+        <div className="container flex flex-col items-center gap-5 text-center">
+          <Logo className="h-14" />
+          <p className="max-w-md text-sm text-muted-foreground">{t.hero.subtitle}</p>
+          <p className="text-xs text-muted-foreground">{t.footer}</p>
         </div>
       </footer>
     </div>
