@@ -60,24 +60,23 @@ export class AuthService {
     }
 
     const email = dto.email.toLowerCase().trim();
-    const phone = normalizePhone(dto.phone, dto.dialCode);
+    const phone = dto.phone ? normalizePhone(dto.phone, dto.dialCode) : null;
 
-    const [emailClash, phoneClash] = await Promise.all([
-      this.prisma.user.findUnique({ where: { email }, select: { id: true } }),
-      this.prisma.user.findUnique({ where: { phone }, select: { id: true } }),
-    ]);
+    const emailClash = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (emailClash) throw new ConflictException("Email is already registered");
-    if (phoneClash) throw new ConflictException("Mobile number is already registered");
+    if (phone) {
+      const phoneClash = await this.prisma.user.findUnique({ where: { phone }, select: { id: true } });
+      if (phoneClash) throw new ConflictException("Mobile number is already registered");
+    }
 
-    // Frictionless, secure: password OR a completed SMS verification (Google
-    // sign-ups arrive through googleAuth, not here).
+    // Email sign-ups need a password (Google sign-ups arrive through googleAuth).
     if (!dto.password) {
       throw new BadRequestException("A password is required");
     }
 
-    // If an OTP was supplied, treat the phone as verified on the spot.
+    // If a phone + OTP were supplied, treat the phone as verified on the spot.
     let phoneVerified: Date | null = null;
-    if (dto.otp) {
+    if (dto.otp && phone) {
       const ok = await this.consumeOtp(phone, "REGISTER", dto.otp);
       if (!ok) throw new UnauthorizedException("Invalid or expired verification code");
       phoneVerified = new Date();
@@ -89,7 +88,7 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         email,
-        phone,
+        phone: phone ?? undefined,
         dialCode: dto.dialCode ?? "+966",
         passwordHash,
         firstName,
@@ -155,11 +154,15 @@ export class AuthService {
 
   // ── Continue with Google ──────────────────────────────────────────────────
   async googleAuth(dto: GoogleAuthDto, meta: RequestMeta) {
-    const profile = decodeGoogleIdToken(dto.idToken);
+    // Verify the token with Google (signature + expiry validated server-side),
+    // then confirm it was minted for OUR app (audience check).
+    const profile = await verifyGoogleIdToken(dto.idToken);
     if (!profile?.email) throw new UnauthorizedException("Invalid Google credential");
-    // SECURITY: production MUST verify the token signature + audience against
-    // Google's JWKS (e.g. google-auth-library). Decoding-only is dev scaffolding.
-    if (IS_PROD && !process.env.GOOGLE_CLIENT_ID) {
+    const expectedAud = process.env.GOOGLE_CLIENT_ID;
+    if (expectedAud && profile.aud !== expectedAud) {
+      throw new UnauthorizedException("Google credential was issued for a different app");
+    }
+    if (IS_PROD && !expectedAud) {
       throw new BadRequestException("Google sign-in is not configured");
     }
 
@@ -554,20 +557,27 @@ function maskPhone(phone: string): string {
 
 interface GoogleProfile {
   email?: string;
+  email_verified?: string | boolean;
   given_name?: string;
   family_name?: string;
   picture?: string;
+  aud?: string;
   sub: string;
 }
 
-/** Decode (NOT verify) a Google ID token's payload. Prod must verify signature. */
-function decodeGoogleIdToken(idToken: string): GoogleProfile | null {
+/**
+ * Verify a Google ID token via Google's tokeninfo endpoint — this validates the
+ * signature, issuer and expiry for us (no crypto library needed). The caller
+ * additionally checks the `aud` claim against our client ID.
+ */
+async function verifyGoogleIdToken(idToken: string): Promise<GoogleProfile | null> {
   try {
-    const [, payload] = idToken.split(".");
-    if (!payload) return null;
-    const json = Buffer.from(payload, "base64url").toString("utf8");
-    const claims = JSON.parse(json) as GoogleProfile;
-    return claims.sub ? claims : null;
+    const res = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
+    );
+    if (!res.ok) return null;
+    const claims = (await res.json()) as GoogleProfile;
+    return claims.sub && claims.email ? claims : null;
   } catch {
     return null;
   }

@@ -29,9 +29,11 @@ export default function RegisterPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
-  const fullPhone = composePhone(form.dialCode, form.phone);
+  const phoneDigits = form.phone.replace(/\D/g, "");
+  // Phone is optional now that OTP is off; include it only if a real number is given.
+  const fullPhone = phoneDigits.length >= 8 ? composePhone(form.dialCode, form.phone) : undefined;
   // SMS OTP is only usable once a provider is wired. Until then, verify-by-SMS is
-  // skipped so signups still work (the phone is stored, just not yet verified).
+  // skipped so signups still work.
   const smsEnabled = process.env.NEXT_PUBLIC_SMS_ENABLED === "true";
 
   async function doRegister(withOtp?: string) {
@@ -39,8 +41,7 @@ export default function RegisterPage() {
       fullName: form.fullName || undefined,
       email: form.email,
       password: form.password,
-      phone: fullPhone,
-      dialCode: form.dialCode,
+      ...(fullPhone ? { phone: fullPhone, dialCode: form.dialCode } : {}),
       gender: form.gender,
       acceptTerms: true,
       ...(withOtp ? { otp: withOtp } : {}),
@@ -52,7 +53,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     if (!form.terms) { setError(isAr ? "لازم توافق على الشروط وسياسة الخصوصية" : "Please accept the Terms & Privacy Policy"); return; }
-    if (form.phone.replace(/\D/g, "").length < 8) { setError(isAr ? "رقم الجوال غير صحيح" : "Enter a valid mobile number"); return; }
+    if (phoneDigits && phoneDigits.length < 8) { setError(isAr ? "رقم الجوال غير صحيح" : "Enter a valid mobile number"); return; }
     setLoading(true);
     try {
       if (!smsEnabled) {
@@ -60,6 +61,7 @@ export default function RegisterPage() {
         await doRegister();
         return;
       }
+      if (!fullPhone) { setError(isAr ? "أدخل رقم جوالك للتحقق" : "Enter your mobile to verify"); setLoading(false); return; }
       const { devCode } = await requestOtp(fullPhone, "REGISTER");
       setStep("verify");
       if (devCode) toast({ title: isAr ? "رمز التحقق (وضع التطوير)" : "Verification code (dev)", description: devCode });
@@ -133,7 +135,7 @@ export default function RegisterPage() {
 
       <form onSubmit={startVerification} className="mt-5 flex flex-col gap-4">
         <Field label={isAr ? "الاسم الكامل" : "Full name"} value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} placeholder={isAr ? "مثلاً: سارة العتيبي" : "e.g. Sara Al-Otaibi"} autoComplete="name" />
-        <PhoneField isAr={isAr} label={isAr ? "رقم الجوال" : "Mobile number"} required dialCode={form.dialCode} onDialCode={(v) => setForm({ ...form, dialCode: v })} value={form.phone} onValue={(v) => setForm({ ...form, phone: v })} />
+        <PhoneField isAr={isAr} label={isAr ? "رقم الجوال (اختياري)" : "Mobile number (optional)"} dialCode={form.dialCode} onDialCode={(v) => setForm({ ...form, dialCode: v })} value={form.phone} onValue={(v) => setForm({ ...form, phone: v })} />
         <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" autoComplete="email" />
         <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder={isAr ? "٨ أحرف على الأقل" : "At least 8 characters"} autoComplete="new-password" />
 

@@ -55,9 +55,10 @@ export class RegisterDto {
   @MaxLength(60)
   lastName?: string;
 
-  @ApiProperty({ example: "+966500000000", description: "Mobile number (mandatory)" })
+  @ApiPropertyOptional({ example: "+966500000000", description: "Mobile number (optional)" })
+  @IsOptional()
   @Matches(PHONE_RE, { message: "Invalid phone number" })
-  phone!: string;
+  phone?: string;
 
   @ApiPropertyOptional({ example: "+966", default: "+966" })
   @IsOptional()

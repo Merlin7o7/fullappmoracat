@@ -39,7 +39,7 @@ export interface RegisterInput {
   fullName?: string;
   firstName?: string;
   lastName?: string;
-  phone: string;
+  phone?: string;
   dialCode?: string;
   gender?: Gender;
   acceptTerms: boolean;
