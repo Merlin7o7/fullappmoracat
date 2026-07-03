@@ -25,13 +25,15 @@ RUN pnpm --filter @moraqat/db build \
  && pnpm --filter @moraqat/api build
 
 # Produce a pruned, production-only bundle of the API + its workspace deps.
+# `pnpm deploy` re-copies @prisma/client from the pristine store, DROPPING the
+# generated .prisma client — so overwrite the deployed store entry with the
+# repo's fully-generated one (built in this same alpine stage → musl engines).
+# Deterministic: same lockfile ⇒ identical store-entry directory name.
 RUN pnpm --filter @moraqat/api --prod deploy /app \
- && cp -r packages/db/prisma /app/prisma
-# Regenerate the Prisma client inside the deployed tree using the CLI already
-# installed in the workspace (npx would try to npm-install into the pruned
-# tree and fail). Output resolves to /app/node_modules/.prisma with musl engines.
+ && cp -r packages/db/prisma /app/prisma \
+ && rm -rf /app/node_modules/.pnpm/@prisma+client* \
+ && cp -a /repo/node_modules/.pnpm/@prisma+client* /app/node_modules/.pnpm/
 WORKDIR /app
-RUN /repo/packages/db/node_modules/.bin/prisma generate --schema=prisma/schema.prisma
 
 # ── Runtime ───────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
