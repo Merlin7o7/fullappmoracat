@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+packages/db/.pgdata
+.git
+.env
+.env.*
+!.env.example
+*.log
+.claude
+.vscode

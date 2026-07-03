@@ -1,0 +1,69 @@
+/**
+ * E2E runner: boots the built API (dist/main.js) against DATABASE_URL, waits
+ * for /health, runs smoke.mjs, then tears the API down. Exit code = suite's.
+ *
+ * Prereqs: `pnpm db:build && pnpm --filter @moraqat/api build`, schema pushed,
+ * seed applied. Used locally and by CI (with a postgres service container).
+ */
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const apiDir = join(__dirname, "..");
+const port = process.env.API_PORT ?? "4000";
+const apiUrl = `http://localhost:${port}`;
+
+const env = {
+  ...process.env,
+  API_PORT: port,
+  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? "e2e-access-secret",
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? "e2e-refresh-secret",
+  PAYMENTS_MODE: "mock",
+  MOCK_WEBHOOK_SECRET: process.env.MOCK_WEBHOOK_SECRET ?? "mock-webhook-secret",
+  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+};
+
+if (!env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL is required");
+  process.exit(1);
+}
+
+console.log("▶ starting API…");
+const api = spawn(process.execPath, [join(apiDir, "dist", "main.js")], {
+  env,
+  stdio: ["ignore", "pipe", "pipe"],
+});
+api.stderr.on("data", (d) => process.stderr.write(d));
+
+async function waitForHealth(timeoutMs = 30_000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(`${apiUrl}/health`);
+      const body = await res.json();
+      if (body.status === "ok" && body.db === "up") return true;
+    } catch {
+      /* not up yet */
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return false;
+}
+
+const healthy = await waitForHealth();
+if (!healthy) {
+  console.error("❌ API did not become healthy in time");
+  api.kill();
+  process.exit(1);
+}
+console.log("✓ API healthy — running smoke suite\n");
+
+const suite = spawn(process.execPath, [join(__dirname, "smoke.mjs")], {
+  env: { ...env, API_URL: apiUrl },
+  stdio: "inherit",
+});
+
+const code = await new Promise((resolve) => suite.on("exit", resolve));
+api.kill();
+process.exit(code ?? 1);

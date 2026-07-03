@@ -1,0 +1,223 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * ════════════════════════════════════════════════════════════════════════
+ *  Moraqat Design System — tokens
+ *  Warm Saudi sand + deep teal ("Moraqat" = the tabby's spotted coat) with a
+ *  saffron accent. Light and dark are both first-class, tuned for WCAG AA+.
+ *  All values are HSL so theming/contrast stay controllable.
+ * ════════════════════════════════════════════════════════════════════════
+ */
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 40 38% 97%;
+    --foreground: 200 24% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 24% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 24% 11%;
+
+    /* Brand — deep teal */
+    --primary: 187 74% 26%;
+    --primary-foreground: 40 40% 98%;
+    --primary-hover: 187 74% 22%;
+
+    /* Warm sand — secondary surface */
+    --secondary: 36 44% 93%;
+    --secondary-foreground: 200 22% 18%;
+
+    --muted: 40 24% 93%;
+    --muted-foreground: 200 10% 40%;
+
+    /* Saffron / amber accent */
+    --accent: 32 92% 52%;
+    --accent-foreground: 30 40% 12%;
+
+    /* Semantic states */
+    --success: 152 58% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 48%;
+    --warning-foreground: 30 40% 12%;
+    --info: 210 80% 46%;
+    --info-foreground: 0 0% 100%;
+    --destructive: 0 74% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Lines + focus */
+    --border: 40 18% 87%;
+    --input: 40 18% 84%;
+    --ring: 187 74% 32%;
+
+    --radius: 0.9rem;
+
+    /* Elevation ladder — consistent shadow scale */
+    --shadow-color: 200 30% 20%;
+    --elevation-1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.10), 0 2px 6px -2px hsl(var(--shadow-color) / 0.08);
+    --elevation-2: 0 2px 4px -2px hsl(var(--shadow-color) / 0.10), 0 8px 20px -6px hsl(var(--shadow-color) / 0.12);
+    --elevation-3: 0 6px 12px -6px hsl(var(--shadow-color) / 0.14), 0 20px 44px -10px hsl(var(--shadow-color) / 0.18);
+
+    /* Motion tokens */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Fonts (wired by next/font) */
+    --font-sans: "Inter", system-ui, sans-serif;
+    --font-display: "Sora", var(--font-sans);
+    --font-arabic: "IBM Plex Sans Arabic", var(--font-sans);
+  }
+
+  .dark {
+    --background: 200 28% 6%;
+    --foreground: 40 24% 96%;
+    --card: 200 24% 9%;
+    --card-foreground: 40 24% 96%;
+    --popover: 200 26% 8%;
+    --popover-foreground: 40 24% 96%;
+
+    --primary: 185 68% 46%;
+    --primary-foreground: 200 28% 6%;
+    --primary-hover: 185 68% 52%;
+
+    --secondary: 200 16% 15%;
+    --secondary-foreground: 40 24% 96%;
+
+    --muted: 200 14% 15%;
+    --muted-foreground: 200 10% 64%;
+
+    --accent: 32 92% 56%;
+    --accent-foreground: 200 28% 6%;
+
+    --success: 152 54% 44%;
+    --success-foreground: 200 28% 6%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 200 28% 6%;
+    --info: 210 84% 60%;
+    --info-foreground: 200 28% 6%;
+    --destructive: 0 68% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 14% 19%;
+    --input: 200 14% 22%;
+    --ring: 185 68% 50%;
+
+    --shadow-color: 200 60% 2%;
+    --elevation-1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.5), 0 2px 8px -2px hsl(var(--shadow-color) / 0.4);
+    --elevation-2: 0 2px 6px -2px hsl(var(--shadow-color) / 0.5), 0 10px 28px -6px hsl(var(--shadow-color) / 0.5);
+    --elevation-3: 0 8px 18px -6px hsl(var(--shadow-color) / 0.6), 0 28px 56px -12px hsl(var(--shadow-color) / 0.7);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Tabular figures for prices, stats, timers — prevents layout shift. */
+  .tabular,
+  [data-tabular] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* RTL: Arabic gets its own font stack; layout flips via the dir attribute. */
+  [dir="rtl"] {
+    font-family: var(--font-arabic);
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+
+  /* Accessible, on-brand focus — never remove the ring. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Premium, unobtrusive scrollbars. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+    background-clip: content-box;
+  }
+
+  /* Honour reduced-motion — kill non-essential animation. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Glassmorphism — floating nav, premium overlays. */
+  .glass {
+    @apply border border-white/15 bg-white/65 shadow-glass backdrop-blur-xl backdrop-saturate-150;
+  }
+  .dark .glass {
+    @apply border-white/[0.08] bg-white/[0.045];
+  }
+
+  /* Loading skeleton shimmer. */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-muted/70;
+  }
+  .skeleton::after {
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/25 to-transparent;
+    content: "";
+  }
+
+  /* Brand gradient text for hero accents. */
+  .text-gradient {
+    @apply bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  /* Subtle ambient mesh backdrop for hero / auth surfaces. */
+  .mesh-bg {
+    background-image:
+      radial-gradient(60% 55% at 20% 15%, hsl(var(--primary) / 0.14), transparent 60%),
+      radial-gradient(50% 45% at 85% 25%, hsl(var(--accent) / 0.12), transparent 60%);
+  }
+
+  /* Hairline top-lit border used on premium cards. */
+  .ring-hairline {
+    box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.06);
+  }
+}
+
+@layer utilities {
+  /* Staggered entrance helpers (respect reduced-motion via base rule). */
+  .animate-delay-75 { animation-delay: 75ms; }
+  .animate-delay-150 { animation-delay: 150ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+}

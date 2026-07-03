@@ -1,0 +1,34 @@
+{
+  "name": "moraqat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Moraqat (مرقط) — Saudi cat essentials subscription platform",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "e2e": "node apps/api/e2e/run.mjs",
+    "db:build": "pnpm --filter @moraqat/db build",
+    "db:generate": "pnpm --filter @moraqat/db generate",
+    "db:migrate": "pnpm --filter @moraqat/db migrate",
+    "db:push": "pnpm --filter @moraqat/db push",
+    "db:seed": "pnpm --filter @moraqat/db seed",
+    "db:studio": "pnpm --filter @moraqat/db studio",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "db:local": "pnpm --filter @moraqat/db local",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "turbo": "^2.1.3",
+    "typescript": "^5.6.2"
+  }
+}
