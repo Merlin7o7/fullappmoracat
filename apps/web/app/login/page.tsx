@@ -22,6 +22,8 @@ export default function LoginPage() {
   const isAr = locale === "ar";
 
   const [method, setMethod] = React.useState<Method>("email");
+  // Mobile + OTP login needs a live SMS provider; hide it until one is wired.
+  const smsEnabled = process.env.NEXT_PUBLIC_SMS_ENABLED === "true";
   const [rememberMe, setRememberMe] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -127,13 +129,15 @@ export default function LoginPage() {
         <span className="h-px flex-1 bg-border" />
       </div>
 
-      {/* Method switch */}
-      <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
-        <MethodTab active={method === "email"} onClick={() => { setMethod("email"); setError(null); }} icon={Mail} label={isAr ? "البريد" : "Email"} />
-        <MethodTab active={method === "phone"} onClick={() => { setMethod("phone"); setError(null); }} icon={Smartphone} label={isAr ? "الجوال" : "Mobile"} />
-      </div>
+      {/* Method switch — only when SMS OTP is available */}
+      {smsEnabled && (
+        <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
+          <MethodTab active={method === "email"} onClick={() => { setMethod("email"); setError(null); }} icon={Mail} label={isAr ? "البريد" : "Email"} />
+          <MethodTab active={method === "phone"} onClick={() => { setMethod("phone"); setError(null); }} icon={Smartphone} label={isAr ? "الجوال" : "Mobile"} />
+        </div>
+      )}
 
-      {method === "email" ? (
+      {!smsEnabled || method === "email" ? (
         <form onSubmit={onEmailLogin} className="mt-5 flex flex-col gap-4">
           <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
           <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={password} onChange={setPassword} placeholder="••••••••" autoComplete="current-password" />

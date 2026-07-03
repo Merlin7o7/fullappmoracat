@@ -30,6 +30,23 @@ export default function RegisterPage() {
   const [loading, setLoading] = React.useState(false);
 
   const fullPhone = composePhone(form.dialCode, form.phone);
+  // SMS OTP is only usable once a provider is wired. Until then, verify-by-SMS is
+  // skipped so signups still work (the phone is stored, just not yet verified).
+  const smsEnabled = process.env.NEXT_PUBLIC_SMS_ENABLED === "true";
+
+  async function doRegister(withOtp?: string) {
+    await register({
+      fullName: form.fullName || undefined,
+      email: form.email,
+      password: form.password,
+      phone: fullPhone,
+      dialCode: form.dialCode,
+      gender: form.gender,
+      acceptTerms: true,
+      ...(withOtp ? { otp: withOtp } : {}),
+    });
+    router.push("/portal");
+  }
 
   async function startVerification(e: React.FormEvent) {
     e.preventDefault();
@@ -38,11 +55,16 @@ export default function RegisterPage() {
     if (form.phone.replace(/\D/g, "").length < 8) { setError(isAr ? "رقم الجوال غير صحيح" : "Enter a valid mobile number"); return; }
     setLoading(true);
     try {
+      if (!smsEnabled) {
+        // No SMS provider — create the account directly (fewest steps, R002).
+        await doRegister();
+        return;
+      }
       const { devCode } = await requestOtp(fullPhone, "REGISTER");
       setStep("verify");
       if (devCode) toast({ title: isAr ? "رمز التحقق (وضع التطوير)" : "Verification code (dev)", description: devCode });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send code");
+      setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {
       setLoading(false);
     }
@@ -53,17 +75,7 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      await register({
-        fullName: form.fullName || undefined,
-        email: form.email,
-        password: form.password,
-        phone: fullPhone,
-        dialCode: form.dialCode,
-        gender: form.gender,
-        acceptTerms: true,
-        otp,
-      });
-      router.push("/portal");
+      await doRegister(otp);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -140,7 +152,7 @@ export default function RegisterPage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" size="lg" disabled={loading} className="mt-1">
           {loading ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-          {isAr ? "تحقّق من الجوال وأكمل" : "Verify mobile & continue"}
+          {smsEnabled ? (isAr ? "تحقّق من الجوال وأكمل" : "Verify mobile & continue") : (isAr ? "إنشاء الحساب" : "Create account")}
           {!loading && <ArrowRight className="size-4 rtl:rotate-180" />}
         </Button>
       </form>
