@@ -1,0 +1,13 @@
+# Moracat reverse proxy — automatic HTTPS via Let's Encrypt.
+# Serves the web app on your root domain and the API on the api subdomain.
+# Domains come from SITE_DOMAIN / API_DOMAIN in your .env.
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:4000
+}
