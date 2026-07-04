@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Cat as CatIcon, Plus, Sparkles, Loader2, X, Search, Star, IdCard, Settings2, Copy, Check } from "lucide-react";
+import { Cat as CatIcon, Plus, Sparkles, Loader2, X, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { Field, SelectField } from "@/components/field";
 import { localizeName } from "@/lib/translit";
+import { exportCardPng, exportCardPdf, printCard } from "@/lib/card-export";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatIdCeremony } from "@/components/cat-id-ceremony";
 import { CatManageDrawer } from "@/components/cat-manage-drawer";
@@ -246,7 +247,10 @@ function CatCard({
 
 function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [copied, setCopied] = React.useState(false);
+  const [busy, setBusy] = React.useState<null | "pdf" | "png" | "print">(null);
+  const cardRef = React.useRef<HTMLDivElement>(null);
   const copy = () => {
     if (!cat.catIdNumber) return;
     navigator.clipboard?.writeText(cat.catIdNumber).then(() => {
@@ -256,22 +260,58 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
   };
   const ownerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || null;
   const breed = cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : null;
+  const baseName = `Moracat-${cat.catIdNumber ?? cat.name}`;
+
+  async function run(kind: "pdf" | "png" | "print") {
+    if (!cardRef.current) return;
+    setBusy(kind);
+    try {
+      if (kind === "pdf") await exportCardPdf(cardRef.current, baseName);
+      else if (kind === "png") await exportCardPng(cardRef.current, baseName);
+      else await printCard(cardRef.current, baseName);
+    } catch {
+      toast({
+        title: isAr ? "تعذّر التصدير" : "Export failed",
+        description: isAr ? "قد تكون صورة القط من مصدر خارجي — جرّب بدون صورة." : "The cat photo may be cross-origin — try without a photo.",
+        variant: "error",
+      });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div className="flex flex-col items-center gap-5 pt-2">
-      <CatIdCard
-        detailed
-        catName={cat.name}
-        catIdNumber={cat.catIdNumber!}
-        issuedAt={cat.idIssuedAt}
-        photoUrl={cat.photoUrl}
-        isAr={isAr}
-        membershipActive={cat.membershipStatus === "ACTIVE"}
-        ownerName={ownerName}
-        ownerPhone={user?.phone ?? null}
-        breed={breed}
-        favoriteFood={cat.favoriteFoods?.[0] ?? null}
-        qrToken={cat.qrToken}
-      />
+      <div ref={cardRef} className="w-full max-w-sm">
+        <CatIdCard
+          detailed
+          catName={cat.name}
+          catIdNumber={cat.catIdNumber!}
+          issuedAt={cat.idIssuedAt}
+          photoUrl={cat.photoUrl}
+          isAr={isAr}
+          membershipActive={cat.membershipStatus === "ACTIVE"}
+          ownerName={ownerName}
+          ownerPhone={user?.phone ?? null}
+          breed={breed}
+          favoriteFood={cat.favoriteFoods?.[0] ?? null}
+          qrToken={cat.qrToken}
+        />
+      </div>
+
+      {/* #6 Export — PDF / high-res PNG / print, full branding preserved. */}
+      <div className="grid w-full max-w-sm grid-cols-3 gap-2">
+        <Button variant="outline" size="sm" onClick={() => run("pdf")} disabled={!!busy}>
+          {busy === "pdf" ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4" />} PDF
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => run("png")} disabled={!!busy}>
+          {busy === "png" ? <Loader2 className="size-4 animate-spin" /> : <ImageDown className="size-4" />} PNG
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => run("print")} disabled={!!busy}>
+          {busy === "print" ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />} {isAr ? "طباعة" : "Print"}
+        </Button>
+      </div>
+
       <button onClick={copy} className="inline-flex items-center gap-1.5 font-mono text-sm tracking-wider text-muted-foreground transition-colors hover:text-foreground" dir="ltr">
         {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
         {cat.catIdNumber}
