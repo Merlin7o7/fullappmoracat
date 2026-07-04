@@ -45,3 +45,6 @@ Thumbs.db
 # Misc
 .vercel
 .sentryclirc
+
+.vercel
+.env*
