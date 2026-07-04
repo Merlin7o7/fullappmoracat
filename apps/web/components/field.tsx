@@ -16,11 +16,12 @@ interface FieldProps {
   className?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   autoComplete?: string;
+  autoFocus?: boolean;
 }
 
 /** Labelled input used across auth + portal forms (a11y-first). */
 export function Field({
-  label, value, onChange, type = "text", placeholder, required, hint, error, className, inputMode, autoComplete,
+  label, value, onChange, type = "text", placeholder, required, hint, error, className, inputMode, autoComplete, autoFocus,
 }: FieldProps) {
   const id = React.useId();
   const [show, setShow] = React.useState(false);
@@ -43,6 +44,7 @@ export function Field({
           placeholder={placeholder}
           inputMode={inputMode}
           autoComplete={autoComplete}
+          autoFocus={autoFocus}
           invalid={!!error}
           aria-describedby={describedBy}
           onChange={(e) => onChange(e.target.value)}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useLocale } from "@/app/providers";
 import { Logo } from "./logo";
+import { CatIdCard } from "./cat-id-card";
 import { IlloCat, IlloHeart, IlloMouse, IlloPaw, IlloSprig, Sticker } from "./illustrations";
 
 /**
@@ -14,8 +15,16 @@ import { IlloCat, IlloHeart, IlloMouse, IlloPaw, IlloSprig, Sticker } from "./il
  * form breathes alone.
  */
 export function AuthShell({
-  children, title, subtitle,
-}: { children: React.ReactNode; title: string; subtitle: string; isAr?: boolean }) {
+  children, title, subtitle, previewCatName,
+}: {
+  children: React.ReactNode;
+  title: string;
+  subtitle: string;
+  isAr?: boolean;
+  /** When the member arrives with a cat's name (from the hero), the brand side
+   *  shows their ID taking shape instead of the generic cat (R016/R011). */
+  previewCatName?: string | null;
+}) {
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
 
@@ -43,10 +52,16 @@ export function AuthShell({
             <IlloSprig tone="peach" className="h-16 w-auto opacity-60" />
           </Sticker>
 
-          <IlloCat tone="peach" className="mx-auto h-52 w-auto" />
+          {previewCatName ? (
+            <CatIdCard catName={previewCatName} catIdNumber="MRC-····-····" isAr={isAr} preview className="mx-auto shadow-glow" />
+          ) : (
+            <IlloCat tone="peach" className="mx-auto h-52 w-auto" />
+          )}
 
           <p className="mt-10 text-center font-display text-3xl font-semibold leading-snug tracking-tight">
-            {t.hero.title} {t.hero.titleAccent}
+            {previewCatName
+              ? (isAr ? `هوية ${previewCatName} جاهزة تنطبع` : `${previewCatName}'s ID is ready to be stamped`)
+              : `${t.hero.title} ${t.hero.titleAccent}`}
           </p>
           <p className="mt-3 text-center text-sm leading-relaxed text-primary-foreground/70">
             {t.hero.trust}

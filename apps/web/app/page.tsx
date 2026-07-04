@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, useMotionValue, useSpring, useReducedMotion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Star, ArrowRight } from "lucide-react";
@@ -30,6 +31,7 @@ const fadeUp = {
 const PREVIEW_ID = "MRC-2K9F-7YQ3";
 
 export default function HomePage() {
+  const router = useRouter();
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
   const [catName, setCatName] = React.useState("");
@@ -38,6 +40,13 @@ export default function HomePage() {
     if (catName.trim()) {
       try { sessionStorage.setItem("moraqat.pendingCatName", catName.trim()); } catch { /* ignore */ }
     }
+  };
+
+  // Enter in the name field goes forward too — the obvious gesture works (R002).
+  const submitName = (e: React.FormEvent) => {
+    e.preventDefault();
+    rememberName();
+    router.push("/register");
   };
 
   return (
@@ -75,7 +84,7 @@ export default function HomePage() {
             {/* Cat's name first (R016) — a taste of belonging before any ask (R011/R017) */}
             <motion.form
               variants={fadeUp} initial="hidden" animate="show" custom={3}
-              onSubmit={(e) => e.preventDefault()}
+              onSubmit={submitName}
               className="mx-auto mt-9 max-w-md lg:mx-0"
             >
               <label htmlFor="hero-cat-name" className="mb-2.5 block text-sm font-medium text-foreground/80">
@@ -146,7 +155,7 @@ export default function HomePage() {
 
         <div className="space-y-6 sm:space-y-8">
           {t.features.items.map((f, i) => (
-            <FeatureRow key={f.title} index={i} title={f.title} body={f.body} flip={i % 2 === 1} />
+            <FeatureRow key={f.title} index={i} eyebrow={f.eyebrow} title={f.title} body={f.body} flip={i % 2 === 1} />
           ))}
         </div>
       </section>
@@ -313,7 +322,16 @@ const FEATURE_ART: { tint: string; art: React.ReactNode }[] = [
   },
 ];
 
-function FeatureRow({ index, title, body, flip }: { index: number; title: string; body: string; flip: boolean }) {
+/* Each pillar is one of the membership's jobs — the chip names it honestly
+ * (two for the cat, two for the owner), like a sticker pressed on the page. */
+const PILLAR_CHIP = [
+  "bg-cream text-cream-foreground/80 -rotate-2",
+  "bg-butter/70 text-foreground/75 rotate-1 dark:bg-butter/20",
+  "bg-blush/60 text-foreground/75 -rotate-1 dark:bg-blush/20",
+  "bg-sage/25 text-foreground/75 rotate-2",
+];
+
+function FeatureRow({ index, eyebrow, title, body, flip }: { index: number; eyebrow: string; title: string; body: string; flip: boolean }) {
   const art = FEATURE_ART[index % FEATURE_ART.length] ?? FEATURE_ART[0]!;
   return (
     <motion.div
@@ -322,11 +340,11 @@ function FeatureRow({ index, title, body, flip }: { index: number; title: string
       className="grid items-stretch gap-6 lg:grid-cols-2 lg:gap-8"
     >
       {/* Copy panel */}
-      <div className={cn("relative flex flex-col justify-center rounded-[2rem] border border-border bg-card p-8 shadow-e1 sm:p-12", flip && "lg:order-2")}>
-        <span aria-hidden className="font-display text-6xl font-semibold leading-none text-primary/10 sm:text-7xl" dir="ltr">
-          {String(index + 1).padStart(2, "0")}
+      <div className={cn("relative flex flex-col items-start justify-center rounded-[2rem] border border-border bg-card p-8 shadow-e1 sm:p-12", flip && "lg:order-2")}>
+        <span className={cn("inline-flex items-center rounded-full border border-foreground/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.12em]", PILLAR_CHIP[index % PILLAR_CHIP.length])}>
+          {eyebrow}
         </span>
-        <h3 className="mt-4 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h3>
+        <h3 className="mt-5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h3>
         <p className="mt-3 max-w-md text-base leading-relaxed text-muted-foreground">{body}</p>
       </div>
 

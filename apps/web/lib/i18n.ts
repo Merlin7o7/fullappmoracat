@@ -29,10 +29,10 @@ export const dict = {
       title: "وش تعني العضوية؟",
       lede: "مو مجرد صندوق شهري — علاقة تسهّل عليك العناية بقطك وتخلّيه معروف.",
       items: [
-        { title: "هوية رسمية", body: "كل قط له هوية خاصة فيها اسمه وصورته ورقمه — نفس الهوية اللي يحملها طول عمره." },
-        { title: "نعرف قطك", body: "الوزن والعمر والفصيلة نسوّي منها تغذية ذكية وتذكيرات، فالعناية فيه تصير أسهل." },
-        { title: "قيمة تشوفها بعينك", body: "أسعار عضوية على الأكل والرمل والأساسيات، ونحسب لك كل ريال توفّره — دليل مو وعود." },
-        { title: "ما يخلص عليك شي", body: "الأكل والرمل المناسبين يوصلونك بوقتهم كل شهر. أوقف أو تخطّى أو غيّر متى ما احتجت." },
+        { eyebrow: "هويته", title: "هوية رسمية", body: "كل قط له هوية خاصة فيها اسمه وصورته ورقمه — نفس الهوية اللي يحملها طول عمره." },
+        { eyebrow: "عنايته", title: "نعرف قطك", body: "الوزن والعمر والفصيلة نسوّي منها تغذية ذكية وتذكيرات، فالعناية فيه تصير أسهل." },
+        { eyebrow: "توفيرك", title: "قيمة تشوفها بعينك", body: "أسعار عضوية على الأكل والرمل والأساسيات، ونحسب لك كل ريال توفّره — دليل مو وعود." },
+        { eyebrow: "راحتك", title: "ما يخلص عليك شي", body: "الأكل والرمل المناسبين يوصلونك بوقتهم كل شهر. أوقف أو تخطّى أو غيّر متى ما احتجت." },
       ],
     },
     plans: {
@@ -73,10 +73,10 @@ export const dict = {
       title: "What membership means",
       lede: "Not a monthly box — a relationship that makes caring for your cat easier, and makes them known.",
       items: [
-        { title: "An identity, officially", body: "Every cat gets a unique Cat ID with their name, photo and number — the same one they'll carry for life." },
-        { title: "We learn your cat", body: "Weight, age and breed shape smart feeding and reminders, so caring for them takes less thinking." },
-        { title: "Value you can see", body: "Member rates on food, litter and essentials, with every riyal saved tallied for you — proof, not a pitch." },
-        { title: "Never run out", body: "The right food and litter arrive on time each month. Pause, skip or change whenever life does." },
+        { eyebrow: "Their identity", title: "An identity, officially", body: "Every cat gets a unique Cat ID with their name, photo and number — the same one they'll carry for life." },
+        { eyebrow: "Their care", title: "We learn your cat", body: "Weight, age and breed shape smart feeding and reminders, so caring for them takes less thinking." },
+        { eyebrow: "Your savings", title: "Value you can see", body: "Member rates on food, litter and essentials, with every riyal saved tallied for you — proof, not a pitch." },
+        { eyebrow: "Your ease", title: "Never run out", body: "The right food and litter arrive on time each month. Pause, skip or change whenever life does." },
       ],
     },
     plans: {

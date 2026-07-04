@@ -4,15 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, ArrowRight, ShieldCheck } from "lucide-react";
-import { Button, cn, useToast } from "@moraqat/ui";
+import { Button, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field } from "@/components/field";
 import { PhoneField, composePhone } from "@/components/phone-field";
 import { GoogleButton } from "@/components/google-button";
 import { AuthShell } from "@/components/auth-shell";
-
-type Gender = "MALE" | "FEMALE" | "UNSPECIFIED";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -23,8 +21,14 @@ export default function RegisterPage() {
 
   const [step, setStep] = React.useState<"details" | "verify">("details");
   const [form, setForm] = React.useState({
-    fullName: "", dialCode: "+966", phone: "", email: "", password: "", gender: "UNSPECIFIED" as Gender, terms: false,
+    fullName: "", dialCode: "+966", phone: "", email: "", password: "", terms: false,
   });
+  // The cat named on the landing page — the account exists for their sake (R016).
+  // The wizard consumes (and clears) the stored name right after this step.
+  const [pendingCat, setPendingCat] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    try { setPendingCat(sessionStorage.getItem("moraqat.pendingCatName")); } catch { /* ignore */ }
+  }, []);
   const [otp, setOtp] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -42,11 +46,11 @@ export default function RegisterPage() {
       email: form.email,
       password: form.password,
       ...(fullPhone ? { phone: fullPhone, dialCode: form.dialCode } : {}),
-      gender: form.gender,
       acceptTerms: true,
       ...(withOtp ? { otp: withOtp } : {}),
     });
-    router.push("/portal");
+    // Straight into naming their cat — never a generic dashboard first (Stage 4).
+    router.push("/portal/cats/new");
   }
 
   async function startVerification(e: React.FormEvent) {
@@ -89,7 +93,7 @@ export default function RegisterPage() {
     setError(null);
     try {
       await loginWithGoogle(idToken);
-      router.push("/portal");
+      router.push(pendingCat ? "/portal/cats/new" : "/portal");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google sign-in failed");
     }
@@ -127,7 +131,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthShell isAr={isAr} title={isAr ? "أنشئ حسابك" : "Create your account"} subtitle={isAr ? "انضم لعضوية مرقط — دقيقة وحدة وتخلص" : "Join Moracat — it takes a minute"}>
+    <AuthShell
+      isAr={isAr}
+      previewCatName={pendingCat}
+      title={pendingCat ? (isAr ? `حساب لأجل ${pendingCat}` : `An account, for ${pendingCat}'s sake`) : (isAr ? "أنشئ حسابك" : "Create your account")}
+      subtitle={
+        pendingCat
+          ? (isAr ? `خطوة وحدة، وبعدها نطبع هوية ${pendingCat}` : `One step, then we stamp ${pendingCat}'s ID`)
+          : (isAr ? "انضم لعضوية مرقط — دقيقة وحدة وتخلص" : "Join Moracat — it takes a minute")
+      }
+    >
       <div className="mb-5">
         <GoogleButton isAr={isAr} onCredential={onGoogle} />
       </div>
@@ -138,8 +151,6 @@ export default function RegisterPage() {
         <PhoneField isAr={isAr} label={isAr ? "رقم الجوال (اختياري)" : "Mobile number (optional)"} dialCode={form.dialCode} onDialCode={(v) => setForm({ ...form, dialCode: v })} value={form.phone} onValue={(v) => setForm({ ...form, phone: v })} />
         <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" autoComplete="email" />
         <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder={isAr ? "٨ أحرف على الأقل" : "At least 8 characters"} autoComplete="new-password" />
-
-        <GenderSelect isAr={isAr} value={form.gender} onChange={(g) => setForm({ ...form, gender: g })} />
 
         <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
           <input type="checkbox" checked={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.checked })} className="mt-0.5 size-4 rounded border-input accent-primary" />
@@ -164,37 +175,6 @@ export default function RegisterPage() {
         <Link href="/login" className="font-medium text-primary hover:underline">{isAr ? "سجّل الدخول" : "Log in"}</Link>
       </p>
     </AuthShell>
-  );
-}
-
-function GenderSelect({ isAr, value, onChange }: { isAr: boolean; value: Gender; onChange: (g: Gender) => void }) {
-  const opts: { key: Gender; ar: string; en: string }[] = [
-    { key: "MALE", ar: "أبو", en: "Him" },
-    { key: "FEMALE", ar: "أم", en: "Her" },
-    { key: "UNSPECIFIED", ar: "أفضّل عدم التحديد", en: "Prefer not to say" },
-  ];
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium">{isAr ? "كيف نحيّيك؟" : "How should we greet you?"}</label>
-      <div className="grid grid-cols-3 gap-2">
-        {opts.map((o) => (
-          <button
-            key={o.key}
-            type="button"
-            onClick={() => onChange(o.key)}
-            className={cn(
-              "rounded-xl border px-2 py-2.5 text-sm font-medium transition-colors",
-              value === o.key ? "border-primary bg-primary/10 text-foreground" : "border-input text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {isAr ? o.ar : o.en}
-          </button>
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {isAr ? "نستخدمها للترحيب: حياك الله يبو/أم قطك 🐈" : "We use this to greet you warmly by your cat's name 🐈"}
-      </p>
-    </div>
   );
 }
 

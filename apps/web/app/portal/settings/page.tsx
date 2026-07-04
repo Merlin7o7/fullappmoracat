@@ -3,9 +3,11 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { User, Lock, ShieldCheck, Loader2, Check } from "lucide-react";
-import { Card, Badge, Button, Skeleton } from "@moraqat/ui";
+import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
+import { useCats } from "@/lib/cat-context";
+import { buildGreeting, type Gender } from "@/lib/greeting";
 import { Field } from "@/components/field";
 
 interface Profile {
@@ -15,6 +17,7 @@ interface Profile {
   email: string;
   locale: string;
   twoFactorEnabled: boolean;
+  gender?: Gender;
 }
 
 export default function SettingsPage() {
@@ -40,7 +43,15 @@ export default function SettingsPage() {
         <Skeleton className="h-64 w-full" />
       ) : (
         <>
-          <ProfileSection isAr={isAr} profile={profile} authedFetch={authedFetch} onSaved={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
+          <ProfileSection
+            isAr={isAr}
+            profile={profile}
+            authedFetch={authedFetch}
+            onSaved={() => {
+              qc.invalidateQueries({ queryKey: ["profile"] });
+              qc.invalidateQueries({ queryKey: ["overview"] }); // the greeting lives there
+            }}
+          />
           <PasswordSection isAr={isAr} authedFetch={authedFetch} onChanged={() => logout()} />
           <TwoFactorSection isAr={isAr} enabled={profile.twoFactorEnabled} authedFetch={authedFetch} onChanged={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
         </>
@@ -67,18 +78,71 @@ function SectionCard({ icon: Icon, title, desc, children }: { icon: typeof User;
 function ProfileSection({ isAr, profile, authedFetch, onSaved }: {
   isAr: boolean; profile: Profile; authedFetch: ReturnType<typeof useAuth>["authedFetch"]; onSaved: () => void;
 }) {
-  const [f, setF] = React.useState({ firstName: profile.firstName ?? "", lastName: profile.lastName ?? "", phone: profile.phone ?? "" });
+  const { updateUser } = useAuth();
+  const { primaryCat } = useCats();
+  const [f, setF] = React.useState({
+    firstName: profile.firstName ?? "", lastName: profile.lastName ?? "", phone: profile.phone ?? "",
+    gender: (profile.gender ?? "UNSPECIFIED") as Gender,
+  });
   const [saved, setSaved] = React.useState(false);
   const save = useMutation({
     mutationFn: (body: Record<string, unknown>) => authedFetch("/account/profile", { method: "PATCH", body: JSON.stringify(body) }),
-    onSuccess: () => { onSaved(); setSaved(true); setTimeout(() => setSaved(false), 2000); },
+    onSuccess: () => { updateUser({ gender: f.gender }); onSaved(); setSaved(true); setTimeout(() => setSaved(false), 2000); },
   });
+
+  // A greeting they can try on before saving — asked here, never at signup
+  // (postponed on purpose; Dossier onboarding rules).
+  const preview = buildGreeting({ locale: isAr ? "ar" : "en", gender: f.gender, primaryCatName: primaryCat?.name, firstName: f.firstName });
+  const greetOpts: { key: Gender; ar: string; en: string }[] = [
+    { key: "MALE", ar: "أبو القط", en: "Their dad" },
+    { key: "FEMALE", ar: "أم القط", en: "Their mom" },
+    { key: "UNSPECIFIED", ar: "أهل القط", en: "Their family" },
+  ];
+
   return (
     <SectionCard icon={User} title={isAr ? "الملف الشخصي" : "Profile"} desc={profile.email}>
-      <form onSubmit={(e) => { e.preventDefault(); save.mutate(f); }} className="grid gap-4 sm:grid-cols-2">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          // Omit blanks — an empty phone must never block saving the rest (R115).
+          save.mutate({
+            firstName: f.firstName.trim() || undefined,
+            lastName: f.lastName.trim() || undefined,
+            phone: f.phone.trim() || undefined,
+            gender: f.gender,
+          });
+        }}
+        className="grid gap-4 sm:grid-cols-2"
+      >
         <Field label={isAr ? "الاسم الأول" : "First name"} value={f.firstName} onChange={(v) => setF({ ...f, firstName: v })} />
         <Field label={isAr ? "اسم العائلة" : "Last name"} value={f.lastName} onChange={(v) => setF({ ...f, lastName: v })} />
         <Field label={isAr ? "الجوال" : "Phone"} value={f.phone} onChange={(v) => setF({ ...f, phone: v })} placeholder="+9665..." className="sm:col-span-2" />
+
+        <div className="sm:col-span-2">
+          <p className="mb-1.5 text-sm font-medium">{isAr ? "كيف نحيّيك؟" : "How should we greet you?"}</p>
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={isAr ? "كيف نحيّيك؟" : "How should we greet you?"}>
+            {greetOpts.map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                role="radio"
+                aria-checked={f.gender === o.key}
+                onClick={() => setF({ ...f, gender: o.key })}
+                className={cn(
+                  "rounded-xl border px-2 py-2.5 text-sm font-medium transition-colors",
+                  f.gender === o.key ? "border-primary bg-primary/10 text-foreground" : "border-input text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {isAr ? o.ar : o.en}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {isAr ? "بيطلع لك: " : "You'll be greeted with: "}
+            <span className="font-medium text-foreground/80">{preview.title}</span>
+          </p>
+        </div>
+
         {save.error && <p className="text-sm text-destructive sm:col-span-2">{save.error.message}</p>}
         <div className="sm:col-span-2">
           <Button type="submit" disabled={save.isPending}>

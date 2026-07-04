@@ -15,6 +15,9 @@ interface CatIdCardProps {
   preview?: boolean;
   /** Membership standing — drives the Active/Inactive indicator (#5, #9). */
   membershipActive?: boolean;
+  /** The ceremony shows the identity, not the standing — the reveal is about
+   *  who they are; activation follows one step later (R031). */
+  hideStatus?: boolean;
   // ── Detailed membership-card fields (#5) ──
   detailed?: boolean;
   ownerName?: string | null;
@@ -33,7 +36,7 @@ interface CatIdCardProps {
  * full membership card (#5): owner, breed, favourite food, status, QR.
  */
 export function CatIdCard({
-  catName, catIdNumber, issuedAt, photoUrl, isAr, preview,
+  catName, catIdNumber, issuedAt, photoUrl, isAr, preview, hideStatus,
   membershipActive, detailed, ownerName, ownerPhone, breed, favoriteFood, qrToken, className,
 }: CatIdCardProps) {
   const since = issuedAt
@@ -72,7 +75,7 @@ export function CatIdCard({
               {isAr ? "مرقط · عضوية" : "Moracat · Member"}
             </span>
           </div>
-          {!preview && <StatusPill active={!!membershipActive} isAr={isAr} />}
+          {!preview && !hideStatus && <StatusPill active={!!membershipActive} isAr={isAr} />}
           {preview && (
             <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[hsl(18_93%_60%)]">
               {isAr ? "معاينة" : "Preview"}

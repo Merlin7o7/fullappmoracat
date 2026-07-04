@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
-import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer } from "lucide-react";
+import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer, Stethoscope } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -218,6 +218,19 @@ function CatCard({
           <Settings2 className="size-4" /> {isAr ? "إدارة" : "Manage"}
         </Button>
       </div>
+
+      {/* The postponed profile, invited later as a benefit to the cat (R002/R017). */}
+      {!inactive && !cat.breed && !cat.weightKg && (
+        <Link
+          href={`/portal/cats/new?cat=${cat.id}`}
+          className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+        >
+          <Stethoscope className="size-3.5" />
+          {isAr
+            ? `أكمل ملف ${localizeName(cat.name, "ar")} — يساعد أي عيادة تساعده أسرع`
+            : `Complete ${localizeName(cat.name, "en")}'s file — it helps any clinic help faster`}
+        </Link>
+      )}
 
       {rec && <RecCard rec={rec} isAr={isAr} />}
     </Card>
