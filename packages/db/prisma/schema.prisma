@@ -621,6 +621,12 @@ model Cat {
   microchipNo    String?
   favoriteFoods  String[]
   preferredBrand String[]
+  // Full-registration profile (#3) — collected before the Cat ID is issued.
+  coatColor          String?
+  isNeutered         Boolean?
+  vaccinationStatus  String? // UP_TO_DATE / PARTIAL / NONE / UNKNOWN
+  currentMedications String?
+  emergencyNotes     String?
   /// Household lifecycle. A cat is never silently dropped: removal soft-deletes,
   /// and a passing is archived as DECEASED so the record and Cat ID endure.
   status           CatStatus           @default(ACTIVE)

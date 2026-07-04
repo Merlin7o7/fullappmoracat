@@ -1,17 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Cat as CatIcon, Plus, Sparkles, Loader2, X, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer } from "lucide-react";
+import Link from "next/link";
+import { useMutation } from "@tanstack/react-query";
+import { Cat as CatIcon, Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats, type PortalCat } from "@/lib/cat-context";
-import { Field, SelectField } from "@/components/field";
 import { localizeName } from "@/lib/translit";
 import { exportCardPng, exportCardPdf, printCard } from "@/lib/card-export";
 import { CatIdCard } from "@/components/cat-id-card";
-import { CatIdCeremony } from "@/components/cat-id-ceremony";
 import { CatManageDrawer } from "@/components/cat-manage-drawer";
 
 interface Recommendation {
@@ -29,30 +28,14 @@ type Filter = "ALL" | "ACTIVE" | "ARCHIVED" | "DECEASED";
 export default function CatsPage() {
   const { authedFetch } = useAuth();
   const { locale } = useLocale();
-  const { toast } = useToast();
   const isAr = locale === "ar";
-  const qc = useQueryClient();
   const { cats, isLoading, setPrimaryCat } = useCats();
 
-  const [showForm, setShowForm] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("ALL");
   const [rec, setRec] = React.useState<{ catId: string; data: Recommendation } | null>(null);
-  const [ceremonyCat, setCeremonyCat] = React.useState<PortalCat | null>(null);
   const [idCardCat, setIdCardCat] = React.useState<PortalCat | null>(null);
   const [manageCat, setManageCat] = React.useState<PortalCat | null>(null);
-
-  const create = useMutation({
-    mutationFn: (body: Record<string, unknown>) => authedFetch<PortalCat>("/cats", { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: (cat) => {
-      qc.invalidateQueries({ queryKey: ["cats"] });
-      qc.invalidateQueries({ queryKey: ["overview"] });
-      setShowForm(false);
-      // The reveal IS the confirmation — a ceremony, not a toast (R031, R080).
-      setCeremonyCat(cat);
-    },
-    onError: (e: Error) => toast({ title: isAr ? "تعذّر إصدار الهوية" : "Couldn't issue the Cat ID", description: e.message, variant: "error" }),
-  });
 
   const feed = useMutation({
     mutationFn: (catId: string) => authedFetch<Recommendation>(`/feeding/cats/${catId}`, { method: "POST", body: "{}" }),
@@ -91,10 +74,8 @@ export default function CatsPage() {
             {isAr ? "كل قط له هويته وسجله — أضف بلا حدود" : "Every cat, their own ID & record — add as many as you like"}
           </p>
         </div>
-        <Button size="sm" onClick={() => setShowForm((v) => !v)}><Plus className="size-4" /> {isAr ? "إضافة قط" : "Add cat"}</Button>
+        <Link href="/portal/cats/new"><Button size="sm"><Plus className="size-4" /> {isAr ? "إضافة قط" : "Add cat"}</Button></Link>
       </div>
-
-      {showForm && <CatForm isAr={isAr} onSubmit={(b) => create.mutate(b)} pending={create.isPending} error={create.error?.message} onClose={() => setShowForm(false)} />}
 
       {/* Search + filter — stays useful whether the household has 2 cats or 20. */}
       {cats.length > 1 && (
@@ -150,19 +131,10 @@ export default function CatsPage() {
           <p className="text-sm text-muted-foreground">
             {isAr ? "أول قط تضيفه يحصل على هويته الرسمية فوراً" : "The first cat you add gets an official Cat ID, instantly"}
           </p>
-          <Button size="sm" onClick={() => setShowForm(true)}><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button>
+          <Link href="/portal/cats/new"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>
         </Card>
       ) : (
         <p className="py-10 text-center text-sm text-muted-foreground">{isAr ? "ما لقينا قط بهذا البحث" : "No cats match your search"}</p>
-      )}
-
-      {/* The reveal ceremony — the peak moment (Dossier Stage 4). */}
-      {ceremonyCat?.catIdNumber && (
-        <CatIdCeremony
-          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl }}
-          isAr={isAr}
-          onClose={() => setCeremonyCat(null)}
-        />
       )}
 
       {/* Cat ID + QR, always in reach (Dossier §04). */}
@@ -348,35 +320,3 @@ function RecCard({ rec, isAr }: { rec: Recommendation; isAr: boolean }) {
   );
 }
 
-function CatForm({ isAr, onSubmit, pending, error, onClose }: { isAr: boolean; onSubmit: (b: Record<string, unknown>) => void; pending: boolean; error?: string; onClose: () => void }) {
-  const [f, setF] = React.useState({ name: "", weightKg: "", gender: "UNKNOWN", activityLevel: "MODERATE", isIndoor: "true" });
-  return (
-    <Card className="p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-display font-semibold">{isAr ? "إضافة قط جديد" : "Add a new cat"}</h3>
-        <button onClick={onClose} aria-label="close"><X className="size-4 text-muted-foreground" /></button>
-      </div>
-      <form
-        onSubmit={(e) => { e.preventDefault(); onSubmit({ name: f.name, weightKg: f.weightKg ? Number(f.weightKg) : undefined, gender: f.gender, activityLevel: f.activityLevel, isIndoor: f.isIndoor === "true" }); }}
-        className="grid gap-4 sm:grid-cols-2"
-      >
-        <Field label={isAr ? "الاسم" : "Name"} required value={f.name} onChange={(v) => setF({ ...f, name: v })} placeholder={isAr ? "مثلاً: مشمش" : "e.g. Simba"} />
-        <Field label={isAr ? "الوزن (كجم)" : "Weight (kg)"} type="number" value={f.weightKg} onChange={(v) => setF({ ...f, weightKg: v })} placeholder="4.5" />
-        <SelectField label={isAr ? "الجنس" : "Sex"} value={f.gender} onChange={(v) => setF({ ...f, gender: v })}
-          options={[{ value: "MALE", label: isAr ? "ذكر" : "Male" }, { value: "FEMALE", label: isAr ? "أنثى" : "Female" }, { value: "UNKNOWN", label: isAr ? "غير محدد" : "Unknown" }]} />
-        <SelectField label={isAr ? "مستوى النشاط" : "Activity"} value={f.activityLevel} onChange={(v) => setF({ ...f, activityLevel: v })}
-          options={[{ value: "LOW", label: isAr ? "منخفض" : "Low" }, { value: "MODERATE", label: isAr ? "متوسط" : "Moderate" }, { value: "HIGH", label: isAr ? "عالٍ" : "High" }]} />
-        <SelectField label={isAr ? "البيئة" : "Environment"} value={f.isIndoor} onChange={(v) => setF({ ...f, isIndoor: v })}
-          options={[{ value: "true", label: isAr ? "داخلي" : "Indoor" }, { value: "false", label: isAr ? "خارجي" : "Outdoor" }]} className="sm:col-span-2" />
-        {error && <p className="text-sm text-destructive sm:col-span-2">{error}</p>}
-        <div className="sm:col-span-2">
-          <Button type="submit" loading={pending} disabled={!f.name}>
-            {pending
-              ? (isAr ? (f.name ? `جارٍ إصدار هوية ${f.name}…` : "جارٍ إصدار الهوية…") : (f.name ? `Issuing ${f.name}'s Cat ID…` : "Issuing the Cat ID…"))
-              : (isAr ? "أصدر هوية القط" : "Issue the Cat ID")}
-          </Button>
-        </div>
-      </form>
-    </Card>
-  );
-}

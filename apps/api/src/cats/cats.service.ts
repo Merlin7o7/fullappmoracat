@@ -77,6 +77,11 @@ export class CatsService {
         microchipNo: dto.microchipNo,
         favoriteFoods: dto.favoriteFoods ?? [],
         preferredBrand: dto.preferredBrand ?? [],
+        coatColor: dto.coatColor,
+        isNeutered: dto.isNeutered,
+        vaccinationStatus: dto.vaccinationStatus,
+        currentMedications: dto.currentMedications,
+        emergencyNotes: dto.emergencyNotes,
         allergies: dto.allergies?.length
           ? { create: dto.allergies.map((allergen) => ({ allergen })) }
           : undefined,
@@ -99,6 +104,14 @@ export class CatsService {
     }
 
     return this.serialize(cat as CatRow, user?.primaryCatId ?? cat.id);
+  }
+
+  /** Breeds for the registration wizard's picker. */
+  listBreeds() {
+    return this.prisma.breed.findMany({
+      orderBy: { nameEn: "asc" },
+      select: { id: true, nameEn: true, nameAr: true },
+    });
   }
 
   async findAll(userId: string, query: ListCatsQueryDto = {}) {

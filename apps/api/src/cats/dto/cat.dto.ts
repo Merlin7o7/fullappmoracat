@@ -16,6 +16,7 @@ export const GENDERS = ["MALE", "FEMALE", "UNKNOWN"] as const;
 export const ACTIVITY_LEVELS = ["LOW", "MODERATE", "HIGH"] as const;
 export const LIFE_STAGES = ["KITTEN", "ADULT", "SENIOR"] as const;
 export const CAT_STATUSES = ["ACTIVE", "ARCHIVED", "DECEASED"] as const;
+export const VACCINATION_STATUSES = ["UP_TO_DATE", "PARTIAL", "NONE", "UNKNOWN"] as const;
 
 export type CatGender = (typeof GENDERS)[number];
 export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
@@ -108,6 +109,35 @@ export class CreateCatDto {
   @IsArray()
   @IsString({ each: true })
   healthConditions?: string[];
+
+  // ── Full-registration profile (#3) ──
+  @ApiPropertyOptional({ example: "Ginger tabby" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  coatColor?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isNeutered?: boolean;
+
+  @ApiPropertyOptional({ enum: VACCINATION_STATUSES })
+  @IsOptional()
+  @IsIn(VACCINATION_STATUSES)
+  vaccinationStatus?: (typeof VACCINATION_STATUSES)[number];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(280)
+  currentMedications?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  emergencyNotes?: string;
 }
 
 export class UpdateCatDto extends PartialType(CreateCatDto) {}

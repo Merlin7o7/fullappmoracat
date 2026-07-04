@@ -41,6 +41,12 @@ export class CatsController {
     return this.cats.findAll(userId, query);
   }
 
+  @Get("meta/breeds")
+  @ApiOperation({ summary: "List breeds for the registration wizard" })
+  listBreeds() {
+    return this.cats.listBreeds();
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get one cat with full health record" })
   findOne(@CurrentUser("id") userId: string, @Param("id") id: string) {

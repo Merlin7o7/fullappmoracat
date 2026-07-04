@@ -15,6 +15,7 @@ export class PlansService {
 
     // Serialise Decimals to numbers for a clean JSON contract.
     return plans.map((p) => ({
+      id: p.id,
       tier: p.tier,
       slug: p.slug,
       nameEn: p.nameEn,
