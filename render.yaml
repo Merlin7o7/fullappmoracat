@@ -27,6 +27,9 @@ services:
       # CORS: the web origin allowed to call this API.
       - key: NEXT_PUBLIC_SITE_URL
         value: https://moracat.co
+      # Extra allowed origins (comma-separated) — the live Vercel URL.
+      - key: CORS_ORIGINS
+        value: https://moracat.vercel.app
       # SMS OTP via Twilio — set these in the Render dashboard (kept secret).
       - key: TWILIO_ACCOUNT_SID
         sync: false
