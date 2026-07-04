@@ -8,10 +8,22 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swa
 const sora = Sora({ subsets: ["latin"], variable: "--font-display", display: "swap" });
 
 // Brand Arabic face — Lyon Arabic Display (licensed; provided by the brand).
+// #10: Lyon is restricted to Arabic LETTER ranges only. Latin glyphs and BOTH
+// digit blocks (Western U+0030–0039 and Arabic-Indic U+0660–0669 / U+06F0–06F9)
+// fall outside this range, so they render in the clean sans (Inter) via the
+// `var(--font-arabic), var(--font-sans)` stack — keeping numbers crisp while
+// Arabic copy keeps its premium Lyon identity.
 const arabic = localFont({
   src: "./fonts/lyon-arabic-display-regular.otf",
   variable: "--font-arabic",
   display: "swap",
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0600-065F, U+066A-06EF, U+06FA-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF",
+    },
+  ],
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
