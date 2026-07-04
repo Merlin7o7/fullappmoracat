@@ -64,6 +64,16 @@ const preset: Partial<Config> = {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
+        // Sticker accents — decorative family from the brand illustration set.
+        cream: {
+          DEFAULT: "hsl(var(--cream))",
+          foreground: "hsl(var(--cream-foreground))",
+        },
+        sage: "hsl(var(--sage))",
+        butter: "hsl(var(--butter))",
+        peach: "hsl(var(--peach))",
+        blush: "hsl(var(--blush))",
+        leaf: "hsl(var(--leaf))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -134,6 +144,25 @@ const preset: Partial<Config> = {
           "0%, 100%": { boxShadow: "0 0 0 0 hsl(var(--primary) / 0.35)" },
           "50%": { boxShadow: "0 0 0 8px hsl(var(--primary) / 0)" },
         },
+        // Benefits ribbon — translates by exactly half (content is doubled).
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
+        "marquee-rtl": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(50%)" },
+        },
+        // Affectionate sticker wobble (entrances, hover accents).
+        wiggle: {
+          "0%, 100%": { transform: "rotate(-2.5deg)" },
+          "50%": { transform: "rotate(2.5deg)" },
+        },
+        // The footer cat's tail / walking bob.
+        bob: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
       },
       animation: {
         "fade-up": "fade-up 0.6s var(--ease-out) both",
@@ -143,6 +172,10 @@ const preset: Partial<Config> = {
         shimmer: "shimmer 1.8s infinite",
         float: "float 7s ease-in-out infinite",
         "pulse-glow": "pulse-glow 2.2s ease-in-out infinite",
+        marquee: "marquee 36s linear infinite",
+        "marquee-rtl": "marquee-rtl 36s linear infinite",
+        wiggle: "wiggle 2.6s ease-in-out infinite",
+        bob: "bob 1.1s ease-in-out infinite",
       },
     },
   },

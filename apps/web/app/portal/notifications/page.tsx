@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Package, CreditCard, Truck, Repeat, Megaphone, Info } from "lucide-react";
+import { Package, CreditCard, Truck, Repeat, Megaphone, Info } from "lucide-react";
 import { Card, Button, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
+import { IlloMouse, IlloPaw } from "@/components/illustrations";
 
 interface Notification {
   id: string;
@@ -47,7 +49,7 @@ export default function NotificationsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "الإشعارات" : "Notifications"}</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "الإشعارات" : "Notifications"}</h1>
         <p className="text-sm text-muted-foreground">
           {unread > 0
             ? isAr ? `${unread} غير مقروءة` : `${unread} unread`
@@ -85,9 +87,15 @@ export default function NotificationsPage() {
           })}
         </Card>
       ) : (
-        <Card className="flex flex-col items-center gap-3 p-10 text-center">
-          <span className="grid size-14 place-items-center rounded-2xl bg-muted"><Bell className="size-7 text-muted-foreground" /></span>
-          <p className="text-sm text-muted-foreground">{isAr ? "لا إشعارات بعد" : "No notifications yet"}</p>
+        /* Empty state = a welcome, not a void (R111). */
+        <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
+          <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
+          <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
+          <IlloMouse tone="sage" className="h-16 w-auto" />
+          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+            {isAr ? "لا إشعارات بعد — حين يحدث شيء يخص قطك ستجده هنا" : "No notifications yet — when something happens for your cat, it lands here"}
+          </p>
+          <Link href="/portal"><Button variant="outline" size="sm">{isAr ? "ارجع إلى لوحتك" : "Back to your dashboard"}</Button></Link>
         </Card>
       )}
     </div>

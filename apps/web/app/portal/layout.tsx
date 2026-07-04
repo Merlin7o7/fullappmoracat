@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Repeat, Cat, Package, MapPin, Settings,
   LifeBuoy, Bell, LogOut, Loader2,
 } from "lucide-react";
-import { Button, cn } from "@moraqat/ui";
+import { cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { CatProvider, useCats } from "@/lib/cat-context";
@@ -15,6 +15,7 @@ import { buildGreeting, type Gender } from "@/lib/greeting";
 import { CatSwitcher } from "@/components/cat-switcher";
 import { ThemeToggle, LangToggle } from "@/components/toggles";
 import { Logo } from "@/components/logo";
+import { IlloPaw } from "@/components/illustrations";
 
 const NAV = [
   { href: "/portal", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة", exact: true },
@@ -42,7 +43,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   if (!ready || !user) {
     return (
       <div className="grid min-h-screen place-items-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <div className="flex flex-col items-center gap-3">
+          <IlloPaw tone="peach" className="size-8 animate-bob" />
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
@@ -50,10 +54,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   return (
     <CatProvider>
       <div className="flex min-h-screen">
-        {/* Sidebar */}
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e border-border bg-card p-4 md:flex">
-          <Link href="/" aria-label="Moracat" className="mb-8 flex px-2">
-            <Logo className="h-9" priority />
+        {/* ── The clubhouse rail — deep green, members only ── */}
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-primary p-4 text-primary-foreground md:flex">
+          <Link href="/" aria-label="Moracat" className="mb-8 flex px-2 pt-1">
+            <Logo className="h-9" priority onDark />
           </Link>
           <nav className="flex flex-1 flex-col gap-1">
             {NAV.map((item) => {
@@ -63,26 +67,37 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                    active ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-primary-foreground/[0.14] text-primary-foreground"
+                      : "text-primary-foreground/65 hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
                   )}
                 >
                   <item.icon className="size-4" />
                   {isAr ? item.ar : item.en}
+                  {active && (
+                    <IlloPaw tone="orange" className="absolute end-3 size-3.5" />
+                  )}
                 </Link>
               );
             })}
           </nav>
-          <Button variant="ghost" size="sm" className="justify-start" onClick={() => { void logout(); router.push("/login"); }}>
+          <button
+            type="button"
+            onClick={() => { void logout(); router.push("/login"); }}
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-primary-foreground/65 transition-colors hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
+          >
             <LogOut className="size-4" />
             {isAr ? "تسجيل الخروج" : "Log out"}
-          </Button>
+          </button>
         </aside>
 
-        {/* Main */}
+        {/* ── Main ── */}
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur sm:px-6">
-            <MobileNav pathname={pathname} isAr={isAr} />
+            <Link href="/" aria-label="Moracat" className="flex md:hidden">
+              <Logo className="h-8" priority />
+            </Link>
             <PortalGreeting isAr={isAr} gender={user.gender} firstName={user.firstName} />
             <div className="flex items-center gap-2 sm:gap-3">
               <CatSwitcher isAr={isAr} />
@@ -90,9 +105,33 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 p-4 sm:p-6">{children}</main>
+          <main className="flex-1 p-4 pb-28 sm:p-6 md:pb-6">{children}</main>
         </div>
       </div>
+
+      {/* ── Mobile: thumb-zone bottom nav (R100), ≥44px targets (R092) ── */}
+      <nav
+        aria-label={isAr ? "التنقل" : "Navigation"}
+        className="glass fixed inset-x-3 bottom-3 z-40 flex items-center justify-between gap-1 overflow-x-auto rounded-full px-2 py-1.5 md:hidden"
+      >
+        {NAV.map((item) => {
+          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-label={isAr ? item.ar : item.en}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "grid size-11 shrink-0 place-items-center rounded-full transition-colors",
+                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon className="size-[18px]" />
+            </Link>
+          );
+        })}
+      </nav>
     </CatProvider>
   );
 }
@@ -110,21 +149,5 @@ function PortalGreeting({ isAr, gender, firstName }: { isAr: boolean; gender?: G
     <p className="hidden min-w-0 flex-1 truncate text-sm font-medium sm:block">
       {greeting.title}
     </p>
-  );
-}
-
-function MobileNav({ pathname, isAr }: { pathname: string; isAr: boolean }) {
-  return (
-    <div className="flex gap-1 overflow-x-auto md:hidden">
-      {NAV.map((item) => {
-        const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-        return (
-          <Link key={item.href} href={item.href} aria-label={isAr ? item.ar : item.en}
-            className={cn("grid size-9 place-items-center rounded-lg", active ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
-            <item.icon className="size-4" />
-          </Link>
-        );
-      })}
-    </div>
   );
 }

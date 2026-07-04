@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Brain, Droplets, Package, Sparkles, Cat as CatIcon, Wallet } from "lucide-react";
+import { Droplets, Package, Sparkles, Cat as CatIcon, Wallet } from "lucide-react";
 import { calculateFeeding, type FeedingInput } from "@moraqat/core";
-import { Card, Badge, cn } from "@moraqat/ui";
+import { Card, cn } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { IlloCan, IlloFish, Sticker } from "@/components/illustrations";
 import { useLocale } from "@/app/providers";
 
 type Activity = "LOW" | "MODERATE" | "HIGH";
@@ -166,13 +168,14 @@ export default function FeedingCalculatorPage() {
     <div className="min-h-screen">
       <SiteHeader />
 
-      <section className="container py-12">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <Badge variant="accent" className="mb-4">
-            <Brain className="size-3.5" /> {t.title}
-          </Badge>
-          <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{t.title}</h1>
-          <p className="mt-3 text-muted-foreground">{t.subtitle}</p>
+      <section className="container py-12 sm:py-16">
+        {/* Warm editorial header — one sticker accent (R080). */}
+        <div className="relative mx-auto mb-12 max-w-2xl text-center">
+          <Sticker rotate={-12} className="-top-4 start-6 hidden sm:block">
+            <IlloCan tone="pink" className="h-10 w-auto opacity-80" />
+          </Sticker>
+          <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">{t.title}</h1>
+          <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-muted-foreground">{t.subtitle}</p>
         </div>
 
         <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-2">
@@ -260,18 +263,23 @@ export default function FeedingCalculatorPage() {
 
           {/* ── Results ────────────────────────────────────────── */}
           <div className="space-y-4">
-            <Card glass className="overflow-hidden p-6">
-              <div className="flex items-end justify-between">
+            {/* The headline number lives on a warm tinted panel — value made visible (R041). */}
+            <Card className="relative overflow-hidden border-border/70 bg-butter/40 p-6 dark:bg-butter/15">
+              <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">{t.daily}</p>
-                  <p className="font-display text-4xl font-bold">
+                  <p className="font-display text-4xl font-bold tabular">
                     {rec.dailyCalories}
                     <span className="ms-1 text-base font-normal text-muted-foreground">{t.kcal}</span>
                   </p>
                 </div>
+                <IlloFish
+                  tone="orange"
+                  className="mb-1.5 hidden h-6 w-auto rotate-[-6deg] opacity-70 rtl:-scale-x-100 sm:block"
+                />
                 <div className="text-end">
                   <p className="text-sm text-muted-foreground">{t.confidence}</p>
-                  <p className="font-display text-2xl font-bold text-success">{confidencePct}%</p>
+                  <p className="font-display text-2xl font-bold text-success tabular">{confidencePct}%</p>
                 </div>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
@@ -319,6 +327,8 @@ export default function FeedingCalculatorPage() {
           </div>
         </div>
       </section>
+
+      <SiteFooter />
     </div>
   );
 }

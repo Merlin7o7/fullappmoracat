@@ -25,7 +25,7 @@ ok(health.json?.status === "ok" && health.json?.db === "up", `health ok, db up`)
 
 console.log("━━ auth ━━");
 const email = `smoke+${rnd()}@e.com`;
-const reg = (await call("/auth/register", "POST", { email, password: "S3cure!pass", firstName: "Smoke" })).json;
+const reg = (await call("/auth/register", "POST", { email, password: "S3cure!pass", firstName: "Smoke", acceptTerms: true })).json;
 ok(!!reg.accessToken && !!reg.refreshToken, "register issues token pair");
 const C = reg.accessToken;
 ok((await call("/cats")).status === 401, "guard blocks unauthenticated");

@@ -3,9 +3,11 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Star, PawPrint, ShoppingBag, SlidersHorizontal } from "lucide-react";
+import { Star, ShoppingBag, SlidersHorizontal } from "lucide-react";
 import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { IlloCan, IlloFish, IlloMouse, IlloPaw, Sticker } from "@/components/illustrations";
 import { useLocale } from "@/app/providers";
 import { api, PRODUCT_TYPES, type ProductListItem } from "@/lib/api";
 
@@ -31,12 +33,16 @@ export default function ProductsPage() {
     <div className="min-h-screen">
       <SiteHeader />
 
-      <section className="container py-10">
-        <div className="mb-8 text-center">
-          <Badge variant="accent" className="mb-3">
-            <ShoppingBag className="size-3.5" /> {isAr ? "المتجر" : "Shop"}
-          </Badge>
-          <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+      <section className="container py-12 sm:py-16">
+        {/* Editorial header — display type, one sticker accent (R080). */}
+        <div className="relative mx-auto mb-10 max-w-2xl text-center">
+          <Sticker rotate={12} className="-top-4 end-2 hidden sm:block">
+            <IlloFish tone="orange" className="h-7 w-auto opacity-80" />
+          </Sticker>
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-primary shadow-e1">
+            <IlloCan tone="pink" className="h-4 w-auto" /> {isAr ? "المتجر" : "Shop"}
+          </p>
+          <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
             {isAr ? "منتجات مختارة لقطك" : "Curated products for your cat"}
           </h1>
         </div>
@@ -51,8 +57,8 @@ export default function ProductsPage() {
                 className={cn(
                   "rounded-full px-4 py-1.5 text-sm font-medium transition-all",
                   type === t.key
-                    ? "bg-primary text-primary-foreground shadow-soft"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
+                    ? "bg-primary text-primary-foreground shadow-e1"
+                    : "bg-cream/70 text-foreground/75 hover:bg-cream hover:text-foreground"
                 )}
               >
                 {isAr ? t.ar : t.en}
@@ -111,6 +117,8 @@ export default function ProductsPage() {
           />
         )}
       </section>
+
+      <SiteFooter />
     </div>
   );
 }
@@ -124,13 +132,13 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.4), duration: 0.4 }}
     >
-      <Card className="group flex h-full flex-col overflow-hidden p-3">
-        <div className="relative mb-3 grid aspect-square place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
+      <Card className="group flex h-full flex-col overflow-hidden p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-e2">
+        <div className="relative mb-3 grid aspect-square place-items-center overflow-hidden rounded-xl bg-cream/70 dark:bg-cream">
           {product.image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.image} alt={name} className="size-full object-cover transition-transform group-hover:scale-105" />
+            <img src={product.image} alt={name} className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
-            <PawPrint className="size-10 text-primary/40" />
+            <IlloPaw tone="butter" className="size-12 opacity-80 transition-transform duration-300 group-hover:-rotate-6" />
           )}
           {product.compareAtPrice && (
             <Badge variant="destructive" className="absolute start-2 top-2">
@@ -159,11 +167,9 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="mx-auto max-w-md py-20 text-center">
-      <span className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-muted">
-        <PawPrint className="size-8 text-muted-foreground" />
-      </span>
-      <h3 className="font-display text-lg font-semibold">{title}</h3>
+    <div className="mx-auto max-w-md rounded-[2rem] bg-cream/60 px-6 py-16 text-center dark:bg-cream/40">
+      <IlloMouse tone="sage" className="mx-auto mb-5 h-10 w-auto rtl:-scale-x-100" />
+      <h3 className="font-display text-xl font-semibold tracking-tight">{title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{body}</p>
     </div>
   );

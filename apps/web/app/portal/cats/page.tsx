@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
-import { Cat as CatIcon, Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer } from "lucide-react";
+import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -12,6 +12,7 @@ import { localizeName } from "@/lib/translit";
 import { exportCardPng, exportCardPdf, printCard } from "@/lib/card-export";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatManageDrawer } from "@/components/cat-manage-drawer";
+import { IlloCat, IlloMouse, IlloPaw } from "@/components/illustrations";
 
 interface Recommendation {
   dailyCalories: number;
@@ -69,7 +70,7 @@ export default function CatsPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "قطط البيت" : "Your household"}</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "قطط البيت" : "Your household"}</h1>
           <p className="text-sm text-muted-foreground">
             {isAr ? "كل قط له هويته وسجله — أضف بلا حدود" : "Every cat, their own ID & record — add as many as you like"}
           </p>
@@ -126,15 +127,21 @@ export default function CatsPage() {
           ))}
         </div>
       ) : cats.length === 0 ? (
-        <Card className="flex flex-col items-center gap-3 p-10 text-center">
-          <span className="grid size-14 place-items-center rounded-2xl bg-muted"><CatIcon className="size-7 text-muted-foreground" /></span>
-          <p className="text-sm text-muted-foreground">
+        /* Empty state = a welcome, not a void (R111). */
+        <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
+          <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
+          <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
+          <IlloCat tone="green" className="h-24 w-auto" />
+          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "أول قط تضيفه يحصل على هويته الرسمية فوراً" : "The first cat you add gets an official Cat ID, instantly"}
           </p>
           <Link href="/portal/cats/new"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>
         </Card>
       ) : (
-        <p className="py-10 text-center text-sm text-muted-foreground">{isAr ? "ما لقينا قط بهذا البحث" : "No cats match your search"}</p>
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <IlloMouse tone="sage" className="h-12 w-auto opacity-80" />
+          <p className="text-sm text-muted-foreground">{isAr ? "ما لقينا قط بهذا البحث" : "No cats match your search"}</p>
+        </div>
       )}
 
       {/* Cat ID + QR, always in reach (Dossier §04). */}

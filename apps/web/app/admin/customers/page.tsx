@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Users } from "lucide-react";
+import { Search } from "lucide-react";
 import { Card, Badge, Skeleton } from "@moraqat/ui";
+import { IlloMouse } from "@/components/illustrations";
 import { useAuth } from "@/lib/auth";
 
 interface CustomerRow {
@@ -75,7 +76,7 @@ export default function AdminCustomers() {
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground"><Users className="mx-auto mb-2 size-8 opacity-40" />No customers found</td></tr>
+                <tr><td colSpan={6} className="px-4 py-14 text-center text-muted-foreground"><IlloMouse tone="sage" className="mx-auto mb-3 h-8 w-auto opacity-80" />No customers found</td></tr>
               )}
             </tbody>
           </table>

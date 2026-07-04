@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShoppingBag } from "lucide-react";
 import { Card, Skeleton } from "@moraqat/ui";
+import { IlloCan } from "@/components/illustrations";
 import { useAuth } from "@/lib/auth";
 
 interface OrderRow {
@@ -84,7 +84,7 @@ export default function AdminOrders() {
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground"><ShoppingBag className="mx-auto mb-2 size-8 opacity-40" />No orders found</td></tr>
+                <tr><td colSpan={6} className="px-4 py-14 text-center text-muted-foreground"><IlloCan tone="pink" className="mx-auto mb-3 h-10 w-auto opacity-80" />No orders found</td></tr>
               )}
             </tbody>
           </table>

@@ -10,8 +10,8 @@ export const dict = {
   ar: {
     dir: "rtl" as const,
     brand: "مرقط",
-    nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول" },
-    announce: "عضويتنا صارت في جدة والرياض — حيّا الله قطّطكم 🐾",
+    nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية" },
+    announce: "عضويتنا صارت في جدة والرياض — حيّا الله قطّطكم",
     hero: {
       badge: "عضوية خاصة لأهل القطط",
       title: "قطك يستاهل",
@@ -43,13 +43,19 @@ export const dict = {
       choose: "ابدأ عضويتك",
     },
     voices: { title: "كلام أعضائنا" },
+    marquee: ["هوية رسمية لقطك", "سجل صحي يمشي معه", "أسعار أعضاء في جدة والرياض", "توصيل شهري ما يتأخر", "ألغِ متى ما تبي"],
+    closing: {
+      title: "قطك جاهز لهويته؟",
+      sub: "دقيقتين وتكون الهوية بين يديك — ومعاينتها ببلاش.",
+    },
+    footerNote: "صُنعت بمحبة لأهل القطط — جدة والرياض",
     footer: "© 2026 مرقط. كل الحقوق محفوظة.",
   },
   en: {
     dir: "ltr" as const,
     brand: "Moracat",
-    nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in" },
-    announce: "Membership is live in Jeddah & Riyadh — welcoming new cats 🐾",
+    nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in", blog: "Blog", tools: "Feeding calculator" },
+    announce: "Membership is live in Jeddah & Riyadh — welcoming new cats",
     hero: {
       badge: "The membership for cat people",
       title: "Give your cat",
@@ -81,6 +87,12 @@ export const dict = {
       choose: "Start membership",
     },
     voices: { title: "From members who mean it" },
+    marquee: ["An official Cat ID", "A health record that travels", "Member rates in Jeddah & Riyadh", "Monthly delivery, on time", "Cancel anytime"],
+    closing: {
+      title: "Ready for their ID?",
+      sub: "Two minutes, and it's in your hands — the preview is free.",
+    },
+    footerNote: "Made with love for cat people — Jeddah & Riyadh",
     footer: "© 2026 Moracat. All rights reserved.",
   },
 } as const;

@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Boxes, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Card, Badge, Button, DataTable, useToast, type Column } from "@moraqat/ui";
+import { IlloCan } from "@/components/illustrations";
 import { useAuth } from "@/lib/auth";
 import { Field, SelectField } from "@/components/field";
 
@@ -79,7 +80,7 @@ export default function AdminProducts() {
         data={data?.items ?? []}
         rowKey={(p) => p.id}
         loading={isLoading}
-        emptyState={<div className="flex flex-col items-center gap-2"><Boxes className="size-8 opacity-40" />No products yet</div>}
+        emptyState={<div className="flex flex-col items-center gap-3"><IlloCan tone="pink" className="h-10 w-auto opacity-80" />No products yet</div>}
       />
     </div>
   );

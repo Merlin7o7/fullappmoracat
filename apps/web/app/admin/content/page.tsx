@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Card, Badge, Button, DataTable, useToast, type Column } from "@moraqat/ui";
+import { IlloSprig } from "@/components/illustrations";
 import { useAuth } from "@/lib/auth";
 import { Field } from "@/components/field";
 
@@ -116,7 +117,7 @@ export default function AdminContent() {
         data={data ?? []}
         rowKey={(p) => p.id}
         loading={isLoading}
-        emptyState={<div className="flex flex-col items-center gap-2"><FileText className="size-8 opacity-40" />No posts yet</div>}
+        emptyState={<div className="flex flex-col items-center gap-3"><IlloSprig tone="leaf" className="h-10 w-auto opacity-70" />No posts yet</div>}
       />
     </div>
   );

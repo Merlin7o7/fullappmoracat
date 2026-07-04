@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Sora } from "next/font/google";
+import { Inter, Fraunces } from "next/font/google";
 import localFont from "next/font/local";
 import { Providers } from "./providers";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const sora = Sora({ subsets: ["latin"], variable: "--font-display", display: "swap" });
+// Display face: Fraunces — a warm, softly-inked serif with real character.
+// Latin only; Arabic display stays Lyon via the [dir="rtl"] font stack.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  axes: ["SOFT", "opsz"],
+});
 
 // Brand Arabic face — Lyon Arabic Display (licensed; provided by the brand).
 // #10: Lyon is restricted to Arabic LETTER ranges only. Latin glyphs and BOTH
@@ -51,7 +58,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7dec9" },
+    { media: "(prefers-color-scheme: light)", color: "#faf7f1" },
     { media: "(prefers-color-scheme: dark)", color: "#0a1712" },
   ],
 };
@@ -59,7 +66,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={`${inter.variable} ${sora.variable} ${arabic.variable} font-sans`}>
+      <body className={`${inter.variable} ${fraunces.variable} ${arabic.variable} font-sans`}>
         <Providers>{children}</Providers>
       </body>
     </html>

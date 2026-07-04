@@ -4,22 +4,25 @@
 
 /*
  * ════════════════════════════════════════════════════════════════════════
- *  Moracat Design System — brand tokens
- *  Palette: Deep Green #045b46 (dominant brand), Orange #f86c2f (CTAs/
- *  highlights), Pink #ffb7b8 (soft accent), Cream #f7dec9 (background),
- *  Black (text/contrast). Light + dark both first-class, tuned for WCAG AA+.
- *  All values are HSL so theming/contrast stay controllable.
+ *  Moracat Design System — "Warm paper, flat stickers, editorial confidence"
+ *
+ *  The world of the brand illustrations: a warm paper-white ground with a
+ *  breath of film grain, deep forest green as the chrome, and a family of
+ *  sticker accents — tangerine, blush, sage, butter, peach — used sparingly,
+ *  like enamel pins on a good coat. Cream (#f7dec9) survives as a *section
+ *  tint*, never the whole page. Light + dark first-class, WCAG AA+.
+ *  All values HSL so theming/contrast stay controllable.
  * ════════════════════════════════════════════════════════════════════════
  */
 @layer base {
   :root {
-    /* Surfaces — warm cream ground, near-white cards, near-black ink */
-    --background: 28 74% 88%;
-    --foreground: 165 45% 7%;
-    --card: 40 60% 96%;
-    --card-foreground: 165 45% 7%;
-    --popover: 40 62% 97%;
-    --popover-foreground: 165 45% 7%;
+    /* Surfaces — warm paper ground, soft-white cards, green-black ink */
+    --background: 40 45% 97%;
+    --foreground: 165 45% 8%;
+    --card: 40 50% 99%;
+    --card-foreground: 165 45% 8%;
+    --popover: 40 50% 99%;
+    --popover-foreground: 165 45% 8%;
 
     /* Brand — deep green #045b46 (dominant chrome, nav, seals, links) */
     --primary: 166 91% 19%;
@@ -27,39 +30,48 @@
     --primary-hover: 166 92% 14%;
 
     /* Pink #ffb7b8 — soft supporting surface */
-    --secondary: 359 100% 86%;
+    --secondary: 359 100% 88%;
     --secondary-foreground: 165 42% 14%;
 
-    --muted: 30 40% 84%;
-    --muted-foreground: 165 14% 30%;
+    --muted: 36 30% 90%;
+    --muted-foreground: 165 12% 32%;
 
     /* Orange #f86c2f — primary CTAs + highlights */
     --accent: 18 93% 58%;
     --accent-foreground: 165 45% 8%;
     --accent-hover: 18 93% 50%;
 
+    /* ── Sticker accents (decorative, from the illustration set) ── */
+    --cream: 30 68% 90%;             /* section tint — the old ground   */
+    --cream-foreground: 165 45% 10%;
+    --sage: 196 20% 58%;             /* the blue-grey paw               */
+    --butter: 44 88% 86%;            /* the butter-yellow paw           */
+    --peach: 26 100% 89%;            /* the peach paw                   */
+    --blush: 359 100% 86%;           /* the pink heart                  */
+    --leaf: 145 45% 34%;             /* the sprig green                 */
+
     /* Semantic states */
-    --success: 150 66% 30%;
+    --success: 150 66% 28%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 46%;
+    --warning: 38 92% 44%;
     --warning-foreground: 30 45% 10%;
-    --info: 200 82% 40%;
+    --info: 200 82% 38%;
     --info-foreground: 0 0% 100%;
-    --destructive: 0 74% 47%;
+    --destructive: 0 74% 45%;
     --destructive-foreground: 0 0% 100%;
 
     /* Lines + focus */
-    --border: 30 34% 80%;
-    --input: 30 34% 78%;
+    --border: 35 25% 84%;
+    --input: 35 25% 80%;
     --ring: 166 91% 24%;
 
-    --radius: 0.9rem;
+    --radius: 1rem;
 
     /* Elevation ladder — warm green-black shadow */
-    --shadow-color: 165 45% 12%;
-    --elevation-1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.10), 0 2px 6px -2px hsl(var(--shadow-color) / 0.08);
-    --elevation-2: 0 2px 4px -2px hsl(var(--shadow-color) / 0.10), 0 8px 20px -6px hsl(var(--shadow-color) / 0.12);
-    --elevation-3: 0 6px 12px -6px hsl(var(--shadow-color) / 0.14), 0 20px 44px -10px hsl(var(--shadow-color) / 0.18);
+    --shadow-color: 165 40% 14%;
+    --elevation-1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.08), 0 2px 6px -2px hsl(var(--shadow-color) / 0.07);
+    --elevation-2: 0 2px 4px -2px hsl(var(--shadow-color) / 0.09), 0 10px 24px -8px hsl(var(--shadow-color) / 0.12);
+    --elevation-3: 0 6px 12px -6px hsl(var(--shadow-color) / 0.12), 0 24px 48px -12px hsl(var(--shadow-color) / 0.18);
 
     /* Motion tokens */
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -67,33 +79,41 @@
 
     /* Fonts (wired by next/font) */
     --font-sans: "Inter", system-ui, sans-serif;
-    --font-display: "Sora", var(--font-sans);
+    --font-display: "Fraunces", Georgia, serif;
     /* Overridden at runtime by next/font local (Lyon Arabic Display). */
     --font-arabic: var(--font-sans);
   }
 
   .dark {
     /* Deep green-black ground with cream ink; brand accents brightened. */
-    --background: 168 44% 6%;
-    --foreground: 36 55% 92%;
-    --card: 168 32% 9%;
-    --card-foreground: 36 55% 92%;
-    --popover: 168 34% 8%;
-    --popover-foreground: 36 55% 92%;
+    --background: 168 42% 6%;
+    --foreground: 38 50% 93%;
+    --card: 168 30% 9%;
+    --card-foreground: 38 50% 93%;
+    --popover: 168 32% 8%;
+    --popover-foreground: 38 50% 93%;
 
-    --primary: 158 56% 46%;
+    --primary: 158 52% 48%;
     --primary-foreground: 168 45% 6%;
-    --primary-hover: 158 56% 54%;
+    --primary-hover: 158 54% 56%;
 
-    --secondary: 359 30% 26%;
-    --secondary-foreground: 36 55% 92%;
+    --secondary: 359 28% 24%;
+    --secondary-foreground: 38 50% 93%;
 
-    --muted: 168 18% 15%;
-    --muted-foreground: 36 20% 66%;
+    --muted: 168 16% 14%;
+    --muted-foreground: 38 18% 68%;
 
     --accent: 18 93% 58%;
     --accent-foreground: 168 45% 6%;
     --accent-hover: 18 94% 64%;
+
+    --cream: 166 24% 12%;
+    --cream-foreground: 38 50% 93%;
+    --sage: 196 22% 52%;
+    --butter: 44 60% 60%;
+    --peach: 26 70% 66%;
+    --blush: 359 60% 68%;
+    --leaf: 145 40% 46%;
 
     --success: 150 55% 46%;
     --success-foreground: 168 45% 6%;
@@ -104,8 +124,8 @@
     --destructive: 0 70% 57%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 168 16% 18%;
-    --input: 168 16% 20%;
+    --border: 168 15% 17%;
+    --input: 168 15% 20%;
     --ring: 158 56% 50%;
 
     --shadow-color: 168 65% 2%;
@@ -131,6 +151,23 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Film grain — the paper the stickers live on. Fixed, composited, subtle. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+  }
+  .dark body::before {
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+  }
+
   /* Tabular figures for prices, stats, timers — prevents layout shift. */
   .tabular,
   [data-tabular] {
@@ -139,7 +176,7 @@
 
   /* RTL: Arabic uses the Lyon Arabic Display face; Latin glyphs (numbers, SAR,
    * ID codes) fall back to the sans. Applies to body AND headings/labels so the
-   * display face never leaks Latin (Sora) into Arabic text. */
+   * display face never leaks Latin (Fraunces) into Arabic text. */
   [dir="rtl"] {
     font-family: var(--font-arabic), var(--font-sans);
   }
@@ -150,7 +187,7 @@
   }
 
   ::selection {
-    @apply bg-primary/20 text-foreground;
+    @apply bg-accent/25 text-foreground;
   }
 
   /* Accessible, on-brand focus — never remove the ring. */
@@ -217,13 +254,44 @@
   /* Subtle ambient mesh backdrop for hero / auth surfaces. */
   .mesh-bg {
     background-image:
-      radial-gradient(60% 55% at 20% 15%, hsl(var(--primary) / 0.14), transparent 60%),
-      radial-gradient(50% 45% at 85% 25%, hsl(var(--accent) / 0.12), transparent 60%);
+      radial-gradient(60% 55% at 20% 15%, hsl(var(--primary) / 0.10), transparent 60%),
+      radial-gradient(50% 45% at 85% 25%, hsl(var(--accent) / 0.09), transparent 60%);
   }
 
   /* Hairline top-lit border used on premium cards. */
   .ring-hairline {
     box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.06);
+  }
+
+  /* Hand-drawn marker underline for the hero's accent word. Drawn in the
+   * accent orange; sits behind the text like a swipe of highlighter. */
+  .underline-marker {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'%3E%3Cpath d='M3 10 Q 50 3 100 8 T 197 6' fill='none' stroke='%23f86c2f' stroke-width='5' stroke-linecap='round' opacity='0.85'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 100% 0.42em;
+    padding-bottom: 0.18em;
+  }
+
+  /* Perforated ticket edge — membership tiers are boarding passes, not
+   * pricing tables. The notches are punched with the page background. */
+  .ticket-notch::before,
+  .ticket-notch::after {
+    content: "";
+    position: absolute;
+    top: var(--notch-y, 62%);
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 9999px;
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    z-index: 1;
+  }
+  .ticket-notch::before {
+    inset-inline-start: -0.9rem;
+  }
+  .ticket-notch::after {
+    inset-inline-end: -0.9rem;
   }
 }
 
@@ -232,4 +300,17 @@
   .animate-delay-75 { animation-delay: 75ms; }
   .animate-delay-150 { animation-delay: 150ms; }
   .animate-delay-300 { animation-delay: 300ms; }
+
+  /* Marquee pauses when hovered — motion never fights reading. */
+  .marquee-pause:hover .animate-marquee {
+    animation-play-state: paused;
+  }
+
+  /* Slow, affectionate wobble for decorative stickers on hover. */
+  .sticker-hover {
+    transition: transform 0.35s var(--ease-spring);
+  }
+  .sticker-hover:hover {
+    transform: rotate(-4deg) scale(1.08);
+  }
 }

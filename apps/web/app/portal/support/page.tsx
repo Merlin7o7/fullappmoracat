@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { LifeBuoy, Plus, Send, X, ArrowLeft } from "lucide-react";
+import { Plus, Send, X, ArrowLeft } from "lucide-react";
 import { Card, Button, Skeleton, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { TicketStatusBadge } from "@/components/ticket-status-badge";
+import { IlloHeart, IlloPaw } from "@/components/illustrations";
 
 interface TicketMessage { id: string; body: string; isStaff: boolean; createdAt: string }
 interface Ticket {
@@ -48,7 +49,7 @@ export default function SupportPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "الدعم" : "Support"}</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "الدعم" : "Support"}</h1>
           <p className="text-sm text-muted-foreground">{isAr ? "نرد عادة خلال ساعات العمل نفسها" : "We usually reply within the same working day"}</p>
         </div>
         {!active && (
@@ -87,9 +88,17 @@ export default function SupportPage() {
           ))}
         </Card>
       ) : (
-        <Card className="flex flex-col items-center gap-3 p-10 text-center">
-          <span className="grid size-14 place-items-center rounded-2xl bg-muted"><LifeBuoy className="size-7 text-muted-foreground" /></span>
-          <p className="text-sm text-muted-foreground">{isAr ? "لا توجد تذاكر — كل شيء تمام 🎉" : "No tickets — everything's purring 🎉"}</p>
+        /* Empty state = a welcome, not a void (R111). */
+        <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
+          <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
+          <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
+          <IlloHeart tone="pink" className="size-16" />
+          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+            {isAr ? "لا توجد تذاكر — كل شيء تمام 🎉" : "No tickets — everything's purring 🎉"}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+            <Plus className="size-4" /> {isAr ? "افتح تذكرة" : "Open a ticket"}
+          </Button>
         </Card>
       )}
     </div>

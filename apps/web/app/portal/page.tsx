@@ -12,6 +12,17 @@ import { buildGreeting, type Gender } from "@/lib/greeting";
 import { localizeName } from "@/lib/translit";
 import { CatIdCard } from "@/components/cat-id-card";
 import { OrderStatusBadge } from "@/components/order-status-badge";
+import { IlloCat, IlloFish, IlloPaw } from "@/components/illustrations";
+
+/** Quiet paw watermark for the value strip. */
+function IlloPawSticker() {
+  return (
+    <IlloPaw
+      tone="peach"
+      className="pointer-events-none absolute -top-5 end-16 size-16 rotate-[16deg] opacity-[0.13]"
+    />
+  );
+}
 
 interface Overview {
   owner: { firstName: string | null; gender: Gender };
@@ -60,8 +71,7 @@ export default function OverviewPage() {
   });
 
   // Value stays visible (R041/R048); no points-scheme framing (Dossier §04).
-  const stats = [
-    { icon: PiggyBank, label: isAr ? "إجمالي التوفير" : "Total saved", num: data?.stats.totalSaved ?? 0, suffix: " SAR", highlight: true },
+  const proofs = [
     { icon: Package, label: isAr ? "الطلبات" : "Orders", num: data?.stats.orders ?? 0 },
     { icon: CatIcon, label: isAr ? "القطط" : "Cats", num: data?.stats.catCounts.active ?? 0 },
     { icon: Wallet, label: isAr ? "المحفظة" : "Wallet", num: data?.stats.walletBalance ?? 0, suffix: " SAR" },
@@ -116,32 +126,62 @@ export default function OverviewPage() {
           />
         </div>
       ) : (
-        <Card className="flex flex-col items-center gap-3 p-10 text-center">
-          <span className="grid size-14 place-items-center rounded-2xl bg-muted"><CatIcon className="size-7 text-muted-foreground" /></span>
-          <p className="text-sm text-muted-foreground">
+        /* Empty state = a welcome, not a void (R111). */
+        <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
+          <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
+          <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
+          <IlloCat tone="green" className="h-24 w-auto" />
+          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "أضف قطك الأول واحصل على هويته الرسمية فوراً" : "Add your first cat and get their official Cat ID, instantly"}
           </p>
           <Link href="/portal/cats"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>
         </Card>
       )}
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map((s) => (
-          <Card key={s.label} className="p-5">
-            <span className={`mb-3 grid size-10 place-items-center rounded-xl ${s.highlight ? "bg-accent/15 text-accent-foreground" : "bg-primary/10 text-primary"}`}>
-              <s.icon className="size-5" />
-            </span>
-            {isLoading ? (
-              <Skeleton className="h-7 w-16" />
-            ) : (
-              <p className="font-display text-2xl font-bold tabular">
-                <AnimatedCounter value={s.num} suffix={s.suffix ?? ""} />
-              </p>
-            )}
-            <p className="text-sm text-muted-foreground">{s.label}</p>
-          </Card>
-        ))}
+      {/* Value strip — the anti-churn number, honoured in the open (R041/R043). */}
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-e2 ring-hairline sm:p-7">
+          <IlloFish
+            tone="orange"
+            className="pointer-events-none absolute -end-4 bottom-4 h-14 w-auto rotate-[-8deg] opacity-90"
+          />
+          <IlloPawSticker />
+          <p className="flex items-center gap-2 text-sm font-medium text-primary-foreground/70">
+            <PiggyBank className="size-4" />
+            {isAr ? "وفّرت معنا حتى اليوم" : "Saved with us so far"}
+          </p>
+          {isLoading ? (
+            <Skeleton className="mt-3 h-12 w-40 bg-primary-foreground/10" />
+          ) : (
+            <p className="mt-2 font-display text-5xl font-semibold tabular tracking-tight sm:text-6xl">
+              <AnimatedCounter value={data?.stats.totalSaved ?? 0} />
+              <span className="ms-2 text-lg font-medium text-primary-foreground/70">SAR</span>
+            </p>
+          )}
+          <p className="mt-2 text-xs text-primary-foreground/60">
+            {isAr ? "سعر العضو مثبّت لك عند كل طلب — هذا الدليل" : "Your member rate, honoured on every order — this is the proof"}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 lg:grid-cols-1 lg:content-between">
+          {proofs.map((s) => (
+            <Card key={s.label} className="flex items-center gap-3 p-4">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <s.icon className="size-5" />
+              </span>
+              <div className="min-w-0">
+                {isLoading ? (
+                  <Skeleton className="h-6 w-12" />
+                ) : (
+                  <p className="truncate font-display text-xl font-bold tabular leading-tight">
+                    <AnimatedCounter value={s.num} suffix={s.suffix ?? ""} />
+                  </p>
+                )}
+                <p className="truncate text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* Active subscription */}

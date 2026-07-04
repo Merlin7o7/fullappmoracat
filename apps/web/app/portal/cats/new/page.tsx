@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { CatIdCeremony } from "@/components/cat-id-ceremony";
+import { IlloPaw } from "@/components/illustrations";
 import type { PortalCat } from "@/lib/cat-context";
 
 interface Breed { id: string; nameEn: string; nameAr: string }
@@ -94,8 +95,9 @@ export default function NewCatPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "سجّل قطك" : "Register your cat"}</h1>
+      <div className="relative">
+        <IlloPaw tone="butter" className="pointer-events-none absolute -top-3 end-0 size-10 rotate-[14deg] opacity-40" />
+        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "سجّل قطك" : "Register your cat"}</h1>
         <p className="text-sm text-muted-foreground">
           {isAr ? "نجمع ملفه كامل، وبعدها نصدر هويته الرسمية" : "We collect their full profile, then issue their official Cat ID"}
         </p>

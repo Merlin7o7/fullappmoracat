@@ -124,9 +124,9 @@ export function CatIdCard({
               <QRCodeSVG value={qrValue} size={44} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
             </div>
           )}
-          {!qrValue && (
+          {!qrValue && !preview && (
             <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[hsl(18_93%_60%)]">
-              {preview ? (isAr ? "معاينة" : "Preview") : isAr ? "هوية رسمية" : "Official ID"}
+              {isAr ? "هوية رسمية" : "Official ID"}
             </p>
           )}
         </div>

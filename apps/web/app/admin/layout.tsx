@@ -39,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="grid min-h-screen place-items-center px-4">
         <div className="max-w-sm text-center">
           <span className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-destructive/10 text-destructive"><ShieldAlert className="size-8" /></span>
-          <h1 className="font-display text-xl font-bold">Staff access only</h1>
+          <h1 className="font-display text-xl font-bold tracking-tight">Staff access only</h1>
           <p className="mt-2 text-sm text-muted-foreground">Your account doesn&apos;t have admin permissions.</p>
           <Link href="/portal"><Button className="mt-5" variant="outline">Go to my account</Button></Link>
         </div>

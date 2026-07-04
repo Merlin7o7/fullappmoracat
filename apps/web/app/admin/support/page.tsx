@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { LifeBuoy, Send, ArrowLeft, CheckCheck, X } from "lucide-react";
+import { Send, ArrowLeft, CheckCheck, X } from "lucide-react";
 import { Card, Badge, Button, DataTable, useToast, cn, type Column } from "@moraqat/ui";
+import { IlloMouse } from "@/components/illustrations";
 import { useAuth } from "@/lib/auth";
 import { TicketStatusBadge } from "@/components/ticket-status-badge";
 
@@ -77,7 +78,7 @@ export default function AdminSupport() {
           rowKey={(t) => t.ticketNumber}
           loading={isLoading}
           onRowClick={(t) => setSelected(t.ticketNumber)}
-          emptyState={<div className="flex flex-col items-center gap-2"><LifeBuoy className="size-8 opacity-40" />No tickets</div>}
+          emptyState={<div className="flex flex-col items-center gap-3"><IlloMouse tone="sage" className="h-8 w-auto opacity-80" />No tickets</div>}
         />
       )}
     </div>

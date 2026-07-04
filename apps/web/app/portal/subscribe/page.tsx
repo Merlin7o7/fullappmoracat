@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
+import { IlloHeart } from "@/components/illustrations";
 
 interface ApiPlan {
   id: string;
@@ -88,11 +89,12 @@ function SubscribeInner() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
+      <div className="relative">
+        <IlloHeart tone="pink" className="pointer-events-none absolute -top-2 end-0 size-9 rotate-[10deg] opacity-40" />
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent-foreground/80">
           {isAr ? "الخطوة الأخيرة" : "Final step"}
         </p>
-        <h1 className="font-display text-2xl font-bold tracking-tight">
+        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           {isAr ? "فعّل عضوية " : "Activate membership for "}{catLine || (isAr ? "قططك" : "your cats")}
         </h1>
         <p className="text-sm text-muted-foreground">

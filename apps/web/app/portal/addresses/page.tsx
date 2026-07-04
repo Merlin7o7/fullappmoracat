@@ -7,6 +7,7 @@ import { Card, Badge, Button, Skeleton } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
+import { IlloPaw } from "@/components/illustrations";
 
 interface Address {
   id: string;
@@ -52,7 +53,7 @@ export default function AddressesPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "العناوين" : "Addresses"}</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "العناوين" : "Addresses"}</h1>
           <p className="text-sm text-muted-foreground">{isAr ? "أماكن توصيل اشتراكك" : "Where your subscription is delivered"}</p>
         </div>
         <Button size="sm" onClick={() => setShowForm((v) => !v)}><Plus className="size-4" /> {isAr ? "إضافة" : "Add"}</Button>
@@ -88,9 +89,15 @@ export default function AddressesPage() {
           ))}
         </div>
       ) : (
-        <Card className="flex flex-col items-center gap-3 p-10 text-center">
-          <span className="grid size-14 place-items-center rounded-2xl bg-muted"><MapPin className="size-7 text-muted-foreground" /></span>
-          <p className="text-sm text-muted-foreground">{isAr ? "لا توجد عناوين محفوظة" : "No saved addresses"}</p>
+        /* Empty state = a welcome, not a void (R111). */
+        <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
+          <IlloPaw tone="sage" className="pointer-events-none absolute start-8 top-6 size-7 rotate-[-14deg] opacity-50" />
+          <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
+          <IlloPaw tone="butter" className="size-20" />
+          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+            {isAr ? "لا توجد عناوين محفوظة — أضف عنوانك ليصل صندوق قطك إلى الباب" : "No saved addresses — add yours so your cat's box reaches the door"}
+          </p>
+          <Button size="sm" onClick={() => setShowForm(true)}><Plus className="size-4" /> {isAr ? "أضف عنواناً" : "Add an address"}</Button>
         </Card>
       )}
     </div>
