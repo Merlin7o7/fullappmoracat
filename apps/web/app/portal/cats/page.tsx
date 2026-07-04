@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { Field, SelectField } from "@/components/field";
+import { localizeName } from "@/lib/translit";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatIdCeremony } from "@/components/cat-id-ceremony";
 import { CatManageDrawer } from "@/components/cat-manage-drawer";
@@ -187,7 +188,7 @@ function CatCard({
         <Avatar name={cat.name} src={cat.photoUrl} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="truncate font-display font-semibold">{cat.name}</p>
+            <p className="truncate font-display font-semibold">{localizeName(cat.name, isAr ? "ar" : "en")}</p>
             {cat.isPrimary && <Star className="size-3.5 shrink-0 fill-accent text-accent" aria-label={isAr ? "الأساسي" : "Primary"} />}
           </div>
           <p className="truncate text-xs text-muted-foreground">

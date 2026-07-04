@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { buildGreeting, type Gender } from "@/lib/greeting";
+import { localizeName } from "@/lib/translit";
 import { CatIdCard } from "@/components/cat-id-card";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 
@@ -81,8 +82,8 @@ export default function OverviewPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           {featured
             ? isAr
-              ? `عضوية ${featured.name} بين يديك`
-              : `${featured.name}'s membership, at a glance`
+              ? `عضوية ${localizeName(featured.name, "ar")} بين يديك`
+              : `${localizeName(featured.name, "en")}'s membership, at a glance`
             : isAr ? "إليك ملخص حسابك" : "Here's your account at a glance"}
         </p>
       </div>
@@ -240,7 +241,7 @@ function CatRail({
                 <Avatar size="sm" name={c.name} src={c.photoUrl} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1">
-                    <span className="truncate text-sm font-medium">{c.name}</span>
+                    <span className="truncate text-sm font-medium">{localizeName(c.name, isAr ? "ar" : "en")}</span>
                     {c.isPrimary && <Star className="size-3 shrink-0 fill-accent text-accent" />}
                   </span>
                   <span className="block truncate font-mono text-[10px] text-muted-foreground" dir="ltr">{c.catIdNumber}</span>

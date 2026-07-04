@@ -3,6 +3,7 @@
 import { PawPrint } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
+import { localizeName } from "@/lib/translit";
 
 interface CatIdCardProps {
   catName: string;
@@ -39,12 +40,15 @@ export function CatIdCard({
     ? new Date(issuedAt).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { month: "short", year: "numeric" })
     : null;
   const qrValue = qrToken ? `MRCV1:${qrToken}` : null;
+  const loc = isAr ? "ar" : "en";
+  const dispName = localizeName(catName, loc);
+  const dispOwner = ownerName ? localizeName(ownerName, loc) : ownerName;
 
   return (
     <div
       role="img"
       aria-label={
-        isAr ? `هوية القط: ${catName}، الرقم ${catIdNumber}` : `Cat ID for ${catName}, number ${catIdNumber}`
+        isAr ? `هوية القط: ${dispName}، الرقم ${catIdNumber}` : `Cat ID for ${dispName}, number ${catIdNumber}`
       }
       className={cn(
         "relative w-full max-w-sm select-none overflow-hidden rounded-2xl p-5 text-white shadow-e3 ring-hairline",
@@ -87,7 +91,7 @@ export function CatIdCard({
             </span>
           )}
           <div className="min-w-0">
-            <p className="font-display text-[clamp(1.35rem,6cqw,1.9rem)] font-semibold leading-tight tracking-tight">{catName}</p>
+            <p className="font-display text-[clamp(1.35rem,6cqw,1.9rem)] font-semibold leading-tight tracking-tight">{dispName}</p>
             {since && <p className="mt-0.5 text-[11px] text-white/55">{isAr ? `عضو من ${since}` : `Member since ${since}`}</p>}
           </div>
         </div>
@@ -96,7 +100,7 @@ export function CatIdCard({
         {detailed && (
           <div className="flex items-end justify-between gap-3">
             <dl className="grid flex-1 grid-cols-2 gap-x-3 gap-y-2 text-[11px] leading-tight">
-              <Detail label={isAr ? "المالك" : "Owner"} value={ownerName} />
+              <Detail label={isAr ? "المالك" : "Owner"} value={dispOwner} />
               <Detail label={isAr ? "الجوال" : "Mobile"} value={ownerPhone} mono />
               <Detail label={isAr ? "الفصيلة" : "Breed"} value={breed} />
               <Detail label={isAr ? "الطعام المفضّل" : "Favourite food"} value={favoriteFood} />

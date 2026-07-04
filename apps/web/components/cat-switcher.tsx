@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, ChevronsUpDown, Plus, Search, Star, Settings2 } from "lucide-react";
 import { Avatar, Badge, cn } from "@moraqat/ui";
 import { useCats } from "@/lib/cat-context";
+import { localizeName } from "@/lib/translit";
 
 /**
  * The cat selector — how a multi-cat household chooses "which cat, right now"
@@ -73,7 +74,7 @@ export function CatSwitcher({ isAr }: { isAr: boolean }) {
       >
         <Avatar size="sm" name={activeCat?.name} src={activeCat?.photoUrl} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold leading-tight">{activeCat?.name}</span>
+          <span className="block truncate text-sm font-semibold leading-tight">{localizeName(activeCat?.name, isAr ? "ar" : "en")}</span>
           <span className="block truncate font-mono text-[10px] leading-tight text-muted-foreground" dir="ltr">
             {activeCat?.catIdNumber}
           </span>
@@ -136,7 +137,7 @@ export function CatSwitcher({ isAr }: { isAr: boolean }) {
                       <Avatar size="sm" name={c.name} src={c.photoUrl} />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-1.5">
-                          <span className="truncate text-sm font-medium">{c.name}</span>
+                          <span className="truncate text-sm font-medium">{localizeName(c.name, isAr ? "ar" : "en")}</span>
                           {c.isPrimary && (
                             <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
                               {isAr ? "الأساسي" : "Primary"}

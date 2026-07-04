@@ -10,6 +10,8 @@
  * no cat we fall back to a plain, warm welcome. English mirrors the warmth.
  */
 
+import { localizeName } from "./translit";
+
 export type Gender = "MALE" | "FEMALE" | "UNSPECIFIED";
 
 export interface GreetingInput {
@@ -29,8 +31,9 @@ export interface Greeting {
 const CAT = "🐈";
 
 export function buildGreeting({ locale, gender, primaryCatName, firstName }: GreetingInput): Greeting {
-  const cat = primaryCatName?.trim();
-  const name = firstName?.trim();
+  // #1: show each name in the active locale's script (rule-based transliteration).
+  const cat = localizeName(primaryCatName, locale).trim() || undefined;
+  const name = localizeName(firstName, locale).trim() || undefined;
   const g: Gender = gender ?? "UNSPECIFIED";
 
   if (locale === "ar") {
