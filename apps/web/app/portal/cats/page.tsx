@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Cat as CatIcon, Plus, Sparkles, Loader2, X, Search, Star, IdCard, Settings2, Copy, Check } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
@@ -23,7 +22,6 @@ interface Recommendation {
   confidence: number;
 }
 
-const ID_BASE = process.env.NEXT_PUBLIC_CAT_ID_BASE ?? "https://moracat.sa/c";
 type Filter = "ALL" | "ACTIVE" | "ARCHIVED" | "DECEASED";
 
 export default function CatsPage() {
@@ -246,8 +244,8 @@ function CatCard({
 }
 
 function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
+  const { user } = useAuth();
   const [copied, setCopied] = React.useState(false);
-  const idUrl = `${ID_BASE}/${cat.catIdNumber ?? ""}`;
   const copy = () => {
     if (!cat.catIdNumber) return;
     navigator.clipboard?.writeText(cat.catIdNumber).then(() => {
@@ -255,20 +253,32 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
       setTimeout(() => setCopied(false), 1500);
     });
   };
+  const ownerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || null;
+  const breed = cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : null;
   return (
     <div className="flex flex-col items-center gap-5 pt-2">
-      <CatIdCard catName={cat.name} catIdNumber={cat.catIdNumber!} issuedAt={cat.idIssuedAt} photoUrl={cat.photoUrl} isAr={isAr} />
-      <div className="rounded-2xl bg-white p-3 shadow-e1 ring-hairline">
-        <QRCodeSVG value={idUrl} size={132} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
-      </div>
+      <CatIdCard
+        detailed
+        catName={cat.name}
+        catIdNumber={cat.catIdNumber!}
+        issuedAt={cat.idIssuedAt}
+        photoUrl={cat.photoUrl}
+        isAr={isAr}
+        membershipActive={cat.membershipStatus === "ACTIVE"}
+        ownerName={ownerName}
+        ownerPhone={user?.phone ?? null}
+        breed={breed}
+        favoriteFood={cat.favoriteFoods?.[0] ?? null}
+        qrToken={cat.qrToken}
+      />
       <button onClick={copy} className="inline-flex items-center gap-1.5 font-mono text-sm tracking-wider text-muted-foreground transition-colors hover:text-foreground" dir="ltr">
         {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
         {cat.catIdNumber}
       </button>
       <p className="max-w-xs text-center text-xs leading-relaxed text-muted-foreground">
         {isAr
-          ? `امسح الرمز لعرض هوية ${cat.name} وبيانات التواصل. سجلّه الغذائي والصحي محفوظ تحت هذه الهوية.`
-          : `Scan to open ${cat.name}'s ID & contact card. Their feeding and health record live under this identity.`}
+          ? `الرمز رمز تحقق آمن — يُقرأ فقط داخل تطبيق مرقط أو من شريك معتمد للتأكد من الهوية والعضوية، بدون كشف أي بيانات عامة.`
+          : `The QR is a secure token — read only inside the Moracat app or by an authorized partner to confirm identity & membership. No public profile is exposed.`}
       </p>
     </div>
   );

@@ -20,6 +20,7 @@ export interface PortalCat {
   id: string;
   name: string;
   catIdNumber: string | null;
+  qrToken: string | null;
   idIssuedAt: string | null;
   photoUrl: string | null;
   gender: string;
@@ -31,6 +32,7 @@ export interface PortalCat {
   isPrimary: boolean;
   archivedAt: string | null;
   deceasedAt: string | null;
+  favoriteFoods?: string[];
   breed: { nameEn: string; nameAr: string } | null;
 }
 

@@ -23,6 +23,8 @@ import { AdminModule } from "./admin/admin.module";
 import { ContentModule } from "./content/content.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { SupportModule } from "./support/support.module";
+import { IdsModule } from "./ids/ids.module";
+import { VerifyModule } from "./verify/verify.module";
 
 @Module({
   imports: [
@@ -30,10 +32,12 @@ import { SupportModule } from "./support/support.module";
     // Rate limiting — 120 requests / minute per IP by default.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
+    IdsModule,
     HealthModule,
     PlansModule,
     AuthModule,
     CatsModule,
+    VerifyModule,
     FeedingModule,
     PaymentsModule,
     ProductsModule,

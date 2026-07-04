@@ -9,6 +9,7 @@ export type Gender = "MALE" | "FEMALE" | "UNSPECIFIED";
 
 export interface AuthUser {
   id: string;
+  memberIdNumber?: string | null;
   email: string;
   firstName?: string | null;
   lastName?: string | null;

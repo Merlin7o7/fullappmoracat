@@ -286,6 +286,9 @@ enum ReturnStatus {
 
 model User {
   id            String     @id @default(cuid())
+  /// Permanent, immutable, human-readable Member ID (e.g. MRC-M-7Q4K2P). Issued
+  /// once at signup, never reused or changed — the customer's identity number.
+  memberIdNumber String?   @unique
   email         String     @unique
   phone         String?    @unique
   passwordHash  String?
@@ -601,6 +604,9 @@ model Cat {
   /// The soul of the product: issued with ceremony, never a silent DB row.
   catIdNumber    String?       @unique
   idIssuedAt     DateTime?
+  /// Opaque, revocable QR verification token (NOT a public URL). Scanned only by
+  /// the Moracat app / authorized partners to check identity + membership (R057).
+  qrToken        String?       @unique
   name           String
   photoUrl       String?
   breedId        String?
@@ -618,7 +624,9 @@ model Cat {
   /// Household lifecycle. A cat is never silently dropped: removal soft-deletes,
   /// and a passing is archived as DECEASED so the record and Cat ID endure.
   status           CatStatus           @default(ACTIVE)
-  membershipStatus CatMembershipStatus @default(ACTIVE)
+  // Membership is INACTIVE until a subscription activates it (R#9). The Cat ID is
+  // still issued immediately; only the membership benefits gate on payment.
+  membershipStatus CatMembershipStatus @default(INACTIVE)
   archivedAt       DateTime?
   deceasedAt       DateTime?
   createdAt      DateTime      @default(now())

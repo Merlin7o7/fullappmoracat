@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { randomInt } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
+import { IdsService } from "../ids/ids.service";
 import type {
   CreateCatDto,
   ListCatsQueryDto,
@@ -18,21 +18,11 @@ const catInclude = {
   allergies: true,
 } as const;
 
-/**
- * Cat ID numbers are human-readable and unambiguous (R032) — something an owner
- * can read aloud with pride at a vet counter. Alphabet excludes 0/O/1/I/L.
- */
-const ID_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-function generateCatIdNumber(): string {
-  const pick = (n: number) =>
-    Array.from({ length: n }, () => ID_ALPHABET[randomInt(ID_ALPHABET.length)]).join("");
-  return `MRC-${pick(4)}-${pick(4)}`;
-}
-
 type CatRow = {
   id: string;
   name: string;
   catIdNumber: string | null;
+  qrToken: string | null;
   idIssuedAt: Date | null;
   photoUrl: string | null;
   gender: string;
@@ -58,15 +48,20 @@ type CatRow = {
 
 @Injectable()
 export class CatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ids: IdsService
+  ) {}
 
   async create(userId: string, dto: CreateCatDto) {
     const cat = await this.prisma.cat.create({
       data: {
         userId,
-        // The Cat ID is issued at the moment the cat joins — instantly, so the
-        // reveal ceremony (R031) has something real to celebrate.
-        catIdNumber: await this.uniqueCatIdNumber(),
+        // The Cat ID + its QR token are issued the moment the cat joins — instantly,
+        // so the reveal ceremony (R031) has something real to celebrate. Membership
+        // stays INACTIVE (schema default) until a subscription activates it (#9).
+        catIdNumber: await this.ids.newCatId(),
+        qrToken: await this.ids.newQrToken(),
         idIssuedAt: new Date(),
         name: dto.name,
         photoUrl: dto.photoUrl,
@@ -133,14 +128,19 @@ export class CatsService {
       orderBy: [{ status: "asc" }, { createdAt: "asc" }],
     });
 
-    // Lazy issuance: no cat is ever left without an identity (pre-ID rows).
+    // Lazy issuance: no cat is ever left without an identity or QR (pre-ID rows).
     for (const cat of cats) {
-      if (!cat.catIdNumber) {
+      if (!cat.catIdNumber || !cat.qrToken) {
         const issued = await this.prisma.cat.update({
           where: { id: cat.id },
-          data: { catIdNumber: await this.uniqueCatIdNumber(), idIssuedAt: new Date() },
+          data: {
+            catIdNumber: cat.catIdNumber ?? (await this.ids.newCatId()),
+            qrToken: cat.qrToken ?? (await this.ids.newQrToken()),
+            idIssuedAt: cat.idIssuedAt ?? new Date(),
+          },
         });
         cat.catIdNumber = issued.catIdNumber;
+        cat.qrToken = issued.qrToken;
         cat.idIssuedAt = issued.idIssuedAt;
       }
     }
@@ -394,25 +394,14 @@ export class CatsService {
     });
   }
 
-  /** Generate a Cat ID number, retrying on the (rare) collision. */
-  private async uniqueCatIdNumber(): Promise<string> {
-    for (let i = 0; i < 5; i++) {
-      const candidate = generateCatIdNumber();
-      const clash = await this.prisma.cat.findUnique({
-        where: { catIdNumber: candidate },
-        select: { id: true },
-      });
-      if (!clash) return candidate;
-    }
-    // 31^8 space — five collisions in a row is effectively impossible.
-    throw new Error("Could not allocate a unique Cat ID number");
-  }
-
   private serialize(cat: CatRow, primaryCatId: string | null) {
     return {
       id: cat.id,
       name: cat.name,
       catIdNumber: cat.catIdNumber,
+      // The QR token is the owner's own secret for their card — safe to return to
+      // the authenticated owner; partners resolve it via /verify, never the URL.
+      qrToken: cat.qrToken,
       idIssuedAt: cat.idIssuedAt,
       photoUrl: cat.photoUrl,
       gender: cat.gender,

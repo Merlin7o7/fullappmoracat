@@ -19,6 +19,7 @@ export class AccountService {
     if (!user) throw new NotFoundException("User not found");
     return {
       id: user.id,
+      memberIdNumber: user.memberIdNumber,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,

@@ -98,6 +98,9 @@ export class SubscriptionsService {
       }
     }
 
+    // Activate membership for the covered cats (#9).
+    await this.syncCatsMembership(dto.catIds);
+
     return this.serialize(await this.reload(sub.id));
   }
 
@@ -126,6 +129,7 @@ export class SubscriptionsService {
         events: { create: { type: "paused", metadata: { until: until ?? null } } },
       },
     });
+    await this.syncCatsMembership(sub.cats.map((c) => c.cat.id));
     return this.serialize(await this.reload(id));
   }
 
@@ -143,6 +147,7 @@ export class SubscriptionsService {
         events: { create: { type: "resumed" } },
       },
     });
+    await this.syncCatsMembership(sub.cats.map((c) => c.cat.id));
     return this.serialize(await this.reload(id));
   }
 
@@ -174,10 +179,28 @@ export class SubscriptionsService {
         events: { create: { type: "cancelled" } },
       },
     });
+    await this.syncCatsMembership(sub.cats.map((c) => c.cat.id));
     return this.serialize(await this.reload(id));
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
+  /**
+   * Recompute membership for the given cats (#9): a cat's membership is ACTIVE
+   * iff it's covered by at least one ACTIVE subscription; otherwise INACTIVE.
+   * The Cat ID itself never changes — only the membership status gates.
+   */
+  private async syncCatsMembership(catIds: string[]) {
+    for (const catId of catIds) {
+      const activeCount = await this.prisma.subscriptionCat.count({
+        where: { catId, subscription: { status: "ACTIVE" } },
+      });
+      await this.prisma.cat.updateMany({
+        where: { id: catId, status: "ACTIVE" },
+        data: { membershipStatus: activeCount > 0 ? "ACTIVE" : "INACTIVE" },
+      });
+    }
+  }
+
   private resolveIntervalDays(interval: string, custom?: number | null): number {
     if (interval === "CUSTOM") {
       if (!custom) throw new BadRequestException("intervalDays is required for CUSTOM interval");

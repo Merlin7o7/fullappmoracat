@@ -11,6 +11,7 @@ import * as bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { IdsService } from "../ids/ids.service";
 import type {
   GoogleAuthDto,
   LoginDto,
@@ -50,7 +51,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly ids: IdsService
   ) {}
 
   // ── Registration ────────────────────────────────────────────────────────
@@ -88,6 +90,7 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         email,
+        memberIdNumber: await this.ids.newMemberId(),
         phone: phone ?? undefined,
         dialCode: dto.dialCode ?? "+966",
         passwordHash,
@@ -173,6 +176,7 @@ export class AuthService {
       user = await this.prisma.user.create({
         data: {
           email,
+          memberIdNumber: await this.ids.newMemberId(),
           firstName: profile.given_name ?? null,
           lastName: profile.family_name ?? null,
           avatarUrl: profile.picture ?? null,
@@ -501,6 +505,7 @@ export class AuthService {
 
   private publicUser(user: {
     id: string;
+    memberIdNumber?: string | null;
     email: string;
     firstName: string | null;
     lastName: string | null;
@@ -515,6 +520,7 @@ export class AuthService {
   }) {
     return {
       id: user.id,
+      memberIdNumber: user.memberIdNumber ?? null,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,

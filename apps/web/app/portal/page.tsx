@@ -73,6 +73,11 @@ export default function OverviewPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{greeting.title}</h1>
+        {user?.memberIdNumber && (
+          <p className="mt-1 font-mono text-xs tracking-wider text-muted-foreground/70" dir="ltr">
+            {isAr ? "عضو مرقط" : "Moracat member"} · {user.memberIdNumber}
+          </p>
+        )}
         <p className="mt-1 text-sm text-muted-foreground">
           {featured
             ? isAr
@@ -92,6 +97,8 @@ export default function OverviewPage() {
               issuedAt={featured.idIssuedAt}
               photoUrl={featured.photoUrl}
               isAr={isAr}
+              membershipActive={featured.membershipStatus === "ACTIVE"}
+              qrToken={featured.qrToken}
             />
             <div className="grid grid-cols-2 gap-2">
               <Link href="/portal/cats"><Button variant="outline" size="sm" className="w-full"><IdCard className="size-4" /> {isAr ? "الهوية" : "Cat ID"}</Button></Link>

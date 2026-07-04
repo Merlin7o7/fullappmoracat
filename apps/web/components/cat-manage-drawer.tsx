@@ -11,9 +11,6 @@ import { Field, SelectField } from "@/components/field";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatHealthPanel } from "@/components/cat-health-panel";
 
-/** The canonical, permanent public locator behind a cat's QR (safety job R057). */
-const ID_BASE = process.env.NEXT_PUBLIC_CAT_ID_BASE ?? "https://moracat.sa/c";
-
 export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: boolean; onClose: () => void }) {
   const { authedFetch } = useAuth();
   const { setPrimaryCat, refresh } = useCats();
@@ -52,7 +49,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
   const restore = () =>
     action.mutate({ path: `/cats/${cat.id}/restore` }, { onSuccess: () => done(isAr ? `عاد ${cat.name} 🐈` : `${cat.name} is back 🐈`) });
 
-  const idUrl = `${ID_BASE}/${cat.catIdNumber ?? ""}`;
+  const qrValue = cat.qrToken ? `MRCV1:${cat.qrToken}` : null;
 
   return (
     <Drawer open onClose={onClose} title={isAr ? `إدارة ${cat.name}` : `Manage ${cat.name}`}>
@@ -70,14 +67,21 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
 
         {/* Identity + QR (the Cat ID made tangible + scannable) */}
         <div className="flex flex-col items-center gap-4">
-          <CatIdCard catName={cat.name} catIdNumber={cat.catIdNumber ?? "MRC-••••-••••"} issuedAt={cat.idIssuedAt} photoUrl={cat.photoUrl} isAr={isAr} />
-          {cat.catIdNumber && (
+          <CatIdCard
+            catName={cat.name}
+            catIdNumber={cat.catIdNumber ?? "MRC-••••-••••"}
+            issuedAt={cat.idIssuedAt}
+            photoUrl={cat.photoUrl}
+            isAr={isAr}
+            membershipActive={cat.membershipStatus === "ACTIVE"}
+          />
+          {qrValue && (
             <div className="flex flex-col items-center gap-2">
               <div className="rounded-2xl bg-white p-3 shadow-e1 ring-hairline">
-                <QRCodeSVG value={idUrl} size={112} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
+                <QRCodeSVG value={qrValue} size={112} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
               </div>
               <p className="max-w-[16rem] text-center text-[11px] leading-relaxed text-muted-foreground">
-                {isAr ? "امسح الرمز لعرض هوية القط وبيانات التواصل" : "Scan to open this cat's ID & contact card"}
+                {isAr ? "رمز تحقق آمن — يُقرأ داخل مرقط أو من شريك معتمد" : "Secure token — read inside Moracat or by an authorized partner"}
               </p>
             </div>
           )}
