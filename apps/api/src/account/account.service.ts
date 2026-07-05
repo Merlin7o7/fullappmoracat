@@ -2,14 +2,25 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  PayloadTooLargeException,
 } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../prisma/prisma.service";
+import { StorageService } from "../storage/storage.service";
 import type { ChangePasswordDto, UpdateProfileDto } from "./dto/account.dto";
+
+interface UploadedImage {
+  buffer: Buffer;
+  mimetype: string;
+  size: number;
+}
 
 @Injectable()
 export class AccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService
+  ) {}
 
   async profile(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -27,9 +38,11 @@ export class AccountService {
       dialCode: user.dialCode,
       gender: user.gender,
       avatarUrl: user.avatarUrl,
+      ownerNickname: user.ownerNickname,
       locale: user.locale,
       status: user.status,
       primaryCatId: user.primaryCatId,
+      emailVerified: !!user.emailVerified,
       phoneVerified: !!user.phoneVerified,
       twoFactorEnabled: user.twoFactor?.enabled ?? false,
       createdAt: user.createdAt,
@@ -39,6 +52,21 @@ export class AccountService {
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     await this.prisma.user.update({ where: { id: userId }, data: dto });
     return this.profile(userId);
+  }
+
+  /** Upload + set the account avatar. Replaces (and deletes) the previous one. */
+  async setAvatar(userId: string, file?: UploadedImage) {
+    if (!file?.buffer?.length) throw new BadRequestException("No image provided");
+    if (file.size > 8 * 1024 * 1024) throw new PayloadTooLargeException("Image must be 8 MB or smaller");
+    const ext = this.storage.imageExt(file.mimetype);
+    if (!ext) throw new BadRequestException("Only JPEG, PNG, or WebP images are allowed");
+
+    const prev = await this.prisma.user.findUnique({ where: { id: userId }, select: { avatarUrl: true } });
+    const key = this.storage.buildKey(`users/${userId}/avatar`, ext);
+    const url = await this.storage.upload(key, file.buffer, file.mimetype);
+    await this.prisma.user.update({ where: { id: userId }, data: { avatarUrl: url } });
+    if (prev?.avatarUrl) void this.storage.remove(prev.avatarUrl);
+    return { avatarUrl: url };
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {

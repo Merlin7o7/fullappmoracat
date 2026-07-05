@@ -27,6 +27,7 @@ interface LayoutInput {
   preheader: string;
   heading: string;
   body: string[]; // paragraphs
+  extra?: string; // raw HTML block rendered after the paragraphs (e.g. an OTP)
   cta?: { label: string; url: string };
   footnote?: string;
 }
@@ -74,6 +75,7 @@ function layout(i: LayoutInput): string {
         <tr><td style="background:${BRAND.card};border:1px solid ${BRAND.hairline};border-radius:20px;padding:30px 28px;">
           <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;font-weight:700;color:${BRAND.ink};text-align:${align};">${i.heading}</h1>
           ${paragraphs}
+          ${i.extra ?? ""}
           ${button}
           ${foot}
         </td></tr>
@@ -110,6 +112,31 @@ export function verifyEmailTemplate(locale: Locale, name: string | null, url: st
     subject: ar ? "أكّد بريدك — مُرقّط" : "Confirm your email — Moracat",
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "إذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة." : "If you didn't create this account, you can safely ignore this email." }),
     text: toText(heading, body, cta),
+  };
+}
+
+export function otpEmailTemplate(locale: Locale, name: string | null, code: string): BuiltEmail {
+  const ar = locale === "ar";
+  const hi = name ? (ar ? `أهلاً ${name}،` : `Hi ${name},`) : ar ? "أهلاً بك،" : "Hi there,";
+  const heading = ar ? "رمز تأكيد بريدك" : "Your verification code";
+  const body = [
+    hi,
+    ar
+      ? "استخدم هذا الرمز لتأكيد بريدك في مُرقّط. صالح لمدة ١٠ دقائق."
+      : "Use this code to confirm your email on Moracat. It's valid for 10 minutes.",
+  ];
+  const codeBlock = `<div style="margin:8px 0 4px;text-align:center;"><span style="display:inline-block;padding:14px 22px;border-radius:14px;background:${BRAND.paper};border:1px solid ${BRAND.hairline};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:30px;font-weight:700;letter-spacing:8px;color:${BRAND.ink};">${code}</span></div>`;
+  return {
+    subject: ar ? `رمز التأكيد: ${code} — مُرقّط` : `Your code: ${code} — Moracat`,
+    html: layout({
+      locale,
+      preheader: `${heading}: ${code}`,
+      heading,
+      body,
+      extra: codeBlock,
+      footnote: ar ? "إذا لم تطلب ذلك، تجاهل هذه الرسالة." : "If you didn't request this, you can ignore this email.",
+    }),
+    text: `${heading}\n\n${body.join("\n")}\n\n${code}\n\n— Moracat`,
   };
 }
 

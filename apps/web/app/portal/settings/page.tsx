@@ -9,6 +9,7 @@ import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { buildGreeting, type Gender } from "@/lib/greeting";
 import { Field } from "@/components/field";
+import { PhotoUploader } from "@/components/photo-uploader";
 
 interface Profile {
   firstName: string | null;
@@ -18,6 +19,8 @@ interface Profile {
   locale: string;
   twoFactorEnabled: boolean;
   gender?: Gender;
+  avatarUrl?: string | null;
+  emailVerified?: boolean;
 }
 
 export default function SettingsPage() {
@@ -114,6 +117,18 @@ function ProfileSection({ isAr, profile, authedFetch, onSaved }: {
         }}
         className="grid gap-4 sm:grid-cols-2"
       >
+        <div className="sm:col-span-2">
+          <PhotoUploader
+            endpoint="/account/avatar"
+            aspect={1}
+            rounded
+            maxEdge={512}
+            currentUrl={profile.avatarUrl ?? null}
+            isAr={isAr}
+            label={isAr ? "الصورة الشخصية" : "Profile picture"}
+            onUploaded={() => onSaved()}
+          />
+        </div>
         <Field label={isAr ? "الاسم الأول" : "First name"} value={f.firstName} onChange={(v) => setF({ ...f, firstName: v })} />
         <Field label={isAr ? "اسم العائلة" : "Last name"} value={f.lastName} onChange={(v) => setF({ ...f, lastName: v })} />
         <Field label={isAr ? "الجوال" : "Phone"} value={f.phone} onChange={(v) => setF({ ...f, phone: v })} placeholder="+9665..." className="sm:col-span-2" />

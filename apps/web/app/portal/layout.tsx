@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings,
+  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users,
   LifeBuoy, Bell, LogOut, Loader2,
 } from "lucide-react";
 import { cn } from "@moraqat/ui";
@@ -21,6 +21,7 @@ const NAV = [
   { href: "/portal", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة", exact: true },
   { href: "/portal/subscriptions", icon: Repeat, en: "Subscriptions", ar: "الاشتراكات" },
   { href: "/portal/cats", icon: Cat, en: "My Cats", ar: "قططي" },
+  { href: "/community", icon: Users, en: "Community", ar: "المجتمع" },
   { href: "/portal/orders", icon: Package, en: "Orders", ar: "الطلبات" },
   { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين" },
   { href: "/portal/notifications", icon: Bell, en: "Notifications", ar: "الإشعارات" },
@@ -37,10 +38,13 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   // Redirect unauthenticated visitors to login once hydration settles.
   React.useEffect(() => {
-    if (ready && !user) router.replace("/login");
+    if (!ready) return;
+    if (!user) router.replace("/login");
+    // The dashboard is gated on a verified email (OTP). Unverified → verify page.
+    else if (user.emailVerified === false) router.replace("/verify-email");
   }, [ready, user, router]);
 
-  if (!ready || !user) {
+  if (!ready || !user || user.emailVerified === false) {
     return (
       <div className="grid min-h-screen place-items-center">
         <div className="flex flex-col items-center gap-3">

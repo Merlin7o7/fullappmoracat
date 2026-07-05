@@ -14,10 +14,9 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { IdsService } from "../ids/ids.service";
 import { MailService } from "../mail/mail.service";
 import {
-  verifyEmailTemplate,
+  otpEmailTemplate,
   welcomeTemplate,
   passwordResetTemplate,
-  emailChangeTemplate,
   type Locale as MailLocale,
 } from "../mail/mail.templates";
 import type {
@@ -50,7 +49,10 @@ const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? "change-me-refresh-secr
 const OTP_TTL_MS = Number(process.env.OTP_TTL_SECONDS ?? 300) * 1000; // 5 min
 const OTP_MAX_ATTEMPTS = 5;
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
-const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const EMAIL_OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const EMAIL_OTP_COOLDOWN_MS = 60 * 1000; // min gap between resend requests
+const EMAIL_OTP_MAX_SENDS_PER_HR = 6; // resend limit per user per hour
+const EMAIL_OTP_MAX_ATTEMPTS = 5; // wrong guesses before a code is invalidated
 const LOCKOUT_THRESHOLD = 10; // failed attempts within the window before lockout
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const IS_PROD = process.env.NODE_ENV === "production";
@@ -118,13 +120,12 @@ export class AuthService {
       },
     });
 
-    // Welcome + email-verification (non-blocking; a mail hiccup never fails
-    // signup). MailService swallows its own errors and logs.
-    void this.sendVerificationEmail(user.id, user.email, user.firstName, user.locale);
-    void this.dispatchWelcome(user.email, user.firstName, user.locale);
+    // Send a 6-digit OTP. The account is authenticated but stays UNVERIFIED
+    // until the code is confirmed — the dashboard is gated on emailVerified.
+    void this.sendEmailOtp(user.id);
 
     const tokens = await this.issueSession(user.id, user.email, user.isStaff, meta, REFRESH_TTL);
-    return { user: this.publicUser(user), ...tokens };
+    return { user: this.publicUser(user), ...tokens, needsEmailVerification: true };
   }
 
   // ── Login (email + password) ──────────────────────────────────────────────
@@ -324,118 +325,90 @@ export class AuthService {
     return { sent: true, ...(IS_PROD ? {} : { devToken: token }) };
   }
 
-  // ── Email verification + change ───────────────────────────────────────────
-
-  /** Issue a fresh verification token and email the confirm link. */
-  private async sendVerificationEmail(
-    userId: string,
-    email: string,
-    name: string | null,
-    locale: MailLocale
-  ) {
-    const token = randomBytes(32).toString("hex");
-    await this.prisma.emailVerification.create({
-      data: {
-        userId,
-        tokenHash: this.hashToken(token),
-        purpose: "VERIFY_EMAIL",
-        expiresAt: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
-      },
-    });
-    const url = `${this.siteUrl()}/verify-email?token=${token}`;
-    const tpl = verifyEmailTemplate(this.mailLocale(locale), name, url);
-    await this.mail.send({ to: email, subject: tpl.subject, html: tpl.html, text: tpl.text });
-  }
+  // ── Email verification via 6-digit OTP ────────────────────────────────────
 
   private async dispatchWelcome(email: string, name: string | null, locale: MailLocale) {
     const tpl = welcomeTemplate(this.mailLocale(locale), name);
     await this.mail.send({ to: email, subject: tpl.subject, html: tpl.html, text: tpl.text });
   }
 
-  /** Resend a verification email to the authenticated (still-unverified) user. */
-  async resendVerification(userId: string) {
+  /** Salted, single-use hash of a short OTP (salted by user so codes can't
+   *  collide across accounts, and constant-time compared on verify). */
+  private hashOtp(code: string, userId: string): string {
+    return this.hashToken(`${code}:${userId}`);
+  }
+
+  /**
+   * Issue + email a 6-digit verification code to the authenticated user.
+   * Rate-limited: a per-minute cooldown and a per-hour cap. Any previous
+   * unconsumed code is invalidated so only the latest works.
+   */
+  async sendEmailOtp(userId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
       select: { id: true, email: true, firstName: true, locale: true, emailVerified: true },
     });
     if (!user) throw new UnauthorizedException("Account not found");
     if (user.emailVerified) return { alreadyVerified: true };
-    await this.sendVerificationEmail(user.id, user.email, user.firstName, user.locale);
-    return { sent: true };
-  }
 
-  /** Consume a VERIFY_EMAIL or CHANGE_EMAIL token. */
-  async verifyEmail(token: string) {
-    const record = await this.prisma.emailVerification.findFirst({
-      where: { tokenHash: this.hashToken(token), usedAt: null, expiresAt: { gt: new Date() } },
+    const now = Date.now();
+    const recent = await this.prisma.emailVerification.findMany({
+      where: { userId, purpose: "VERIFY_EMAIL", createdAt: { gt: new Date(now - 60 * 60 * 1000) } },
+      orderBy: { createdAt: "desc" },
     });
-    if (!record) throw new BadRequestException("Invalid or expired verification link");
-
-    if (record.purpose === "CHANGE_EMAIL") {
-      if (!record.newEmail) throw new BadRequestException("Invalid verification link");
-      const clash = await this.prisma.user.findUnique({
-        where: { email: record.newEmail },
-        select: { id: true },
-      });
-      if (clash && clash.id !== record.userId) {
-        throw new ConflictException("That email is already in use");
-      }
-      await this.prisma.$transaction([
-        this.prisma.user.update({
-          where: { id: record.userId },
-          data: { email: record.newEmail, emailVerified: new Date() },
-        }),
-        this.prisma.emailVerification.update({
-          where: { id: record.id },
-          data: { usedAt: new Date() },
-        }),
-      ]);
-      return { changed: true };
+    if (recent.length >= EMAIL_OTP_MAX_SENDS_PER_HR) {
+      throw new BadRequestException("Too many code requests. Please try again later.");
+    }
+    if (recent[0] && now - recent[0].createdAt.getTime() < EMAIL_OTP_COOLDOWN_MS) {
+      throw new BadRequestException("Please wait a moment before requesting another code.");
     }
 
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: record.userId },
-        data: { emailVerified: new Date() },
-      }),
-      this.prisma.emailVerification.update({
-        where: { id: record.id },
-        data: { usedAt: new Date() },
-      }),
-    ]);
-    return { verified: true };
-  }
+    // Only the newest code is valid.
+    await this.prisma.emailVerification.deleteMany({ where: { userId, purpose: "VERIFY_EMAIL", usedAt: null } });
 
-  /** Request an email change — password-confirmed, verified at the new address. */
-  async requestEmailChange(userId: string, newEmailRaw: string, password: string) {
-    const newEmail = newEmailRaw.toLowerCase().trim();
-    const user = await this.prisma.user.findFirst({
-      where: { id: userId, deletedAt: null },
-      select: { id: true, passwordHash: true, email: true, locale: true },
-    });
-    if (!user) throw new UnauthorizedException("Account not found");
-    if (newEmail === user.email) throw new BadRequestException("That's already your email");
-
-    const ok = user.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
-    if (!ok) throw new UnauthorizedException("Password is incorrect");
-
-    const clash = await this.prisma.user.findUnique({ where: { email: newEmail }, select: { id: true } });
-    if (clash) throw new ConflictException("That email is already in use");
-
-    const token = randomBytes(32).toString("hex");
+    const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
     await this.prisma.emailVerification.create({
       data: {
-        userId: user.id,
-        tokenHash: this.hashToken(token),
-        purpose: "CHANGE_EMAIL",
-        newEmail,
-        expiresAt: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
+        userId,
+        codeHash: this.hashOtp(code, userId),
+        purpose: "VERIFY_EMAIL",
+        expiresAt: new Date(now + EMAIL_OTP_TTL_MS),
       },
     });
-    const url = `${this.siteUrl()}/verify-email?token=${token}&mode=change`;
-    const tpl = emailChangeTemplate(this.mailLocale(user.locale), url);
-    await this.mail.send({ to: newEmail, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    const tpl = otpEmailTemplate(this.mailLocale(user.locale), user.firstName, code);
+    await this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    if (!IS_PROD) this.logger.log(`Email OTP for ${user.email}: ${code}`);
     return { sent: true };
+  }
+
+  /** Verify a 6-digit code for the current user; attempt-limited + brute-safe. */
+  async verifyEmailOtp(userId: string, code: string) {
+    const record = await this.prisma.emailVerification.findFirst({
+      where: { userId, purpose: "VERIFY_EMAIL", usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!record) throw new BadRequestException("Your code has expired. Request a new one.");
+    if (record.attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+      throw new BadRequestException("Too many attempts. Request a new code.");
+    }
+
+    const expected = Buffer.from(record.codeHash);
+    const actual = Buffer.from(this.hashOtp(code, userId));
+    const ok = expected.length === actual.length && timingSafeEqual(expected, actual);
+    if (!ok) {
+      await this.prisma.emailVerification.update({
+        where: { id: record.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new BadRequestException("Incorrect code. Please try again.");
+    }
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      await tx.emailVerification.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+      return tx.user.update({ where: { id: userId }, data: { emailVerified: new Date() } });
+    });
+    void this.dispatchWelcome(user.email, user.firstName, user.locale);
+    return { verified: true };
   }
 
   private siteUrl(): string {
@@ -673,6 +646,7 @@ export class AuthService {
     locale: string;
     isStaff: boolean;
     status: string;
+    emailVerified?: Date | null;
   }) {
     return {
       id: user.id,
@@ -688,6 +662,7 @@ export class AuthService {
       locale: user.locale,
       isStaff: user.isStaff,
       status: user.status,
+      emailVerified: !!user.emailVerified,
     };
   }
 }

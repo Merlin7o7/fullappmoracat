@@ -30,6 +30,7 @@ import { WaitlistModule } from "./waitlist/waitlist.module";
 import { MailModule } from "./mail/mail.module";
 import { StorageModule } from "./storage/storage.module";
 import { CommunityModule } from "./community/community.module";
+import { UploadsModule } from "./uploads/uploads.module";
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CommunityModule } from "./community/community.module";
     MailModule,
     StorageModule,
     CommunityModule,
+    UploadsModule,
     // Rate limiting — 120 requests / minute per IP by default.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,

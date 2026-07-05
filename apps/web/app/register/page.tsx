@@ -49,8 +49,8 @@ export default function RegisterPage() {
       acceptTerms: true,
       ...(withOtp ? { otp: withOtp } : {}),
     });
-    // Straight into naming their cat — never a generic dashboard first (Stage 4).
-    router.push("/portal/cats/new");
+    // Verify email by OTP first; then straight into naming their cat.
+    router.push(`/verify-email?next=${encodeURIComponent("/portal/cats/new")}`);
   }
 
   async function startVerification(e: React.FormEvent) {

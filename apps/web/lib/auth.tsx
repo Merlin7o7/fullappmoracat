@@ -21,6 +21,7 @@ export interface AuthUser {
   locale?: string;
   status?: string;
   isStaff?: boolean;
+  emailVerified?: boolean;
 }
 
 interface Tokens {
@@ -62,6 +63,12 @@ interface AuthContextValue extends AuthState {
   authedFetch: <T = unknown>(path: string, init?: RequestInit) => Promise<T>;
   /** Multipart upload (FormData) with the same token-attach + refresh flow. */
   authedUpload: <T = unknown>(path: string, form: FormData, method?: string) => Promise<T>;
+  /** Image upload via XHR with real upload-progress events (0–100). */
+  uploadImage: <T = unknown>(
+    path: string,
+    blob: Blob,
+    opts?: { onProgress?: (pct: number) => void; filename?: string }
+  ) => Promise<T>;
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -267,6 +274,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [persist, state.user]
   );
 
+  const uploadImage = React.useCallback<AuthContextValue["uploadImage"]>(
+    async (path, blob, opts) => {
+      const send = (token: string) =>
+        new Promise<unknown>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", `${BASE}/api${path}`);
+          xhr.setRequestHeader("authorization", `Bearer ${token}`);
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable && opts?.onProgress) opts.onProgress(Math.round((e.loaded / e.total) * 100));
+          };
+          xhr.onload = () => {
+            let json: { message?: string | string[] } | null = null;
+            try {
+              json = JSON.parse(xhr.responseText);
+            } catch {
+              json = null;
+            }
+            if (xhr.status >= 200 && xhr.status < 300) resolve(json);
+            else reject({ status: xhr.status, json });
+          };
+          xhr.onerror = () => reject({ status: 0, json: null });
+          const fd = new FormData();
+          fd.append("file", blob, opts?.filename ?? "image.webp");
+          xhr.send(fd);
+        });
+
+      const tokens = tokensRef.current;
+      if (!tokens) throw new Error("Not authenticated");
+
+      try {
+        return (await send(tokens.accessToken)) as never;
+      } catch (err) {
+        const e = err as { status?: number; json?: { message?: string | string[] } };
+        if (e.status === 401) {
+          try {
+            const refreshed = await apiPost<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
+              refreshToken: tokens.refreshToken,
+            });
+            const next = { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken };
+            persist(state.user, next);
+            return (await send(next.accessToken)) as never;
+          } catch {
+            persist(null, null);
+            throw new Error("Session expired");
+          }
+        }
+        const msg = Array.isArray(e.json?.message) ? e.json?.message.join(", ") : e.json?.message;
+        throw new Error(msg || `Upload failed (${e.status ?? "network"})`);
+      }
+    },
+    [persist, state.user]
+  );
+
   const value = React.useMemo<AuthContextValue>(
     () => ({
       ...state,
@@ -281,8 +341,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateUser,
       authedFetch,
       authedUpload,
+      uploadImage,
     }),
-    [state, login, loginWithPhone, loginWithGoogle, register, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedUpload]
+    [state, login, loginWithPhone, loginWithGoogle, register, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedUpload, uploadImage]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2, Images } from "lucide-react";
-import { cn, useToast } from "@moraqat/ui";
+import { useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { PhotoUploader } from "@/components/photo-uploader";
 
@@ -13,22 +13,24 @@ interface GalleryPhoto {
 }
 
 /**
- * Cat photo management: profile portrait (square, cropped) + a gallery of up to
- * 12 shots. Uploads are cropped/compressed client-side then sent to R2 via the
- * API. Used inside the manage drawer and the registration flow.
+ * Cat photo management: profile portrait (square) + cover (16:9) + a gallery of
+ * up to 12 shots. Uploads are cropped/compressed client-side then sent to R2
+ * via the API. Used inside the manage drawer.
  */
 export function CatPhotosPanel({
   catId,
   currentPhotoUrl,
+  currentCoverUrl,
   isAr,
   onChanged,
 }: {
   catId: string;
   currentPhotoUrl?: string | null;
+  currentCoverUrl?: string | null;
   isAr: boolean;
   onChanged?: () => void;
 }) {
-  const { authedUpload, authedFetch } = useAuth();
+  const { authedFetch } = useAuth();
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -38,23 +40,11 @@ export function CatPhotosPanel({
   });
   const photos = gallery.data ?? [];
 
-  async function uploadTo(path: string, blob: Blob) {
-    const fd = new FormData();
-    fd.append("file", blob, "photo.webp");
-    await authedUpload(path, fd);
-  }
-
-  async function onProfile(blob: Blob) {
-    await uploadTo(`/cats/${catId}/photo`, blob);
+  async function refreshCat() {
     await qc.invalidateQueries({ queryKey: ["cats"] });
     await qc.invalidateQueries({ queryKey: ["cat", catId] });
     await qc.invalidateQueries({ queryKey: ["overview"] });
     onChanged?.();
-  }
-
-  async function onGalleryAdd(blob: Blob) {
-    await uploadTo(`/cats/${catId}/gallery`, blob);
-    await qc.invalidateQueries({ queryKey: ["gallery", catId] });
   }
 
   async function removePhoto(id: string) {
@@ -69,22 +59,31 @@ export function CatPhotosPanel({
   return (
     <div className="space-y-4">
       <PhotoUploader
+        endpoint={`/cats/${catId}/photo`}
         aspect={1}
         rounded
         maxEdge={800}
         currentUrl={currentPhotoUrl}
         isAr={isAr}
         label={isAr ? "الصورة الشخصية" : "Profile photo"}
-        onUpload={onProfile}
+        onUploaded={refreshCat}
+      />
+
+      <PhotoUploader
+        endpoint={`/cats/${catId}/cover`}
+        aspect={16 / 9}
+        maxEdge={1280}
+        currentUrl={currentCoverUrl}
+        isAr={isAr}
+        label={isAr ? "صورة الغلاف" : "Cover image"}
+        onUploaded={refreshCat}
       />
 
       <div>
         <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
           <Images className="size-4 text-primary" />
           {isAr ? "المعرض" : "Gallery"}
-          <span className="text-xs font-normal text-muted-foreground">
-            {photos.length}/12
-          </span>
+          <span className="text-xs font-normal text-muted-foreground">{photos.length}/12</span>
         </p>
 
         <div className="grid grid-cols-3 gap-2">
@@ -101,19 +100,20 @@ export function CatPhotosPanel({
               </button>
             </div>
           ))}
-
-          {photos.length < 12 && (
-            <div className={cn("aspect-square", photos.length === 0 && "col-span-3 aspect-auto")}>
-              <PhotoUploader
-                aspect={1}
-                maxEdge={1000}
-                isAr={isAr}
-                hint={isAr ? "أضف صورة للمعرض" : "Add a gallery photo"}
-                onUpload={onGalleryAdd}
-              />
-            </div>
-          )}
         </div>
+
+        {photos.length < 12 && (
+          <div className="mt-2">
+            <PhotoUploader
+              endpoint={`/cats/${catId}/gallery`}
+              aspect={1}
+              maxEdge={1000}
+              isAr={isAr}
+              hint={isAr ? "أضف صورة للمعرض" : "Add a gallery photo"}
+              onUploaded={() => qc.invalidateQueries({ queryKey: ["gallery", catId] })}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

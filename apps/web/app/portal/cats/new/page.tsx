@@ -8,6 +8,7 @@ import { Card, Button, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
+import { PhotoUploader } from "@/components/photo-uploader";
 import { CatIdCeremony } from "@/components/cat-id-ceremony";
 import { CatIdCard } from "@/components/cat-id-card";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
@@ -150,11 +151,15 @@ function IssueIdFlow() {
                   { value: "FEMALE", label: isAr ? "أنثى" : "Female" },
                 ]}
               />
-              <Field
-                label={isAr ? "رابط صورته (اختياري — تطلع على الهوية)" : "Photo URL (optional — it goes on the ID)"}
-                value={f.photoUrl}
-                onChange={(v) => set({ photoUrl: v })}
-                placeholder="https://…"
+              <PhotoUploader
+                endpoint="/uploads/image"
+                aspect={1}
+                rounded
+                maxEdge={800}
+                currentUrl={f.photoUrl || null}
+                isAr={isAr}
+                label={isAr ? "صورته (اختياري — تطلع على الهوية)" : "Photo (optional — it goes on the ID)"}
+                onUploaded={(res) => set({ photoUrl: (res.url as string) ?? "" })}
               />
               <div className="mt-2 flex items-center justify-between gap-3">
                 <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")}>
@@ -212,7 +217,17 @@ function IssueIdFlow() {
         <CatIdCeremony
           cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl }}
           isAr={isAr}
-          onClose={() => router.push(`/portal/subscribe?cat=${ceremonyCat.id}`)}
+          onShareChoice={async (makePublic) => {
+            try {
+              await authedFetch(`/cats/${ceremonyCat.id}/visibility`, {
+                method: "PATCH",
+                body: JSON.stringify({ isPublic: makePublic }),
+              });
+            } catch {
+              /* non-blocking — they can change it later in settings */
+            }
+          }}
+          onClose={() => router.push("/portal/cats")}
         />
       )}
     </div>

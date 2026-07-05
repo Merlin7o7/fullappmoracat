@@ -1,8 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { Body, Controller, Get, Param, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
 import { AccountService } from "./account.service";
 import { ChangePasswordDto, UpdateProfileDto } from "./dto/account.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+
+interface UploadedImageFile {
+  buffer: Buffer;
+  mimetype: string;
+  size: number;
+}
 
 @ApiTags("account")
 @ApiBearerAuth()
@@ -26,6 +33,14 @@ export class AccountController {
   @ApiOperation({ summary: "Update profile details" })
   updateProfile(@CurrentUser("id") userId: string, @Body() dto: UpdateProfileDto) {
     return this.account.updateProfile(userId, dto);
+  }
+
+  @Post("avatar")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 8 * 1024 * 1024 } }))
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Upload/replace the account profile picture" })
+  setAvatar(@CurrentUser("id") userId: string, @UploadedFile() file: UploadedImageFile) {
+    return this.account.setAvatar(userId, file);
   }
 
   @Post("change-password")

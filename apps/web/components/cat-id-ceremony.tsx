@@ -26,7 +26,18 @@ const STAMP_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
  * everything else stays calm so this peak means something. Reduced-motion
  * skips straight to the card with a gentle fade (R075).
  */
-export function CatIdCeremony({ cat, isAr, onClose }: { cat: CeremonyCat; isAr: boolean; onClose: () => void }) {
+export function CatIdCeremony({
+  cat,
+  isAr,
+  onClose,
+  onShareChoice,
+}: {
+  cat: CeremonyCat;
+  isAr: boolean;
+  onClose: () => void;
+  /** If provided, the reveal asks "share with the community?" and reports the choice. */
+  onShareChoice?: (makePublic: boolean) => Promise<void> | void;
+}) {
   const titleId = React.useId();
   const reduced = useReducedMotion();
   const [act, setAct] = React.useState<"stamping" | "reveal">(reduced ? "reveal" : "stamping");
@@ -57,7 +68,7 @@ export function CatIdCeremony({ cat, isAr, onClose }: { cat: CeremonyCat; isAr: 
             onDone={() => setAct("reveal")}
           />
         ) : (
-          <RevealAct key="reveal" cat={cat} isAr={isAr} reduced={!!reduced} onClose={onClose} />
+          <RevealAct key="reveal" cat={cat} isAr={isAr} reduced={!!reduced} onClose={onClose} onShareChoice={onShareChoice} />
         )}
       </AnimatePresence>
     </div>
@@ -126,8 +137,30 @@ function StampingAct({ isAr, catName, idNumber, onDone }: { isAr: boolean; catNa
 
 /* ── Act II · the card arrives ───────────────────────────────────────────── */
 
-function RevealAct({ cat, isAr, reduced, onClose }: { cat: CeremonyCat; isAr: boolean; reduced: boolean; onClose: () => void }) {
+function RevealAct({
+  cat,
+  isAr,
+  reduced,
+  onClose,
+  onShareChoice,
+}: {
+  cat: CeremonyCat;
+  isAr: boolean;
+  reduced: boolean;
+  onClose: () => void;
+  onShareChoice?: (makePublic: boolean) => Promise<void> | void;
+}) {
   const ctaRef = React.useRef<HTMLButtonElement>(null);
+  const [choosing, setChoosing] = React.useState<null | "public" | "private">(null);
+
+  async function choose(makePublic: boolean) {
+    setChoosing(makePublic ? "public" : "private");
+    try {
+      await onShareChoice?.(makePublic);
+    } finally {
+      onClose();
+    }
+  }
   const fade = (delay: number) =>
     reduced
       ? { initial: { opacity: 0 }, animate: { opacity: 1 } }
@@ -179,11 +212,32 @@ function RevealAct({ cat, isAr, reduced, onClose }: { cat: CeremonyCat; isAr: bo
         )}
       </motion.div>
 
-      <motion.div {...fade(1.0)} className="mt-9 w-full">
-        <Button ref={ctaRef} size="lg" className="w-full" onClick={onClose}>
-          {isAr ? `يلا نبدأ مع ${cat.name}` : `Begin ${cat.name}'s journey`}
-        </Button>
-      </motion.div>
+      {onShareChoice ? (
+        <motion.div {...fade(1.0)} className="mt-9 w-full">
+          <p className="mb-3 text-sm text-white/80">
+            {isAr
+              ? `تحب تشارك هوية ${cat.name} مع مجتمع مرقط؟`
+              : `Would you like to share ${cat.name}'s Cat ID with the Moracat Community?`}
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button ref={ctaRef} size="lg" className="w-full" disabled={choosing !== null} onClick={() => choose(true)}>
+              {choosing === "public" ? "…" : isAr ? "نعم، اجعلها عامة" : "Yes, make my Cat ID public"}
+            </Button>
+            <Button variant="glass" size="lg" className="w-full text-white" disabled={choosing !== null} onClick={() => choose(false)}>
+              {choosing === "private" ? "…" : isAr ? "لا، احتفظ بها خاصة" : "No, keep it private"}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-white/50">
+            {isAr ? "تقدر تغيّرها لاحقاً من إعدادات القط." : "You can change this later in your cat's settings."}
+          </p>
+        </motion.div>
+      ) : (
+        <motion.div {...fade(1.0)} className="mt-9 w-full">
+          <Button ref={ctaRef} size="lg" className="w-full" onClick={onClose}>
+            {isAr ? `يلا نبدأ مع ${cat.name}` : `Begin ${cat.name}'s journey`}
+          </Button>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

@@ -441,19 +441,24 @@ model PasswordReset {
 /// and short-lived. `purpose` is VERIFY_EMAIL (confirm the address at/after
 /// signup) or CHANGE_EMAIL (verify a requested new address in `newEmail` before
 /// it replaces the account email).
+/// Email verification challenge. For signup this holds a 6-digit OTP (hashed in
+/// `codeHash`), single-use, short-lived and attempt-limited. `purpose` is
+/// VERIFY_EMAIL (confirm the address) or CHANGE_EMAIL (verify a new address in
+/// `newEmail`). `attempts` caps guesses; the row is invalidated once exceeded.
 model EmailVerification {
   id        String    @id @default(cuid())
   userId    String
-  tokenHash String    @unique
+  codeHash  String
   purpose   String    @default("VERIFY_EMAIL")
   newEmail  String?
+  attempts  Int       @default(0)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([userId, purpose])
   @@index([expiresAt])
   @@map("email_verifications")
 }
