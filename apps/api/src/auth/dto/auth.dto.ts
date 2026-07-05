@@ -174,3 +174,19 @@ export class Verify2faDto {
   @Matches(/^\d{6}$/, { message: "Code must be 6 digits" })
   code!: string;
 }
+
+export class VerifyEmailDto {
+  @ApiProperty({ description: "The verification token from the email link" })
+  @IsString()
+  token!: string;
+}
+
+export class ChangeEmailDto {
+  @ApiProperty({ example: "new@example.com" })
+  @IsEmail()
+  newEmail!: string;
+
+  @ApiProperty({ description: "Current password, to authorize the change" })
+  @IsString()
+  password!: string;
+}

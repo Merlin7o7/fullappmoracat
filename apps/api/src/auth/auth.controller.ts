@@ -20,6 +20,8 @@ import {
   RequestOtpDto,
   ResetPasswordDto,
   Verify2faDto,
+  VerifyEmailDto,
+  ChangeEmailDto,
 } from "./dto/auth.dto";
 import { Public } from "../common/decorators/public.decorator";
 import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
@@ -89,6 +91,30 @@ export class AuthController {
   @ApiOperation({ summary: "Reset a password using a reset token" })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.auth.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Public()
+  @Post("email/verify")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Confirm an email (or email change) using a token" })
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.auth.verifyEmail(dto.token);
+  }
+
+  @ApiBearerAuth()
+  @Post("email/verify/resend")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Resend the verification email to the current user" })
+  resendVerification(@CurrentUser("id") userId: string) {
+    return this.auth.resendVerification(userId);
+  }
+
+  @ApiBearerAuth()
+  @Post("email/change")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Request an email change (password-confirmed, verified at new address)" })
+  changeEmail(@CurrentUser("id") userId: string, @Body() dto: ChangeEmailDto) {
+    return this.auth.requestEmailChange(userId, dto.newEmail, dto.password);
   }
 
   @Public()

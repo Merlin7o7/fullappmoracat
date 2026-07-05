@@ -10,6 +10,8 @@ import { useCats, type PortalCat } from "@/lib/cat-context";
 import { Field, SelectField } from "@/components/field";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatHealthPanel } from "@/components/cat-health-panel";
+import { CatPhotosPanel } from "@/components/cat-photos-panel";
+import { CatCommunityPanel } from "@/components/cat-community-panel";
 
 export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: boolean; onClose: () => void }) {
   const { authedFetch } = useAuth();
@@ -105,6 +107,17 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
         )}
 
         {editing && <EditForm cat={cat} isAr={isAr} onSaved={() => { setEditing(false); done(isAr ? "تم الحفظ" : "Saved"); }} />}
+
+        {/* Photos — profile portrait + gallery */}
+        {cat.status === "ACTIVE" && (
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">{isAr ? "الصور" : "Photos"}</h3>
+            <CatPhotosPanel catId={cat.id} currentPhotoUrl={cat.photoUrl} isAr={isAr} />
+          </div>
+        )}
+
+        {/* Community sharing + privacy */}
+        {cat.status === "ACTIVE" && <CatCommunityPanel catId={cat.id} catName={cat.name} isAr={isAr} />}
 
         {/* Health record */}
         <div>

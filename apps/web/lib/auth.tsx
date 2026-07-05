@@ -60,6 +60,8 @@ interface AuthContextValue extends AuthState {
   updateUser: (patch: Partial<AuthUser>) => void;
   /** Authenticated fetch against the API that refreshes on 401. */
   authedFetch: <T = unknown>(path: string, init?: RequestInit) => Promise<T>;
+  /** Multipart upload (FormData) with the same token-attach + refresh flow. */
+  authedUpload: <T = unknown>(path: string, form: FormData, method?: string) => Promise<T>;
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -226,6 +228,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [persist, state.user]
   );
 
+  const authedUpload = React.useCallback<AuthContextValue["authedUpload"]>(
+    async (path, form, method = "POST") => {
+      const doFetch = (token: string) =>
+        // NOTE: no content-type header — the browser sets the multipart boundary.
+        fetch(`${BASE}/api${path}`, {
+          method,
+          body: form,
+          headers: { authorization: `Bearer ${token}` },
+        });
+
+      const tokens = tokensRef.current;
+      if (!tokens) throw new Error("Not authenticated");
+
+      let res = await doFetch(tokens.accessToken);
+      if (res.status === 401) {
+        try {
+          const refreshed = await apiPost<{ accessToken: string; refreshToken: string }>(
+            "/auth/refresh",
+            { refreshToken: tokens.refreshToken }
+          );
+          const next = { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken };
+          persist(state.user, next);
+          res = await doFetch(next.accessToken);
+        } catch {
+          persist(null, null);
+          throw new Error("Session expired");
+        }
+      }
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = Array.isArray(json?.message) ? json.message.join(", ") : json?.message;
+        throw new Error(message || `Upload failed (${res.status})`);
+      }
+      return json as never;
+    },
+    [persist, state.user]
+  );
+
   const value = React.useMemo<AuthContextValue>(
     () => ({
       ...state,
@@ -239,8 +280,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       updateUser,
       authedFetch,
+      authedUpload,
     }),
-    [state, login, loginWithPhone, loginWithGoogle, register, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch]
+    [state, login, loginWithPhone, loginWithGoogle, register, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedUpload]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

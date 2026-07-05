@@ -7,9 +7,16 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
-import { CatsService } from "./cats.service";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
+import { CatsService, type UploadedImage } from "./cats.service";
+import { UpdateVisibilityDto } from "./dto/cat-visibility.dto";
+
+/** 8 MB hard cap at the multer layer (the service re-validates type + size). */
+const IMAGE_UPLOAD = { limits: { fileSize: 8 * 1024 * 1024 } };
 import {
   CreateCatDto,
   ListCatsQueryDto,
@@ -164,5 +171,75 @@ export class CatsController {
     @Param("docId") docId: string
   ) {
     return this.cats.removeDocument(userId, id, docId);
+  }
+
+  // ── Photos (multipart/form-data, field name "file") ────────────────────
+  @Post(":id/photo")
+  @UseInterceptors(FileInterceptor("file", IMAGE_UPLOAD))
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Upload/replace a cat's profile photo" })
+  uploadPhoto(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @UploadedFile() file: UploadedImage
+  ) {
+    return this.cats.setProfilePhoto(userId, id, file);
+  }
+
+  @Post(":id/cover")
+  @UseInterceptors(FileInterceptor("file", IMAGE_UPLOAD))
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Upload/replace a cat's cover image" })
+  uploadCover(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @UploadedFile() file: UploadedImage
+  ) {
+    return this.cats.setCoverPhoto(userId, id, file);
+  }
+
+  @Get(":id/gallery")
+  @ApiOperation({ summary: "List a cat's gallery photos" })
+  listGallery(@CurrentUser("id") userId: string, @Param("id") id: string) {
+    return this.cats.listGallery(userId, id);
+  }
+
+  @Post(":id/gallery")
+  @UseInterceptors(FileInterceptor("file", IMAGE_UPLOAD))
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Add a gallery photo" })
+  addGalleryPhoto(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @UploadedFile() file: UploadedImage
+  ) {
+    return this.cats.addGalleryPhoto(userId, id, file);
+  }
+
+  @Delete(":id/gallery/:photoId")
+  @ApiOperation({ summary: "Remove a gallery photo" })
+  removeGalleryPhoto(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @Param("photoId") photoId: string
+  ) {
+    return this.cats.removeGalleryPhoto(userId, id, photoId);
+  }
+
+  // ── Community visibility & privacy ──────────────────────────────────────
+  @Get(":id/visibility")
+  @ApiOperation({ summary: "Get a cat's community visibility + privacy settings" })
+  getVisibility(@CurrentUser("id") userId: string, @Param("id") id: string) {
+    return this.cats.getVisibility(userId, id);
+  }
+
+  @Patch(":id/visibility")
+  @ApiOperation({ summary: "Update sharing + per-field privacy (opt-in)" })
+  updateVisibility(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @Body() dto: UpdateVisibilityDto
+  ) {
+    return this.cats.updateVisibility(userId, id, dto);
   }
 }

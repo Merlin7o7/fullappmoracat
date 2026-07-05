@@ -63,7 +63,58 @@ export interface Testimonial {
   rating: number;
 }
 
+export interface LocalizedName {
+  nameEn: string;
+  nameAr: string;
+}
+
+export interface CommunityCard {
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  gender: string;
+  viewCount: number;
+  isFeatured: boolean;
+  breed: LocalizedName | null;
+  city: LocalizedName | null;
+  lifeStage: string | null;
+}
+
+export interface CommunityListResponse {
+  items: CommunityCard[];
+  pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean };
+}
+
+export interface CommunityProfile extends CommunityCard {
+  catIdNumber: string | null;
+  issuedAt: string | null;
+  coverUrl: string | null;
+  bio: string | null;
+  ownerNickname: string | null;
+  gallery: { id: string; url: string }[];
+  birthDate: string | null;
+}
+
+export interface CommunityFacets {
+  breeds: (LocalizedName & { id: string })[];
+  cities: (LocalizedName & { id: string })[];
+}
+
 export const api = {
+  community(
+    params: { breedId?: string; cityId?: string; gender?: string; stage?: string; sort?: string; search?: string; page?: number } = {}
+  ) {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v) q.set(k, String(v));
+    const qs = q.toString();
+    return get<CommunityListResponse>(`/community/cats${qs ? `?${qs}` : ""}`);
+  },
+  communityCat(slug: string) {
+    return get<CommunityProfile>(`/community/cats/${slug}`);
+  },
+  communityFacets() {
+    return get<CommunityFacets>("/community/facets");
+  },
   products(params: { type?: string; brand?: string; search?: string; sort?: string; page?: number } = {}) {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v) q.set(k, String(v));

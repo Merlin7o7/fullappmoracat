@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { SubscriptionsService } from "./subscriptions.service";
 import { CreateSubscriptionDto, PauseDto } from "./dto/subscription.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { Commercial } from "../common/decorators/commercial.decorator";
 
 @ApiTags("subscriptions")
 @ApiBearerAuth()
@@ -11,6 +12,7 @@ export class SubscriptionsController {
   constructor(private readonly subs: SubscriptionsService) {}
 
   @Post()
+  @Commercial() // Community Mode: paid activation is disabled — no new subscriptions.
   @ApiOperation({ summary: "Build a subscription (plan + cats + custom items)" })
   create(@CurrentUser("id") userId: string, @Body() dto: CreateSubscriptionDto) {
     return this.subs.create(userId, dto);

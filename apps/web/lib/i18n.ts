@@ -10,7 +10,7 @@ export const dict = {
   ar: {
     dir: "rtl" as const,
     brand: "مرقط",
-    nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية" },
+    nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية", community: "المجتمع" },
     announce: "عضويتنا صارت في جدة والرياض — حيّا الله قطّطكم",
     hero: {
       badge: "عضوية خاصة لأهل القطط",
@@ -54,7 +54,7 @@ export const dict = {
   en: {
     dir: "ltr" as const,
     brand: "Moracat",
-    nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in", blog: "Blog", tools: "Feeding calculator" },
+    nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in", blog: "Blog", tools: "Feeding calculator", community: "Community" },
     announce: "Membership is live in Jeddah & Riyadh — welcoming new cats",
     hero: {
       badge: "The membership for cat people",

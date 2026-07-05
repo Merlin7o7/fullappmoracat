@@ -295,6 +295,12 @@ model User {
   firstName     String?
   lastName      String?
   avatarUrl     String?
+  /// Optional public-facing handle shown on shared Cat IDs when the owner opts
+  /// to reveal a name — never the legal name unless they choose it.
+  ownerNickname String?
+  /// Master switch for the owner's own community presence (separate from each
+  /// cat's visibility). Private by default — sharing is always opt-in.
+  profileIsPublic Boolean  @default(false)
   gender        Gender     @default(UNSPECIFIED)
   /// Dial code, defaulting to Saudi Arabia (+966). `phone` is stored in full
   /// E.164 form; this records the chosen country for a frictionless re-entry.
@@ -314,13 +320,14 @@ model User {
   deletedAt     DateTime?
 
   // Auth relations
-  accounts        OAuthAccount[]
-  sessions        DeviceSession[]
-  twoFactor       TwoFactor?
-  loginHistory    LoginHistory[]
-  passwordResets  PasswordReset[]
-  roleAssignments UserRole[]
-  auditLogs       AuditLog[]
+  accounts           OAuthAccount[]
+  sessions           DeviceSession[]
+  twoFactor          TwoFactor?
+  loginHistory       LoginHistory[]
+  passwordResets     PasswordReset[]
+  emailVerifications EmailVerification[]
+  roleAssignments    UserRole[]
+  auditLogs          AuditLog[]
 
   // Domain relations
   cats           Cat[]
@@ -428,6 +435,27 @@ model PasswordReset {
 
   @@index([userId])
   @@map("password_resets")
+}
+
+/// Email confirmation + email-change challenge. The token is hashed, single-use
+/// and short-lived. `purpose` is VERIFY_EMAIL (confirm the address at/after
+/// signup) or CHANGE_EMAIL (verify a requested new address in `newEmail` before
+/// it replaces the account email).
+model EmailVerification {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  purpose   String    @default("VERIFY_EMAIL")
+  newEmail  String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verifications")
 }
 
 /// SMS one-time-passcode challenge. The code is hashed; challenges are
@@ -632,9 +660,35 @@ model Cat {
   status           CatStatus           @default(ACTIVE)
   // Membership is INACTIVE until a subscription activates it (R#9). The Cat ID is
   // still issued immediately; only the membership benefits gate on payment.
+  // In Community Mode every Cat ID stays INACTIVE ("Coming Soon") — activation
+  // is impossible until payments go live.
   membershipStatus CatMembershipStatus @default(INACTIVE)
   archivedAt       DateTime?
   deceasedAt       DateTime?
+
+  // ── Community & sharing (all opt-in; private by default) ────────────────
+  /// Whether this cat appears in the public community. Always false until the
+  /// owner explicitly chooses to share. Post-moderation: visible immediately,
+  /// admins can hide.
+  isPublic       Boolean   @default(false)
+  /// Stable, human-friendly handle for the public share URL (/community/:slug).
+  publicSlug     String?   @unique
+  bio            String?
+  coverUrl       String?
+  sharedAt       DateTime?
+  viewCount      Int       @default(0)
+  isFeatured     Boolean   @default(false)
+  featuredAt     DateTime?
+  /// Moderation: set when an admin hides a public cat. Non-null = not shown.
+  hiddenAt       DateTime?
+  hiddenReason   String?
+  // Per-field privacy — the owner controls exactly what a public visitor sees.
+  showOwnerName  Boolean   @default(false)
+  showCity       Boolean   @default(false)
+  showGallery    Boolean   @default(true)
+  showAge        Boolean   @default(true)
+  showBreed      Boolean   @default(true)
+
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
@@ -649,10 +703,36 @@ model Cat {
   documents       CatDocument[]
   recommendations FeedingRecommendation[]
   subscriptions   SubscriptionCat[]
+  photos          CatPhoto[]
 
   @@index([userId])
   @@index([userId, status])
+  // Community browse: public + not hidden, ordered by recency / popularity /
+  // featured. Partial-index-friendly composite keys.
+  @@index([isPublic, hiddenAt, sharedAt])
+  @@index([isPublic, hiddenAt, viewCount])
+  @@index([isPublic, isFeatured])
   @@map("cats")
+}
+
+/// A gallery photo for a cat (profile shots beyond the primary `photoUrl`).
+/// Stored in object storage (Cloudflare R2 / S3-compatible); `url` is the
+/// public/CDN URL, never a local path.
+model CatPhoto {
+  id        String   @id @default(cuid())
+  catId     String
+  url       String
+  alt       String?
+  sortOrder Int      @default(0)
+  isCover   Boolean  @default(false)
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId, sortOrder])
+  @@map("cat_photos")
 }
 
 /// A single vaccination event — part of every cat's health record.
@@ -1871,4 +1951,26 @@ model Webhook {
   createdAt DateTime @default(now())
 
   @@map("webhooks")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  MEMBERSHIP WAITLIST — Community-Mode interest capture (pre-monetization)
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Someone who asked to be told when paid memberships launch. Captured from the
+/// "Memberships are launching soon" page and the Cat ID's activate CTA. No
+/// payment data — just intent. Email is unique so re-submits upsert.
+model WaitlistEntry {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  userId       String?
+  catName      String?
+  planInterest String? // ESSENTIAL / PREMIUM / COMPLETE_CARE / MULTI_CAT / unsure
+  source       String? // where they joined from (page, cat-id, etc.)
+  locale       Locale    @default(ar)
+  notifiedAt   DateTime? // set when we email them at launch
+  createdAt    DateTime  @default(now())
+
+  @@index([createdAt])
+  @@map("waitlist_entries")
 }

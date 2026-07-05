@@ -8,6 +8,7 @@ import { CreateProductDto, UpdateProductDto } from "./admin-products.dto";
 import { RefundsService } from "../payments/refunds.service";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { Commercial } from "../common/decorators/commercial.decorator";
 
 @ApiTags("admin")
 @ApiBearerAuth()
@@ -64,6 +65,7 @@ export class AdminController {
   }
 
   @Post("orders/:orderNumber/refund")
+  @Commercial() // Community Mode: no payment/refund surface is reachable.
   @RequirePermissions("payments.write")
   @ApiOperation({ summary: "Refund an order (full when amount omitted, else partial)" })
   refundOrder(

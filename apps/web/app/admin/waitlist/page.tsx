@@ -1,0 +1,88 @@
+"use client";
+
+import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, BellRing, Download } from "lucide-react";
+import { Button } from "@moraqat/ui";
+import { useAuth } from "@/lib/auth";
+
+interface WaitlistEntry {
+  id: string;
+  email: string;
+  catName: string | null;
+  planInterest: string | null;
+  source: string | null;
+  createdAt: string;
+}
+
+export default function AdminWaitlistPage() {
+  const { authedFetch } = useAuth();
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-waitlist"],
+    queryFn: () => authedFetch<{ items: WaitlistEntry[]; pagination: { total: number } }>("/admin/waitlist"),
+  });
+
+  const entries = data?.items ?? [];
+
+  function exportCsv() {
+    const header = "email,plan_interest,cat_name,source,joined_at\n";
+    const rows = entries
+      .map((e) => [e.email, e.planInterest ?? "", e.catName ?? "", e.source ?? "", e.createdAt].join(","))
+      .join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "moracat-waitlist.csv";
+    a.click();
+  }
+
+  return (
+    <div>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold">Membership waitlist</h1>
+          <p className="text-sm text-muted-foreground">{data ? `${data.pagination.total} people waiting` : "People waiting for launch."}</p>
+        </div>
+        {entries.length > 0 && (
+          <Button size="sm" variant="outline" onClick={exportCsv}><Download className="size-4" /> Export CSV</Button>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="grid place-items-center py-16"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
+      ) : isError ? (
+        <p className="py-16 text-center text-sm text-muted-foreground">Couldn't load. Try refreshing.</p>
+      ) : entries.length === 0 ? (
+        <div className="grid place-items-center rounded-2xl border border-dashed py-16 text-center">
+          <BellRing className="size-8 text-muted-foreground/40" />
+          <p className="mt-2 text-sm text-muted-foreground">No sign-ups yet.</p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="p-3">Email</th>
+                <th className="p-3">Interest</th>
+                <th className="p-3">Cat</th>
+                <th className="p-3">Source</th>
+                <th className="p-3">Joined</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {entries.map((e) => (
+                <tr key={e.id} className="hover:bg-muted/30">
+                  <td className="p-3" dir="ltr">{e.email}</td>
+                  <td className="p-3 text-muted-foreground">{e.planInterest ?? "—"}</td>
+                  <td className="p-3 text-muted-foreground">{e.catName ?? "—"}</td>
+                  <td className="p-3 text-muted-foreground">{e.source ?? "—"}</td>
+                  <td className="p-3 text-muted-foreground">{new Date(e.createdAt).toLocaleDateString("en-GB")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

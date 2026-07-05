@@ -16,6 +16,7 @@ import {
   type PaymentProviderKey,
 } from "../payments/payment-provider.interface";
 import type { CheckoutDto } from "./dto/checkout.dto";
+import { commerceEnabled } from "../common/config/features";
 
 /** KSA standard VAT — prices are VAT-inclusive; the invoice breaks it out. */
 const VAT_RATE = 0.15;
@@ -30,6 +31,15 @@ export class CheckoutService {
   ) {}
 
   async checkout(userId: string, dto: CheckoutDto) {
+    // Defense-in-depth behind the route-level @Commercial guard: even an
+    // internal caller can never move money while Community Mode is active.
+    if (!commerceEnabled()) {
+      throw new HttpException(
+        { code: "MEMBERSHIPS_COMING_SOON", message: "Checkout is not available yet." },
+        HttpStatus.FORBIDDEN
+      );
+    }
+
     const cart = await this.cart.get(dto.cartId); // throws if missing
     if (cart.items.length === 0) throw new BadRequestException("Cart is empty");
 

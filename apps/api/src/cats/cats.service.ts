@@ -1,6 +1,19 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, PayloadTooLargeException } from "@nestjs/common";
+import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { IdsService } from "../ids/ids.service";
+import { StorageService } from "../storage/storage.service";
+import type { UpdateVisibilityDto } from "./dto/cat-visibility.dto";
+
+/** Minimal shape of a multer-parsed upload (avoids an extra @types/multer dep). */
+export interface UploadedImage {
+  buffer: Buffer;
+  mimetype: string;
+  size: number;
+}
+
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB (client compresses before upload)
+const MAX_GALLERY_PHOTOS = 12;
 import type {
   CreateCatDto,
   ListCatsQueryDto,
@@ -50,7 +63,8 @@ type CatRow = {
 export class CatsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly ids: IdsService
+    private readonly ids: IdsService,
+    private readonly storage: StorageService
   ) {}
 
   async create(userId: string, dto: CreateCatDto) {
@@ -376,6 +390,140 @@ export class CatsService {
     await this.ownedCat(userId, catId);
     await this.prisma.catDocument.deleteMany({ where: { id, catId } });
     return { success: true };
+  }
+
+  // ── Photos (profile, cover, gallery) ────────────────────────────────────────
+
+  /** Validate + store an image, returning its public URL + object key. */
+  private async storeImage(file: UploadedImage | undefined, prefix: string) {
+    if (!file || !file.buffer?.length) throw new BadRequestException("No image provided");
+    if (file.size > MAX_IMAGE_BYTES) {
+      throw new PayloadTooLargeException("Image must be 8 MB or smaller");
+    }
+    const ext = this.storage.imageExt(file.mimetype);
+    if (!ext) throw new BadRequestException("Only JPEG, PNG, or WebP images are allowed");
+    const key = this.storage.buildKey(prefix, ext);
+    const url = await this.storage.upload(key, file.buffer, file.mimetype);
+    return { url };
+  }
+
+  async setProfilePhoto(userId: string, catId: string, file?: UploadedImage) {
+    await this.ownedCat(userId, catId);
+    const prev = await this.prisma.cat.findUnique({ where: { id: catId }, select: { photoUrl: true } });
+    const { url } = await this.storeImage(file, `cats/${catId}/profile`);
+    await this.prisma.cat.update({ where: { id: catId }, data: { photoUrl: url } });
+    if (prev?.photoUrl) void this.storage.remove(prev.photoUrl);
+    return { photoUrl: url };
+  }
+
+  async setCoverPhoto(userId: string, catId: string, file?: UploadedImage) {
+    await this.ownedCat(userId, catId);
+    const prev = await this.prisma.cat.findUnique({ where: { id: catId }, select: { coverUrl: true } });
+    const { url } = await this.storeImage(file, `cats/${catId}/cover`);
+    await this.prisma.cat.update({ where: { id: catId }, data: { coverUrl: url } });
+    if (prev?.coverUrl) void this.storage.remove(prev.coverUrl);
+    return { coverUrl: url };
+  }
+
+  async listGallery(userId: string, catId: string) {
+    await this.ownedCat(userId, catId);
+    return this.prisma.catPhoto.findMany({
+      where: { catId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async addGalleryPhoto(userId: string, catId: string, file?: UploadedImage) {
+    await this.ownedCat(userId, catId);
+    const count = await this.prisma.catPhoto.count({ where: { catId } });
+    if (count >= MAX_GALLERY_PHOTOS) {
+      throw new BadRequestException(`A cat can have at most ${MAX_GALLERY_PHOTOS} gallery photos`);
+    }
+    const { url } = await this.storeImage(file, `cats/${catId}/gallery`);
+    return this.prisma.catPhoto.create({
+      data: { catId, url, sortOrder: count },
+    });
+  }
+
+  async removeGalleryPhoto(userId: string, catId: string, photoId: string) {
+    await this.ownedCat(userId, catId);
+    const photo = await this.prisma.catPhoto.findFirst({ where: { id: photoId, catId } });
+    if (!photo) throw new NotFoundException("Photo not found");
+    await this.prisma.catPhoto.delete({ where: { id: photo.id } });
+    void this.storage.remove(photo.url);
+    return { success: true };
+  }
+
+  // ── Community visibility & privacy ──────────────────────────────────────────
+
+  private static readonly VISIBILITY_SELECT = {
+    isPublic: true,
+    publicSlug: true,
+    bio: true,
+    showOwnerName: true,
+    showCity: true,
+    showGallery: true,
+    showAge: true,
+    showBreed: true,
+    viewCount: true,
+    isFeatured: true,
+    sharedAt: true,
+  } as const;
+
+  async getVisibility(userId: string, catId: string) {
+    await this.ownedCat(userId, catId);
+    return this.prisma.cat.findUnique({
+      where: { id: catId },
+      select: CatsService.VISIBILITY_SELECT,
+    });
+  }
+
+  async updateVisibility(userId: string, catId: string, dto: UpdateVisibilityDto) {
+    await this.ownedCat(userId, catId);
+    const current = await this.prisma.cat.findUnique({
+      where: { id: catId },
+      select: { name: true, publicSlug: true },
+    });
+
+    const data: Record<string, unknown> = {};
+    for (const k of ["showOwnerName", "showCity", "showGallery", "showAge", "showBreed"] as const) {
+      if (dto[k] !== undefined) data[k] = dto[k];
+    }
+    if (dto.bio !== undefined) data.bio = dto.bio.trim() || null;
+
+    if (dto.isPublic !== undefined) {
+      data.isPublic = dto.isPublic;
+      if (dto.isPublic) {
+        data.sharedAt = new Date();
+        // Mint a stable public slug on first share; keep it thereafter.
+        if (!current?.publicSlug) data.publicSlug = await this.makePublicSlug(current?.name ?? "cat");
+      }
+    }
+
+    return this.prisma.cat.update({
+      where: { id: catId },
+      data,
+      select: CatsService.VISIBILITY_SELECT,
+    });
+  }
+
+  /** Stable, URL-safe public handle: latinized name + short random suffix. */
+  private async makePublicSlug(name: string): Promise<string> {
+    const base =
+      name
+        .normalize("NFKD")
+        .replace(/[^\x20-\x7E]/g, "") // drop non-ASCII (e.g. Arabic)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 24) || "cat";
+    // Random suffix makes collisions astronomically unlikely; retry to be safe.
+    for (let i = 0; i < 5; i++) {
+      const slug = `${base}-${randomBytes(3).toString("hex")}`;
+      const clash = await this.prisma.cat.findUnique({ where: { publicSlug: slug }, select: { id: true } });
+      if (!clash) return slug;
+    }
+    return `cat-${randomBytes(6).toString("hex")}`;
   }
 
   // ── Internals ────────────────────────────────────────────────────────────────

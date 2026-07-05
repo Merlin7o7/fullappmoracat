@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2,
+  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing,
 } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +17,8 @@ const NAV = [
   { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
   { href: "/admin/products", icon: Boxes, label: "Products" },
   { href: "/admin/content", icon: FileText, label: "Content" },
+  { href: "/admin/community", icon: Cat, label: "Community" },
+  { href: "/admin/waitlist", icon: BellRing, label: "Waitlist" },
   { href: "/admin/support", icon: LifeBuoy, label: "Support" },
 ];
 

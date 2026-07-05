@@ -90,7 +90,22 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-primary-foreground/15 pt-6 sm:flex-row">
+        {/* Legal links — bilingual, no more 404s. */}
+        <nav aria-label={isAr ? "روابط قانونية" : "Legal"} className="mt-12 flex flex-wrap gap-x-5 gap-y-2 border-t border-primary-foreground/15 pt-6">
+          {[
+            { href: "/legal/privacy", label: isAr ? "الخصوصية" : "Privacy" },
+            { href: "/legal/terms", label: isAr ? "الشروط" : "Terms" },
+            { href: "/legal/cookies", label: isAr ? "ملفات الارتباط" : "Cookies" },
+            { href: "/legal/community-guidelines", label: isAr ? "إرشادات المجتمع" : "Community Guidelines" },
+            { href: "/legal/content-policy", label: isAr ? "سياسة المحتوى" : "Content Policy" },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} className="text-xs text-primary-foreground/70 transition-colors hover:text-primary-foreground">
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="mt-6 flex flex-col items-center justify-between gap-4 pt-2 sm:flex-row">
           <p className="flex items-center gap-2 text-xs text-primary-foreground/60">
             <IlloPaw tone="peach" className="size-4" />
             {t.footerNote}

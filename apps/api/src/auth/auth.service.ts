@@ -12,6 +12,14 @@ import { authenticator } from "otplib";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { IdsService } from "../ids/ids.service";
+import { MailService } from "../mail/mail.service";
+import {
+  verifyEmailTemplate,
+  welcomeTemplate,
+  passwordResetTemplate,
+  emailChangeTemplate,
+  type Locale as MailLocale,
+} from "../mail/mail.templates";
 import type {
   GoogleAuthDto,
   LoginDto,
@@ -42,6 +50,9 @@ const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? "change-me-refresh-secr
 const OTP_TTL_MS = Number(process.env.OTP_TTL_SECONDS ?? 300) * 1000; // 5 min
 const OTP_MAX_ATTEMPTS = 5;
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
+const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const LOCKOUT_THRESHOLD = 10; // failed attempts within the window before lockout
+const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const IS_PROD = process.env.NODE_ENV === "production";
 
 @Injectable()
@@ -52,7 +63,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly notifications: NotificationsService,
-    private readonly ids: IdsService
+    private readonly ids: IdsService,
+    private readonly mail: MailService
   ) {}
 
   // ── Registration ────────────────────────────────────────────────────────
@@ -106,6 +118,11 @@ export class AuthService {
       },
     });
 
+    // Welcome + email-verification (non-blocking; a mail hiccup never fails
+    // signup). MailService swallows its own errors and logs.
+    void this.sendVerificationEmail(user.id, user.email, user.firstName, user.locale);
+    void this.dispatchWelcome(user.email, user.firstName, user.locale);
+
     const tokens = await this.issueSession(user.id, user.email, user.isStaff, meta, REFRESH_TTL);
     return { user: this.publicUser(user), ...tokens };
   }
@@ -116,6 +133,17 @@ export class AuthService {
       where: { email: dto.email.toLowerCase().trim(), deletedAt: null },
       include: { twoFactor: true },
     });
+
+    // Brute-force lockout: too many recent failures for this account → refuse,
+    // regardless of whether this attempt's password is correct.
+    if (user) {
+      const recentFailures = await this.prisma.loginHistory.count({
+        where: { userId: user.id, success: false, createdAt: { gt: new Date(Date.now() - LOCKOUT_WINDOW_MS) } },
+      });
+      if (recentFailures >= LOCKOUT_THRESHOLD) {
+        throw new UnauthorizedException("Too many attempts. Please try again in a few minutes.");
+      }
+    }
 
     const ok = user?.passwordHash
       ? await bcrypt.compare(dto.password, user.passwordHash)
@@ -187,6 +215,8 @@ export class AuthService {
           loyalty: { create: {} },
         },
       });
+      // Google emails are already verified — just welcome them.
+      void this.dispatchWelcome(user.email, user.firstName, user.locale);
     }
 
     await this.prisma.oAuthAccount.upsert({
@@ -281,6 +311,10 @@ export class AuthService {
         expiresAt: new Date(Date.now() + RESET_TTL_MS),
       },
     });
+    const resetUrl = `${this.siteUrl()}/reset-password?token=${token}`;
+    const tpl = passwordResetTemplate(this.mailLocale(user.locale), resetUrl);
+    await this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    // Keep the in-app record too, so the portal feed stays the source of truth.
     await this.notifications.notify(user.id, {
       category: "SYSTEM",
       title: "إعادة تعيين كلمة المرور",
@@ -288,6 +322,128 @@ export class AuthService {
     });
     this.logger.log(`Password reset requested for ${user.email}`);
     return { sent: true, ...(IS_PROD ? {} : { devToken: token }) };
+  }
+
+  // ── Email verification + change ───────────────────────────────────────────
+
+  /** Issue a fresh verification token and email the confirm link. */
+  private async sendVerificationEmail(
+    userId: string,
+    email: string,
+    name: string | null,
+    locale: MailLocale
+  ) {
+    const token = randomBytes(32).toString("hex");
+    await this.prisma.emailVerification.create({
+      data: {
+        userId,
+        tokenHash: this.hashToken(token),
+        purpose: "VERIFY_EMAIL",
+        expiresAt: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
+      },
+    });
+    const url = `${this.siteUrl()}/verify-email?token=${token}`;
+    const tpl = verifyEmailTemplate(this.mailLocale(locale), name, url);
+    await this.mail.send({ to: email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+  }
+
+  private async dispatchWelcome(email: string, name: string | null, locale: MailLocale) {
+    const tpl = welcomeTemplate(this.mailLocale(locale), name);
+    await this.mail.send({ to: email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+  }
+
+  /** Resend a verification email to the authenticated (still-unverified) user. */
+  async resendVerification(userId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true, email: true, firstName: true, locale: true, emailVerified: true },
+    });
+    if (!user) throw new UnauthorizedException("Account not found");
+    if (user.emailVerified) return { alreadyVerified: true };
+    await this.sendVerificationEmail(user.id, user.email, user.firstName, user.locale);
+    return { sent: true };
+  }
+
+  /** Consume a VERIFY_EMAIL or CHANGE_EMAIL token. */
+  async verifyEmail(token: string) {
+    const record = await this.prisma.emailVerification.findFirst({
+      where: { tokenHash: this.hashToken(token), usedAt: null, expiresAt: { gt: new Date() } },
+    });
+    if (!record) throw new BadRequestException("Invalid or expired verification link");
+
+    if (record.purpose === "CHANGE_EMAIL") {
+      if (!record.newEmail) throw new BadRequestException("Invalid verification link");
+      const clash = await this.prisma.user.findUnique({
+        where: { email: record.newEmail },
+        select: { id: true },
+      });
+      if (clash && clash.id !== record.userId) {
+        throw new ConflictException("That email is already in use");
+      }
+      await this.prisma.$transaction([
+        this.prisma.user.update({
+          where: { id: record.userId },
+          data: { email: record.newEmail, emailVerified: new Date() },
+        }),
+        this.prisma.emailVerification.update({
+          where: { id: record.id },
+          data: { usedAt: new Date() },
+        }),
+      ]);
+      return { changed: true };
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: { emailVerified: new Date() },
+      }),
+      this.prisma.emailVerification.update({
+        where: { id: record.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+    return { verified: true };
+  }
+
+  /** Request an email change — password-confirmed, verified at the new address. */
+  async requestEmailChange(userId: string, newEmailRaw: string, password: string) {
+    const newEmail = newEmailRaw.toLowerCase().trim();
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true, passwordHash: true, email: true, locale: true },
+    });
+    if (!user) throw new UnauthorizedException("Account not found");
+    if (newEmail === user.email) throw new BadRequestException("That's already your email");
+
+    const ok = user.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
+    if (!ok) throw new UnauthorizedException("Password is incorrect");
+
+    const clash = await this.prisma.user.findUnique({ where: { email: newEmail }, select: { id: true } });
+    if (clash) throw new ConflictException("That email is already in use");
+
+    const token = randomBytes(32).toString("hex");
+    await this.prisma.emailVerification.create({
+      data: {
+        userId: user.id,
+        tokenHash: this.hashToken(token),
+        purpose: "CHANGE_EMAIL",
+        newEmail,
+        expiresAt: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
+      },
+    });
+    const url = `${this.siteUrl()}/verify-email?token=${token}&mode=change`;
+    const tpl = emailChangeTemplate(this.mailLocale(user.locale), url);
+    await this.mail.send({ to: newEmail, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    return { sent: true };
+  }
+
+  private siteUrl(): string {
+    return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  }
+
+  private mailLocale(locale: string | null | undefined): MailLocale {
+    return locale === "en" ? "en" : "ar";
   }
 
   async resetPassword(token: string, newPassword: string) {

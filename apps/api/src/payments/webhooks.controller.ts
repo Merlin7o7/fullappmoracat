@@ -10,9 +10,11 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { Public } from "../common/decorators/public.decorator";
+import { Commercial } from "../common/decorators/commercial.decorator";
 import { WebhooksService } from "./webhooks.service";
 
 @ApiTags("payments")
+@Commercial() // Community Mode: no payment webhook is processable.
 @Controller("payments/webhooks")
 export class WebhooksController {
   constructor(private readonly webhooks: WebhooksService) {}

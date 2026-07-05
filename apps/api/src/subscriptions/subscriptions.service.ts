@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
+import { commerceEnabled } from "../common/config/features";
 import type { CreateSubscriptionDto } from "./dto/subscription.dto";
 
 const INTERVAL_DAYS: Record<string, number> = {
@@ -18,6 +20,16 @@ export class SubscriptionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateSubscriptionDto) {
+    // Community Mode: paid activation is disabled. Membership must never flip to
+    // ACTIVE without a captured payment, so subscription creation is refused
+    // outright until commerce goes live. (Defense-in-depth behind @Commercial.)
+    if (!commerceEnabled()) {
+      throw new ForbiddenException({
+        code: "MEMBERSHIPS_COMING_SOON",
+        message: "Memberships are launching soon.",
+      });
+    }
+
     // Validate cats belong to the user.
     const cats = await this.prisma.cat.findMany({
       where: { id: { in: dto.catIds }, userId, deletedAt: null },

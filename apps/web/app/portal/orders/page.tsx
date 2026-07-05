@@ -66,9 +66,9 @@ export default function OrdersPage() {
           <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
           <IlloCan tone="pink" className="h-24 w-auto" />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-            {isAr ? "لا توجد طلبات بعد — أول صندوق لقطك يبدأ من الاشتراك" : "No orders yet — your cat's first box starts with a subscription"}
+            {isAr ? "لا توجد طلبات بعد — العضويات والتوصيل على وشك الإطلاق" : "No orders yet — memberships & delivery are launching soon"}
           </p>
-          <Link href="/portal/subscribe"><Button size="sm">{isAr ? "ابدأ اشتراكاً" : "Start a subscription"}</Button></Link>
+          <Link href="/portal/subscribe"><Button size="sm">{isAr ? "استعرض العضويات" : "Preview memberships"}</Button></Link>
         </Card>
       )}
     </div>

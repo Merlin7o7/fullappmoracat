@@ -3,7 +3,10 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
+import { join } from "node:path";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
+import { assertProductionConfig } from "./common/config/env.validation";
 
 /** Build the CORS allow-list: the site URL, its www/apex twin, extras, + dev. */
 function buildAllowedOrigins(): string[] {
@@ -26,10 +29,20 @@ function buildAllowedOrigins(): string[] {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: false });
+  // Refuse to boot in production with default/weak secrets or a mock PSP behind
+  // enabled commerce. Fail closed, loudly, before serving a single request.
+  assertProductionConfig();
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false });
 
   // ── Security headers ──────────────────────────────────────────────────
-  app.use(helmet());
+  // crossOriginResourcePolicy relaxed so locally-served /uploads images can be
+  // embedded by the web app in dev (prod images are served from R2/CDN).
+  app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
+  // Dev-only: serve locally-stored uploads. In production, images live on R2
+  // and this directory is empty/unused.
+  app.useStaticAssets(join(process.cwd(), ".uploads"), { prefix: "/uploads/" });
   app.enableCors({
     // Allow the site origin plus its www/apex counterpart, plus any extra
     // origins from CORS_ORIGINS (comma-separated). This way both
@@ -51,16 +64,25 @@ async function bootstrap() {
   app.setGlobalPrefix("api", { exclude: ["health"] });
 
   // ── Swagger / OpenAPI ─────────────────────────────────────────────────
-  const config = new DocumentBuilder()
-    .setTitle("Moraqat API")
-    .setDescription("Moraqat (مرقط) — cat essentials subscription platform API")
-    .setVersion("0.1.0")
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api/docs", app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  // Exposed in non-production by default. In production it stays off unless
+  // ENABLE_SWAGGER=true is explicitly set, so the API surface isn't advertised.
+  const swaggerEnabled =
+    process.env.NODE_ENV !== "production" || process.env.ENABLE_SWAGGER === "true";
+  if (swaggerEnabled) {
+    const config = new DocumentBuilder()
+      .setTitle("Moraqat API")
+      .setDescription("Moraqat (مرقط) — cat essentials subscription platform API")
+      .setVersion("0.1.0")
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup("api/docs", app, document, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
+
+  // Drain in-flight requests and close Prisma cleanly on SIGTERM/SIGINT.
+  app.enableShutdownHooks();
 
   // Honour the platform-provided PORT (Render/Railway/Heroku set it) before our
   // own API_PORT, so the same image runs unchanged on managed hosts.

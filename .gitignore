@@ -48,3 +48,6 @@ Thumbs.db
 
 .vercel
 .env*
+
+# Local dev object-storage fallback (prod uses R2)
+.uploads/

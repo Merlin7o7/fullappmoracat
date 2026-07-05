@@ -43,7 +43,7 @@ export function SiteHeader() {
           <nav className="hidden items-center gap-1 md:flex">
             {[
               { href: "/#how", label: t.nav.how },
-              { href: "/#plans", label: t.nav.plans },
+              { href: "/community", label: t.nav.community },
               { href: "/products", label: t.nav.products },
               { href: "/blog", label: t.nav.blog },
               { href: "/tools/feeding", label: t.nav.tools },

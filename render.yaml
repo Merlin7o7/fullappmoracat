@@ -14,8 +14,38 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # ── Community Mode: monetization disabled (fail-closed) ──────────────
+      # No checkout, no paid subscriptions, no payment surface is reachable.
+      # Flip to true ONLY when payments go live (and set PAYMENTS_MODE=live —
+      # the API refuses to boot if commerce is on while the PSP is mock).
+      - key: COMMERCE_ENABLED
+        value: false
       - key: PAYMENTS_MODE
         value: mock
+      # ── Transactional email (Resend) ────────────────────────────────────
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: EMAIL_FROM
+        value: Moracat <onboarding@resend.dev>
+      # Resend API key — paste in the Render dashboard (kept secret).
+      - key: RESEND_API_KEY
+        sync: false
+      # ── Object storage (Cloudflare R2, S3-compatible) ───────────────────
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET
+        value: moracat-media
+      # Endpoint https://<account>.r2.cloudflarestorage.com + keys + public URL
+      # are secrets — paste in the Render dashboard.
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      # Public bucket URL is not a secret — set it directly.
+      - key: S3_PUBLIC_URL
+        value: https://pub-1bc6cdbbb878439f908a3257ecaa6a11.r2.dev
       # Neon connection string — paste in the Render dashboard (kept secret).
       - key: DATABASE_URL
         sync: false

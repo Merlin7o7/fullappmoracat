@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "@moraqat/ui";
 import { dict, type Locale } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
+import { CookieConsent } from "@/components/cookie-consent";
 
 type Dictionary = (typeof dict)[Locale];
 type LocaleCtx = { locale: Locale; setLocale: (l: Locale) => void; t: Dictionary };
@@ -49,7 +50,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ToastProvider>
-            <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
+            <LocaleContext.Provider value={value}>
+              {children}
+              <CookieConsent />
+            </LocaleContext.Provider>
           </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>

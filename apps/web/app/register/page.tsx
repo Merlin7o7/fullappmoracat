@@ -156,9 +156,9 @@ export default function RegisterPage() {
           <input type="checkbox" checked={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.checked })} className="mt-0.5 size-4 rounded border-input accent-primary" />
           <span>
             {isAr ? "أوافق على " : "I agree to the "}
-            <Link href="/terms" className="font-medium text-primary hover:underline">{isAr ? "الشروط" : "Terms"}</Link>
+            <Link href="/legal/terms" className="font-medium text-primary hover:underline">{isAr ? "الشروط" : "Terms"}</Link>
             {isAr ? " و" : " & "}
-            <Link href="/privacy" className="font-medium text-primary hover:underline">{isAr ? "سياسة الخصوصية" : "Privacy Policy"}</Link>
+            <Link href="/legal/privacy" className="font-medium text-primary hover:underline">{isAr ? "سياسة الخصوصية" : "Privacy Policy"}</Link>
           </span>
         </label>
 
