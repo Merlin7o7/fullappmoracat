@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useMutation } from "@tanstack/react-query";
-import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer, Stethoscope } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer, Stethoscope, Wallet } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -242,10 +242,18 @@ function CatCard({
 }
 
 function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
-  const { user } = useAuth();
+  const { user, authedFetch } = useAuth();
   const { toast } = useToast();
   const [copied, setCopied] = React.useState(false);
   const [busy, setBusy] = React.useState<null | "pdf" | "png" | "print">(null);
+  const [walletBusy, setWalletBusy] = React.useState(false);
+  // Wallet buttons appear only where the environment can actually issue a
+  // pass — no dead controls, no premature promises (R040).
+  const wallet = useQuery({
+    queryKey: ["wallet-availability"],
+    queryFn: () => authedFetch<{ google: boolean; apple: boolean }>("/wallet/availability"),
+    staleTime: 5 * 60_000,
+  });
   // Exports capture a dedicated off-screen node at a fixed 856px width — the
   // on-screen card can be any size (phone drawer, desktop) without changing
   // the exported artwork one pixel (R034).
@@ -276,6 +284,22 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
       });
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function addToGoogleWallet() {
+    setWalletBusy(true);
+    try {
+      const { saveUrl } = await authedFetch<{ saveUrl: string }>(`/wallet/cats/${cat.id}/google`);
+      window.open(saveUrl, "_blank", "noopener");
+    } catch {
+      toast({
+        title: isAr ? "تعذّر إنشاء بطاقة المحفظة" : "Couldn't create the wallet pass",
+        description: isAr ? "جرّب مرة ثانية بعد لحظات" : "Give it another try in a moment",
+        variant: "error",
+      });
+    } finally {
+      setWalletBusy(false);
     }
   }
 
@@ -324,6 +348,14 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
           {busy === "print" ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />} {isAr ? "طباعة" : "Print"}
         </Button>
       </div>
+
+      {/* The card where cards live — shown only when the pass can be issued (R034, R040). */}
+      {wallet.data?.google && (
+        <Button variant="outline" size="sm" className="w-full max-w-sm" onClick={addToGoogleWallet} disabled={walletBusy}>
+          {walletBusy ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
+          {isAr ? "أضفها إلى Google Wallet" : "Add to Google Wallet"}
+        </Button>
+      )}
 
       <button onClick={copy} className="inline-flex items-center gap-1.5 font-mono text-sm tracking-wider text-muted-foreground transition-colors hover:text-foreground" dir="ltr">
         {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}

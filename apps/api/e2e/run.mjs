@@ -6,6 +6,7 @@
  * seed applied. Used locally and by CI (with a postgres service container).
  */
 import { spawn } from "node:child_process";
+import { generateKeyPairSync } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -14,9 +15,21 @@ const apiDir = join(__dirname, "..");
 const port = process.env.API_PORT ?? "4000";
 const apiUrl = `http://localhost:${port}`;
 
+// Throwaway RSA key so the suite exercises the CONFIGURED Google Wallet path
+// (JWT issue + signature verify). Real deploys use the service-account key;
+// without one the feature stays fail-closed.
+const walletKey = generateKeyPairSync("rsa", { modulusLength: 2048 });
+const walletPrivatePem = walletKey.privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+const walletPublicPem = walletKey.publicKey.export({ type: "spki", format: "pem" }).toString();
+
 const env = {
   ...process.env,
   API_PORT: port,
+  WALLET_GOOGLE_ISSUER_ID: "3388000000099999999",
+  WALLET_GOOGLE_SA_EMAIL: "e2e-wallet@moracat-e2e.iam.gserviceaccount.com",
+  WALLET_GOOGLE_SA_KEY: walletPrivatePem,
+  // Public half for smoke.mjs to verify the signature (not read by the API).
+  WALLET_GOOGLE_TEST_PUBLIC_KEY: walletPublicPem,
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? "e2e-access-secret",
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? "e2e-refresh-secret",
   PAYMENTS_MODE: "mock",

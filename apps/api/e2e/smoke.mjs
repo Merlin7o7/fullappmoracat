@@ -51,6 +51,27 @@ ok(cat2.catIdNumber !== cat.catIdNumber, "Cat IDs are unique per cat");
 const recommendation = (await call(`/feeding/cats/${cat.id}`, "POST", {}, C)).json;
 ok(recommendation.dailyCalories > 200 && recommendation.estimatedMonthlyCostSar > 0, `feeding rec (${recommendation.dailyCalories} kcal)`);
 
+console.log("━━ wallet pass (R034) ━━");
+{
+  const { verify: rsaVerify } = await import("node:crypto");
+  ok((await call("/wallet/availability")).status === 401, "wallet availability requires auth");
+  const avail = (await call("/wallet/availability", "GET", undefined, C)).json;
+  ok(avail.google === true && avail.apple === false, "availability reflects configured targets (google on, apple off)");
+  const { saveUrl } = (await call(`/wallet/cats/${cat.id}/google`, "GET", undefined, C)).json;
+  ok(saveUrl?.startsWith("https://pay.google.com/gp/v/save/"), "google save URL issued");
+  const jwt = saveUrl.split("/save/")[1];
+  const [h, p, sig] = jwt.split(".");
+  const claims = JSON.parse(Buffer.from(p, "base64url").toString());
+  const obj = claims.payload?.genericObjects?.[0];
+  ok(claims.typ === "savetowallet" && claims.aud === "google", "JWT claims shaped for Save to Wallet");
+  ok(obj?.id?.endsWith(cat.catIdNumber) && obj?.barcode?.value === `MRCV1:${cat.qrToken}`, "pass carries the Cat ID + secure QR token (never a URL)");
+  const pub = process.env.WALLET_GOOGLE_TEST_PUBLIC_KEY;
+  ok(!!pub && rsaVerify("RSA-SHA256", Buffer.from(`${h}.${p}`), pub, Buffer.from(sig, "base64url")), "JWT signature verifies (RS256)");
+  // Cross-account isolation: another user's cat must 404, never leak a pass.
+  const other = (await call("/auth/register", "POST", { email: `smoke+${rnd()}@e.com`, password: "S3cure!pass", firstName: "Other", acceptTerms: true })).json;
+  ok((await call(`/wallet/cats/${cat.id}/google`, "GET", undefined, other.accessToken)).status === 404, "cross-account wallet access blocked (404)");
+}
+
 console.log("━━ storefront + checkout (direct capture) ━━");
 const plans = (await call("/plans")).json;
 ok(plans.length === 4 && plans.every((p) => p.nameAr), "4 plans with Arabic names");
