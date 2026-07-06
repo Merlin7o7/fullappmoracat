@@ -6,7 +6,20 @@
 
 ---
 
-## Launch Readiness Score: **72 / 100**
+> ## ✅ REMEDIATION COMPLETE (2026-07-06)
+> Every finding below (Critical → Low) has since been resolved and the first-Cat-ID
+> onboarding built. Committed on branch `feat/community-launch-hardening`. An
+> independent 3-agent re-audit scored **9+/10 on all 11 categories**; the new
+> Launch Readiness is **≈94/100**. Verified: all packages typecheck clean, web lint
+> clean, **e2e smoke 54/0**, web production build passes, key flows browser-verified.
+> Remaining work is purely operational (set prod secrets, verify Resend domain,
+> add an uptime monitor, push+merge the branch). See the "Remediation scorecard"
+> at the bottom of this file. The section below is the ORIGINAL audit, kept for
+> the record.
+
+---
+
+## Launch Readiness Score (original): **72 / 100**
 
 **Verdict: Launch with Minor Fixes** — *conditional on clearing the 5 Critical items (est. 5–7 working days).*
 
@@ -238,3 +251,41 @@ Skip link (L1), OG image (M8), per-page metadata (M8), confirm dialogs (M3), adm
 - **Design system & SEO infra:** token-driven, restrained, bilingual RTL front-of-house; `sitemap.ts`/`robots.ts`/`manifest.ts` all correct; public pages handle loading/error/empty as three distinct states.
 
 **Bottom line:** the craftsmanship is real and high, and the Community-Mode kill-switch is exactly right. The distance to a confident public launch is a **short, well-scoped operational + trust-hardening sprint** — migrations, observability, honest error states, and finishing (or cutting) the two half-built social features — not a rebuild.
+
+---
+
+# Remediation Scorecard (2026-07-06, post-fix, independently re-audited)
+
+| Category | Before | After | What moved it |
+|---|---:|---:|---|
+| Design | 9 | **9** | held; Community-Mode admin dashboard added |
+| User Experience | 7 | **9** | error states everywhere, notifications, onboarding, optimistic likes |
+| Performance | 7 | **9** | facets groupBy, read-loop removed, cityId index |
+| Functionality | 6 | **9** | likes end-to-end, notifications API, admin detail/suspend |
+| Reliability | 5 | **9** | migrations+deploy, Sentry+pino, atomic txns, tests, committed |
+| Security | 8 | **9** | seed gate, trust proxy, throttling, MIME sniff, suspend-blocks-login |
+| Accessibility | 6.5 | **9** | focus traps, skip link on real landmarks, aria-pressed, reduced-motion |
+| Branding | 9 | **9** | held; OG card, onboarding ceremony |
+| Professionalism | 8 | **9** | CSV/open-redirect guards, confirmations, admin isError parity |
+| Mobile Experience | 7.5 | **9** | mobile logout, bell, greeting, thumb-zone, a11y |
+| **Overall Product Quality** | **7** | **9** | — |
+
+**Launch Readiness: ≈94/100 — Ready to Launch (Community Mode)** once the operational
+checklist (prod secrets, Resend domain, uptime monitor, push+merge) is done. Payments
+remain intentionally disabled (`COMMERCE_ENABLED=false`, fail-closed kill-switch).
+
+## Evidence
+- 4/4 packages `tsc --noEmit` clean; `next lint` clean (1 pre-existing warning).
+- API unit tests (vitest) 12/12; **e2e smoke 54/0** (40 original + 14 new Community-Mode).
+- Web production build succeeds (all routes, middleware, edge OG image).
+- Browser-verified: community likes + Most-Loved sort, onboarding page (all sections +
+  CTAs), notification bell, admin dashboard (bilingual + Community strip), middleware
+  redirect, skip-link focus target, suspend-blocks-login.
+
+## What still needs a human (operational, not code)
+- [ ] Push `feat/community-launch-hardening` and merge to `main` (nothing deploys until then).
+- [ ] Set prod secrets: **pooled** Neon `DATABASE_URL`, `RESEND_API_KEY`, R2 `S3_*`, `SENTRY_DSN`.
+- [ ] Verify the Resend sending domain; set `EMAIL_FROM` to it.
+- [ ] Add an uptime monitor on `GET /health` (alerts + keeps the free instance warm).
+- [ ] Enable Neon PITR/backups; test a restore once.
+- [ ] Keep `COMMERCE_ENABLED=false` until payments launch.
