@@ -77,7 +77,10 @@ export function CatIdCard({
   return (
     <div
       className={cn(
-        "w-full max-w-sm [container-type:inline-size]",
+        // Radius matches the inner card (5cqw ≈ 1.2rem at the display size) so a
+        // caller's box-shadow glow (shadow-glow) clips to the rounded card instead
+        // of leaking as a rectangle behind it.
+        "w-full max-w-sm rounded-[1.2rem] [container-type:inline-size]",
         !exportMode && "drop-shadow-[0_18px_36px_hsl(165_40%_14%/0.28)]",
         className
       )}
