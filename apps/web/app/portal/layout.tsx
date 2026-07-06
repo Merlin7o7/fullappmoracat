@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users,
-  LifeBuoy, Bell, LogOut, Loader2,
+  LifeBuoy, Bell, LogOut, Loader2, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -86,6 +86,17 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               );
             })}
           </nav>
+          {/* Staff-only bridge to the admin console — hidden for members (RBAC is
+              enforced server-side; this is just the discoverable entry point). */}
+          {user.isStaff && (
+            <Link
+              href="/admin"
+              className="mb-1 flex items-center gap-3 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-accent/20"
+            >
+              <ShieldCheck className="size-4 text-accent" />
+              {isAr ? "لوحة الإدارة" : "Admin console"}
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => { void logout(); router.push("/login"); }}
