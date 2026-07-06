@@ -59,7 +59,7 @@ export class StorageService {
   /** Write → read-back → public-fetch round trip, for diagnosing prod uploads. */
   async selfTest() {
     if (!this.isConfigured()) return { configured: false };
-    const key = `_selftest/${randomBytes(8).toString("hex")}.txt`;
+    const key = "_selftest/persistent.txt";
     const out: Record<string, unknown> = { bucket: this.bucket, key };
     try {
       await this.s3().send(
@@ -79,6 +79,16 @@ export class StorageService {
       out.getOk = false;
       out.getError = (e as Error).name;
     }
+    // Decisive: can THIS account's keys read an object written from my machine?
+    // If not, Render's R2 account/bucket differs from the one the public URL serves.
+    const localWriteKey = "users/cmr8fmw7b000m18wbb0llcunx/uploads/76955e81a85bce913899ea3c.png";
+    try {
+      await this.s3().send(new GetObjectCommand({ Bucket: this.bucket, Key: localWriteKey }));
+      out.canReadLocalWrite = true;
+    } catch (e) {
+      out.canReadLocalWrite = false;
+      out.localReadError = (e as Error).name;
+    }
     const publicUrl = this.publicUrl(key);
     out.publicUrl = publicUrl;
     try {
@@ -86,11 +96,6 @@ export class StorageService {
       out.publicStatus = r.status;
     } catch {
       out.publicStatus = "fetch-error";
-    }
-    try {
-      await this.s3().send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
-    } catch {
-      /* best effort */
     }
     return out;
   }
