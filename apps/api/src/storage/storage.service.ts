@@ -82,7 +82,7 @@ export class StorageService {
     const publicUrl = this.publicUrl(key);
     out.publicUrl = publicUrl;
     try {
-      const r = await fetch(publicUrl, { cache: "no-store" });
+      const r = await fetch(publicUrl);
       out.publicStatus = r.status;
     } catch {
       out.publicStatus = "fetch-error";
