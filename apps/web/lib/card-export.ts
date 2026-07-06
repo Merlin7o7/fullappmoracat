@@ -13,15 +13,17 @@ const CARD_W_MM = 85.6;
 const CARD_H_MM = 54;
 // Target raster width ≈ 508 DPI at physical card size — crisp for print and retina.
 const EXPORT_WIDTH_PX = 1712;
+// Instagram Stories are 1080×1920 — the story node is 540 CSS px wide (ratio 2).
+const STORY_WIDTH_PX = 1080;
 
-async function renderPng(node: HTMLElement): Promise<string> {
+async function renderPng(node: HTMLElement, targetWidthPx = EXPORT_WIDTH_PX): Promise<string> {
   // Settle the type + photos before capture, or the card reflows mid-render
   // and the output no longer matches the design.
   await document.fonts.ready;
   await Promise.all(
     Array.from(node.querySelectorAll("img")).map((img) => img.decode().catch(() => undefined))
   );
-  const pixelRatio = EXPORT_WIDTH_PX / Math.max(1, node.offsetWidth);
+  const pixelRatio = targetWidthPx / Math.max(1, node.offsetWidth);
   return toPng(node, { pixelRatio, skipAutoScale: true });
 }
 
@@ -62,6 +64,41 @@ export async function exportCardPdf(node: HTMLElement, baseName: string) {
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [CARD_W_MM, CARD_H_MM] });
   pdf.addImage(dataUrl, "PNG", 0, 0, CARD_W_MM, CARD_H_MM, undefined, "FAST");
   pdf.save(`${baseName}.pdf`);
+}
+
+/**
+ * "Share my Moracat ID" — capture the 9:16 story frame at exactly 1080×1920.
+ * On devices with the Web Share API (phones — where Instagram lives) this opens
+ * the native share sheet with the image attached; elsewhere it downloads the
+ * PNG in one click. Returns how it concluded so the caller can toast honestly.
+ */
+export async function shareStoryPng(
+  node: HTMLElement,
+  baseName: string,
+  shareText: string
+): Promise<"shared" | "downloaded" | "cancelled"> {
+  const dataUrl = await renderPng(node, STORY_WIDTH_PX);
+  const filename = `${baseName}-story.png`;
+
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    const file = new File([blob], filename, { type: "image/png" });
+    if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], text: shareText });
+        return "shared";
+      } catch (err) {
+        // The member closed the share sheet — that's a decision, not a failure.
+        if ((err as Error).name === "AbortError") return "cancelled";
+        // Any other share error falls through to a plain download.
+      }
+    }
+  } catch {
+    /* blob/File unsupported → download below */
+  }
+
+  triggerDownload(dataUrl, filename);
+  return "downloaded";
 }
 
 /** Print-ready: opens the card image in a window and invokes the print dialog. */

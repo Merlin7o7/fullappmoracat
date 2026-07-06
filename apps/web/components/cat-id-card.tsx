@@ -202,7 +202,9 @@ export function CatIdCard({
           <div className="min-w-0 leading-none">
             <p className="truncate font-mono text-[1.9cqw] uppercase tracking-[0.26em] text-[hsl(168_30%_34%)]">
               {isAr ? "رقم الهوية" : "Cat ID"}
-              {since ? (isAr ? ` · عضو منذ ${since}` : ` · Member since ${since}`) : ""}
+              {/* Tenure shows under the name in simple mode — only the detailed
+                  card (no room up top) carries it here. Never both. */}
+              {detailed && since ? (isAr ? ` · عضو منذ ${since}` : ` · Member since ${since}`) : ""}
             </p>
             <p className="mt-[1.6cqw] font-mono text-[4.4cqw] font-medium tracking-[0.16em] text-[hsl(170_82%_12%)] tabular" dir="ltr">
               {catIdNumber}

@@ -3,14 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer, Stethoscope, Wallet } from "lucide-react";
+import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer, Stethoscope, Wallet, Share2 } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
-import { exportCardPng, exportCardPdf, printCard, exportSafeSrc } from "@/lib/card-export";
+import { exportCardPng, exportCardPdf, printCard, shareStoryPng, exportSafeSrc } from "@/lib/card-export";
 import { CatIdCard } from "@/components/cat-id-card";
+import { CatIdStory } from "@/components/cat-id-story";
 import { CatManageDrawer } from "@/components/cat-manage-drawer";
 import { IlloCat, IlloMouse, IlloPaw } from "@/components/illustrations";
 
@@ -247,6 +248,8 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
   const [copied, setCopied] = React.useState(false);
   const [busy, setBusy] = React.useState<null | "pdf" | "png" | "print">(null);
   const [walletBusy, setWalletBusy] = React.useState(false);
+  const [shareBusy, setShareBusy] = React.useState(false);
+  const storyRef = React.useRef<HTMLDivElement>(null);
   // Wallet buttons appear only where the environment can actually issue a
   // pass — no dead controls, no premature promises (R040).
   const wallet = useQuery({
@@ -284,6 +287,36 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
       });
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function shareStory() {
+    if (!storyRef.current) return;
+    setShareBusy(true);
+    try {
+      const dispName = localizeName(cat.name, isAr ? "ar" : "en");
+      const outcome = await shareStoryPng(
+        storyRef.current,
+        baseName,
+        isAr
+          ? `${dispName} رسمياً في عائلة مرقط 🐾 سوّ هوية قطك على moracat.co`
+          : `${dispName} is officially a Moracat 🐾 Create your cat's ID at moracat.co`
+      );
+      if (outcome === "downloaded") {
+        toast({
+          title: isAr ? "جاهزة للستوري ✨" : "Story ready ✨",
+          description: isAr ? "حفظناها لك — ارفعها على انستقرام" : "Saved for you — post it to your Story",
+          variant: "success",
+        });
+      }
+    } catch {
+      toast({
+        title: isAr ? "تعذّر إنشاء الستوري" : "Couldn't create the story",
+        description: isAr ? "جرّب مرة ثانية بعد لحظات" : "Give it another try in a moment",
+        variant: "error",
+      });
+    } finally {
+      setShareBusy(false);
     }
   }
 
@@ -334,7 +367,27 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
         <div ref={exportRef} style={{ width: 856 }}>
           <CatIdCard {...cardProps} exportMode photoUrl={exportSafeSrc(cat.photoUrl)} className="max-w-none" />
         </div>
+        {/* 9:16 Instagram-Story frame (540×960 → captured at 1080×1920). The
+            wrapper must match the frame width exactly — the capture's pixel
+            ratio is computed from the captured node's own offsetWidth. */}
+        <div ref={storyRef} style={{ width: 540 }}>
+          <CatIdStory
+            catName={cat.name}
+            catIdNumber={cat.catIdNumber!}
+            issuedAt={cat.idIssuedAt}
+            photoUrl={exportSafeSrc(cat.photoUrl)}
+            qrToken={cat.qrToken}
+            membershipActive={cat.membershipStatus === "ACTIVE"}
+            isAr={isAr}
+          />
+        </div>
       </div>
+
+      {/* The growth moment — a story frame members genuinely want to post (R003). */}
+      <Button size="lg" className="w-full max-w-sm" onClick={shareStory} disabled={shareBusy}>
+        {shareBusy ? <Loader2 className="size-4 animate-spin" /> : <Share2 className="size-4" />}
+        {isAr ? `شارك هوية ${localizeName(cat.name, "ar")} ✨` : `Share ${localizeName(cat.name, "en")}'s ID ✨`}
+      </Button>
 
       {/* #6 Export — PDF / high-res PNG / print, full branding preserved. */}
       <div className="grid w-full max-w-sm grid-cols-3 gap-2">
