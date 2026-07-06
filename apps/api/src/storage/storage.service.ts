@@ -34,6 +34,27 @@ export class StorageService {
     return process.env.S3_BUCKET || "moracat-media";
   }
 
+  /** Non-secret config summary for diagnostics (safe to expose briefly). */
+  configSummary() {
+    const host = (u?: string) => {
+      try {
+        return u ? new URL(u).host : null;
+      } catch {
+        return "invalid";
+      }
+    };
+    const ak = process.env.S3_ACCESS_KEY ?? "";
+    return {
+      configured: this.isConfigured(),
+      bucket: this.bucket,
+      endpointHost: host(process.env.S3_ENDPOINT),
+      publicHost: host(process.env.S3_PUBLIC_URL),
+      accessKeyTail: ak ? ak.slice(-6) : null,
+      region: process.env.S3_REGION ?? null,
+      nodeEnv: process.env.NODE_ENV ?? null,
+    };
+  }
+
   /** True when real object storage is configured (else dev-local fallback). */
   isConfigured(): boolean {
     return Boolean(
