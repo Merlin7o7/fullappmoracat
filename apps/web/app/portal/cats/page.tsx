@@ -367,9 +367,15 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
         <div ref={exportRef} style={{ width: 856 }}>
           <CatIdCard {...cardProps} exportMode photoUrl={exportSafeSrc(cat.photoUrl)} className="max-w-none" />
         </div>
-        {/* 9:16 Instagram-Story frame (540×960 → captured at 1080×1920). The
-            wrapper must match the frame width exactly — the capture's pixel
-            ratio is computed from the captured node's own offsetWidth. */}
+      </div>
+
+      {/* 9:16 Instagram-Story frame (540×960 → captured at 1080×1920), in its
+          OWN offscreen container sized exactly to the frame: sharing the card
+          twin's wider (856px) container let RTL anchor the frame to the
+          container's right edge, which WebKit bakes into the capture on iPhone
+          (content shifted by the width delta, blank band on the other side).
+          The capture's pixel ratio also derives from this node's offsetWidth. */}
+      <div aria-hidden className="pointer-events-none fixed top-0" style={{ left: -4000, zIndex: -1, width: 540 }}>
         <div ref={storyRef} style={{ width: 540 }}>
           <CatIdStory
             catName={cat.name}

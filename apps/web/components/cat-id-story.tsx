@@ -42,15 +42,19 @@ export interface CatIdStoryProps {
 
 export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, membershipActive, isAr }: CatIdStoryProps) {
   return (
+    // The CAPTURED root must stay dir="ltr": WebKit's foreignObject renderer
+    // mis-anchors RTL roots horizontally (content shifts by the container-width
+    // delta, leaving a blank band on iPhone exports). Text direction is applied
+    // on the inner layer instead — Arabic layout is unaffected.
     <div
-      dir={isAr ? "rtl" : "ltr"}
+      dir="ltr"
       style={{ width: 540, height: 960, ...LIGHT_TOKENS } as React.CSSProperties}
-      className="relative isolate flex flex-col items-center overflow-hidden bg-[#faf7f1] text-[hsl(165_45%_8%)]"
+      className="relative isolate overflow-hidden bg-[#faf7f1] text-[hsl(165_45%_8%)]"
     >
       {/* Ambient tints + grain — the paper the stickers live on. */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10"
+        className="absolute inset-0"
         style={{
           backgroundImage:
             "radial-gradient(70% 45% at 50% 12%, hsl(166 91% 19% / 0.07), transparent 65%), radial-gradient(55% 40% at 50% 88%, hsl(18 93% 58% / 0.08), transparent 60%)",
@@ -59,7 +63,9 @@ export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, 
       {/* Plain low-opacity grain — NO mix-blend-mode: Safari's foreignObject
           compositor mishandles blend modes and blacks out whole regions of the
           captured image on iPhone. Visually near-identical at this opacity. */}
-      <div aria-hidden className="absolute inset-0 -z-10 opacity-[0.04]" style={{ backgroundImage: GRAIN, backgroundSize: "160px 160px" }} />
+      <div aria-hidden className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: GRAIN, backgroundSize: "160px 160px" }} />
+
+      <div dir={isAr ? "rtl" : "ltr"} className="absolute inset-0 flex flex-col items-center">
 
       {/* ── Header: the brand, then the announcement ── */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -114,6 +120,7 @@ export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, 
           <IlloPaw tone="orange" className="size-5" />
           {isAr ? "سوّ هوية قطك · moracat.co" : "Create your cat's ID · moracat.co"}
         </span>
+      </div>
       </div>
     </div>
   );
