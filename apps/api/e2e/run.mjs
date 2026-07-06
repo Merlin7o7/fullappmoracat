@@ -20,6 +20,10 @@ const env = {
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? "e2e-access-secret",
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? "e2e-refresh-secret",
   PAYMENTS_MODE: "mock",
+  // Exercise the full commerce engine (checkout/subscriptions/webhooks) against
+  // the mock provider. Real deploys keep COMMERCE_ENABLED=false (Community Mode);
+  // this is the one place we validate the still-present engine end-to-end.
+  COMMERCE_ENABLED: "true",
   MOCK_WEBHOOK_SECRET: process.env.MOCK_WEBHOOK_SECRET ?? "mock-webhook-secret",
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
 };

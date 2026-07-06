@@ -27,11 +27,18 @@ console.log("━━ auth ━━");
 const email = `smoke+${rnd()}@e.com`;
 const reg = (await call("/auth/register", "POST", { email, password: "S3cure!pass", firstName: "Smoke", acceptTerms: true })).json;
 ok(!!reg.accessToken && !!reg.refreshToken, "register issues token pair");
+ok(reg.needsEmailVerification === true && reg.user?.emailVerified === false, "signup requires email verification (OTP)");
 const C = reg.accessToken;
 ok((await call("/cats")).status === 401, "guard blocks unauthenticated");
 const rotated = (await call("/auth/refresh", "POST", { refreshToken: reg.refreshToken })).json;
 ok(rotated.refreshToken && rotated.refreshToken !== reg.refreshToken, "refresh rotates");
 ok((await call("/auth/refresh", "POST", { refreshToken: reg.refreshToken })).status === 401, "old refresh rejected");
+
+console.log("━━ email OTP + community + uploads ━━");
+ok((await call("/auth/email/otp/verify", "POST", { code: "000000" }, C)).status === 400, "wrong email OTP rejected (400)");
+const community = await call("/community/cats");
+ok(community.status === 200 && typeof community.json?.pagination?.total === "number", "community browse is public");
+ok((await call("/uploads/image", "POST", {})).status === 401, "image upload requires auth (401)");
 
 console.log("━━ cats + Cat ID + feeding ━━");
 const cat = (await call("/cats", "POST", { name: "Smokey", weightKg: 4.5, activityLevel: "MODERATE", isIndoor: true }, C)).json;
