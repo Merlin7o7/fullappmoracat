@@ -243,18 +243,22 @@ function QrTile({ value, isAr }: { value: string; isAr: boolean }) {
 }
 
 function StatusPill({ active, comingSoon, isAr }: { active: boolean; comingSoon: boolean; isAr: boolean }) {
-  // Leaf-green when active, butter when "coming soon", muted when lapsed.
+  // Before paid membership exists, the card is still a real, issued credential —
+  // present it as a verified official identity, never a "coming soon" placeholder.
+  if (comingSoon) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-[1.3cqw] rounded-full bg-[hsl(150_60%_45%/0.15)] px-[2.2cqw] py-[0.9cqw] text-[2cqw] font-semibold uppercase tracking-[0.16em] text-[hsl(150_55%_82%)] ring-1 ring-[hsl(150_55%_60%/0.32)]">
+        <ShieldCheck className="size-[2.6cqw]" />
+        {isAr ? "موثّقة" : "Verified"}
+      </span>
+    );
+  }
+  // Commerce era: leaf-green when the membership is active, muted when lapsed.
   const tone = active
     ? "bg-[hsl(150_60%_45%/0.16)] text-[hsl(150_60%_82%)] ring-[hsl(150_60%_60%/0.35)]"
-    : comingSoon
-      ? "bg-[hsl(44_80%_60%/0.14)] text-[hsl(44_75%_80%)] ring-[hsl(44_70%_62%/0.35)]"
-      : "bg-white/10 text-white/60 ring-white/20";
-  const dot = active ? "bg-[hsl(150_60%_60%)]" : comingSoon ? "bg-[hsl(44_80%_64%)]" : "bg-white/40";
-  const label = active
-    ? isAr ? "فعّالة" : "Active"
-    : comingSoon
-      ? isAr ? "قريباً" : "Coming soon"
-      : isAr ? "غير مفعّلة" : "Inactive";
+    : "bg-white/10 text-white/60 ring-white/20";
+  const dot = active ? "bg-[hsl(150_60%_60%)]" : "bg-white/40";
+  const label = active ? (isAr ? "فعّالة" : "Active") : isAr ? "غير مفعّلة" : "Inactive";
   return (
     <span className={cn("inline-flex shrink-0 items-center gap-[1.3cqw] rounded-full px-[2.2cqw] py-[0.9cqw] text-[2cqw] font-semibold uppercase tracking-[0.16em] ring-1", tone)}>
       <span className={cn("size-[1.4cqw] rounded-full", dot)} />
