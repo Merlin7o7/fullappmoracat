@@ -1,11 +1,12 @@
 "use client";
 
-import { PawPrint, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
 import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
 import { ImgWithFallback } from "@/components/img-with-fallback";
+import { IlloPaw } from "@/components/illustrations";
 
 interface CatIdCardProps {
   catName: string;
@@ -120,29 +121,19 @@ export function CatIdCard({
                 "linear-gradient(115deg,transparent 30%,rgba(255,255,255,0.07) 46%,rgba(255,255,255,0.03) 55%,transparent 70%)",
             }}
           />
-          {/* Top light + quiet paw watermark. */}
+          {/* Top light + quiet brand-paw watermark (the illustration set, not a stock glyph). */}
           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-1/2 bg-gradient-to-b from-white/[0.08] to-transparent" />
-          <PawPrint
+          <IlloPaw
+            tone="butter"
             aria-hidden
-            className="pointer-events-none absolute -end-[5cqw] top-[4cqw] -z-10 size-[34cqw] rotate-[14deg] text-white/[0.05]"
-            strokeWidth={1.1}
+            className="pointer-events-none absolute -end-[5cqw] top-[6cqw] -z-10 size-[32cqw] rotate-[14deg] opacity-[0.06]"
           />
 
-          {/* Header: paw seal + wordmark + standing */}
+          {/* Header: the brand lockup (مرقط / Moracat) + standing. The document
+              type ("Cat ID") lives on the paper band — no duplicate eyebrow. */}
           <div className="flex items-start justify-between gap-[3cqw]">
-            <div className="flex items-center gap-[2.4cqw]">
-              <span className="grid size-[7.5cqw] shrink-0 place-items-center rounded-full bg-[hsl(18_93%_58%)] ring-1 ring-white/25">
-                <PawPrint className="size-[4cqw] text-white" strokeWidth={2.4} />
-              </span>
-              <div className="leading-none">
-                <span className="block font-mono text-[2.6cqw] uppercase tracking-[0.32em] text-white/90">
-                  {isAr ? "مرقط" : "Moracat"}
-                </span>
-                <span className="mt-[1cqw] block font-mono text-[1.9cqw] uppercase tracking-[0.3em] text-[hsl(30_70%_82%)]">
-                  {isAr ? "هوية القط" : "Cat ID"}
-                </span>
-              </div>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/moracat-logo-light.png" alt="" aria-hidden className="h-[7.5cqw] w-auto" />
 
             {preview ? (
               <span className="font-mono text-[2.1cqw] uppercase tracking-[0.24em] text-[hsl(30_70%_82%)]">
@@ -158,7 +149,7 @@ export function CatIdCard({
             <span
               className={cn(
                 "relative shrink-0 overflow-hidden rounded-[3cqw] bg-white/10 p-[0.6cqw] ring-1 ring-white/30",
-                detailed ? "size-[13.5cqw]" : "size-[16cqw]"
+                detailed ? "size-[12cqw]" : "size-[16cqw]"
               )}
             >
               <ImgWithFallback
@@ -167,7 +158,7 @@ export function CatIdCard({
                 className="size-full rounded-[2.5cqw] object-cover"
                 fallback={
                   <span aria-hidden className="grid size-full place-items-center rounded-[2.5cqw] bg-[hsl(170_60%_9%)]">
-                    <PawPrint className="size-[6cqw] text-white/45" />
+                    <IlloPaw tone="butter" className="size-[6.5cqw] opacity-60" />
                   </span>
                 }
               />
@@ -176,7 +167,7 @@ export function CatIdCard({
               <p
                 className={cn(
                   "truncate font-display font-semibold leading-[1.08] tracking-tight",
-                  detailed ? "text-[5.6cqw]" : "text-[7.2cqw]"
+                  detailed ? "text-[5.2cqw]" : "text-[7.2cqw]"
                 )}
               >
                 {dispName}
@@ -194,7 +185,7 @@ export function CatIdCard({
 
           {/* The record: who to call, what's protected — the card's real jobs (§05). */}
           {detailed && (
-            <dl className="grid grid-cols-2 gap-x-[3.5cqw] gap-y-[1.6cqw]">
+            <dl className="grid grid-cols-2 gap-x-[3.5cqw] gap-y-[1.4cqw]">
               <Detail label={isAr ? "المالك" : "Owner"} value={dispOwner} isAr={isAr} />
               <Detail label={isAr ? "للطوارئ" : "Emergency"} value={ownerPhone} isAr={isAr} mono />
               <Detail label={isAr ? "التطعيمات" : "Vaccines"} value={vaccinationLabel(vaccinationStatus, isAr)} isAr={isAr} />
