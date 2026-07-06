@@ -45,6 +45,10 @@ USER app
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget -qO- http://localhost:4000/health || exit 1
-# Apply committed migrations (idempotent; Prisma holds an advisory lock so it's
-# safe if more than one instance starts), then boot. No manual `db push` in prod.
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node dist/main.js"]
+# Best-effort migrations, then boot. Migration is attempted only when the Prisma
+# CLI is present, and a failure (e.g. DATABASE_URL is a pgbouncer-pooled URL,
+# through which Prisma migrations can't run) NEVER blocks startup — the app boots
+# regardless. Schema changes are applied out-of-band via `pnpm --filter
+# @moraqat/db migrate:deploy` against the DIRECT (non-pooled) Neon URL before/at
+# deploy; this line just keeps a dev/self-hosted stack convenient.
+CMD ["sh", "-c", "if [ -x node_modules/.bin/prisma ]; then timeout 60 node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma || echo 'WARN: migrate deploy skipped/timed out (apply migrations out-of-band with the direct URL)'; fi; exec node dist/main.js"]
