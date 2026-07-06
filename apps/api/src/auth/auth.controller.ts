@@ -8,8 +8,17 @@ import {
   HttpStatus,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { AuthService } from "./auth.service";
+
+/**
+ * Tight per-route limits on the credential + code-sending surfaces (the global
+ * default is a loose 120/min meant for ordinary reads). These blunt credential
+ * stuffing and stop the SMS/email OTP endpoints from being pumped for cost.
+ */
+const STRICT = { default: { limit: 8, ttl: 60_000 } } as const;
+const OTP_SEND = { default: { limit: 4, ttl: 60_000 } } as const;
 import {
   ForgotPasswordDto,
   GoogleAuthDto,
@@ -38,6 +47,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
+  @Throttle(STRICT)
   @Post("register")
   @ApiOperation({ summary: "Create a new customer account" })
   register(@Body() dto: RegisterDto, @Req() req: Request) {
@@ -45,6 +55,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(STRICT)
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Authenticate with email + password" })
@@ -53,6 +64,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(OTP_SEND)
   @Post("otp/request")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Send an SMS one-time passcode" })
@@ -61,6 +73,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(STRICT)
   @Post("otp/login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Authenticate with mobile number + OTP" })
@@ -77,6 +90,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(OTP_SEND)
   @Post("password/forgot")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Request a password-reset link" })
@@ -93,6 +107,7 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
+  @Throttle(OTP_SEND)
   @Post("email/otp/send")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Send/resend a 6-digit email verification code to the current user" })

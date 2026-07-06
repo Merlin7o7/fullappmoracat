@@ -75,7 +75,7 @@ export function AuthShell({
       </aside>
 
       {/* ── Form side ── */}
-      <main className="mesh-bg relative flex items-center justify-center px-4 py-12 sm:px-8">
+      <main id="main" tabIndex={-1} className="mesh-bg relative flex items-center justify-center px-4 py-12 outline-none sm:px-8">
         <div className="w-full max-w-md">
           <Link href="/" aria-label="Moracat" className="mb-8 inline-flex">
             <Logo className="h-10" priority />

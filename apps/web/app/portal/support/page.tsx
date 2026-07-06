@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { TicketStatusBadge } from "@/components/ticket-status-badge";
+import { QueryError } from "@/components/query-error";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
 
 interface TicketMessage { id: string; body: string; isStaff: boolean; createdAt: string }
@@ -25,7 +26,7 @@ export default function SupportPage() {
   const [showForm, setShowForm] = React.useState(false);
   const [selected, setSelected] = React.useState<string | null>(null);
 
-  const { data: tickets, isLoading } = useQuery({
+  const { data: tickets, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["tickets", user?.id],
     queryFn: () => authedFetch<Ticket[]>("/support/tickets"),
     enabled: !!user,
@@ -71,6 +72,8 @@ export default function SupportPage() {
         />
       ) : isLoading ? (
         <Skeleton className="h-40 w-full" />
+      ) : isError ? (
+        <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
       ) : tickets && tickets.length > 0 ? (
         <Card className="divide-y divide-border p-0">
           {tickets.map((t) => (

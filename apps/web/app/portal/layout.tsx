@@ -16,6 +16,8 @@ import { CatSwitcher } from "@/components/cat-switcher";
 import { ThemeToggle, LangToggle } from "@/components/toggles";
 import { Logo } from "@/components/logo";
 import { IlloPaw } from "@/components/illustrations";
+import { NotificationsBell } from "@/app/portal/notifications/notifications-bell";
+import { localizeName } from "@/lib/translit";
 
 const NAV = [
   { href: "/portal", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة", exact: true },
@@ -114,13 +116,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <Logo className="h-8" priority />
             </Link>
             <PortalGreeting isAr={isAr} gender={user.gender} firstName={user.firstName} />
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <NotificationsBell />
               <CatSwitcher isAr={isAr} />
               <LangToggle />
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 p-4 pb-28 sm:p-6 md:pb-6">{children}</main>
+          <main id="main" tabIndex={-1} className="flex-1 p-4 pb-28 outline-none sm:p-6 md:pb-6">{children}</main>
         </div>
       </div>
 
@@ -151,7 +154,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   );
 }
 
-/** The warm Saudi greeting, resolved from owner gender + the primary cat (R001). */
+/** The warm Saudi greeting, resolved from owner gender + the primary cat (R001).
+ *  M6: the member's name is never hidden on phones — the full greeting shows on
+ *  sm+, and a compact "name · cat" line takes its place on the narrowest screens. */
 function PortalGreeting({ isAr, gender, firstName }: { isAr: boolean; gender?: Gender; firstName?: string | null }) {
   const { primaryCat } = useCats();
   const greeting = buildGreeting({
@@ -160,9 +165,20 @@ function PortalGreeting({ isAr, gender, firstName }: { isAr: boolean; gender?: G
     primaryCatName: primaryCat?.name,
     firstName,
   });
+
+  // Compact mobile line: first name, with the primary cat as a quiet suffix.
+  const name = firstName?.trim();
+  const catName = primaryCat ? localizeName(primaryCat.name, isAr ? "ar" : "en") : null;
+  const compact = name
+    ? catName
+      ? isAr ? `${name} · ${catName}` : `${name} · ${catName}`
+      : name
+    : greeting.title;
+
   return (
-    <p className="hidden min-w-0 flex-1 truncate text-sm font-medium sm:block">
-      {greeting.title}
-    </p>
+    <>
+      <p className="min-w-0 flex-1 truncate text-sm font-medium sm:hidden">{compact}</p>
+      <p className="hidden min-w-0 flex-1 truncate text-sm font-medium sm:block">{greeting.title}</p>
+    </>
   );
 }

@@ -8,7 +8,7 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="py-10 sm:py-14">
+      <main id="main" tabIndex={-1} className="py-10 outline-none sm:py-14">
         <CommunityBrowse />
       </main>
       <SiteFooter />

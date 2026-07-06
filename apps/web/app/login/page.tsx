@@ -45,7 +45,18 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = React.useState("");
   const fullPhone = composePhone(dialCode, phone);
 
-  function goToPortal() { router.push("/portal"); }
+  // Honour the ?next= the edge middleware appends so a bounced member lands back
+  // where they were headed (only same-path internal targets, never an open
+  // redirect). Read from the URL at call time — avoids the useSearchParams
+  // Suspense requirement since this only runs after a user action.
+  function goToPortal() {
+    let dest = "/portal";
+    if (typeof window !== "undefined") {
+      const next = new URLSearchParams(window.location.search).get("next");
+      if (next && next.startsWith("/") && !next.startsWith("//")) dest = next;
+    }
+    router.push(dest);
+  }
 
   async function onEmailLogin(e: React.FormEvent) {
     e.preventDefault();

@@ -3,10 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Search, Eye, Star, Sparkles, PawPrint, Flame, Clock } from "lucide-react";
+import { Search, Eye, Star, Sparkles, PawPrint, Flame, Clock, Heart } from "lucide-react";
 import { Badge, Skeleton, cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
-import { api, type CommunityCard } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { api, type CommunityCard, type LikeToggleResponse } from "@/lib/api";
 import { localizeName } from "@/lib/translit";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 
@@ -17,10 +18,11 @@ import { ImgWithFallback } from "@/components/img-with-fallback";
  * scrollable so it stays visible while browsing on any screen.
  */
 
-// Sections map to real backend sorts (no fake "likes" system).
+// Sections map to real backend sorts.
 const SECTIONS = [
   { key: "recent", icon: Clock, en: "Newest", ar: "الأحدث" },
   { key: "viewed", icon: Flame, en: "Trending", ar: "الرائج" },
+  { key: "liked", icon: Heart, en: "Most Loved", ar: "الأكثر إعجابًا" },
   { key: "featured", icon: Star, en: "Featured", ar: "مميّزة" },
 ] as const;
 
@@ -37,9 +39,164 @@ const STAGES = [
   { key: "SENIOR", en: "Senior", ar: "كبير" },
 ] as const;
 
+/**
+ * Likes are a real, honest interaction: the current user's liked slugs are the
+ * source of truth for filled/outline hearts, fetched once per session when a
+ * user is present. Guests get outline hearts that route to sign-in.
+ *
+ * Exported so the community profile view can share the exact same behaviour
+ * (single implementation, no divergence).
+ */
+export function useCommunityLikes() {
+  const { user, authedFetch } = useAuth();
+  const [liked, setLiked] = React.useState<Set<string>>(() => new Set());
+
+  // Fetch the user's liked slugs once when a user becomes present.
+  React.useEffect(() => {
+    if (!user) {
+      setLiked(new Set());
+      return;
+    }
+    let cancelled = false;
+    authedFetch<string[]>("/community/my-likes")
+      .then((slugs) => {
+        if (!cancelled) setLiked(new Set(slugs));
+      })
+      .catch(() => {
+        /* non-fatal — hearts stay outline until the user interacts */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authedFetch]);
+
+  const isLiked = React.useCallback((slug: string) => liked.has(slug), [liked]);
+
+  /** Optimistically toggle; caller supplies current count and gets the reconciled count. */
+  const toggle = React.useCallback(
+    async (slug: string): Promise<{ liked: boolean; likeCount: number } | null> => {
+      const currentlyLiked = liked.has(slug);
+      // Optimistic set update.
+      setLiked((prev) => {
+        const next = new Set(prev);
+        if (currentlyLiked) next.delete(slug);
+        else next.add(slug);
+        return next;
+      });
+      try {
+        const res = await authedFetch<LikeToggleResponse>(`/community/cats/${slug}/like`, {
+          method: currentlyLiked ? "DELETE" : "POST",
+        });
+        // Reconcile the set with the server truth.
+        setLiked((prev) => {
+          const next = new Set(prev);
+          if (res.liked) next.add(slug);
+          else next.delete(slug);
+          return next;
+        });
+        return res;
+      } catch {
+        // Revert on error.
+        setLiked((prev) => {
+          const next = new Set(prev);
+          if (currentlyLiked) next.add(slug);
+          else next.delete(slug);
+          return next;
+        });
+        return null;
+      }
+    },
+    [liked, authedFetch]
+  );
+
+  return { hasUser: !!user, isLiked, toggle };
+}
+
+type CommunityLikes = ReturnType<typeof useCommunityLikes>;
+
+/**
+ * Heart Like control. ≥44px tap target, aria-pressed + labelled, reduced-motion
+ * honoured. Guests route to /login (honest — never a fake like). Optimistic
+ * count so the tap feels instant; reconciled with the server's likeCount.
+ */
+export function LikeButton({
+  slug,
+  name,
+  initialCount,
+  likes,
+  isAr,
+  className,
+}: {
+  slug: string;
+  name: string;
+  initialCount: number;
+  likes: CommunityLikes;
+  isAr: boolean;
+  className?: string;
+}) {
+  const liked = likes.isLiked(slug);
+  const [count, setCount] = React.useState(initialCount);
+  const [pending, setPending] = React.useState(false);
+
+  // Keep count in sync if the underlying card data changes (e.g. refetch).
+  React.useEffect(() => setCount(initialCount), [initialCount]);
+
+  const label = liked ? (isAr ? `إلغاء إعجاب ${name}` : `Unlike ${name}`) : isAr ? `إعجاب ${name}` : `Like ${name}`;
+
+  async function onClick(e: React.MouseEvent) {
+    // The button often sits inside a card <Link>; never navigate on a like tap.
+    e.preventDefault();
+    e.stopPropagation();
+    if (pending) return;
+
+    if (!likes.hasUser) {
+      // Honest guest path — send them to sign in (don't fake a like), and carry
+      // the return path so they come back to the cat they were about to love.
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?next=${next}`;
+      return;
+    }
+
+    setPending(true);
+    // Optimistic count flip.
+    setCount((c) => c + (liked ? -1 : 1));
+    const res = await likes.toggle(slug);
+    if (res) {
+      setCount(res.likeCount); // reconcile with server truth
+    } else {
+      setCount((c) => c + (liked ? 1 : -1)); // revert on error
+    }
+    setPending(false);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      aria-label={label}
+      aria-pressed={liked}
+      className={cn(
+        "inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full text-xs font-medium transition-colors disabled:opacity-70",
+        liked ? "text-red-600 dark:text-red-400" : "text-muted-foreground hover:text-foreground",
+        className
+      )}
+    >
+      <Heart
+        className={cn(
+          "size-4 transition-transform motion-safe:duration-200",
+          liked && "fill-current motion-safe:scale-110"
+        )}
+      />
+      <span className="tabular-nums">{count}</span>
+    </button>
+  );
+}
+
 export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
   const { locale } = useLocale();
   const isAr = locale === "ar";
+  const likes = useCommunityLikes();
 
   const [section, setSection] = React.useState<string>("recent");
   const [search, setSearch] = React.useState("");
@@ -115,7 +272,7 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
                     : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <s.icon className={cn("size-4", active && s.key === "featured" && "fill-current")} />
+                <s.icon className={cn("size-4", active && (s.key === "featured" || s.key === "liked") && "fill-current")} />
                 {isAr ? s.ar : s.en}
               </button>
             );
@@ -183,7 +340,7 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
       ) : (
         <Grid>
           {cats.map((cat) => (
-            <CommunityCatCard key={cat.slug} cat={cat} isAr={isAr} />
+            <CommunityCatCard key={cat.slug} cat={cat} isAr={isAr} likes={likes} />
           ))}
         </Grid>
       )}
@@ -201,43 +358,54 @@ function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">{children}</div>;
 }
 
-function CommunityCatCard({ cat, isAr }: { cat: CommunityCard; isAr: boolean }) {
+function CommunityCatCard({ cat, isAr, likes }: { cat: CommunityCard; isAr: boolean; likes: CommunityLikes }) {
   const name = localizeName(cat.name, isAr ? "ar" : "en");
   const meta = [cat.breed && (isAr ? cat.breed.nameAr : cat.breed.nameEn), cat.city && (isAr ? cat.city.nameAr : cat.city.nameEn)]
     .filter(Boolean)
     .join(isAr ? " · " : " · ");
   return (
-    <Link href={`/community/${cat.slug}`} className="group">
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-e1 transition-transform duration-200 group-hover:-translate-y-0.5">
-        <div className="relative aspect-square overflow-hidden bg-muted">
-          <ImgWithFallback
-            src={cat.photoUrl}
-            alt={name}
-            loading="lazy"
-            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-            fallback={
-              <span className="grid size-full place-items-center">
-                <PawPrint className="size-10 text-muted-foreground/40" />
+    <div className="group relative">
+      {/* The like control lives outside the <Link> so its 44px target never navigates. */}
+      <LikeButton
+        slug={cat.slug}
+        name={name}
+        initialCount={cat.likeCount}
+        likes={likes}
+        isAr={isAr}
+        className="absolute end-1 top-1 z-10 rounded-full bg-background/85 px-2 shadow-e1 backdrop-blur"
+      />
+      <Link href={`/community/${cat.slug}`} className="block">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-e1 transition-transform duration-200 group-hover:-translate-y-0.5">
+          <div className="relative aspect-square overflow-hidden bg-muted">
+            <ImgWithFallback
+              src={cat.photoUrl}
+              alt={name}
+              loading="lazy"
+              className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fallback={
+                <span className="grid size-full place-items-center">
+                  <PawPrint className="size-10 text-muted-foreground/40" />
+                </span>
+              }
+            />
+            {cat.isFeatured && (
+              <Badge variant="secondary" className="absolute start-2 top-2 gap-1 bg-background/85 backdrop-blur">
+                <Star className="size-3 fill-accent text-accent" /> {isAr ? "مميّز" : "Featured"}
+              </Badge>
+            )}
+          </div>
+          <div className="p-3">
+            <p className="truncate font-display font-semibold">{name}</p>
+            <div className="mt-0.5 flex items-center justify-between gap-2">
+              <p className="truncate text-xs text-muted-foreground">{meta || (isAr ? "قط مرقط" : "A Moracat")}</p>
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
+                <Eye className="size-3" /> {cat.viewCount}
               </span>
-            }
-          />
-          {cat.isFeatured && (
-            <Badge variant="secondary" className="absolute start-2 top-2 gap-1 bg-background/85 backdrop-blur">
-              <Star className="size-3 fill-accent text-accent" /> {isAr ? "مميّز" : "Featured"}
-            </Badge>
-          )}
-        </div>
-        <div className="p-3">
-          <p className="truncate font-display font-semibold">{name}</p>
-          <div className="mt-0.5 flex items-center justify-between gap-2">
-            <p className="truncate text-xs text-muted-foreground">{meta || (isAr ? "قط مرقط" : "A Moracat")}</p>
-            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
-              <Eye className="size-3" /> {cat.viewCount}
-            </span>
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
 

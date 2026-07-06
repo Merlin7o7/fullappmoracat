@@ -128,5 +128,41 @@ const notifs = (await call("/account/notifications", "GET", undefined, C)).json;
 ok(notifs.some((n) => n.title.includes("Support replied")), "customer notified");
 ok(notifs.some((n) => n.category === "ORDER"), "order notification emitted");
 
+console.log("━━ community: onboarding · likes · notifications ━━");
+// First Cat ID routes the member through the one-time welcome; later cats don't.
+ok(cat.firstCatIdIssued === true, "first Cat ID sets firstCatIdIssued (welcome trigger)");
+ok(cat2.firstCatIdIssued === false, "second Cat ID does NOT re-trigger the welcome");
+// Share Smokey publicly, then a second member likes them.
+const shared = (await call(`/cats/${cat.id}/visibility`, "PATCH", { isPublic: true, showBreed: true }, C)).json;
+ok(shared.isPublic === true && !!shared.publicSlug, "cat made public with a slug");
+const slug = shared.publicSlug;
+const liker = (await call("/auth/register", "POST", { email: `liker-${rnd()}@smoke.test`, password: "Passw0rd!23", fullName: "Liker Smoke", acceptTerms: true })).json;
+const L = liker.accessToken;
+const like1 = (await call(`/community/cats/${slug}/like`, "POST", undefined, L)).json;
+ok(like1.liked === true && like1.likeCount === 1, "like registers (count 1)");
+const like2 = (await call(`/community/cats/${slug}/like`, "POST", undefined, L)).json;
+ok(like2.likeCount === 1, "like is idempotent (still 1 on repeat)");
+const myLikes = (await call("/community/my-likes", "GET", undefined, L)).json;
+ok(Array.isArray(myLikes) && myLikes.includes(slug), "my-likes returns the liked slug");
+const loved = (await call("/community/cats?sort=liked")).json;
+ok(loved.items[0]?.slug === slug && loved.items[0]?.likeCount === 1, "Most-Loved sort ranks by likeCount");
+const unlike = (await call(`/community/cats/${slug}/like`, "DELETE", undefined, L)).json;
+ok(unlike.liked === false && unlike.likeCount === 0, "unlike decrements to 0");
+// The owner sees in-app community notifications with a readable API.
+const feed = (await call("/notifications", "GET", undefined, C)).json;
+ok(Array.isArray(feed.items) && typeof feed.unread === "number", "notifications read API returns items + unread");
+ok(feed.items.some((n) => n.category === "COMMUNITY"), "community notifications emitted to owner");
+const uc = (await call("/notifications/unread-count", "GET", undefined, C)).json;
+ok(typeof uc.unread === "number", "unread-count endpoint works");
+const readAll = (await call("/notifications/read-all", "PATCH", undefined, C)).json;
+ok(readAll.success === true, "mark-all-read works");
+const uc2 = (await call("/notifications/unread-count", "GET", undefined, C)).json;
+ok(uc2.unread === 0, "unread drops to 0 after mark-all-read");
+// Arabic search normalization: a diacritic-free query finds a diacritic name.
+const arCat = (await call("/cats", "POST", { name: "مِشْمِش", activityLevel: "LOW", isIndoor: true }, C)).json;
+await call(`/cats/${arCat.id}/visibility`, "PATCH", { isPublic: true }, C);
+const arSearch = (await call(`/community/cats?search=${encodeURIComponent("مشمش")}`)).json;
+ok(arSearch.pagination.total >= 1, "Arabic search matches across diacritics/tatweel");
+
 console.log(`\n${fail === 0 ? "✅ SMOKE PASS" : "❌ SMOKE FAILURES"}: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

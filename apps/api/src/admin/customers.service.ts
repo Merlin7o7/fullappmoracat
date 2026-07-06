@@ -58,7 +58,10 @@ export class AdminCustomersService {
       include: {
         orders: { orderBy: { placedAt: "desc" }, take: 10 },
         subscriptions: { include: { plan: { select: { nameEn: true } } } },
-        cats: { where: { deletedAt: null }, select: { id: true, name: true, weightKg: true } },
+        cats: {
+          where: { deletedAt: null },
+          select: { id: true, name: true, weightKg: true, isPublic: true, hiddenAt: true },
+        },
         wallet: true,
         loyalty: true,
       },
@@ -81,5 +84,49 @@ export class AdminCustomersService {
         orderNumber: o.orderNumber, status: o.status, grandTotal: Number(o.grandTotal), placedAt: o.placedAt,
       })),
     };
+  }
+
+  /**
+   * Suspend or reactivate a customer — the abuse/safety lever. Suspending also
+   * revokes every device session (immediate logout; the JWT strategy re-checks
+   * status on each request too) and withdraws their public cats from the
+   * community so abusive content disappears at once. Reactivating restores
+   * access but leaves cats hidden for a moderator to review individually.
+   */
+  async setStatus(actorId: string, id: string, action: "suspend" | "reactivate", reason?: string) {
+    const target = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, isStaff: true, status: true },
+    });
+    if (!target) throw new NotFoundException("Customer not found");
+    if (target.isStaff) {
+      // Staff accounts aren't managed through the customer surface.
+      throw new NotFoundException("Customer not found");
+    }
+    const status = action === "suspend" ? "SUSPENDED" : "ACTIVE";
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id }, data: { status } }),
+      this.prisma.auditLog.create({
+        data: {
+          userId: actorId,
+          action: `customer.${action}`,
+          entityType: "User",
+          entityId: id,
+          metadata: { reason: reason ?? null },
+        },
+      }),
+      ...(action === "suspend"
+        ? [
+            this.prisma.deviceSession.deleteMany({ where: { userId: id } }),
+            this.prisma.cat.updateMany({
+              where: { userId: id, isPublic: true, hiddenAt: null },
+              data: { hiddenAt: new Date(), hiddenReason: "Account suspended" },
+            }),
+          ]
+        : []),
+    ]);
+
+    return { id, status };
   }
 }

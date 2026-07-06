@@ -18,27 +18,47 @@ export function useLocale() {
   return ctx;
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = React.useState<Locale>("ar");
+export function Providers({
+  children,
+  initialLocale = "ar",
+}: {
+  children: React.ReactNode;
+  /** Locale resolved server-side from the cookie so the first paint is correct —
+   *  no flash of Arabic RTL for English members (R102). */
+  initialLocale?: Locale;
+}) {
+  const [locale, setLocaleState] = React.useState<Locale>(initialLocale);
   const [queryClient] = React.useState(
     () => new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 1 } } })
   );
 
-  // Persist + reflect locale on <html> (dir/lang) for correct RTL.
-  React.useEffect(() => {
-    const saved = (localStorage.getItem("moraqat.locale") as Locale) || "ar";
-    setLocaleState(saved);
-  }, []);
-
   const setLocale = React.useCallback((l: Locale) => {
     setLocaleState(l);
-    localStorage.setItem("moraqat.locale", l);
+    try {
+      localStorage.setItem("moraqat.locale", l);
+    } catch {
+      /* storage unavailable — the cookie below is the source of truth */
+    }
+    // The server reads this cookie on the next request to emit <html lang/dir>
+    // correctly — this is what makes the locale SSR-correct, not client-only.
+    document.cookie = `locale=${l}; path=/; max-age=31536000; SameSite=Lax`;
   }, []);
 
+  // Keep <html> in sync for instant client switches without a reload.
   React.useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = dict[locale].dir;
   }, [locale]);
+
+  // Client-side error tracking — loaded only when a DSN is configured, so it
+  // adds nothing to the bundle payload for unconfigured/dev environments.
+  React.useEffect(() => {
+    const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+    if (!dsn) return;
+    void import("@sentry/nextjs").then((Sentry) => {
+      Sentry.init({ dsn, environment: process.env.NODE_ENV, tracesSampleRate: 0.1 });
+    });
+  }, []);
 
   const value = React.useMemo<LocaleCtx>(
     () => ({ locale, setLocale, t: dict[locale] }),

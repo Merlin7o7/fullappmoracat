@@ -38,11 +38,13 @@ export class UploadsController {
   async uploadImage(@CurrentUser("id") userId: string, @UploadedFile() file: UploadedImage) {
     if (!file?.buffer?.length) throw new BadRequestException("No image provided");
     if (file.size > MAX_IMAGE_BYTES) throw new PayloadTooLargeException("Image must be 8 MB or smaller");
-    const ext = this.storage.imageExt(file.mimetype);
-    if (!ext) throw new BadRequestException("Only JPEG, PNG, or WebP images are allowed");
+    // Trust the bytes, not the declared mimetype (blocks polyglot/SVG/HTML).
+    const ext = this.storage.sniffImageExt(file.buffer);
+    if (!ext) throw new BadRequestException("Only real JPEG, PNG, or WebP images are allowed");
+    const contentType = ext === "jpg" ? "image/jpeg" : ext === "png" ? "image/png" : "image/webp";
 
     const key = this.storage.buildKey(`users/${userId}/uploads`, ext);
-    const url = await this.storage.upload(key, file.buffer, file.mimetype);
+    const url = await this.storage.upload(key, file.buffer, contentType);
     return { url };
   }
 }

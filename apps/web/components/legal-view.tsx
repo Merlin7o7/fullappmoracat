@@ -18,7 +18,7 @@ export function LegalView({ doc }: { doc: LegalDoc }) {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-4 py-12 outline-none sm:py-16">
         <header className="mb-8 border-b border-border pb-6">
           <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{doc.title[l]}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{doc.intro[l]}</p>

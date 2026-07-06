@@ -1,4 +1,5 @@
 export { cn } from "./lib/cn";
+export { useFocusTrap } from "./lib/use-focus-trap";
 export { Button, buttonVariants, type ButtonProps } from "./components/button";
 export {
   Card,

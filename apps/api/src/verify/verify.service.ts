@@ -4,7 +4,16 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { timingSafeEqual } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
+
+/** Constant-time string compare — avoids leaking the partner key via timing. */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 const IS_PROD = process.env.NODE_ENV === "production";
 const TOKEN_PREFIX = "MRCV1:";
@@ -55,7 +64,9 @@ export class VerifyService {
   private authorize(partnerKey?: string) {
     const expected = process.env.PARTNER_VERIFY_KEY;
     if (expected) {
-      if (partnerKey !== expected) throw new UnauthorizedException("Invalid partner key");
+      if (!partnerKey || !safeEqual(partnerKey, expected)) {
+        throw new UnauthorizedException("Invalid partner key");
+      }
       return;
     }
     // No key configured: allowed in dev for testing, refused in production.

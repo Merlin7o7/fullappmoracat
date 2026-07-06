@@ -7,6 +7,7 @@ import { Card, Badge, Button, Skeleton } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
+import { QueryError } from "@/components/query-error";
 import { IlloPaw } from "@/components/illustrations";
 
 interface Address {
@@ -30,7 +31,7 @@ export default function AddressesPage() {
   const qc = useQueryClient();
   const [showForm, setShowForm] = React.useState(false);
 
-  const { data: addresses, isLoading } = useQuery({
+  const { data: addresses, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["addresses", user?.id],
     queryFn: () => authedFetch<Address[]>("/addresses"),
     enabled: !!user,
@@ -66,6 +67,8 @@ export default function AddressesPage() {
 
       {isLoading ? (
         <Skeleton className="h-32 w-full" />
+      ) : isError ? (
+        <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
       ) : addresses && addresses.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {addresses.map((a) => (

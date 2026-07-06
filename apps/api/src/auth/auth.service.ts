@@ -167,7 +167,22 @@ export class AuthService {
       if (!valid) throw new UnauthorizedException("Invalid 2FA code");
     }
 
+    // A suspended/deactivated account can never obtain a fresh session — even
+    // with correct credentials (the JWT strategy also blocks per-request, but
+    // login must refuse up front so an abuser can't mint new tokens).
+    this.assertLoginAllowed(user.status);
+
     return this.completeLogin(user.id, user.email, user.isStaff, this.publicUser(user), dto.rememberMe, meta);
+  }
+
+  /** Refuse suspended/deactivated accounts at any login entry point. */
+  private assertLoginAllowed(status: string) {
+    if (status === "SUSPENDED") {
+      throw new UnauthorizedException("This account is suspended. Contact support.");
+    }
+    if (status === "DEACTIVATED") {
+      throw new UnauthorizedException("This account is deactivated.");
+    }
   }
 
   // ── Login (mobile number + OTP) ───────────────────────────────────────────
@@ -178,6 +193,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findFirst({ where: { phone, deletedAt: null } });
     if (!user) throw new UnauthorizedException("No account found for this number");
+    this.assertLoginAllowed(user.status);
 
     if (!user.phoneVerified) {
       await this.prisma.user.update({ where: { id: user.id }, data: { phoneVerified: new Date() } });
@@ -227,6 +243,7 @@ export class AuthService {
       create: { userId: user.id, provider: "google", providerAccountId: profile.sub },
     });
 
+    this.assertLoginAllowed(user.status);
     return this.completeLogin(user.id, user.email, user.isStaff, this.publicUser(user), dto.rememberMe, meta);
   }
 
@@ -251,6 +268,23 @@ export class AuthService {
   async requestOtp(dto: RequestOtpDto) {
     const phone = normalizePhone(dto.phone);
     const purpose = (dto.purpose ?? "LOGIN") as OtpPurpose;
+
+    // Per-phone send caps mirror the email-OTP path: a short cooldown and an
+    // hourly ceiling so this endpoint can't be pumped to burn SMS budget. Silent
+    // (still returns "sent") so it never reveals whether a number is registered.
+    const now = Date.now();
+    const recent = await this.prisma.otpChallenge.findMany({
+      where: { phone, createdAt: { gt: new Date(now - 60 * 60 * 1000) } },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    if (
+      recent.length >= EMAIL_OTP_MAX_SENDS_PER_HR ||
+      (recent[0] && now - recent[0].createdAt.getTime() < EMAIL_OTP_COOLDOWN_MS)
+    ) {
+      this.logger.warn(`OTP[${purpose}] rate-limited for ${maskPhone(phone)}`);
+      return { sent: true };
+    }
 
     // For LOGIN, don't reveal whether an account exists — always claim "sent".
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");

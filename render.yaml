@@ -47,7 +47,20 @@ services:
       - key: S3_PUBLIC_URL
         value: https://pub-1bc6cdbbb878439f908a3257ecaa6a11.r2.dev
       # Neon connection string — paste in the Render dashboard (kept secret).
+      # IMPORTANT: use the POOLED Neon URL (host contains "-pooler") with
+      # ?sslmode=require&pgbouncer=true&connection_limit=1 — the direct URL will
+      # exhaust Neon's connection cap under load.
       - key: DATABASE_URL
+        sync: false
+      # ── Observability (Sentry + logs) ───────────────────────────────────
+      # Paste the API DSN in the dashboard; empty = disabled (no-op).
+      - key: SENTRY_DSN
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+      # Seed admin: created ONLY when this is set (prod is skipped otherwise);
+      # must be ≥12 chars. Leave unset unless bootstrapping the first admin.
+      - key: ADMIN_SEED_PASSWORD
         sync: false
       # Auto-generated strong secrets (Render fills these once).
       - key: JWT_ACCESS_SECRET

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "../lib/cn";
+import { useFocusTrap } from "../lib/use-focus-trap";
 
 interface DrawerProps {
   open: boolean;
@@ -14,6 +15,7 @@ interface DrawerProps {
 
 export function Drawer({ open, onClose, title, children, className }: DrawerProps) {
   const titleId = React.useId();
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -28,8 +30,10 @@ export function Drawer({ open, onClose, title, children, className }: DrawerProp
     <div className="fixed inset-0 z-[90]">
       <div className="absolute inset-0 animate-fade-in bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         aria-labelledby={title ? titleId : undefined}
         className={cn(
           "absolute inset-x-0 bottom-0 max-h-[85dvh] animate-slide-in-up overflow-y-auto rounded-t-2xl border border-border bg-card p-6 shadow-e3",

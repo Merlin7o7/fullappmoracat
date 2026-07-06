@@ -168,7 +168,7 @@ export default function FeedingCalculatorPage() {
     <div className="min-h-screen">
       <SiteHeader />
 
-      <section className="container py-12 sm:py-16">
+      <section id="main" tabIndex={-1} className="container py-12 outline-none sm:py-16">
         {/* Warm editorial header — one sticker accent (R080). */}
         <div className="relative mx-auto mb-12 max-w-2xl text-center">
           <Sticker rotate={-12} className="-top-4 start-6 hidden sm:block">

@@ -12,6 +12,7 @@ import { buildGreeting, type Gender } from "@/lib/greeting";
 import { localizeName } from "@/lib/translit";
 import { CatIdCard } from "@/components/cat-id-card";
 import { OrderStatusBadge } from "@/components/order-status-badge";
+import { QueryError } from "@/components/query-error";
 import { IlloCat, IlloFish, IlloPaw } from "@/components/illustrations";
 
 /** Quiet paw watermark for the value strip. */
@@ -53,7 +54,7 @@ export default function OverviewPage() {
   const isAr = locale === "ar";
   const { primaryCat, activeCat, activeCats, setPrimaryCat, setActiveCat } = useCats();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["overview", user?.id],
     queryFn: () => authedFetch<Overview>("/account/overview"),
     enabled: !!user,
@@ -138,6 +139,12 @@ export default function OverviewPage() {
         </Card>
       )}
 
+      {/* On a failed load we never fabricate value (R112): a zeroed "Saved 0 SAR"
+          would be a trust breach. Show the blameless retry instead of the tiles. */}
+      {isError ? (
+        <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
+      ) : (
+        <>
       {/* Value strip — the anti-churn number, honoured in the open (R041/R043). */}
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-e2 ring-hairline sm:p-7">
@@ -234,6 +241,8 @@ export default function OverviewPage() {
           <p className="py-6 text-center text-sm text-muted-foreground">{isAr ? "لا توجد طلبات بعد" : "No orders yet"}</p>
         )}
       </Card>
+        </>
+      )}
     </div>
   );
 }

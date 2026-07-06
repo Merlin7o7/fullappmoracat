@@ -10,6 +10,7 @@ import { useCats } from "@/lib/cat-context";
 import { buildGreeting, type Gender } from "@/lib/greeting";
 import { Field } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
+import { QueryError } from "@/components/query-error";
 
 interface Profile {
   firstName: string | null;
@@ -29,7 +30,7 @@ export default function SettingsPage() {
   const isAr = locale === "ar";
   const qc = useQueryClient();
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: () => authedFetch<Profile>("/account/profile"),
     enabled: !!user,
@@ -42,7 +43,9 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground">{isAr ? "الملف الشخصي والأمان" : "Profile and security"}</p>
       </div>
 
-      {isLoading || !profile ? (
+      {isError ? (
+        <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
+      ) : isLoading || !profile ? (
         <Skeleton className="h-64 w-full" />
       ) : (
         <>

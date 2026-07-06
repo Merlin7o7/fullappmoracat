@@ -30,7 +30,7 @@ export default function BlogPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <section className="container py-14 sm:py-20">
+      <section id="main" tabIndex={-1} className="container py-14 outline-none sm:py-20">
         {/* Editorial masthead — big display type, one quiet sprig (R080). */}
         <div className="relative mx-auto mb-14 max-w-2xl text-center">
           <Sticker rotate={-14} className="-top-5 start-4 hidden sm:block">

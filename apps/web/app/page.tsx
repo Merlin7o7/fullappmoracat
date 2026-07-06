@@ -54,7 +54,7 @@ export default function HomePage() {
       <SiteHeader />
 
       {/* ── Hero · identity first (Dossier Stage 1 + §05) ────────────────── */}
-      <section className="mesh-bg relative overflow-hidden">
+      <section id="main" tabIndex={-1} className="mesh-bg relative overflow-hidden outline-none">
         <div className="container grid items-center gap-14 py-14 md:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
           {/* Left · the promise */}
           <div className="relative text-center lg:text-start">
