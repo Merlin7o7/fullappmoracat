@@ -5,7 +5,7 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { join, dirname } from "node:path";
 
@@ -45,6 +45,19 @@ export class StorageService {
       }
     };
     const ak = process.env.S3_ACCESS_KEY ?? "";
+    // Compare each env value against the known-good local value by hash (safe to
+    // expose). Whichever is `false` is the env var that's wrong on this host.
+    const h = (s?: string) => createHash("sha256").update(s ?? "").digest("hex").slice(0, 16);
+    const REF: Record<string, string> = {
+      S3_ENDPOINT: "84c5df51a790502f",
+      S3_ACCESS_KEY: "fc119d37c1af137e",
+      S3_SECRET_KEY: "1472a982bed24ddd",
+      S3_BUCKET: "d6fef84cfb667fb2",
+      S3_PUBLIC_URL: "c7701d7b85b95d11",
+    };
+    const matchesLocal = Object.fromEntries(
+      Object.entries(REF).map(([k, ref]) => [k, h(process.env[k]) === ref])
+    );
     return {
       configured: this.isConfigured(),
       bucket: this.bucket,
@@ -53,6 +66,7 @@ export class StorageService {
       accessKeyTail: ak ? ak.slice(-6) : null,
       region: process.env.S3_REGION ?? null,
       nodeEnv: process.env.NODE_ENV ?? null,
+      matchesLocal,
     };
   }
 
