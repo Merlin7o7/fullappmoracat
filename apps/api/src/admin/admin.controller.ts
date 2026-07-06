@@ -45,6 +45,17 @@ export class AdminController {
     return this.customers.detail(id);
   }
 
+  @Patch("customers/:id/status")
+  @RequirePermissions("customers.write")
+  @ApiOperation({ summary: "Suspend or reactivate a customer" })
+  setCustomerStatus(
+    @CurrentUser("id") actorId: string,
+    @Param("id") id: string,
+    @Body() body: { action: "suspend" | "reactivate"; reason?: string }
+  ) {
+    return this.customers.setStatus(actorId, id, body.action, body.reason);
+  }
+
   // ── Orders ────────────────────────────────────────────────────────────
   @Get("orders")
   @RequirePermissions("orders.read")

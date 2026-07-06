@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Star, ShoppingBag, SlidersHorizontal } from "lucide-react";
-import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
+import { Star, BellRing, SlidersHorizontal } from "lucide-react";
+import { Card, Badge, Skeleton, buttonVariants, cn } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloCan, IlloFish, IlloMouse, IlloPaw, Sticker } from "@/components/illustrations";
 import { useLocale } from "@/app/providers";
 import { api, PRODUCT_TYPES, type ProductListItem } from "@/lib/api";
@@ -33,7 +35,7 @@ export default function ProductsPage() {
     <div className="min-h-screen">
       <SiteHeader />
 
-      <section className="container py-12 sm:py-16">
+      <section id="main" tabIndex={-1} className="container py-12 outline-none sm:py-16">
         {/* Editorial header — display type, one sticker accent (R080). */}
         <div className="relative mx-auto mb-10 max-w-2xl text-center">
           <Sticker rotate={12} className="-top-4 end-2 hidden sm:block">
@@ -70,6 +72,7 @@ export default function ProductsPage() {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
+              aria-label={isAr ? "ترتيب المنتجات" : "Sort products"}
               className="rounded-full border border-border bg-card px-3 py-1.5 text-sm"
             >
               {SORTS.map((s) => (
@@ -134,12 +137,15 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
     >
       <Card className="group flex h-full flex-col overflow-hidden p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-e2">
         <div className="relative mb-3 grid aspect-square place-items-center overflow-hidden rounded-xl bg-cream/70 dark:bg-cream">
-          {product.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.image} alt={name} className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
-          ) : (
-            <IlloPaw tone="butter" className="size-12 opacity-80 transition-transform duration-300 group-hover:-rotate-6" />
-          )}
+          <ImgWithFallback
+            src={product.image}
+            alt={name}
+            loading="lazy"
+            className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fallback={
+              <IlloPaw tone="butter" className="size-12 opacity-80 transition-transform duration-300 group-hover:-rotate-6" />
+            }
+          />
           {product.compareAtPrice && (
             <Badge variant="destructive" className="absolute start-2 top-2">
               {isAr ? "خصم" : "Sale"}
@@ -156,9 +162,15 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
           <span className="font-display text-lg font-bold">
             {product.price} <span className="text-xs font-normal text-muted-foreground">SAR</span>
           </span>
-          <Button size="sm" variant="primary" className="size-9 p-0" aria-label="Add to cart">
-            <ShoppingBag className="size-4" />
-          </Button>
+          {/* Community Mode: no checkout yet. Funnel interest to the launch waitlist. */}
+          <Link
+            href="/portal/subscribe?from=shop"
+            aria-label={isAr ? `أعلمني عند توفّر ${name}` : `Notify me about ${name}`}
+            className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "gap-1.5")}
+          >
+            <BellRing className="size-4" />
+            {isAr ? "أعلمني" : "Notify me"}
+          </Link>
         </div>
       </Card>
     </motion.div>

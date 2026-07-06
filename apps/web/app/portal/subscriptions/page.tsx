@@ -6,6 +6,7 @@ import { Pause, Play, SkipForward, X, Repeat, Loader2, Truck } from "lucide-reac
 import { Card, Badge, Button, Skeleton, Dialog, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
+import { QueryError } from "@/components/query-error";
 import { IlloCan, IlloPaw } from "@/components/illustrations";
 
 interface Sub {
@@ -27,7 +28,7 @@ export default function SubscriptionsPage() {
   const qc = useQueryClient();
   const [confirmCancel, setConfirmCancel] = React.useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["subscriptions", user?.id],
     queryFn: () => authedFetch<Sub[]>("/subscriptions"),
     enabled: !!user,
@@ -63,6 +64,8 @@ export default function SubscriptionsPage() {
 
       {isLoading ? (
         <Skeleton className="h-40 w-full" />
+      ) : isError ? (
+        <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
       ) : data && data.length > 0 ? (
         data.map((sub) => (
           <Card key={sub.id} className="p-6">

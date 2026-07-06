@@ -1,7 +1,11 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_GUARD, APP_FILTER } from "@nestjs/core";
+import { randomUUID } from "node:crypto";
+import { LoggerModule } from "nestjs-pino";
+import type { IncomingMessage } from "node:http";
+import { SentryExceptionFilter } from "./common/sentry-exception.filter";
 import { PrismaModule } from "./prisma/prisma.module";
 import { HealthModule } from "./health/health.module";
 import { PlansModule } from "./plans/plans.module";
@@ -43,6 +47,23 @@ import { WalletModule } from "./wallet/wallet.module";
       isGlobal: true,
       envFilePath: ["../../.env.local", "../../.env", ".env.local", ".env"],
     }),
+    // Structured JSON logging + a per-request correlation id (propagated from an
+    // upstream x-request-id or minted). Pretty-printed in dev, JSON in prod so
+    // logs are queryable/shippable. Health checks are silenced to cut noise.
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === "production" ? "info" : "debug"),
+        genReqId: (req: IncomingMessage) =>
+          (req.headers["x-request-id"] as string) || randomUUID(),
+        autoLogging: { ignore: (req: IncomingMessage) => req.url === "/health" },
+        transport:
+          process.env.NODE_ENV === "production"
+            ? undefined
+            : { target: "pino-pretty", options: { singleLine: true, translateTime: "SYS:HH:MM:ss" } },
+        // Never log Authorization headers or cookies.
+        redact: ["req.headers.authorization", "req.headers.cookie"],
+      },
+    }),
     MailModule,
     StorageModule,
     CommunityModule,
@@ -81,6 +102,8 @@ import { WalletModule } from "./wallet/wallet.module";
     { provide: APP_GUARD, useClass: CommerceGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    // Report 5xx/unhandled faults to Sentry (no-op without SENTRY_DSN).
+    { provide: APP_FILTER, useClass: SentryExceptionFilter },
   ],
 })
 export class AppModule {}

@@ -1,6 +1,8 @@
-# Production-shaped stack: postgres + redis + api + web.
+# Production-shaped stack: postgres + api + web.
 #   docker compose -f docker-compose.prod.yml up --build
 # Set real secrets via environment or an .env file next to this compose file.
+# (No Redis: the app doesn't use it in Community Mode — the throttler is
+# in-memory. Add it back here only when a Redis-backed throttle/cache is wired.)
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,13 +19,6 @@ services:
       timeout: 5s
       retries: 10
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redisdata:/data
-
   api:
     build:
       context: .
@@ -34,7 +29,6 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-moraqat}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-moraqat}?schema=public
-      REDIS_URL: redis://redis:6379
       API_PORT: 4000
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET}
@@ -64,4 +58,3 @@ services:
 
 volumes:
   pgdata:
-  redisdata:

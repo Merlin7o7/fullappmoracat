@@ -8,6 +8,7 @@ import { Badge, Button, useToast } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { CatIdCard } from "@/components/cat-id-card";
 import { ImgWithFallback } from "@/components/img-with-fallback";
+import { LikeButton, useCommunityLikes } from "@/components/community-browse";
 import { localizeName } from "@/lib/translit";
 import type { CommunityProfile } from "@/lib/api";
 
@@ -20,6 +21,7 @@ const STAGE_LABEL: Record<string, [string, string]> = {
 export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slug: string }) {
   const { locale } = useLocale();
   const { toast } = useToast();
+  const likes = useCommunityLikes();
   const isAr = locale === "ar";
   const name = localizeName(cat.name, isAr ? "ar" : "en");
   const [copied, setCopied] = React.useState(false);
@@ -53,7 +55,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
   ].filter(Boolean) as { icon: React.ElementType; label: string; value: string }[];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+    <main id="main" tabIndex={-1} className="mx-auto max-w-3xl px-4 py-8 outline-none sm:py-12">
       <Link href="/community" className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4 rtl:rotate-180" />
         {isAr ? "المجتمع" : "Community"}
@@ -103,6 +105,14 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
               {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
               {isAr ? "مشاركة" : "Share"}
             </Button>
+            <LikeButton
+              slug={slug}
+              name={name}
+              initialCount={cat.likeCount}
+              likes={likes}
+              isAr={isAr}
+              className="border border-border px-3 hover:bg-muted"
+            />
             <div className="rounded-xl bg-white p-1.5 shadow-e1 ring-hairline" title={isAr ? "امسح للزيارة" : "Scan to visit"}>
               <QRCodeSVG value={shareUrl} size={48} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
             </div>

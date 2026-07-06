@@ -1,10 +1,19 @@
-import { BadRequestException, Injectable, NotFoundException, PayloadTooLargeException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+  PayloadTooLargeException,
+} from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { IdsService } from "../ids/ids.service";
 import { StorageService } from "../storage/storage.service";
 import { MailService } from "../mail/mail.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { catIdIssuedTemplate } from "../mail/mail.templates";
+import { normalizeName } from "../common/text";
 import type { UpdateVisibilityDto } from "./dto/cat-visibility.dto";
 
 /** Minimal shape of a multer-parsed upload (avoids an extra @types/multer dep). */
@@ -63,13 +72,45 @@ type CatRow = {
 };
 
 @Injectable()
-export class CatsService {
+export class CatsService implements OnModuleInit {
+  private readonly logger = new Logger("Cats");
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly ids: IdsService,
     private readonly storage: StorageService,
-    private readonly mail: MailService
+    private readonly mail: MailService,
+    private readonly notifications: NotificationsService
   ) {}
+
+  /**
+   * One-time, boot-time backfill. Any legacy cat missing a Cat ID / QR token or a
+   * normalized-name is repaired here — so the hot read paths (findAll/findOne)
+   * stay strictly read-only (no writes in a request loop). New cats always get
+   * these at create, so this is a no-op in steady state.
+   */
+  async onModuleInit() {
+    const stale = await this.prisma.cat.findMany({
+      where: {
+        deletedAt: null,
+        OR: [{ catIdNumber: null }, { qrToken: null }, { nameNormalized: null }],
+      },
+      select: { id: true, name: true, catIdNumber: true, qrToken: true, idIssuedAt: true },
+    });
+    if (!stale.length) return;
+    for (const c of stale) {
+      await this.prisma.cat.update({
+        where: { id: c.id },
+        data: {
+          catIdNumber: c.catIdNumber ?? (await this.ids.newCatId()),
+          qrToken: c.qrToken ?? (await this.ids.newQrToken()),
+          idIssuedAt: c.idIssuedAt ?? new Date(),
+          nameNormalized: normalizeName(c.name),
+        },
+      });
+    }
+    this.logger.log(`Backfilled identity/search fields for ${stale.length} legacy cat(s).`);
+  }
 
   async create(userId: string, dto: CreateCatDto) {
     const cat = await this.prisma.cat.create({
@@ -82,6 +123,7 @@ export class CatsService {
         qrToken: await this.ids.newQrToken(),
         idIssuedAt: new Date(),
         name: dto.name,
+        nameNormalized: normalizeName(dto.name),
         photoUrl: dto.photoUrl,
         breedId: dto.breedId,
         gender: dto.gender,
@@ -115,21 +157,41 @@ export class CatsService {
     // step for single-cat owners (R005 one clear action).
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { primaryCatId: true, email: true, firstName: true, locale: true },
+      select: { primaryCatId: true, email: true, firstName: true, locale: true, onboardedAt: true },
     });
     if (!user?.primaryCatId) {
       await this.prisma.user.update({ where: { id: userId }, data: { primaryCatId: cat.id } });
     }
 
-    // Celebrate the Cat ID the moment it's issued (R031/R073 — the reveal is the
-    // hero moment; the email is its echo). Fire-and-forget so it never blocks or
-    // fails the create; dev/log mode makes it a no-op without a mail key.
-    if (user?.email && cat.catIdNumber) {
-      const tpl = catIdIssuedTemplate(user.locale === "en" ? "en" : "ar", cat.name, cat.catIdNumber);
-      void this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    // First-ever Cat ID → route this member through the one-time welcome (Stage 4
+    // ceremony hand-off, R031). We stamp onboardedAt now so it fires exactly once;
+    // subsequent cats go straight back to the dashboard.
+    const firstCatIdIssued = !user?.onboardedAt;
+    if (firstCatIdIssued) {
+      await this.prisma.user.update({ where: { id: userId }, data: { onboardedAt: new Date() } });
     }
 
-    return this.serialize(cat as CatRow, user?.primaryCatId ?? cat.id);
+    // Celebrate the Cat ID the moment it's issued (R031/R073 — the reveal is the
+    // hero moment; the email + in-app note are its echo). Fire-and-forget so they
+    // never block or fail the create; dev/log mail is a no-op without a key.
+    if (cat.catIdNumber) {
+      this.notifications.emit(userId, {
+        category: "COMMUNITY",
+        title: `${cat.name}'s Cat ID is ready`,
+        body: `${cat.name} is now officially registered as ${cat.catIdNumber}. Tap to view the card.`,
+        data: { kind: "cat_id_issued", catId: cat.id, catIdNumber: cat.catIdNumber },
+      });
+      if (user?.email) {
+        const tpl = catIdIssuedTemplate(
+          user.locale === "en" ? "en" : "ar",
+          cat.name,
+          cat.catIdNumber
+        );
+        void this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+      }
+    }
+
+    return { ...this.serialize(cat as CatRow, user?.primaryCatId ?? cat.id), firstCatIdIssued };
   }
 
   /** Breeds for the registration wizard's picker. */
@@ -167,22 +229,9 @@ export class CatsService {
       orderBy: [{ status: "asc" }, { createdAt: "asc" }],
     });
 
-    // Lazy issuance: no cat is ever left without an identity or QR (pre-ID rows).
-    for (const cat of cats) {
-      if (!cat.catIdNumber || !cat.qrToken) {
-        const issued = await this.prisma.cat.update({
-          where: { id: cat.id },
-          data: {
-            catIdNumber: cat.catIdNumber ?? (await this.ids.newCatId()),
-            qrToken: cat.qrToken ?? (await this.ids.newQrToken()),
-            idIssuedAt: cat.idIssuedAt ?? new Date(),
-          },
-        });
-        cat.catIdNumber = issued.catIdNumber;
-        cat.qrToken = issued.qrToken;
-        cat.idIssuedAt = issued.idIssuedAt;
-      }
-    }
+    // Identity issuance is guaranteed at create time and repaired once at boot
+    // (onModuleInit) — so this read path stays strictly read-only (no per-row
+    // writes in a request loop). See onModuleInit for the legacy backfill.
 
     // Self-heal: if the stored primary is gone/archived/deceased, promote the
     // first active cat so the household always has a valid featured identity.
@@ -235,6 +284,8 @@ export class CatsService {
       where: { id },
       data: {
         name: dto.name,
+        // Keep the search-folded copy in step whenever the name changes.
+        ...(dto.name !== undefined ? { nameNormalized: normalizeName(dto.name) } : {}),
         photoUrl: dto.photoUrl,
         breedId: dto.breedId,
         gender: dto.gender,
@@ -321,6 +372,15 @@ export class CatsService {
 
   async remove(userId: string, id: string) {
     await this.ownedCat(userId, id);
+    // Collect the cat's stored image objects BEFORE we soft-delete, so we can
+    // free them from object storage (the row is only soft-deleted, so the DB
+    // cascade never fires for CatPhoto — without this the files would orphan in
+    // the bucket forever, a cost + privacy leak).
+    const [cat, galleryPhotos] = await Promise.all([
+      this.prisma.cat.findUnique({ where: { id }, select: { photoUrl: true, coverUrl: true } }),
+      this.prisma.catPhoto.findMany({ where: { catId: id }, select: { url: true } }),
+    ]);
+
     // Soft-delete AND withdraw from every public surface in one atomic write, so
     // a deleted cat can never linger in the community browse, the featured rail,
     // or resolve via its public slug — the community queries already filter
@@ -333,11 +393,25 @@ export class CatsService {
         isPublic: false,
         isFeatured: false,
         featuredAt: null,
+        // Release the public handle so it can't resolve or surface in anyone's
+        // "my-likes" (which filters on a non-null slug) after deletion.
+        publicSlug: null,
       },
     });
-    // Child rows (photos, health, vaccinations, feeding recs, subscription links)
-    // cascade at the DB via onDelete: Cascade on their FKs; the QR token + public
-    // slug stay on the row but no longer resolve (verify/profile filter deletedAt).
+    // Drop likes on the removed cat (the row is soft-deleted, so the CatLike
+    // FK cascade won't fire) — keeps like tallies and my-likes honest.
+    await this.prisma.catLike.deleteMany({ where: { catId: id } });
+    // Remove the image objects (profile, cover, gallery) — best-effort, never
+    // blocks the delete. keyFromUrl only touches our own namespaces, so an
+    // external avatar URL is safely skipped.
+    for (const url of [cat?.photoUrl, cat?.coverUrl, ...galleryPhotos.map((p) => p.url)]) {
+      if (url) void this.storage.remove(url);
+    }
+    // Drop the gallery rows too (their objects are now gone; a soft-deleted cat
+    // is never restored — restore() requires deletedAt: null). Remaining child
+    // rows (health, vaccinations, feeding recs, subscription links, likes)
+    // cascade at the DB via onDelete: Cascade on their FKs when the row is purged.
+    await this.prisma.catPhoto.deleteMany({ where: { catId: id } });
     await this.reassignPrimaryIfNeeded(userId, id);
     return { success: true };
   }
@@ -428,10 +502,13 @@ export class CatsService {
     if (file.size > MAX_IMAGE_BYTES) {
       throw new PayloadTooLargeException("Image must be 8 MB or smaller");
     }
-    const ext = this.storage.imageExt(file.mimetype);
-    if (!ext) throw new BadRequestException("Only JPEG, PNG, or WebP images are allowed");
+    // Verify the REAL bytes, not the client-declared mimetype — blocks a polyglot
+    // / SVG / HTML payload mislabeled as an image. The sniffed type is canonical.
+    const ext = this.storage.sniffImageExt(file.buffer);
+    if (!ext) throw new BadRequestException("Only real JPEG, PNG, or WebP images are allowed");
+    const contentType = ext === "jpg" ? "image/jpeg" : ext === "png" ? "image/png" : "image/webp";
     const key = this.storage.buildKey(prefix, ext);
-    const url = await this.storage.upload(key, file.buffer, file.mimetype);
+    const url = await this.storage.upload(key, file.buffer, contentType);
     return { url };
   }
 
@@ -510,7 +587,7 @@ export class CatsService {
     await this.ownedCat(userId, catId);
     const current = await this.prisma.cat.findUnique({
       where: { id: catId },
-      select: { name: true, publicSlug: true },
+      select: { name: true, publicSlug: true, isPublic: true },
     });
 
     const data: Record<string, unknown> = {};
@@ -519,20 +596,35 @@ export class CatsService {
     }
     if (dto.bio !== undefined) data.bio = dto.bio.trim() || null;
 
+    let newlyPublic = false;
     if (dto.isPublic !== undefined) {
       data.isPublic = dto.isPublic;
       if (dto.isPublic) {
+        newlyPublic = !current?.isPublic;
         data.sharedAt = new Date();
         // Mint a stable public slug on first share; keep it thereafter.
         if (!current?.publicSlug) data.publicSlug = await this.makePublicSlug(current?.name ?? "cat");
       }
     }
 
-    return this.prisma.cat.update({
+    const updated = await this.prisma.cat.update({
       where: { id: catId },
       data,
       select: CatsService.VISIBILITY_SELECT,
     });
+
+    // Confirm the share in-app the moment it happens (a public action deserves a
+    // receipt — R024 spirit), with the link to the live profile.
+    if (newlyPublic) {
+      this.notifications.emit(userId, {
+        category: "COMMUNITY",
+        title: `${current?.name ?? "Your cat"} is live in the community`,
+        body: `Their public profile is now discoverable. Share the link and collect some love.`,
+        data: { kind: "cat_made_public", slug: updated.publicSlug },
+      });
+    }
+
+    return updated;
   }
 
   /** Stable, URL-safe public handle: latinized name + short random suffix. */

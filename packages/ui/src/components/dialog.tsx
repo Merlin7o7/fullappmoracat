@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "../lib/cn";
+import { useFocusTrap } from "../lib/use-focus-trap";
 
 interface DialogProps {
   open: boolean;
@@ -16,21 +17,19 @@ interface DialogProps {
 
 /** Accessible modal: role=dialog, aria-modal, Esc + scrim dismiss, focus capture. */
 export function Dialog({ open, onClose, title, description, children, footer, className }: DialogProps) {
-  const panelRef = React.useRef<HTMLDivElement>(null);
+  // Traps Tab within the panel and restores focus to the trigger on close.
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
   const titleId = React.useId();
   const descId = React.useId();
 
   React.useEffect(() => {
     if (!open) return;
-    const prev = document.activeElement as HTMLElement | null;
-    panelRef.current?.focus();
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
-      prev?.focus();
     };
   }, [open, onClose]);
 

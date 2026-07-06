@@ -6,7 +6,11 @@ import { Send, ArrowLeft, CheckCheck, X } from "lucide-react";
 import { Card, Badge, Button, DataTable, useToast, cn, type Column } from "@moraqat/ui";
 import { IlloMouse } from "@/components/illustrations";
 import { useAuth } from "@/lib/auth";
+import { useLocale } from "@/app/providers";
 import { TicketStatusBadge } from "@/components/ticket-status-badge";
+import { ConfirmDialog } from "@/app/admin/_components/confirm";
+import { titleCase, fmtDate, fmtDateTime } from "@/app/admin/_components/i18n";
+import { QueryError } from "@/components/query-error";
 
 interface TicketMessage { id: string; body: string; isStaff: boolean; createdAt: string }
 interface TicketRow {
@@ -19,11 +23,13 @@ const STATUSES = ["", "OPEN", "PENDING", "RESOLVED", "CLOSED"];
 
 export default function AdminSupport() {
   const { authedFetch, user } = useAuth();
+  const { locale } = useLocale();
+  const isAr = locale === "ar";
   const qc = useQueryClient();
   const [filter, setFilter] = React.useState("");
   const [selected, setSelected] = React.useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin-tickets", user?.id, filter],
     queryFn: () => authedFetch<TicketRow[]>(`/admin/support/tickets${filter ? `?status=${filter}` : ""}`),
     enabled: !!user?.isStaff,
@@ -33,7 +39,7 @@ export default function AdminSupport() {
 
   const columns: Column<TicketRow>[] = [
     {
-      key: "subject", header: "Ticket", sortable: true,
+      key: "subject", header: isAr ? "التذكرة" : "Ticket", sortable: true,
       render: (t) => (
         <div className="min-w-0">
           <p className="truncate font-medium">{t.subject}</p>
@@ -41,36 +47,38 @@ export default function AdminSupport() {
         </div>
       ),
     },
-    { key: "category", header: "Category", sortable: true, render: (t) => <span className="text-muted-foreground">{t.category ?? "—"}</span> },
+    { key: "category", header: isAr ? "التصنيف" : "Category", sortable: true, render: (t) => <span className="text-muted-foreground">{t.category ?? "—"}</span> },
     {
-      key: "priority", header: "Priority", sortable: true,
-      render: (t) => <Badge variant={t.priority === "URGENT" ? "destructive" : t.priority === "HIGH" ? "warning" : "secondary"}>{t.priority[0] + t.priority.slice(1).toLowerCase()}</Badge>,
+      key: "priority", header: isAr ? "الأولوية" : "Priority", sortable: true,
+      render: (t) => <Badge variant={t.priority === "URGENT" ? "destructive" : t.priority === "HIGH" ? "warning" : "secondary"}>{titleCase(t.priority)}</Badge>,
     },
     {
-      key: "updatedAt", header: "Updated", sortable: true, sortValue: (t) => t.updatedAt,
-      render: (t) => <span className="text-muted-foreground tabular">{new Date(t.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>,
+      key: "updatedAt", header: isAr ? "آخر تحديث" : "Updated", sortable: true, sortValue: (t) => t.updatedAt,
+      render: (t) => <span className="text-muted-foreground tabular">{fmtDate(t.updatedAt, isAr, { day: "numeric", month: "short" })}</span>,
     },
-    { key: "status", header: "Status", sortable: true, render: (t) => <TicketStatusBadge status={t.status} isAr={false} /> },
+    { key: "status", header: isAr ? "الحالة" : "Status", sortable: true, render: (t) => <TicketStatusBadge status={t.status} isAr={isAr} /> },
   ];
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Support</h1>
-          <p className="text-sm text-muted-foreground">{data ? `${data.length} tickets` : "—"}</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "الدعم" : "Support"}</h1>
+          <p className="text-sm text-muted-foreground">{data ? (isAr ? `${data.length.toLocaleString("ar-SA")} تذكرة` : `${data.length} tickets`) : "—"}</p>
         </div>
         {!active && (
           <select value={filter} onChange={(e) => setFilter(e.target.value)}
             className="h-10 rounded-full border border-input bg-background px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            {STATUSES.map((s) => <option key={s} value={s}>{s ? s[0] + s.slice(1).toLowerCase() : "All statuses"}</option>)}
+            {STATUSES.map((s) => <option key={s} value={s}>{s ? titleCase(s) : (isAr ? "كل الحالات" : "All statuses")}</option>)}
           </select>
         )}
       </div>
 
       {active ? (
-        <StaffThread ticket={active} authedFetch={authedFetch} onBack={() => setSelected(null)}
+        <StaffThread ticket={active} authedFetch={authedFetch} isAr={isAr} onBack={() => setSelected(null)}
           onChanged={() => qc.invalidateQueries({ queryKey: ["admin-tickets"] })} />
+      ) : isError ? (
+        <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
       ) : (
         <DataTable
           columns={columns}
@@ -78,18 +86,19 @@ export default function AdminSupport() {
           rowKey={(t) => t.ticketNumber}
           loading={isLoading}
           onRowClick={(t) => setSelected(t.ticketNumber)}
-          emptyState={<div className="flex flex-col items-center gap-3"><IlloMouse tone="sage" className="h-8 w-auto opacity-80" />No tickets</div>}
+          emptyState={<div className="flex flex-col items-center gap-3"><IlloMouse tone="sage" className="h-8 w-auto opacity-80" />{isAr ? "لا توجد تذاكر" : "No tickets"}</div>}
         />
       )}
     </div>
   );
 }
 
-function StaffThread({ ticket, authedFetch, onBack, onChanged }: {
+function StaffThread({ ticket, authedFetch, onBack, onChanged, isAr }: {
   ticket: TicketRow; authedFetch: ReturnType<typeof useAuth>["authedFetch"];
-  onBack: () => void; onChanged: () => void;
+  onBack: () => void; onChanged: () => void; isAr: boolean;
 }) {
   const [body, setBody] = React.useState("");
+  const [confirmClose, setConfirmClose] = React.useState(false);
   const { toast } = useToast();
 
   const act = useMutation({
@@ -97,14 +106,15 @@ function StaffThread({ ticket, authedFetch, onBack, onChanged }: {
       authedFetch(`/admin/support/tickets/${ticket.ticketNumber}/${verb}`, { method: "POST", body: JSON.stringify(payload ?? {}) }),
     onSuccess: (_d, { verb }) => {
       setBody("");
+      setConfirmClose(false);
       onChanged();
-      if (verb !== "reply") toast({ title: `Ticket ${verb}d`, variant: "success" });
+      if (verb === "resolve") toast({ title: isAr ? "تم حل التذكرة" : "Ticket resolved", variant: "success" });
+      else if (verb === "close") toast({ title: isAr ? "تم إغلاق التذكرة" : "Ticket closed", variant: "success" });
     },
-    onError: (e) => toast({ title: "Action failed", description: e.message, variant: "error" }),
+    onError: (e) => toast({ title: isAr ? "فشل الإجراء" : "Action failed", description: e.message, variant: "error" }),
   });
 
   const isClosed = ticket.status === "CLOSED";
-  const fmtTime = (d: string) => new Date(d).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   return (
     <Card className="p-6">
@@ -117,15 +127,15 @@ function StaffThread({ ticket, authedFetch, onBack, onChanged }: {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <TicketStatusBadge status={ticket.status} isAr={false} />
+          <TicketStatusBadge status={ticket.status} isAr={isAr} />
           {!isClosed && ticket.status !== "RESOLVED" && (
             <Button variant="outline" size="sm" onClick={() => act.mutate({ verb: "resolve" })} disabled={act.isPending}>
-              <CheckCheck className="size-4" /> Resolve
+              <CheckCheck className="size-4" /> {isAr ? "حل" : "Resolve"}
             </Button>
           )}
           {!isClosed && (
-            <Button variant="ghost" size="sm" onClick={() => act.mutate({ verb: "close" })} disabled={act.isPending}>
-              <X className="size-4" /> Close
+            <Button variant="ghost" size="sm" onClick={() => setConfirmClose(true)} disabled={act.isPending}>
+              <X className="size-4" /> {isAr ? "إغلاق" : "Close"}
             </Button>
           )}
         </div>
@@ -135,7 +145,7 @@ function StaffThread({ ticket, authedFetch, onBack, onChanged }: {
         {ticket.messages.map((m) => (
           <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-3 text-sm", m.isStaff ? "self-end bg-primary/10" : "self-start bg-muted")}>
             <p className="mb-1 text-[11px] font-medium text-muted-foreground">
-              {m.isStaff ? "Staff" : ticket.customer.name} · {fmtTime(m.createdAt)}
+              {m.isStaff ? (isAr ? "الموظف" : "Staff") : ticket.customer.name} · {fmtDateTime(m.createdAt, isAr)}
             </p>
             <p className="whitespace-pre-wrap">{m.body}</p>
           </div>
@@ -147,13 +157,27 @@ function StaffThread({ ticket, authedFetch, onBack, onChanged }: {
           <input
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Reply to the customer…"
-            aria-label="Staff reply"
+            placeholder={isAr ? "الرد على العميل…" : "Reply to the customer…"}
+            aria-label={isAr ? "رد الموظف" : "Staff reply"}
             className="h-11 flex-1 rounded-xl border border-input bg-background px-4 text-sm shadow-e1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          <Button type="submit" disabled={!body.trim() || act.isPending} aria-label="Send"><Send className="size-4" /></Button>
+          <Button type="submit" disabled={!body.trim() || act.isPending} aria-label={isAr ? "إرسال" : "Send"}><Send className="size-4" /></Button>
         </form>
       )}
+
+      <ConfirmDialog
+        open={confirmClose}
+        onClose={() => setConfirmClose(false)}
+        onConfirm={() => act.mutate({ verb: "close" })}
+        pending={act.isPending}
+        isAr={isAr}
+        destructive
+        title={isAr ? "إغلاق هذه التذكرة؟" : "Close this ticket?"}
+        description={isAr
+          ? "لن يتمكن العميل من الرد على تذكرة مغلقة. يمكنه فتح تذكرة جديدة إذا احتاج."
+          : "The customer won’t be able to reply to a closed ticket. They can open a new one if needed."}
+        confirmLabel={isAr ? "إغلاق التذكرة" : "Close ticket"}
+      />
     </Card>
   );
 }

@@ -50,6 +50,8 @@ function IssueIdFlow() {
 
   const [step, setStep] = React.useState<0 | 1>(0);
   const [ceremonyCat, setCeremonyCat] = React.useState<PortalCat | null>(null);
+  // First-ever Cat ID → after the ceremony, route through the one-time welcome.
+  const [firstIssue, setFirstIssue] = React.useState(false);
   const [f, setF] = React.useState({
     name: "",
     photoUrl: "",
@@ -86,7 +88,7 @@ function IssueIdFlow() {
         }).catch(() => {});
         updateUser({ firstName: parts[0] || user?.firstName, lastName: parts.slice(1).join(" ") || user?.lastName, phone: f.ownerPhone.trim() || user?.phone });
       }
-      return authedFetch<PortalCat>("/cats", {
+      return authedFetch<PortalCat & { firstCatIdIssued?: boolean }>("/cats", {
         method: "POST",
         body: JSON.stringify({
           name: f.name.trim(),
@@ -98,7 +100,8 @@ function IssueIdFlow() {
     onSuccess: (cat) => {
       qc.invalidateQueries({ queryKey: ["cats"] });
       qc.invalidateQueries({ queryKey: ["overview"] });
-      setCeremonyCat(cat); // the reveal — then straight into the subscription journey
+      setFirstIssue(Boolean(cat.firstCatIdIssued));
+      setCeremonyCat(cat); // the reveal — then the welcome (first time) or the cats page
     },
     onError: (e: Error) => toast({ title: isAr ? "تعذّر إصدار الهوية" : "Couldn't issue the Cat ID", description: e.message, variant: "error" }),
   });
@@ -227,7 +230,13 @@ function IssueIdFlow() {
               /* non-blocking — they can change it later in settings */
             }
           }}
-          onClose={() => router.push("/portal/cats")}
+          onClose={() =>
+            router.push(
+              firstIssue
+                ? `/portal/welcome?cat=${ceremonyCat.id}`
+                : "/portal/cats"
+            )
+          }
         />
       )}
     </div>

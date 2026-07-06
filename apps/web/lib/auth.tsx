@@ -103,8 +103,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     tokensRef.current = tokens;
     setState({ user, tokens, ready: true });
     if (typeof window !== "undefined") {
-      if (user && tokens) localStorage.setItem(STORAGE_KEY, JSON.stringify({ user, tokens }));
-      else localStorage.removeItem(STORAGE_KEY);
+      if (user && tokens) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ user, tokens }));
+        // Non-secret presence flag the edge middleware reads to gate /portal &
+        // /admin shells (the tokens themselves stay in localStorage). Persisted
+        // to match the localStorage session's lifetime, so a returning member
+        // isn't bounced to /login on a hard nav after a browser restart.
+        document.cookie = `mrc_auth=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+        document.cookie = "mrc_auth=; path=/; max-age=0; SameSite=Lax";
+      }
     }
   }, []);
 
@@ -116,6 +125,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(raw) as { user: AuthUser; tokens: Tokens };
         tokensRef.current = parsed.tokens;
         setState({ user: parsed.user, tokens: parsed.tokens, ready: true });
+        // Re-assert the middleware presence cookie in case it was cleared while
+        // the localStorage session persists (belt-and-suspenders with the
+        // persistent cookie set in persist()).
+        document.cookie = `mrc_auth=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
         return;
       }
     } catch {

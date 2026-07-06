@@ -234,6 +234,7 @@ enum NotificationCategory {
   PROMOTION
   SUBSCRIPTION
   DELIVERY
+  COMMUNITY
   SYSTEM
 }
 
@@ -314,6 +315,10 @@ model User {
   primaryCatId  String?    @unique
   termsAcceptedAt DateTime?
   isStaff       Boolean    @default(false)
+  /// Set the first time this member is shown the post-first-Cat-ID welcome
+  /// (Stage 4 ceremony hand-off). Null = never onboarded yet, so the very next
+  /// Cat ID issuance routes them to /portal/welcome exactly once.
+  onboardedAt   DateTime?
   lastLoginAt   DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -344,6 +349,7 @@ model User {
   questions      ProductQuestion[]
   wishlist       WishlistItem[]
   recentlyViewed RecentlyViewed[]
+  catLikes       CatLike[]
   notifications  Notification[]
   notifPrefs     NotificationPreference[]
   tickets        SupportTicket[]
@@ -577,6 +583,8 @@ model Address {
   subscriptions Subscription[]
 
   @@index([userId])
+  // Community city filter joins Cat→user→addresses(cityId) on the default addr.
+  @@index([cityId, isDefault])
   @@map("addresses")
 }
 
@@ -641,6 +649,10 @@ model Cat {
   /// the Moracat app / authorized partners to check identity + membership (R057).
   qrToken        String?       @unique
   name           String
+  /// Search-normalized copy of `name` (Arabic diacritics/tatweel stripped, alef
+  /// & yaa unified, lowercased). Maintained on write so community search matches
+  /// across spelling variants — Arabic is the default experience (R101).
+  nameNormalized String?
   photoUrl       String?
   breedId        String?
   gender         CatGender     @default(UNKNOWN)
@@ -682,6 +694,9 @@ model Cat {
   coverUrl       String?
   sharedAt       DateTime?
   viewCount      Int       @default(0)
+  /// Denormalized like tally — kept in lock-step with the CatLike rows via an
+  /// atomic increment/decrement so "Most Loved" sorts on an index, not a count().
+  likeCount      Int       @default(0)
   isFeatured     Boolean   @default(false)
   featuredAt     DateTime?
   /// Moderation: set when an admin hides a public cat. Non-null = not shown.
@@ -709,6 +724,7 @@ model Cat {
   recommendations FeedingRecommendation[]
   subscriptions   SubscriptionCat[]
   photos          CatPhoto[]
+  likes           CatLike[]
 
   @@index([userId])
   @@index([userId, status])
@@ -716,8 +732,28 @@ model Cat {
   // featured. Partial-index-friendly composite keys.
   @@index([isPublic, hiddenAt, sharedAt])
   @@index([isPublic, hiddenAt, viewCount])
+  @@index([isPublic, hiddenAt, likeCount])
   @@index([isPublic, isFeatured])
+  @@index([nameNormalized])
   @@map("cats")
+}
+
+/// A member's "love" for a public cat. One row per (user, cat) — the unique
+/// constraint makes the like idempotent, and Cat.likeCount is the denormalized
+/// tally kept in step with these rows inside a transaction.
+model CatLike {
+  id        String   @id @default(cuid())
+  userId    String
+  catId     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cat  Cat  @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, catId])
+  @@index([catId])
+  @@index([userId])
+  @@map("cat_likes")
 }
 
 /// A gallery photo for a cat (profile shots beyond the primary `photoUrl`).

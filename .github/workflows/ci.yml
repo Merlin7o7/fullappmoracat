@@ -34,8 +34,15 @@ jobs:
       - name: Typecheck
         run: pnpm --filter @moraqat/api typecheck && pnpm --filter @moraqat/web typecheck && pnpm --filter @moraqat/ui typecheck && pnpm --filter @moraqat/core typecheck
 
-      - name: Unit tests (feeding engine)
-        run: pnpm --filter @moraqat/core test
+      - name: Lint (web)
+        run: pnpm --filter @moraqat/web lint
+
+      - name: Unit tests
+        run: pnpm --filter @moraqat/core test && pnpm --filter @moraqat/api test
+
+      - name: Dependency audit (high+)
+        run: pnpm audit --audit-level=high --prod
+        continue-on-error: true
 
       - name: Build API
         run: pnpm --filter @moraqat/api build
@@ -80,8 +87,8 @@ jobs:
       - name: Build db + core + api
         run: pnpm --filter @moraqat/db build && pnpm --filter @moraqat/core build && pnpm --filter @moraqat/api build
 
-      - name: Push schema + seed
-        run: pnpm --filter @moraqat/db push && pnpm --filter @moraqat/db seed
+      - name: Apply migrations + seed (validates committed migrations)
+        run: pnpm --filter @moraqat/db migrate:deploy && pnpm --filter @moraqat/db seed
 
       - name: Run smoke suite
         run: node apps/api/e2e/run.mjs

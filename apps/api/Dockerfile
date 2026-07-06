@@ -45,4 +45,6 @@ USER app
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget -qO- http://localhost:4000/health || exit 1
-CMD ["node", "dist/main.js"]
+# Apply committed migrations (idempotent; Prisma holds an advisory lock so it's
+# safe if more than one instance starts), then boot. No manual `db push` in prod.
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node dist/main.js"]

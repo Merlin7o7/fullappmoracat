@@ -1,10 +1,13 @@
+// Must be first: initializes Sentry before the app is built (no-op without DSN).
+import "./instrument";
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
-import { ValidationPipe, Logger } from "@nestjs/common";
+import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
 import { join } from "node:path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import { Logger as PinoLogger } from "nestjs-pino";
 import { AppModule } from "./app.module";
 import { assertProductionConfig } from "./common/config/env.validation";
 
@@ -33,7 +36,19 @@ async function bootstrap() {
   // enabled commerce. Fail closed, loudly, before serving a single request.
   assertProductionConfig();
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    cors: false,
+    bufferLogs: true,
+  });
+
+  // Route all Nest logs through pino (structured JSON + request ids in prod).
+  app.useLogger(app.get(PinoLogger));
+
+  // Behind Render/Vercel/Cloudflare the client IP arrives in X-Forwarded-For.
+  // Trust the first proxy hop so req.ip is the real client — the per-IP rate
+  // limiter and login-history forensics depend on it (else every request looks
+  // like it comes from the proxy).
+  app.set("trust proxy", 1);
 
   // ── Security headers ──────────────────────────────────────────────────
   // crossOriginResourcePolicy relaxed so locally-served /uploads images can be
@@ -88,7 +103,7 @@ async function bootstrap() {
   // own API_PORT, so the same image runs unchanged on managed hosts.
   const port = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
   await app.listen(port);
-  Logger.log(`🚀 Moraqat API on http://localhost:${port} — docs at /api/docs`, "Bootstrap");
+  app.get(PinoLogger).log(`🚀 Moraqat API on http://localhost:${port}`);
 }
 
 void bootstrap();

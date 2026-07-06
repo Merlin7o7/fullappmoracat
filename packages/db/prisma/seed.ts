@@ -199,14 +199,24 @@ async function main() {
   console.log(`  ✓ RBAC: ${roles.length} roles, ${allPerms.length} permissions`);
 
   // ── Super-admin staff user (for the admin panel) ────────────────────────
+  // NEVER plant a known-credential backdoor in production. The seed admin is
+  // created only outside production, OR when an explicit ADMIN_SEED_PASSWORD is
+  // provided (a one-off, operator-run prod bootstrap). The password is never
+  // printed in production. Without ADMIN_SEED_PASSWORD in prod, this is skipped.
   const superAdminRole = await prisma.role.findUnique({ where: { key: "super_admin" } });
-  if (superAdminRole) {
+  const isProd = process.env.NODE_ENV === "production";
+  const adminEmail = process.env.ADMIN_SEED_EMAIL ?? "admin@moraqat.sa";
+  const adminPassword = process.env.ADMIN_SEED_PASSWORD ?? (isProd ? null : "Admin!2026");
+  if (superAdminRole && adminPassword) {
+    if (isProd && adminPassword.length < 12) {
+      throw new Error("ADMIN_SEED_PASSWORD must be ≥12 chars in production.");
+    }
     const admin = await prisma.user.upsert({
-      where: { email: "admin@moraqat.sa" },
+      where: { email: adminEmail },
       update: { isStaff: true, status: "ACTIVE" },
       create: {
-        email: "admin@moraqat.sa",
-        passwordHash: await hash("Admin!2026", 12),
+        email: adminEmail,
+        passwordHash: await hash(adminPassword, 12),
         firstName: "Moraqat",
         lastName: "Admin",
         isStaff: true,
@@ -219,7 +229,13 @@ async function main() {
       update: {},
       create: { userId: admin.id, roleId: superAdminRole.id },
     });
-    console.log("  ✓ admin user: admin@moraqat.sa / Admin!2026 (super_admin)");
+    console.log(
+      isProd
+        ? `  ✓ admin user: ${adminEmail} (super_admin) — password from ADMIN_SEED_PASSWORD`
+        : `  ✓ admin user: ${adminEmail} / ${adminPassword} (super_admin, dev only)`
+    );
+  } else if (superAdminRole) {
+    console.log("  • admin user skipped (production without ADMIN_SEED_PASSWORD)");
   }
 
   // ── Feature flags ────────────────────────────────────────────────────────

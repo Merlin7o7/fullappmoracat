@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Button } from "@moraqat/ui";
+import { Button, useFocusTrap } from "@moraqat/ui";
 import { CatIdCard } from "./cat-id-card";
 import { IlloPaw } from "./illustrations";
 
@@ -41,6 +41,9 @@ export function CatIdCeremony({
   const titleId = React.useId();
   const reduced = useReducedMotion();
   const [act, setAct] = React.useState<"stamping" | "reveal">(reduced ? "reveal" : "stamping");
+  // Trap focus within the ceremony and restore it to the trigger on close — the
+  // signature moment must not let keyboard focus wander to the page behind (R097).
+  const trapRef = useFocusTrap<HTMLDivElement>(true);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -50,7 +53,7 @@ export function CatIdCeremony({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+    <div ref={trapRef} className="fixed inset-0 z-[95] flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className="absolute inset-0 animate-fade-in bg-[hsl(168_50%_5%/0.9)] backdrop-blur-md" aria-hidden />
 
       {/* Screen readers get the outcome immediately — the theatre is visual only. */}

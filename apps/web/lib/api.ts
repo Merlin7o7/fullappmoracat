@@ -74,6 +74,7 @@ export interface CommunityCard {
   photoUrl: string | null;
   gender: string;
   viewCount: number;
+  likeCount: number;
   isFeatured: boolean;
   breed: LocalizedName | null;
   city: LocalizedName | null;
@@ -98,6 +99,12 @@ export interface CommunityProfile extends CommunityCard {
 export interface CommunityFacets {
   breeds: (LocalizedName & { id: string })[];
   cities: (LocalizedName & { id: string })[];
+}
+
+/** Response shape of POST/DELETE /community/cats/:slug/like (via authedFetch). */
+export interface LikeToggleResponse {
+  liked: boolean;
+  likeCount: number;
 }
 
 export const api = {

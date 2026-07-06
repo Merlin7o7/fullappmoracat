@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
+import { normalizeName } from "../common/text";
 import type { CommunityQueryDto } from "./dto/community-query.dto";
 
 const PAGE_SIZE = 24;
@@ -27,7 +28,17 @@ export class CommunityService {
     if (query.breedId) where.breedId = query.breedId;
     if (query.gender) where.gender = query.gender as Prisma.CatWhereInput["gender"];
     if (query.stage) where.lifeStage = query.stage as Prisma.CatWhereInput["lifeStage"];
-    if (query.search) where.name = { contains: query.search, mode: "insensitive" };
+    // Search the Arabic-folded copy so diacritic/tatweel/alef variants all match
+    // (R101). Fall back to the raw name for legacy rows not yet backfilled.
+    if (query.search) {
+      const term = normalizeName(query.search);
+      if (term) {
+        where.OR = [
+          { nameNormalized: { contains: term } },
+          { name: { contains: query.search, mode: "insensitive" } },
+        ];
+      }
+    }
     // City filter only matches cats that actually reveal their city (privacy).
     if (query.cityId) {
       where.showCity = true;
@@ -37,9 +48,11 @@ export class CommunityService {
     const orderBy: Prisma.CatOrderByWithRelationInput[] =
       query.sort === "viewed"
         ? [{ viewCount: "desc" }, { sharedAt: "desc" }]
-        : query.sort === "featured"
-          ? [{ isFeatured: "desc" }, { viewCount: "desc" }]
-          : [{ sharedAt: "desc" }];
+        : query.sort === "liked"
+          ? [{ likeCount: "desc" }, { sharedAt: "desc" }]
+          : query.sort === "featured"
+            ? [{ isFeatured: "desc" }, { viewCount: "desc" }]
+            : [{ sharedAt: "desc" }];
 
     const [rows, total] = await Promise.all([
       this.prisma.cat.findMany({
@@ -110,11 +123,13 @@ export class CommunityService {
 
   // ── Filter facets (breeds + cities that actually have public cats) ──────────
   async facets() {
-    const publicCats = await this.prisma.cat.findMany({
-      where: this.baseWhere(),
-      select: { breedId: true },
+    // Distinct breeds among public cats — a grouped aggregate, never a full scan
+    // of every public row into Node (that grew linearly with the community).
+    const grouped = await this.prisma.cat.groupBy({
+      by: ["breedId"],
+      where: { ...this.baseWhere(), breedId: { not: null } },
     });
-    const breedIds = [...new Set(publicCats.map((c) => c.breedId).filter(Boolean))] as string[];
+    const breedIds = grouped.map((g) => g.breedId).filter((b): b is string => Boolean(b));
     const [breeds, cities] = await Promise.all([
       this.prisma.breed.findMany({
         where: { id: { in: breedIds } },
@@ -138,6 +153,7 @@ export class CommunityService {
       photoUrl: true,
       gender: true,
       viewCount: true,
+      likeCount: true,
       isFeatured: true,
       sharedAt: true,
       lifeStage: true,
@@ -164,6 +180,7 @@ export class CommunityService {
     photoUrl: string | null;
     gender: string;
     viewCount: number;
+    likeCount: number;
     isFeatured: boolean;
     lifeStage: string | null;
     showBreed: boolean;
@@ -179,6 +196,7 @@ export class CommunityService {
       photoUrl: c.photoUrl,
       gender: c.gender,
       viewCount: c.viewCount,
+      likeCount: c.likeCount,
       isFeatured: c.isFeatured,
       breed: c.showBreed ? (c.breed ?? null) : null,
       city: c.showCity ? city : null,

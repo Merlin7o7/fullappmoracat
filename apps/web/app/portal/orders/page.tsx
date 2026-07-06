@@ -7,6 +7,7 @@ import { Card, Skeleton, Button } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { OrderStatusBadge } from "@/components/order-status-badge";
+import { QueryError } from "@/components/query-error";
 import { IlloCan, IlloPaw } from "@/components/illustrations";
 
 interface OrderRow {
@@ -23,7 +24,7 @@ export default function OrdersPage() {
   const { locale } = useLocale();
   const isAr = locale === "ar";
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["orders", user?.id],
     queryFn: () => authedFetch<OrderRow[]>("/orders"),
     enabled: !!user,
@@ -40,6 +41,8 @@ export default function OrdersPage() {
 
       {isLoading ? (
         <Skeleton className="h-48 w-full" />
+      ) : isError ? (
+        <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
       ) : data && data.length > 0 ? (
         <Card className="divide-y divide-border p-0">
           {data.map((o) => (
