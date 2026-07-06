@@ -62,6 +62,8 @@ export class StorageService {
       configured: this.isConfigured(),
       bucket: this.bucket,
       endpointHost: host(process.env.S3_ENDPOINT),
+      endpointRaw: JSON.stringify(process.env.S3_ENDPOINT ?? null), // full value (not secret; account id already public)
+      endpointLen: (process.env.S3_ENDPOINT ?? "").length,
       publicHost: host(process.env.S3_PUBLIC_URL),
       accessKeyTail: ak ? ak.slice(-6) : null,
       region: process.env.S3_REGION ?? null,
