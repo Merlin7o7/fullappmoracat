@@ -150,6 +150,7 @@ function VaxForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
   const [f, setF] = React.useState({ name: "", administeredAt: "", dueAt: "", clinic: "" });
   return (
     <FormShell isAr={isAr} pending={pending} disabled={!f.name || !f.administeredAt} onCancel={onCancel}
+      submitLabel={isAr ? "سجّل اللقاح" : "Record vaccine"}
       onSubmit={() => onSubmit({ name: f.name, administeredAt: f.administeredAt, dueAt: f.dueAt || undefined, clinic: f.clinic || undefined })}>
       <Field label={isAr ? "اللقاح" : "Vaccine"} required value={f.name} onChange={(v) => setF({ ...f, name: v })} placeholder={isAr ? "الحمى الثلاثية" : "Tricat"} />
       <Field label={isAr ? "تاريخ الإعطاء" : "Given on"} type="date" required value={f.administeredAt} onChange={(v) => setF({ ...f, administeredAt: v })} />
@@ -163,6 +164,7 @@ function VisitForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
   const [f, setF] = React.useState({ visitedAt: "", reason: "", clinic: "", diagnosis: "", cost: "" });
   return (
     <FormShell isAr={isAr} pending={pending} disabled={!f.reason || !f.visitedAt} onCancel={onCancel}
+      submitLabel={isAr ? "سجّل الزيارة" : "Record visit"}
       onSubmit={() => onSubmit({ visitedAt: f.visitedAt, reason: f.reason, clinic: f.clinic || undefined, diagnosis: f.diagnosis || undefined, cost: f.cost ? Number(f.cost) : undefined })}>
       <Field label={isAr ? "سبب الزيارة" : "Reason"} required value={f.reason} onChange={(v) => setF({ ...f, reason: v })} placeholder={isAr ? "فحص دوري" : "Check-up"} />
       <Field label={isAr ? "التاريخ" : "Date"} type="date" required value={f.visitedAt} onChange={(v) => setF({ ...f, visitedAt: v })} />
@@ -177,6 +179,7 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
   const [f, setF] = React.useState({ title: "", kind: "other", url: "" });
   return (
     <FormShell isAr={isAr} pending={pending} disabled={!f.title || !f.url} onCancel={onCancel}
+      submitLabel={isAr ? "أضف المستند" : "Add document"}
       onSubmit={() => onSubmit({ title: f.title, kind: f.kind, url: f.url })}>
       <Field label={isAr ? "العنوان" : "Title"} required value={f.title} onChange={(v) => setF({ ...f, title: v })} />
       <SelectField label={isAr ? "النوع" : "Kind"} value={f.kind} onChange={(v) => setF({ ...f, kind: v })}
@@ -199,14 +202,15 @@ interface FormProps {
   onCancel: () => void;
 }
 
-function FormShell({ isAr, pending, disabled, onCancel, onSubmit, children }: {
-  isAr: boolean; pending: boolean; disabled: boolean; onCancel: () => void; onSubmit: () => void; children: React.ReactNode;
+function FormShell({ isAr, pending, disabled, submitLabel, onCancel, onSubmit, children }: {
+  isAr: boolean; pending: boolean; disabled: boolean; submitLabel: string; onCancel: () => void; onSubmit: () => void; children: React.ReactNode;
 }) {
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="grid gap-3 sm:grid-cols-2">
       {children}
       <div className="flex gap-2 sm:col-span-2">
-        <Button type="submit" size="sm" loading={pending} disabled={disabled}>{isAr ? "حفظ" : "Save"}</Button>
+        {/* Buttons name the action, never "Save" (R086). */}
+        <Button type="submit" size="sm" loading={pending} disabled={disabled}>{submitLabel}</Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>{isAr ? "إلغاء" : "Cancel"}</Button>
       </div>
     </form>

@@ -58,7 +58,7 @@ function ResetPasswordInner() {
 
   if (done) {
     return (
-      <AuthShell isAr={isAr} title={isAr ? "تم بنجاح" : "All set"} subtitle={isAr ? "نوجّهك لتسجيل الدخول…" : "Taking you to login…"}>
+      <AuthShell isAr={isAr} title={isAr ? "تم — كل شيء تمام" : "All set"} subtitle={isAr ? "نوجّهك لتسجيل الدخول…" : "Taking you to login…"}>
         <div className="grid place-items-center py-6 text-success"><CheckCircle2 className="size-10" /></div>
       </AuthShell>
     );

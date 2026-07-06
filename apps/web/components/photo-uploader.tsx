@@ -63,7 +63,7 @@ export function PhotoUploader({
     // during normalization below; obvious non-images are rejected here.
     const looksImage = file.type === "" || /^image\//i.test(file.type);
     if (!looksImage) {
-      toast({ title: isAr ? "الرجاء اختيار صورة" : "Please choose an image", variant: "error" });
+      toast({ title: isAr ? "نحتاج ملف صورة — جرّب JPG أو PNG" : "That's not an image — try a JPG or PNG", variant: "error" });
       return;
     }
     if (file.size > MAX_INPUT_BYTES) {
