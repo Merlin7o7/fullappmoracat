@@ -24,27 +24,41 @@ interface CatIdCardProps {
   hideStatus?: boolean;
   /** Opt-in subtle motion (hero/ceremony). Off by default so exports stay static. */
   animated?: boolean;
-  // ── Detailed membership-card fields (#5) ──
+  // ── Detailed membership-card fields ──
   detailed?: boolean;
   ownerName?: string | null;
+  /** Shown as the emergency contact — the card's "bring my cat home" job (§05 job 1). */
   ownerPhone?: string | null;
   breed?: string | null;
   favoriteFood?: string | null;
+  gender?: string | null;
+  birthDate?: string | null;
+  vaccinationStatus?: string | null;
   /** Opaque QR verification token (#2) — encoded as `MRCV1:<token>`, never a URL. */
   qrToken?: string | null;
+  /** Static export rendering — drops the drop-shadow so the captured PNG has no
+   *  clipped shadow halo; geometry is identical (everything is sized in cqw). */
+  exportMode?: boolean;
   className?: string;
 }
 
 /**
- * The Cat ID — the membership made tangible (Dossier §05). Built like a luxury
- * credential: deep-jade field, a brushed gold-foil edge, an iridescent
- * holographic sheen, guilloché security lines, and a passport-style ID chip.
- * Quiet, precise, proud (R035) — something a member genuinely wants to share.
- * The QR is a secure in-ecosystem token, never a public link (#2).
+ * The Cat ID — the membership made tangible (Dossier §05). A civic credential
+ * in the brand's own materials: a deep-green field over a warm-paper data band
+ * (the passport MRZ, reimagined), guilloché engraving, an orange paw seal, and
+ * the cat's name set large in the display face — the cat is the hero (R009).
+ * Quietly premium through restraint — no gold, no glitter (Brand personality).
+ *
+ * Every dimension is in container-query units (cqw), so the card renders
+ * pixel-proportionally identically at any width — portal rail, phone drawer,
+ * or the fixed-width export node — and is locked to the physical ID-1 card
+ * ratio (85.6 × 54 mm) in BOTH simple and detailed modes, so PNG/PDF/print
+ * output can never crop or distort (R034).
  */
 export function CatIdCard({
   catName, catIdNumber, issuedAt, photoUrl, coverUrl, isAr, preview, hideStatus,
-  membershipActive, animated, detailed, ownerName, ownerPhone, breed, favoriteFood, qrToken, className,
+  membershipActive, animated, detailed, ownerName, ownerPhone, breed, favoriteFood,
+  gender, birthDate, vaccinationStatus, qrToken, exportMode, className,
 }: CatIdCardProps) {
   const since = issuedAt
     ? new Date(issuedAt).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { month: "short", year: "numeric" })
@@ -55,13 +69,15 @@ export function CatIdCard({
   const dispOwner = ownerName ? localizeName(ownerName, loc) : ownerName;
   // Before launch every membership is "Coming Soon"; after, inactive means lapsed.
   const comingSoon = !membershipActive && !commerceEnabled();
+  const age = birthDate ? ageLabel(birthDate, isAr) : null;
+  const sex = genderLabel(gender, isAr);
+  const meta = [sex, age, breed].filter(Boolean).join(" · ");
 
   return (
-    // Brushed gold-foil edge — the metallic border of a passport / premium card.
     <div
       className={cn(
-        "group relative w-full max-w-sm rounded-[1.3rem] p-[1.5px] shadow-e3",
-        "bg-[linear-gradient(140deg,rgba(240,225,190,0.55),rgba(191,155,90,0.35)_20%,rgba(255,255,255,0.06)_44%,rgba(255,255,255,0.03)_60%,rgba(191,155,90,0.30)_82%,rgba(240,225,190,0.5))]",
+        "w-full max-w-sm [container-type:inline-size]",
+        !exportMode && "drop-shadow-[0_18px_36px_hsl(165_40%_14%/0.28)]",
         className
       )}
     >
@@ -70,167 +86,162 @@ export function CatIdCard({
         aria-label={
           isAr ? `هوية القط: ${dispName}، الرقم ${catIdNumber}` : `Cat ID for ${dispName}, number ${catIdNumber}`
         }
-        className={cn(
-          "relative isolate overflow-hidden rounded-[1.2rem] p-5 text-white",
-          !detailed && "aspect-[1.586]",
-          "bg-[radial-gradient(125%_125%_at_0%_0%,hsl(168_72%_18%),hsl(169_82%_11%)_46%,hsl(174_82%_5%))]"
-        )}
+        className="relative isolate flex aspect-[85.6/54] flex-col overflow-hidden rounded-[5cqw]"
       >
-        {/* Optional cover wash — the cat's world, barely there. */}
-        {coverUrl && (
-          <ImgWithFallback
-            src={coverUrl}
-            alt=""
-            className="absolute inset-0 -z-10 size-full object-cover opacity-[0.14]"
-            fallback={<></>}
-          />
-        )}
-        {/* Guilloché security lines — fine engraving, like a banknote. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.5]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(115deg,rgba(255,255,255,0.045) 0 1px,transparent 1px 7px),repeating-linear-gradient(65deg,rgba(255,255,255,0.03) 0 1px,transparent 1px 9px)",
-          }}
-        />
-        {/* Iridescent holographic sheen — shifts gently on hover (subtle motion). */}
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute -inset-x-10 -inset-y-4 -z-10 translate-x-0 transition-transform duration-700 ease-out",
-            animated && "group-hover:translate-x-6"
+        {/* ── The green field — the brand's chrome, deep and calm ── */}
+        <div className="relative flex min-h-0 flex-1 flex-col justify-between px-[5.5cqw] pb-[3cqw] pt-[3.4cqw] text-white [background-image:radial-gradient(130%_130%_at_0%_0%,hsl(168_72%_19%),hsl(169_82%_11%)_52%,hsl(174_82%_6%))]">
+          {/* Optional cover wash — the cat's world, barely there. */}
+          {coverUrl && (
+            <ImgWithFallback
+              src={coverUrl}
+              alt=""
+              className="absolute inset-0 -z-10 size-full object-cover opacity-[0.14]"
+              fallback={<></>}
+            />
           )}
-          style={{
-            backgroundImage:
-              "linear-gradient(115deg,transparent 26%,hsla(20,90%,66%,0.12),hsla(280,80%,72%,0.10),hsla(190,90%,70%,0.11),transparent 72%)",
-          }}
-        />
-        {/* Top light + quiet paw seal. */}
-        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-1/2 bg-gradient-to-b from-white/[0.09] to-transparent" />
-        <PawPrint aria-hidden className="pointer-events-none absolute -bottom-8 -end-8 -z-10 size-40 rotate-[-12deg] text-white/[0.05]" strokeWidth={1.1} />
+          {/* Guilloché engraving — banknote craft, scaled with the card. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 opacity-50"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(115deg,rgba(255,255,255,0.045) 0 0.25cqw,transparent 0.25cqw 1.7cqw),repeating-linear-gradient(65deg,rgba(255,255,255,0.03) 0 0.25cqw,transparent 0.25cqw 2.1cqw)",
+            }}
+          />
+          {/* Soft light sweep — shifts gently on hover when animated. */}
+          <span
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute inset-0 -z-10 transition-transform duration-700 ease-out",
+              animated && "group-hover:translate-x-[3cqw]"
+            )}
+            style={{
+              backgroundImage:
+                "linear-gradient(115deg,transparent 30%,rgba(255,255,255,0.07) 46%,rgba(255,255,255,0.03) 55%,transparent 70%)",
+            }}
+          />
+          {/* Top light + quiet paw watermark. */}
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-1/2 bg-gradient-to-b from-white/[0.08] to-transparent" />
+          <PawPrint
+            aria-hidden
+            className="pointer-events-none absolute -end-[5cqw] top-[4cqw] -z-10 size-[34cqw] rotate-[14deg] text-white/[0.05]"
+            strokeWidth={1.1}
+          />
 
-        <div className="relative flex h-full flex-col justify-between gap-4">
-          {/* Header: foil seal + wordmark + standing */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2.5">
-              <span
-                className="grid size-8 place-items-center rounded-full ring-1 ring-white/25"
-                style={{ backgroundImage: "conic-gradient(from 210deg,rgba(240,225,190,0.9),rgba(191,155,90,0.5),rgba(255,255,255,0.85),rgba(191,155,90,0.5),rgba(240,225,190,0.9))" }}
-              >
-                <PawPrint className="size-4 text-[hsl(170_82%_12%)]" strokeWidth={2.2} />
+          {/* Header: paw seal + wordmark + standing */}
+          <div className="flex items-start justify-between gap-[3cqw]">
+            <div className="flex items-center gap-[2.4cqw]">
+              <span className="grid size-[7.5cqw] shrink-0 place-items-center rounded-full bg-[hsl(18_93%_58%)] ring-1 ring-white/25">
+                <PawPrint className="size-[4cqw] text-white" strokeWidth={2.4} />
               </span>
               <div className="leading-none">
-                <span className="block font-mono text-[10px] uppercase tracking-[0.24em] text-white/80">
+                <span className="block font-mono text-[2.6cqw] uppercase tracking-[0.32em] text-white/90">
                   {isAr ? "مرقط" : "Moracat"}
                 </span>
-                <span className="mt-1 block font-mono text-[8px] uppercase tracking-[0.28em] text-[hsl(42_60%_74%)]">
-                  {isAr ? "عضوية" : "Membership"}
+                <span className="mt-[1cqw] block font-mono text-[1.9cqw] uppercase tracking-[0.3em] text-[hsl(30_70%_82%)]">
+                  {isAr ? "هوية القط" : "Cat ID"}
                 </span>
               </div>
             </div>
 
             {preview ? (
-              <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[hsl(42_60%_74%)]">
+              <span className="font-mono text-[2.1cqw] uppercase tracking-[0.24em] text-[hsl(30_70%_82%)]">
                 {isAr ? "معاينة" : "Preview"}
               </span>
             ) : (
-              !hideStatus && (
-                <div className="flex flex-col items-end gap-1">
-                  <StatusPill active={!!membershipActive} comingSoon={comingSoon} isAr={isAr} />
-                  {comingSoon && (
-                    <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-[hsl(42_60%_72%)]">
-                      {isAr ? "قريباً" : "Coming soon"}
-                    </span>
-                  )}
-                </div>
-              )
+              !hideStatus && <StatusPill active={!!membershipActive} comingSoon={comingSoon} isAr={isAr} />
             )}
           </div>
 
-          {/* Identity: portrait + name */}
-          <div className="flex items-center gap-3.5">
+          {/* Identity: portrait + the name, large — the cat is the hero (R009). */}
+          <div className={cn("flex min-h-0 items-center gap-[3.4cqw]", !detailed && "flex-1")}>
             <span
               className={cn(
-                "relative shrink-0 rounded-full p-[2px]",
-                detailed ? "size-16" : "size-12"
+                "relative shrink-0 overflow-hidden rounded-[3cqw] bg-white/10 p-[0.6cqw] ring-1 ring-white/30",
+                detailed ? "size-[13.5cqw]" : "size-[16cqw]"
               )}
-              style={{ backgroundImage: "linear-gradient(140deg,rgba(240,225,190,0.8),rgba(191,155,90,0.35),rgba(255,255,255,0.5))" }}
             >
               <ImgWithFallback
                 src={photoUrl}
                 alt=""
-                className="size-full rounded-full object-cover"
+                className="size-full rounded-[2.5cqw] object-cover"
                 fallback={
-                  <span aria-hidden className="grid size-full place-items-center rounded-full bg-[hsl(170_60%_9%)]">
-                    <PawPrint className="size-5 text-white/45" />
+                  <span aria-hidden className="grid size-full place-items-center rounded-[2.5cqw] bg-[hsl(170_60%_9%)]">
+                    <PawPrint className="size-[6cqw] text-white/45" />
                   </span>
                 }
               />
             </span>
             <div className="min-w-0">
-              <p className="font-display text-[clamp(1.4rem,6cqw,2rem)] font-semibold leading-tight tracking-tight">
+              <p
+                className={cn(
+                  "truncate font-display font-semibold leading-[1.08] tracking-tight",
+                  detailed ? "text-[5.6cqw]" : "text-[7.2cqw]"
+                )}
+              >
                 {dispName}
               </p>
-              {since && (
-                <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/55">
+              {detailed && meta && (
+                <p className="mt-[1cqw] truncate text-[2.6cqw] leading-snug text-white/75">{meta}</p>
+              )}
+              {!detailed && since && (
+                <p className="mt-[1.2cqw] font-mono text-[2.2cqw] uppercase tracking-[0.16em] text-white/55">
                   {isAr ? `عضو منذ ${since}` : `Member since ${since}`}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Detailed fields (#5) */}
+          {/* The record: who to call, what's protected — the card's real jobs (§05). */}
           {detailed && (
-            <div className="flex items-end justify-between gap-3">
-              <dl className="grid flex-1 grid-cols-2 gap-x-3 gap-y-2 text-[11px] leading-tight">
-                <Detail label={isAr ? "المالك" : "Owner"} value={dispOwner} />
-                <Detail label={isAr ? "الجوال" : "Mobile"} value={ownerPhone} mono />
-                <Detail label={isAr ? "الفصيلة" : "Breed"} value={breed} />
-                <Detail label={isAr ? "الطعام المفضّل" : "Favourite food"} value={favoriteFood} />
-              </dl>
-              {qrValue && <QrTile value={qrValue} isAr={isAr} size={64} />}
-            </div>
+            <dl className="grid grid-cols-2 gap-x-[3.5cqw] gap-y-[1.6cqw]">
+              <Detail label={isAr ? "المالك" : "Owner"} value={dispOwner} isAr={isAr} />
+              <Detail label={isAr ? "للطوارئ" : "Emergency"} value={ownerPhone} isAr={isAr} mono />
+              <Detail label={isAr ? "التطعيمات" : "Vaccines"} value={vaccinationLabel(vaccinationStatus, isAr)} isAr={isAr} />
+              <Detail label={isAr ? "طعامه المفضّل" : "Favourite food"} value={favoriteFood} isAr={isAr} />
+            </dl>
           )}
+        </div>
 
-          {/* Footer: passport-style ID chip + QR / seal */}
-          <div className="flex items-end justify-between gap-3">
-            <div
-              className="rounded-lg px-2.5 py-1.5 ring-1 ring-white/12"
-              style={{ backgroundImage: "linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))" }}
-            >
-              <p className="font-mono text-[8px] uppercase tracking-[0.24em] text-[hsl(42_55%_70%)]">
-                {isAr ? "رقم الهوية" : "Cat ID"}
-              </p>
-              <p className="mt-0.5 font-mono text-sm tracking-[0.2em] text-white tabular" dir="ltr">
-                {catIdNumber}
-              </p>
-            </div>
-
-            {!detailed && !preview && qrValue ? (
-              <QrTile value={qrValue} isAr={isAr} size={46} />
-            ) : (
-              !qrValue &&
-              !preview && (
-                <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.2em] text-[hsl(42_60%_74%)]">
-                  <ShieldCheck className="size-3.5" />
-                  {isAr ? "هوية رسمية" : "Official ID"}
-                </span>
-              )
-            )}
+        {/* ── The paper band — warm ground, human-readable number, scannable QR ── */}
+        <div className="flex h-[19cqw] shrink-0 items-center justify-between gap-[3cqw] border-t border-dashed border-[hsl(168_35%_25%/0.3)] bg-[hsl(40_45%_96%)] px-[5.5cqw] text-[hsl(168_60%_10%)]">
+          <div className="min-w-0 leading-none">
+            <p className="truncate font-mono text-[1.9cqw] uppercase tracking-[0.26em] text-[hsl(168_30%_34%)]">
+              {isAr ? "رقم الهوية" : "Cat ID"}
+              {since ? (isAr ? ` · عضو منذ ${since}` : ` · Member since ${since}`) : ""}
+            </p>
+            <p className="mt-[1.6cqw] font-mono text-[4.4cqw] font-medium tracking-[0.16em] text-[hsl(170_82%_12%)] tabular" dir="ltr">
+              {catIdNumber}
+            </p>
           </div>
+
+          {!preview && qrValue ? (
+            <QrTile value={qrValue} isAr={isAr} />
+          ) : (
+            <span className="inline-flex shrink-0 items-center gap-[1.2cqw] font-mono text-[2cqw] uppercase tracking-[0.22em] text-[hsl(168_30%_34%)]">
+              <ShieldCheck className="size-[3.2cqw]" />
+              {isAr ? "هوية رسمية" : "Official ID"}
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-/** White QR tile with a gold hairline + micro-label — the "scan me" moment. */
-function QrTile({ value, size, isAr }: { value: string; size: number; isAr: boolean }) {
+/** White QR tile on the paper band — maximum contrast, honest quiet zone. */
+function QrTile({ value, isAr }: { value: string; isAr: boolean }) {
   return (
-    <div className="shrink-0 rounded-lg bg-white p-1.5 ring-1 ring-[rgba(191,155,90,0.5)]">
-      <QRCodeSVG value={value} size={size} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
-      <p className="mt-0.5 text-center font-mono text-[6px] uppercase tracking-[0.16em] text-[hsl(170_60%_22%)]">
+    <div className="shrink-0 rounded-[2cqw] bg-white p-[1.3cqw] shadow-[0_1px_2px_hsl(168_40%_20%/0.14)] ring-1 ring-[hsl(168_20%_78%)]">
+      <QRCodeSVG
+        value={value}
+        size={256}
+        level="M"
+        bgColor="#ffffff"
+        fgColor="#0b3b30"
+        style={{ width: "11.5cqw", height: "11.5cqw" }}
+      />
+      <p className="mt-[0.6cqw] text-center font-mono text-[1.5cqw] uppercase tracking-[0.18em] text-[hsl(168_30%_36%)]">
         {isAr ? "تحقّق" : "Verify"}
       </p>
     </div>
@@ -238,31 +249,73 @@ function QrTile({ value, size, isAr }: { value: string; size: number; isAr: bool
 }
 
 function StatusPill({ active, comingSoon, isAr }: { active: boolean; comingSoon: boolean; isAr: boolean }) {
-  // Gold when "coming soon", jade-green when active, muted when lapsed-inactive.
+  // Leaf-green when active, butter when "coming soon", muted when lapsed.
   const tone = active
-    ? "bg-[hsla(150,60%,45%,0.16)] text-[hsl(150_60%_82%)] ring-[hsla(150,60%,60%,0.35)]"
+    ? "bg-[hsl(150_60%_45%/0.16)] text-[hsl(150_60%_82%)] ring-[hsl(150_60%_60%/0.35)]"
     : comingSoon
-      ? "bg-[hsla(42,70%,55%,0.14)] text-[hsl(42_65%_78%)] ring-[hsla(42,65%,60%,0.35)]"
+      ? "bg-[hsl(44_80%_60%/0.14)] text-[hsl(44_75%_80%)] ring-[hsl(44_70%_62%/0.35)]"
       : "bg-white/10 text-white/60 ring-white/20";
-  const dot = active ? "bg-[hsl(150_60%_60%)]" : comingSoon ? "bg-[hsl(42_75%_62%)]" : "bg-white/40";
+  const dot = active ? "bg-[hsl(150_60%_60%)]" : comingSoon ? "bg-[hsl(44_80%_64%)]" : "bg-white/40";
   const label = active
     ? isAr ? "فعّالة" : "Active"
-    : isAr ? "غير مفعّلة" : "Inactive";
+    : comingSoon
+      ? isAr ? "قريباً" : "Coming soon"
+      : isAr ? "غير مفعّلة" : "Inactive";
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.15em] ring-1", tone)}>
-      <span className={cn("size-1.5 rounded-full", dot)} />
+    <span className={cn("inline-flex shrink-0 items-center gap-[1.3cqw] rounded-full px-[2.2cqw] py-[0.9cqw] text-[2cqw] font-semibold uppercase tracking-[0.16em] ring-1", tone)}>
+      <span className={cn("size-[1.4cqw] rounded-full", dot)} />
       {label}
     </span>
   );
 }
 
-function Detail({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
+function Detail({ label, value, isAr, mono }: { label: string; value?: string | null; isAr: boolean; mono?: boolean }) {
   return (
-    <div className="min-w-0">
-      <dt className="font-mono text-[8px] uppercase tracking-[0.15em] text-[hsl(42_45%_66%)]">{label}</dt>
-      <dd className={cn("truncate text-white/85", mono && "font-mono tabular")} dir={mono ? "ltr" : undefined}>
+    <div className="min-w-0 leading-none">
+      <dt className="font-mono text-[1.9cqw] uppercase tracking-[0.2em] text-[hsl(40_45%_85%)]/70">{label}</dt>
+      <dd
+        className={cn("mt-[1cqw] truncate text-[2.9cqw] leading-snug text-white/90", mono && "font-mono tracking-[0.06em] tabular")}
+        dir={mono ? "ltr" : undefined}
+        style={mono ? { textAlign: isAr ? "right" : "left" } : undefined}
+      >
         {value || "—"}
       </dd>
     </div>
   );
+}
+
+function genderLabel(gender: string | null | undefined, isAr: boolean): string | null {
+  if (gender === "MALE") return isAr ? "ذكر" : "Male";
+  if (gender === "FEMALE") return isAr ? "أنثى" : "Female";
+  return null;
+}
+
+function vaccinationLabel(status: string | null | undefined, isAr: boolean): string | null {
+  switch (status) {
+    case "UP_TO_DATE": return isAr ? "مكتملة" : "Up to date";
+    case "PARTIAL": return isAr ? "جزئية" : "Partial";
+    case "NONE": return isAr ? "لا يوجد" : "None";
+    default: return isAr ? "غير مسجّلة" : "Not recorded"; // honest, never invented (R040)
+  }
+}
+
+/** Rounded age from a birth date, in natural Arabic/English ("سنتين", "4 أشهر"). */
+function ageLabel(birthDate: string, isAr: boolean): string | null {
+  const b = new Date(birthDate);
+  if (Number.isNaN(+b)) return null;
+  const now = new Date();
+  let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
+  if (now.getDate() < b.getDate()) months -= 1;
+  if (months < 0) return null;
+  if (months < 12) {
+    if (!isAr) return `${months} mo`;
+    if (months <= 1) return "شهر";
+    if (months === 2) return "شهرين";
+    return months <= 10 ? `${months} أشهر` : `${months} شهر`;
+  }
+  const years = Math.floor(months / 12);
+  if (!isAr) return years === 1 ? "1 yr" : `${years} yrs`;
+  if (years === 1) return "سنة";
+  if (years === 2) return "سنتين";
+  return years <= 10 ? `${years} سنوات` : `${years} سنة`;
 }

@@ -24,6 +24,8 @@ export interface PortalCat {
   idIssuedAt: string | null;
   photoUrl: string | null;
   gender: string;
+  birthDate: string | null;
+  vaccinationStatus?: string | null;
   weightKg: number | null;
   activityLevel: string;
   isIndoor: boolean;

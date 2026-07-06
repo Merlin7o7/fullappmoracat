@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
-import { exportCardPng, exportCardPdf, printCard } from "@/lib/card-export";
+import { exportCardPng, exportCardPdf, printCard, exportSafeSrc } from "@/lib/card-export";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatManageDrawer } from "@/components/cat-manage-drawer";
 import { IlloCat, IlloMouse, IlloPaw } from "@/components/illustrations";
@@ -173,9 +173,13 @@ function CatCard({
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {cat.catIdNumber && <span className="font-mono tracking-wider tabular" dir="ltr">{cat.catIdNumber}</span>}
-            {cat.catIdNumber && (cat.breed || cat.weightKg) ? " · " : ""}
-            {cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : ""}
-            {cat.weightKg ? ` · ${cat.weightKg} ${isAr ? "كجم" : "kg"}` : ""}
+            {(() => {
+              const meta = [
+                cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : null,
+                cat.weightKg ? `${cat.weightKg} ${isAr ? "كجم" : "kg"}` : null,
+              ].filter(Boolean).join(" · ");
+              return meta ? `${cat.catIdNumber ? " · " : ""}${meta}` : "";
+            })()}
           </p>
         </div>
         {!cat.isPrimary && cat.status === "ACTIVE" && (
@@ -242,7 +246,10 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
   const { toast } = useToast();
   const [copied, setCopied] = React.useState(false);
   const [busy, setBusy] = React.useState<null | "pdf" | "png" | "print">(null);
-  const cardRef = React.useRef<HTMLDivElement>(null);
+  // Exports capture a dedicated off-screen node at a fixed 856px width — the
+  // on-screen card can be any size (phone drawer, desktop) without changing
+  // the exported artwork one pixel (R034).
+  const exportRef = React.useRef<HTMLDivElement>(null);
   const copy = () => {
     if (!cat.catIdNumber) return;
     navigator.clipboard?.writeText(cat.catIdNumber).then(() => {
@@ -255,12 +262,12 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
   const baseName = `Moracat-${cat.catIdNumber ?? cat.name}`;
 
   async function run(kind: "pdf" | "png" | "print") {
-    if (!cardRef.current) return;
+    if (!exportRef.current) return;
     setBusy(kind);
     try {
-      if (kind === "pdf") await exportCardPdf(cardRef.current, baseName);
-      else if (kind === "png") await exportCardPng(cardRef.current, baseName);
-      else await printCard(cardRef.current, baseName);
+      if (kind === "pdf") await exportCardPdf(exportRef.current, baseName);
+      else if (kind === "png") await exportCardPng(exportRef.current, baseName);
+      else await printCard(exportRef.current, baseName);
     } catch {
       toast({
         title: isAr ? "تعذّر التصدير" : "Export failed",
@@ -272,23 +279,37 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
     }
   }
 
+  const cardProps = {
+    detailed: true,
+    catName: cat.name,
+    catIdNumber: cat.catIdNumber!,
+    issuedAt: cat.idIssuedAt,
+    isAr,
+    membershipActive: cat.membershipStatus === "ACTIVE",
+    ownerName,
+    ownerPhone: user?.phone ?? null,
+    breed,
+    favoriteFood: cat.favoriteFoods?.[0] ?? null,
+    gender: cat.gender,
+    birthDate: cat.birthDate ?? null,
+    vaccinationStatus: cat.vaccinationStatus ?? null,
+    qrToken: cat.qrToken,
+  } as const;
+
   return (
     <div className="flex flex-col items-center gap-5 pt-2">
-      <div ref={cardRef} className="w-full max-w-sm">
-        <CatIdCard
-          detailed
-          catName={cat.name}
-          catIdNumber={cat.catIdNumber!}
-          issuedAt={cat.idIssuedAt}
-          photoUrl={cat.photoUrl}
-          isAr={isAr}
-          membershipActive={cat.membershipStatus === "ACTIVE"}
-          ownerName={ownerName}
-          ownerPhone={user?.phone ?? null}
-          breed={breed}
-          favoriteFood={cat.favoriteFoods?.[0] ?? null}
-          qrToken={cat.qrToken}
-        />
+      <div className="w-full max-w-sm">
+        <CatIdCard {...cardProps} photoUrl={cat.photoUrl} />
+      </div>
+
+      {/* Hidden fixed-width twin for export — identical composition (cqw units),
+          photo routed same-origin so the capture can embed it. The captured node
+          must be statically positioned (html-to-image keeps the root's computed
+          position, so capturing the fixed wrapper itself would render off-canvas). */}
+      <div aria-hidden className="pointer-events-none fixed top-0" style={{ left: -4000, zIndex: -1 }}>
+        <div ref={exportRef} style={{ width: 856 }}>
+          <CatIdCard {...cardProps} exportMode photoUrl={exportSafeSrc(cat.photoUrl)} className="max-w-none" />
+        </div>
       </div>
 
       {/* #6 Export — PDF / high-res PNG / print, full branding preserved. */}

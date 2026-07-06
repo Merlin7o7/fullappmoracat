@@ -40,6 +40,7 @@ type CatRow = {
   photoUrl: string | null;
   gender: string;
   birthDate: Date | null;
+  vaccinationStatus: string | null;
   weightKg: number | null;
   lifeStage: string | null;
   activityLevel: string;
@@ -567,6 +568,8 @@ export class CatsService {
       photoUrl: cat.photoUrl,
       gender: cat.gender,
       birthDate: cat.birthDate,
+      // On-card health signal (§05 job 2) — the ID shows vaccination standing.
+      vaccinationStatus: cat.vaccinationStatus,
       weightKg: cat.weightKg,
       lifeStage: cat.lifeStage,
       activityLevel: cat.activityLevel,
