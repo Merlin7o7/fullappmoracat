@@ -3,6 +3,8 @@ import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { IdsService } from "../ids/ids.service";
 import { StorageService } from "../storage/storage.service";
+import { MailService } from "../mail/mail.service";
+import { catIdIssuedTemplate } from "../mail/mail.templates";
 import type { UpdateVisibilityDto } from "./dto/cat-visibility.dto";
 
 /** Minimal shape of a multer-parsed upload (avoids an extra @types/multer dep). */
@@ -65,7 +67,8 @@ export class CatsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ids: IdsService,
-    private readonly storage: StorageService
+    private readonly storage: StorageService,
+    private readonly mail: MailService
   ) {}
 
   async create(userId: string, dto: CreateCatDto) {
@@ -112,10 +115,18 @@ export class CatsService {
     // step for single-cat owners (R005 one clear action).
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { primaryCatId: true },
+      select: { primaryCatId: true, email: true, firstName: true, locale: true },
     });
     if (!user?.primaryCatId) {
       await this.prisma.user.update({ where: { id: userId }, data: { primaryCatId: cat.id } });
+    }
+
+    // Celebrate the Cat ID the moment it's issued (R031/R073 — the reveal is the
+    // hero moment; the email is its echo). Fire-and-forget so it never blocks or
+    // fails the create; dev/log mode makes it a no-op without a mail key.
+    if (user?.email && cat.catIdNumber) {
+      const tpl = catIdIssuedTemplate(user.locale === "en" ? "en" : "ar", cat.name, cat.catIdNumber);
+      void this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
     }
 
     return this.serialize(cat as CatRow, user?.primaryCatId ?? cat.id);

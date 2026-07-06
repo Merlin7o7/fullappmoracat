@@ -7,6 +7,8 @@ import { randomBytes } from "node:crypto";
 import { Prisma } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { MailService } from "../mail/mail.service";
+import { supportTicketOpenedTemplate, supportReplyTemplate } from "../mail/mail.templates";
 import type { CreateTicketDto } from "./dto/support.dto";
 
 /**
@@ -21,8 +23,19 @@ import type { CreateTicketDto } from "./dto/support.dto";
 export class SupportService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly mail: MailService
   ) {}
+
+  private async emailUser(userId: string, build: (loc: "ar" | "en", name: string | null) => { subject: string; html: string; text: string }) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, firstName: true, locale: true },
+    });
+    if (!user?.email) return;
+    const tpl = build(user.locale === "en" ? "en" : "ar", user.firstName);
+    void this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+  }
 
   // ── Customer side ─────────────────────────────────────────────────────────
 
@@ -39,6 +52,8 @@ export class SupportService {
       },
       include: ticketInclude,
     });
+    // Confirm we've got it — with the ticket number to reference.
+    await this.emailUser(userId, (loc, name) => supportTicketOpenedTemplate(loc, name, ticket.ticketNumber, ticket.subject));
     return this.serialize(ticket);
   }
 
@@ -142,6 +157,8 @@ export class SupportService {
       body: `${ticket.ticketNumber}: ${ticket.subject}`,
       data: { ticketNumber: ticket.ticketNumber },
     });
+    // Nudge the customer by email too, so a reply isn't missed.
+    await this.emailUser(ticket.userId, (loc, name) => supportReplyTemplate(loc, name, ticket.ticketNumber));
 
     return this.getAny(ticketNumber);
   }

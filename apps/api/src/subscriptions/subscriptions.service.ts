@@ -6,6 +6,8 @@ import {
 } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
+import { MailService } from "../mail/mail.service";
+import { subscriptionConfirmedTemplate } from "../mail/mail.templates";
 import { commerceEnabled } from "../common/config/features";
 import type { CreateSubscriptionDto } from "./dto/subscription.dto";
 
@@ -17,7 +19,10 @@ const INTERVAL_DAYS: Record<string, number> = {
 
 @Injectable()
 export class SubscriptionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService
+  ) {}
 
   async create(userId: string, dto: CreateSubscriptionDto) {
     // Community Mode: paid activation is disabled. Membership must never flip to
@@ -112,6 +117,19 @@ export class SubscriptionsService {
 
     // Activate membership for the covered cats (#9).
     await this.syncCatsMembership(dto.catIds);
+
+    // Welcome to the plan — membership is the moment value goes live (R041).
+    const buyer = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, firstName: true, locale: true },
+    });
+    if (buyer?.email && sub.plan) {
+      const loc = buyer.locale === "en" ? "en" : "ar";
+      const planName = loc === "ar" ? sub.plan.nameAr : sub.plan.nameEn;
+      const nextAt = next.toLocaleDateString(loc === "ar" ? "ar-SA" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
+      const tpl = subscriptionConfirmedTemplate(loc, buyer.firstName, planName, nextAt);
+      void this.mail.send({ to: buyer.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    }
 
     return this.serialize(await this.reload(sub.id));
   }

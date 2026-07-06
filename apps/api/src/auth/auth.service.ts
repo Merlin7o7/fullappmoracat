@@ -17,6 +17,7 @@ import {
   otpEmailTemplate,
   welcomeTemplate,
   passwordResetTemplate,
+  passwordChangedTemplate,
   type Locale as MailLocale,
 } from "../mail/mail.templates";
 import type {
@@ -426,7 +427,7 @@ export class AuthService {
     if (!reset) throw new BadRequestException("Invalid or expired reset link");
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await this.prisma.$transaction([
+    const [user] = await this.prisma.$transaction([
       this.prisma.user.update({ where: { id: reset.userId }, data: { passwordHash } }),
       this.prisma.passwordReset.update({ where: { id: reset.id }, data: { usedAt: new Date() } }),
       // Revoke all sessions on reset.
@@ -435,6 +436,9 @@ export class AuthService {
         data: { revokedAt: new Date() },
       }),
     ]);
+    // Security confirmation — a silent password change is what an attacker wants.
+    const changed = passwordChangedTemplate(this.mailLocale(user.locale), user.firstName);
+    void this.mail.send({ to: user.email, subject: changed.subject, html: changed.html, text: changed.text });
     return { success: true };
   }
 

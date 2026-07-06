@@ -10,6 +10,8 @@ import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CartService } from "../cart/cart.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { MailService } from "../mail/mail.service";
+import { orderConfirmationTemplate, paymentReceiptTemplate } from "../mail/mail.templates";
 import {
   PAYMENT_PROVIDER_FACTORY,
   type IPaymentProviderFactory,
@@ -27,6 +29,7 @@ export class CheckoutService {
     private readonly prisma: PrismaService,
     private readonly cart: CartService,
     private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
     @Inject(PAYMENT_PROVIDER_FACTORY) private readonly payments: IPaymentProviderFactory
   ) {}
 
@@ -163,6 +166,24 @@ export class CheckoutService {
         : `${order.orderNumber} — ${Number(order.grandTotal)} ${order.currency}. We're preparing your box!`,
       data: { orderNumber: order.orderNumber },
     });
+
+    // Confirmed orders get a branded confirmation + receipt by email. Pending
+    // (redirect/BNPL) orders wait for the capture webhook to confirm first.
+    if (!isPending) {
+      const buyer = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, firstName: true, locale: true },
+      });
+      if (buyer?.email) {
+        const loc = buyer.locale === "en" ? "en" : "ar";
+        const items = order.items.map((it) => ({ name: loc === "ar" ? it.nameAr : it.nameEn, qty: it.quantity }));
+        const total = Number(order.grandTotal);
+        const conf = orderConfirmationTemplate(loc, buyer.firstName, order.orderNumber, total, items);
+        const rcpt = paymentReceiptTemplate(loc, buyer.firstName, order.orderNumber, total, Number(order.taxTotal), order.payments[0]?.provider ?? "—");
+        void this.mail.send({ to: buyer.email, subject: conf.subject, html: conf.html, text: conf.text });
+        void this.mail.send({ to: buyer.email, subject: rcpt.subject, html: rcpt.html, text: rcpt.text });
+      }
+    }
 
     return {
       orderNumber: order.orderNumber,
