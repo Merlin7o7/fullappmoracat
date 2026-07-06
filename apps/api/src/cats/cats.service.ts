@@ -310,7 +310,23 @@ export class CatsService {
 
   async remove(userId: string, id: string) {
     await this.ownedCat(userId, id);
-    await this.prisma.cat.update({ where: { id }, data: { deletedAt: new Date() } });
+    // Soft-delete AND withdraw from every public surface in one atomic write, so
+    // a deleted cat can never linger in the community browse, the featured rail,
+    // or resolve via its public slug — the community queries already filter
+    // deletedAt, but resetting these keeps the row honest and means a future
+    // restore comes back private-by-default rather than silently re-shared.
+    await this.prisma.cat.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        isPublic: false,
+        isFeatured: false,
+        featuredAt: null,
+      },
+    });
+    // Child rows (photos, health, vaccinations, feeding recs, subscription links)
+    // cascade at the DB via onDelete: Cascade on their FKs; the QR token + public
+    // slug stay on the row but no longer resolve (verify/profile filter deletedAt).
     await this.reassignPrimaryIfNeeded(userId, id);
     return { success: true };
   }

@@ -25,6 +25,11 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
     void qc.invalidateQueries({ queryKey: ["cats"] });
     void qc.invalidateQueries({ queryKey: ["overview"] });
     void qc.invalidateQueries({ queryKey: ["cat", cat.id] });
+    // Lifecycle changes (remove / archive / deceased / restore) all change what
+    // the community shows — refresh those caches too so a deleted or archived
+    // cat disappears from the browse + facets immediately, not on next reload.
+    void qc.invalidateQueries({ queryKey: ["community"] });
+    void qc.invalidateQueries({ queryKey: ["community-facets"] });
     refresh();
     toast({ title: msg, variant: "success" });
   };
