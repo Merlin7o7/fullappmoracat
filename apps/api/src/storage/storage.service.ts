@@ -2,12 +2,28 @@ import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common"
 import {
   S3Client,
   PutObjectCommand,
-  GetObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
-import { randomBytes, createHash } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { join, dirname } from "node:path";
+
+/**
+ * Reduce an S3/R2 endpoint to `scheme://host` — dropping any path (e.g. an
+ * accidentally-appended bucket name), query, trailing slash, or whitespace.
+ * Under path-style addressing the SDK appends `/{bucket}/{key}` itself, so the
+ * endpoint must never carry a path or keys get double-prefixed.
+ */
+function normalizeEndpoint(raw?: string): string | undefined {
+  const s = (raw ?? "").trim();
+  if (!s) return undefined;
+  try {
+    const u = new URL(s);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return s.replace(/\/+$/, "") || undefined;
+  }
+}
 
 /** Allowed image types → file extension. */
 const IMAGE_EXT: Record<string, string> = {
@@ -35,87 +51,6 @@ export class StorageService {
     return process.env.S3_BUCKET || "moracat-media";
   }
 
-  /** Non-secret config summary for diagnostics (safe to expose briefly). */
-  configSummary() {
-    const host = (u?: string) => {
-      try {
-        return u ? new URL(u).host : null;
-      } catch {
-        return "invalid";
-      }
-    };
-    const ak = process.env.S3_ACCESS_KEY ?? "";
-    // Compare each env value against the known-good local value by hash (safe to
-    // expose). Whichever is `false` is the env var that's wrong on this host.
-    const h = (s?: string) => createHash("sha256").update(s ?? "").digest("hex").slice(0, 16);
-    const REF: Record<string, string> = {
-      S3_ENDPOINT: "84c5df51a790502f",
-      S3_ACCESS_KEY: "fc119d37c1af137e",
-      S3_SECRET_KEY: "1472a982bed24ddd",
-      S3_BUCKET: "d6fef84cfb667fb2",
-      S3_PUBLIC_URL: "c7701d7b85b95d11",
-    };
-    const matchesLocal = Object.fromEntries(
-      Object.entries(REF).map(([k, ref]) => [k, h(process.env[k]) === ref])
-    );
-    return {
-      configured: this.isConfigured(),
-      bucket: this.bucket,
-      endpointHost: host(process.env.S3_ENDPOINT),
-      endpointRaw: JSON.stringify(process.env.S3_ENDPOINT ?? null), // full value (not secret; account id already public)
-      endpointLen: (process.env.S3_ENDPOINT ?? "").length,
-      publicHost: host(process.env.S3_PUBLIC_URL),
-      accessKeyTail: ak ? ak.slice(-6) : null,
-      region: process.env.S3_REGION ?? null,
-      nodeEnv: process.env.NODE_ENV ?? null,
-      matchesLocal,
-    };
-  }
-
-  /** Write → read-back → public-fetch round trip, for diagnosing prod uploads. */
-  async selfTest() {
-    if (!this.isConfigured()) return { configured: false };
-    const key = "_selftest/persistent.txt";
-    const out: Record<string, unknown> = { bucket: this.bucket, key };
-    try {
-      await this.s3().send(
-        new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: "selftest", ContentType: "text/plain" })
-      );
-      out.put = true;
-    } catch (e) {
-      out.put = false;
-      out.putError = (e as Error).name;
-      return out;
-    }
-    try {
-      const g = await this.s3().send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
-      out.getOk = true;
-      out.body = await g.Body?.transformToString();
-    } catch (e) {
-      out.getOk = false;
-      out.getError = (e as Error).name;
-    }
-    // Decisive: can THIS account's keys read an object written from my machine?
-    // If not, Render's R2 account/bucket differs from the one the public URL serves.
-    const localWriteKey = "users/cmr8fmw7b000m18wbb0llcunx/uploads/76955e81a85bce913899ea3c.png";
-    try {
-      await this.s3().send(new GetObjectCommand({ Bucket: this.bucket, Key: localWriteKey }));
-      out.canReadLocalWrite = true;
-    } catch (e) {
-      out.canReadLocalWrite = false;
-      out.localReadError = (e as Error).name;
-    }
-    const publicUrl = this.publicUrl(key);
-    out.publicUrl = publicUrl;
-    try {
-      const r = await fetch(publicUrl);
-      out.publicStatus = r.status;
-    } catch {
-      out.publicStatus = "fetch-error";
-    }
-    return out;
-  }
-
   /** True when real object storage is configured (else dev-local fallback). */
   isConfigured(): boolean {
     return Boolean(
@@ -128,10 +63,11 @@ export class StorageService {
 
   private s3(): S3Client {
     if (!this.client) {
-      // Normalize: a trailing slash or stray whitespace on the endpoint (a
-      // common copy-paste mistake) makes path-style requests resolve to a
-      // different location than the public bucket URL serves.
-      const endpoint = (process.env.S3_ENDPOINT ?? "").trim().replace(/\/+$/, "") || undefined;
+      // Normalize to scheme + host ONLY. A pasted endpoint that includes a
+      // path (e.g. ".../moracat-media", the bucket name) double-prefixes every
+      // object key under path-style addressing, so uploads land where the public
+      // bucket URL can't serve them. Stripping the path makes it robust.
+      const endpoint = normalizeEndpoint(process.env.S3_ENDPOINT);
       this.client = new S3Client({
         region: process.env.S3_REGION || "auto",
         endpoint,
