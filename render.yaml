@@ -26,7 +26,7 @@ services:
       - key: EMAIL_PROVIDER
         value: resend
       - key: EMAIL_FROM
-        value: Moracat <onboarding@resend.dev>
+        value: Moracat <noreply@moracat.co>
       # Resend API key — paste in the Render dashboard (kept secret).
       - key: RESEND_API_KEY
         sync: false
