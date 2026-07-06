@@ -12,6 +12,7 @@ import * as React from "react";
 import { Camera, ImageUp, Loader2, X, ZoomIn, Check, RotateCw } from "lucide-react";
 import { Button, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { ImgWithFallback } from "@/components/img-with-fallback";
 
 export interface PhotoUploaderProps {
   /** API path the compressed image is POSTed to (multipart field "file"). */
@@ -27,8 +28,14 @@ export interface PhotoUploaderProps {
   isAr?: boolean;
 }
 
-const OUT_TYPE = "image/webp";
-const MAX_INPUT_BYTES = 20 * 1024 * 1024; // pre-compression guard
+// JPEG, not WebP: canvas WebP *encoding* is unreliable on mobile Safari (older
+// iOS falls back to PNG or produces broken output). JPEG toBlob is universal.
+const OUT_TYPE = "image/jpeg";
+const OUT_QUALITY = 0.85;
+const MAX_INPUT_BYTES = 25 * 1024 * 1024; // pre-normalization guard
+// Downscale huge camera photos before any canvas work — iOS Safari blanks/fails
+// canvases over a device memory limit, and 12MP+ camera shots routinely exceed it.
+const MAX_SOURCE_EDGE = 2200;
 
 export function PhotoUploader({
   endpoint,
@@ -46,22 +53,38 @@ export function PhotoUploader({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [src, setSrc] = React.useState<string | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
+  const [preparing, setPreparing] = React.useState(false);
   const [progress, setProgress] = React.useState<number | null>(null); // null = idle
 
-  function pickFile(file: File | undefined | null) {
+  async function pickFile(file: File | undefined | null) {
     if (!file) return;
-    if (!/^image\/(jpe?g|png|webp)$/i.test(file.type)) {
-      toast({ title: isAr ? "الصور فقط: JPG أو PNG أو WebP" : "Images only: JPG, PNG, or WebP", variant: "error" });
+    // Accept anything the browser reports as an image, plus empty-type (iOS can
+    // hand back a HEIC/HEIF file with a blank MIME). Real decoding is validated
+    // during normalization below; obvious non-images are rejected here.
+    const looksImage = file.type === "" || /^image\//i.test(file.type);
+    if (!looksImage) {
+      toast({ title: isAr ? "الرجاء اختيار صورة" : "Please choose an image", variant: "error" });
       return;
     }
     if (file.size > MAX_INPUT_BYTES) {
-      toast({ title: isAr ? "الصورة كبيرة جداً (الحد ٢٠MB)" : "That image is too large (20 MB max)", variant: "error" });
+      toast({ title: isAr ? "الصورة كبيرة جداً (الحد ٢٥MB)" : "That image is too large (25 MB max)", variant: "error" });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setSrc(reader.result as string);
-    reader.onerror = () => toast({ title: isAr ? "تعذّر قراءة الملف" : "Couldn't read that file", variant: "error" });
-    reader.readAsDataURL(file);
+    setPreparing(true);
+    try {
+      // Normalize once: apply EXIF orientation and downscale. Everything
+      // downstream (crop preview + output) is then upright and memory-safe.
+      const normalized = await normalizeToDataUrl(file);
+      setSrc(normalized);
+    } catch {
+      toast({
+        title: isAr ? "تعذّر قراءة هذه الصورة" : "Couldn't read that image",
+        description: isAr ? "جرّب صورة بصيغة JPG أو PNG." : "Try a JPG or PNG image.",
+        variant: "error",
+      });
+    } finally {
+      setPreparing(false);
+    }
   }
 
   async function handleCropped(blob: Blob) {
@@ -69,7 +92,7 @@ export function PhotoUploader({
     setProgress(0);
     try {
       const res = await uploadImage<Record<string, unknown>>(endpoint, blob, {
-        filename: "photo.webp",
+        filename: "photo.jpg",
         onProgress: (p) => setProgress(p),
       });
       await onUploaded(res);
@@ -81,7 +104,8 @@ export function PhotoUploader({
     }
   }
 
-  const busy = progress !== null;
+  const uploading = progress !== null;
+  const busy = uploading || preparing;
 
   return (
     <div>
@@ -116,12 +140,12 @@ export function PhotoUploader({
             rounded ? "rounded-full" : "rounded-xl"
           )}
         >
-          {currentUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={currentUrl} alt="" className="size-full object-cover" />
-          ) : (
-            <Camera className="size-6 text-muted-foreground" />
-          )}
+          <ImgWithFallback
+            src={currentUrl}
+            alt=""
+            className="size-full object-cover"
+            fallback={<Camera className="size-6 text-muted-foreground" />}
+          />
           {busy && (
             <span className="absolute inset-0 grid place-items-center bg-background/75">
               <Loader2 className="size-5 animate-spin text-primary" />
@@ -130,7 +154,9 @@ export function PhotoUploader({
         </span>
 
         <div className="min-w-0 flex-1">
-          {busy ? (
+          {preparing ? (
+            <p className="text-sm font-medium">{isAr ? "جارٍ التحضير…" : "Preparing…"}</p>
+          ) : uploading ? (
             <>
               <p className="text-sm font-medium">{isAr ? "جارٍ الرفع…" : "Uploading…"}</p>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -200,6 +226,45 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = src;
   });
+}
+
+/**
+ * Decode a picked file into an upright, downscaled JPEG data URL. `createImageBitmap`
+ * with `imageOrientation: "from-image"` bakes out EXIF rotation (so iPhone camera
+ * shots aren't sideways) and lets us cap dimensions before any canvas work,
+ * sidestepping iOS Safari's canvas memory limits on large photos. Falls back to
+ * an <img> decode where createImageBitmap isn't available.
+ */
+async function normalizeToDataUrl(file: File): Promise<string> {
+  let source: ImageBitmap | HTMLImageElement;
+  let objectUrl: string | null = null;
+  try {
+    source = await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    objectUrl = URL.createObjectURL(file);
+    source = await loadImage(objectUrl);
+  }
+
+  const iw = "width" in source ? source.width : (source as HTMLImageElement).naturalWidth;
+  const ih = "height" in source ? source.height : (source as HTMLImageElement).naturalHeight;
+  const scale = Math.min(1, MAX_SOURCE_EDGE / Math.max(iw, ih));
+  const w = Math.max(1, Math.round(iw * scale));
+  const h = Math.max(1, Math.round(ih * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no 2d context");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source as CanvasImageSource, 0, 0, w, h);
+  if ("close" in source) source.close();
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+
+  const url = canvas.toDataURL(OUT_TYPE, 0.92);
+  // A blank/failed decode yields a suspiciously tiny data URL — treat as error.
+  if (url.length < 128) throw new Error("decode produced empty image");
+  return url;
 }
 
 function ImageCropper({ initialSrc, aspect, maxEdge, rounded, isAr, onCancel, onConfirm }: CropperProps) {
@@ -284,7 +349,7 @@ function ImageCropper({ initialSrc, aspect, maxEdge, rounded, isAr, onCancel, on
       ctx.imageSmoothingQuality = "high";
       const scale = baseScale * zoom;
       ctx.drawImage(imgRef.current, -offset.x / scale, -offset.y / scale, FRAME_W / scale, FRAME_H / scale, 0, 0, outW, outH);
-      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, OUT_TYPE, 0.85));
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, OUT_TYPE, OUT_QUALITY));
       if (blob) onConfirm(blob);
     } finally {
       setRendering(false);

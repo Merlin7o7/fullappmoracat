@@ -21,7 +21,7 @@ const NAV = [
   { href: "/portal", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة", exact: true },
   { href: "/portal/subscriptions", icon: Repeat, en: "Subscriptions", ar: "الاشتراكات" },
   { href: "/portal/cats", icon: Cat, en: "My Cats", ar: "قططي" },
-  { href: "/community", icon: Users, en: "Community", ar: "المجتمع" },
+  { href: "/portal/community", icon: Users, en: "Community", ar: "المجتمع" },
   { href: "/portal/orders", icon: Package, en: "Orders", ar: "الطلبات" },
   { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين" },
   { href: "/portal/notifications", icon: Bell, en: "Notifications", ar: "الإشعارات" },

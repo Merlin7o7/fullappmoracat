@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2, Images } from "lucide-react";
+import { Trash2, Images, PawPrint } from "lucide-react";
 import { useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { PhotoUploader } from "@/components/photo-uploader";
+import { ImgWithFallback } from "@/components/img-with-fallback";
 
 interface GalleryPhoto {
   id: string;
@@ -89,8 +90,17 @@ export function CatPhotosPanel({
         <div className="grid grid-cols-3 gap-2">
           {photos.map((p) => (
             <div key={p.id} className="group relative aspect-square overflow-hidden rounded-xl bg-muted ring-hairline">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.url} alt="" className="size-full object-cover" loading="lazy" />
+              <ImgWithFallback
+                src={p.url}
+                alt=""
+                loading="lazy"
+                className="size-full object-cover"
+                fallback={
+                  <span className="grid size-full place-items-center">
+                    <PawPrint className="size-6 text-muted-foreground/40" />
+                  </span>
+                }
+              />
               <button
                 onClick={() => removePhoto(p.id)}
                 aria-label={isAr ? "حذف" : "Delete"}

@@ -3,10 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { Share2, Eye, MapPin, Cat as CatIcon, Cake, ArrowLeft, Check } from "lucide-react";
+import { Share2, Eye, MapPin, Cat as CatIcon, Cake, ArrowLeft, Check, PawPrint } from "lucide-react";
 import { Badge, Button, useToast } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { CatIdCard } from "@/components/cat-id-card";
+import { ImgWithFallback } from "@/components/img-with-fallback";
 import { localizeName } from "@/lib/translit";
 import type { CommunityProfile } from "@/lib/api";
 
@@ -61,8 +62,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
       {/* Cover */}
       {cat.coverUrl && (
         <div className="mb-6 aspect-[16/6] w-full overflow-hidden rounded-3xl bg-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={cat.coverUrl} alt="" className="size-full object-cover" />
+          <ImgWithFallback src={cat.coverUrl} alt="" className="size-full object-cover" fallback={<span className="block size-full" />} />
         </div>
       )}
 
@@ -131,8 +131,17 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {cat.gallery.map((p) => (
               <div key={p.id} className="aspect-square overflow-hidden rounded-2xl bg-muted ring-hairline">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.url} alt="" loading="lazy" className="size-full object-cover" />
+                <ImgWithFallback
+                  src={p.url}
+                  alt=""
+                  loading="lazy"
+                  className="size-full object-cover"
+                  fallback={
+                    <span className="grid size-full place-items-center">
+                      <PawPrint className="size-8 text-muted-foreground/40" />
+                    </span>
+                  }
+                />
               </div>
             ))}
           </div>

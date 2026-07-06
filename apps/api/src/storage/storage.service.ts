@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import {
   S3Client,
   PutObjectCommand,
@@ -84,7 +84,16 @@ export class StorageService {
       return this.publicUrl(key);
     }
 
-    // ── Dev-only local fallback (never in production) ────────────────────
+    // Never fall back to local disk in production: the returned URL would point
+    // at the API host's ephemeral disk (and defaults to localhost), producing an
+    // unreachable image → a broken "?" on every device. Fail loudly instead so
+    // the client shows a clear error rather than storing a dead URL.
+    if (process.env.NODE_ENV === "production") {
+      this.logger.error("Upload attempted but object storage (S3_*) is not configured.");
+      throw new ServiceUnavailableException("Image storage is not configured");
+    }
+
+    // ── Dev-only local fallback ──────────────────────────────────────────
     const abs = join(process.cwd(), ".uploads", key);
     await mkdir(dirname(abs), { recursive: true });
     await writeFile(abs, body);

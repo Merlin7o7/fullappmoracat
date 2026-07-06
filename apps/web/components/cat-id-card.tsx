@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
 import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
+import { ImgWithFallback } from "@/components/img-with-fallback";
 
 interface CatIdCardProps {
   catName: string;
@@ -77,8 +78,12 @@ export function CatIdCard({
       >
         {/* Optional cover wash — the cat's world, barely there. */}
         {coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt="" aria-hidden className="absolute inset-0 -z-10 size-full object-cover opacity-[0.14]" />
+          <ImgWithFallback
+            src={coverUrl}
+            alt=""
+            className="absolute inset-0 -z-10 size-full object-cover opacity-[0.14]"
+            fallback={<></>}
+          />
         )}
         {/* Guilloché security lines — fine engraving, like a banknote. */}
         <span
@@ -152,14 +157,16 @@ export function CatIdCard({
               )}
               style={{ backgroundImage: "linear-gradient(140deg,rgba(240,225,190,0.8),rgba(191,155,90,0.35),rgba(255,255,255,0.5))" }}
             >
-              {photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photoUrl} alt="" className="size-full rounded-full object-cover" />
-              ) : (
-                <span aria-hidden className="grid size-full place-items-center rounded-full bg-[hsl(170_60%_9%)]">
-                  <PawPrint className="size-5 text-white/45" />
-                </span>
-              )}
+              <ImgWithFallback
+                src={photoUrl}
+                alt=""
+                className="size-full rounded-full object-cover"
+                fallback={
+                  <span aria-hidden className="grid size-full place-items-center rounded-full bg-[hsl(170_60%_9%)]">
+                    <PawPrint className="size-5 text-white/45" />
+                  </span>
+                }
+              />
             </span>
             <div className="min-w-0">
               <p className="font-display text-[clamp(1.4rem,6cqw,2rem)] font-semibold leading-tight tracking-tight">
