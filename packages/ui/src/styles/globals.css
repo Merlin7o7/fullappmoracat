@@ -80,6 +80,7 @@
     /* Fonts (wired by next/font) */
     --font-sans: "Inter", system-ui, sans-serif;
     --font-display: "Fraunces", Georgia, serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
     /* Overridden at runtime by next/font local (Lyon Arabic Display). */
     --font-arabic: var(--font-sans);
   }

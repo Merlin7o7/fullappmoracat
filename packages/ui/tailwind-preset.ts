@@ -86,6 +86,10 @@ const preset: Partial<Config> = {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         arabic: ["var(--font-arabic)", "system-ui", "sans-serif"],
         display: ["var(--font-display)", "var(--font-sans)", "sans-serif"],
+        // Deterministic mono (IBM Plex Mono via next/font) — the official layer
+        // (Cat ID numbers, card microtype) must render identically on every
+        // device, especially in card exports. OS monos are the fallback only.
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
       },
       fontSize: {
         // Type scale with paired line-heights + tracking (display is tighter).

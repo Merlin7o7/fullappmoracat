@@ -1,10 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Inter, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { Providers } from "./providers";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+// Deterministic mono for the "official layer" — Cat ID numbers, card microtype,
+// data chips. Without it, `font-mono` fell to ui-monospace (the OS font), so the
+// branded card — and its EXPORTS — rendered differently on every device.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
+  display: "swap",
+});
 // Display face: Fraunces — a warm, softly-inked serif with real character.
 // Latin only; Arabic display stays Lyon via the [dir="rtl"] font stack.
 const fraunces = Fraunces({
@@ -24,6 +33,12 @@ const arabic = localFont({
   src: "./fonts/lyon-arabic-display-regular.otf",
   variable: "--font-arabic",
   display: "swap",
+  // No auto-generated metric fallback: next/font's adjusted face covers
+  // U+0-10FFFF and would sit between Lyon and Inter in the RTL stack, so
+  // Latin (IDs, SAR, "PDF") rendered in adjusted-Arial instead of Inter.
+  // With it off, the unicode-range below keeps Lyon to Arabic letters and
+  // everything else falls straight through to the clean sans.
+  adjustFontFallback: false,
   declarations: [
     {
       prop: "unicode-range",
@@ -66,7 +81,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={`${inter.variable} ${fraunces.variable} ${arabic.variable} font-sans`}>
+      <body className={`${inter.variable} ${fraunces.variable} ${arabic.variable} ${plexMono.variable} font-sans`}>
         <Providers>{children}</Providers>
       </body>
     </html>
