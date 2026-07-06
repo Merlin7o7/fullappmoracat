@@ -16,6 +16,12 @@ const EXPORT_WIDTH_PX = 1712;
 // Instagram Stories are 1080×1920 — the story node is 540 CSS px wide (ratio 2).
 const STORY_WIDTH_PX = 1080;
 
+// iOS/macOS Safari rasterizes the capture's foreignObject SVG lazily: the first
+// draw(s) can come back partially painted — half-black output. Detect WebKit and
+// warm the pipeline up, keeping only the last (fully painted) render.
+const IS_WEBKIT =
+  typeof navigator !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 async function renderPng(node: HTMLElement, targetWidthPx = EXPORT_WIDTH_PX): Promise<string> {
   // Settle the type + photos before capture, or the card reflows mid-render
   // and the output no longer matches the design.
@@ -24,7 +30,12 @@ async function renderPng(node: HTMLElement, targetWidthPx = EXPORT_WIDTH_PX): Pr
     Array.from(node.querySelectorAll("img")).map((img) => img.decode().catch(() => undefined))
   );
   const pixelRatio = targetWidthPx / Math.max(1, node.offsetWidth);
-  return toPng(node, { pixelRatio, skipAutoScale: true });
+  const opts = { pixelRatio, skipAutoScale: true };
+  if (IS_WEBKIT) {
+    await toPng(node, opts);
+    await toPng(node, opts);
+  }
+  return toPng(node, opts);
 }
 
 /**

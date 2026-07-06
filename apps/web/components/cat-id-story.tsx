@@ -56,7 +56,10 @@ export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, 
             "radial-gradient(70% 45% at 50% 12%, hsl(166 91% 19% / 0.07), transparent 65%), radial-gradient(55% 40% at 50% 88%, hsl(18 93% 58% / 0.08), transparent 60%)",
         }}
       />
-      <div aria-hidden className="absolute inset-0 -z-10 opacity-[0.05] mix-blend-multiply" style={{ backgroundImage: GRAIN, backgroundSize: "160px 160px" }} />
+      {/* Plain low-opacity grain — NO mix-blend-mode: Safari's foreignObject
+          compositor mishandles blend modes and blacks out whole regions of the
+          captured image on iPhone. Visually near-identical at this opacity. */}
+      <div aria-hidden className="absolute inset-0 -z-10 opacity-[0.04]" style={{ backgroundImage: GRAIN, backgroundSize: "160px 160px" }} />
 
       {/* ── Header: the brand, then the announcement ── */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
