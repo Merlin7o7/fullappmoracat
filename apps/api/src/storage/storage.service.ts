@@ -126,9 +126,13 @@ export class StorageService {
 
   private s3(): S3Client {
     if (!this.client) {
+      // Normalize: a trailing slash or stray whitespace on the endpoint (a
+      // common copy-paste mistake) makes path-style requests resolve to a
+      // different location than the public bucket URL serves.
+      const endpoint = (process.env.S3_ENDPOINT ?? "").trim().replace(/\/+$/, "") || undefined;
       this.client = new S3Client({
         region: process.env.S3_REGION || "auto",
-        endpoint: process.env.S3_ENDPOINT,
+        endpoint,
         forcePathStyle: true, // R2 + custom endpoints want path-style addressing
         credentials: {
           accessKeyId: process.env.S3_ACCESS_KEY as string,
