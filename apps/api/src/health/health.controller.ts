@@ -1,4 +1,4 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
 import { ApiTags, ApiOkResponse } from "@nestjs/swagger";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
@@ -15,7 +15,7 @@ export class HealthController {
   @Public()
   @Get()
   @ApiOkResponse({ description: "Liveness + database connectivity probe" })
-  async check() {
+  async check(@Query("selftest") selftest?: string) {
     let db = "down";
     try {
       await this.prisma.$queryRaw`SELECT 1`;
@@ -29,6 +29,8 @@ export class HealthController {
       db,
       // TEMP diagnostic: non-secret storage config for debugging prod uploads.
       storage: this.storage.configSummary(),
+      // TEMP: ?selftest=1 does a write→read-back→public-fetch round trip.
+      ...(selftest === "1" ? { selfTest: await this.storage.selfTest() } : {}),
       timestamp: new Date().toISOString(),
     };
   }

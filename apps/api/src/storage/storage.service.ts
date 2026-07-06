@@ -2,6 +2,7 @@ import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common"
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { randomBytes } from "node:crypto";
@@ -53,6 +54,45 @@ export class StorageService {
       region: process.env.S3_REGION ?? null,
       nodeEnv: process.env.NODE_ENV ?? null,
     };
+  }
+
+  /** Write → read-back → public-fetch round trip, for diagnosing prod uploads. */
+  async selfTest() {
+    if (!this.isConfigured()) return { configured: false };
+    const key = `_selftest/${randomBytes(8).toString("hex")}.txt`;
+    const out: Record<string, unknown> = { bucket: this.bucket, key };
+    try {
+      await this.s3().send(
+        new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: "selftest", ContentType: "text/plain" })
+      );
+      out.put = true;
+    } catch (e) {
+      out.put = false;
+      out.putError = (e as Error).name;
+      return out;
+    }
+    try {
+      const g = await this.s3().send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      out.getOk = true;
+      out.body = await g.Body?.transformToString();
+    } catch (e) {
+      out.getOk = false;
+      out.getError = (e as Error).name;
+    }
+    const publicUrl = this.publicUrl(key);
+    out.publicUrl = publicUrl;
+    try {
+      const r = await fetch(publicUrl, { cache: "no-store" });
+      out.publicStatus = r.status;
+    } catch {
+      out.publicStatus = "fetch-error";
+    }
+    try {
+      await this.s3().send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    } catch {
+      /* best effort */
+    }
+    return out;
   }
 
   /** True when real object storage is configured (else dev-local fallback). */
