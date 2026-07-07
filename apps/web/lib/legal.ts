@@ -10,6 +10,8 @@ export interface LegalSection {
   body: { ar: string[]; en: string[] };
 }
 
+import { LEGAL_ENTITY, CONTACT } from "./org";
+
 export interface LegalDoc {
   slug: string;
   title: { ar: string; en: string };
@@ -18,9 +20,9 @@ export interface LegalDoc {
   sections: LegalSection[];
 }
 
-const UPDATED = "2026-07-05";
-const CONTACT_AR = "للاستفسارات المتعلقة بالخصوصية أو بياناتك، راسلنا على privacy@moracat.co.";
-const CONTACT_EN = "For privacy questions or requests about your data, contact us at privacy@moracat.co.";
+const UPDATED = "2026-07-08";
+const CONTACT_AR = `للاستفسارات المتعلقة بالخصوصية أو بياناتك، راسلنا على ${CONTACT.privacyEmail}، أو عبر إنستقرام ${CONTACT.instagramHandle}، أو هاتفياً على ${CONTACT.phone}.`;
+const CONTACT_EN = `For privacy questions or requests about your data, contact us at ${CONTACT.privacyEmail}, on Instagram ${CONTACT.instagramHandle}, or by phone at ${CONTACT.phone}.`;
 
 export const LEGAL_DOCS: LegalDoc[] = [
   {
@@ -28,8 +30,8 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: { ar: "سياسة الخصوصية", en: "Privacy Policy" },
     updated: UPDATED,
     intro: {
-      ar: "تصف هذه السياسة كيف تجمع مرقط بياناتك الشخصية وتستخدمها وتحميها، وحقوقك بموجب نظام حماية البيانات الشخصية في المملكة العربية السعودية.",
-      en: "This policy explains how Moracat collects, uses, and protects your personal data, and your rights under Saudi Arabia's Personal Data Protection Law (PDPL).",
+      ar: `تُشغَّل منصة مرقط من قِبل ${LEGAL_ENTITY.ar}. تصف هذه السياسة كيف تجمع مرقط بياناتك الشخصية وتستخدمها وتحميها، وحقوقك بموجب نظام حماية البيانات الشخصية في المملكة العربية السعودية.`,
+      en: `Moracat is operated by ${LEGAL_ENTITY.en}. This policy explains how Moracat collects, uses, and protects your personal data, and your rights under Saudi Arabia's Personal Data Protection Law (PDPL).`,
     },
     sections: [
       {
@@ -129,8 +131,8 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: { ar: "الشروط والأحكام", en: "Terms & Conditions" },
     updated: UPDATED,
     intro: {
-      ar: "باستخدامك منصة مرقط فإنك توافق على هذه الشروط. يرجى قراءتها بعناية.",
-      en: "By using Moracat you agree to these terms. Please read them carefully.",
+      ar: `باستخدامك منصة مرقط، التي تُشغّلها ${LEGAL_ENTITY.ar}، فإنك توافق على هذه الشروط. يرجى قراءتها بعناية.`,
+      en: `By using Moracat, operated by ${LEGAL_ENTITY.en}, you agree to these terms. Please read them carefully.`,
     },
     sections: [
       {

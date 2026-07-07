@@ -3,12 +3,13 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MapPin, Plus, Trash2, Loader2, Star, X } from "lucide-react";
-import { Card, Badge, Button, Skeleton } from "@moraqat/ui";
+import { Card, Badge, Button, Skeleton, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { QueryError } from "@/components/query-error";
 import { IlloPaw } from "@/components/illustrations";
+import { fetchWithTimeout, httpError } from "@/lib/http";
 
 interface Address {
   id: string;
@@ -29,6 +30,7 @@ export default function AddressesPage() {
   const { locale } = useLocale();
   const isAr = locale === "ar";
   const qc = useQueryClient();
+  const { toast } = useToast();
   const [showForm, setShowForm] = React.useState(false);
 
   const { data: addresses, isLoading, isError, refetch, isFetching } = useQuery({
@@ -36,9 +38,19 @@ export default function AddressesPage() {
     queryFn: () => authedFetch<Address[]>("/addresses"),
     enabled: !!user,
   });
-  const { data: cities } = useQuery({
+  // Cities feed the form's picker. It's a public endpoint, but it still needs a
+  // timeout and an honest error+retry — without cities the form can't be used,
+  // so a silent failure would leave the "Add" button doing nothing.
+  const {
+    data: cities, isLoading: citiesLoading, isError: citiesError,
+    refetch: refetchCities, isFetching: citiesFetching,
+  } = useQuery({
     queryKey: ["cities"],
-    queryFn: async () => (await fetch(`${API}/api/cities`)).json() as Promise<City[]>,
+    queryFn: async () => {
+      const res = await fetchWithTimeout(`${API}/api/cities`, { headers: { accept: "application/json" } });
+      if (!res.ok) throw httpError(res.status, await res.json().catch(() => null), "Couldn't load cities");
+      return res.json() as Promise<City[]>;
+    },
   });
 
   const create = useMutation({
@@ -48,6 +60,11 @@ export default function AddressesPage() {
   const remove = useMutation({
     mutationFn: (id: string) => authedFetch(`/addresses/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["addresses"] }),
+    onError: (e: Error) => toast({
+      title: isAr ? "تعذّر حذف العنوان" : "Couldn't remove the address",
+      description: e.message,
+      variant: "error",
+    }),
   });
 
   return (
@@ -57,12 +74,25 @@ export default function AddressesPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "العناوين" : "Addresses"}</h1>
           <p className="text-sm text-muted-foreground">{isAr ? "أماكن توصيل اشتراكك" : "Where your subscription is delivered"}</p>
         </div>
-        <Button size="sm" onClick={() => setShowForm((v) => !v)}><Plus className="size-4" /> {isAr ? "إضافة" : "Add"}</Button>
+        <Button size="sm" onClick={() => setShowForm((v) => !v)} disabled={citiesLoading}>
+          {citiesLoading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} {isAr ? "إضافة" : "Add"}
+        </Button>
       </div>
 
-      {showForm && cities && (
-        <AddressForm isAr={isAr} cities={cities} pending={create.isPending} error={create.error?.message}
-          onClose={() => setShowForm(false)} onSubmit={(b) => create.mutate(b)} />
+      {showForm && (
+        citiesLoading ? (
+          <Card className="p-6"><Skeleton className="h-40 w-full" /></Card>
+        ) : citiesError ? (
+          <QueryError
+            isAr={isAr}
+            onRetry={() => refetchCities()}
+            retrying={citiesFetching}
+            title={isAr ? "تعذّر تحميل قائمة المدن — أعد المحاولة لإضافة عنوان" : "We couldn't load the city list — try again to add an address"}
+          />
+        ) : cities && cities.length > 0 ? (
+          <AddressForm isAr={isAr} cities={cities} pending={create.isPending} error={create.error?.message}
+            onClose={() => setShowForm(false)} onSubmit={(b) => create.mutate(b)} />
+        ) : null
       )}
 
       {isLoading ? (
@@ -85,8 +115,15 @@ export default function AddressesPage() {
                 {a.street}{a.district ? `, ${a.district}` : ""}<br />
                 {isAr ? a.city.nameAr : a.city.nameEn}
               </p>
-              <Button variant="ghost" size="sm" className="mt-3 text-destructive" onClick={() => remove.mutate(a.id)} disabled={remove.isPending}>
-                <Trash2 className="size-4" /> {isAr ? "حذف" : "Remove"}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-3 text-destructive"
+                onClick={() => remove.mutate(a.id)}
+                disabled={remove.isPending}
+              >
+                {remove.isPending && remove.variables === a.id ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                {isAr ? "حذف" : "Remove"}
               </Button>
             </Card>
           ))}

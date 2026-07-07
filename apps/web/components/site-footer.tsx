@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { Instagram, Phone } from "lucide-react";
 import { useLocale } from "@/app/providers";
+import { CONTACT, LEGAL_ENTITY, copyright } from "@/lib/org";
 import { IlloCat, IlloMouse, IlloPaw, IlloSprig } from "./illustrations";
 
 /**
@@ -35,7 +37,7 @@ export function SiteFooter() {
       links: [
         { href: "/login", label: t.nav.login },
         { href: "/portal", label: isAr ? "بوابة الأعضاء" : "Member portal" },
-        { href: "/portal/support", label: isAr ? "الدعم" : "Support" },
+        { href: "/contact", label: isAr ? "تواصل معنا" : "Contact us" },
       ],
     },
   ];
@@ -64,6 +66,24 @@ export function SiteFooter() {
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-primary-foreground/85">
               {t.hero.subtitle}
             </p>
+            {/* Contact — reachable and clickable on mobile (tel:). */}
+            <div className="mt-6 flex flex-col gap-2.5">
+              <a
+                href={CONTACT.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-2 text-sm text-primary-foreground/85 transition-colors hover:text-primary-foreground"
+              >
+                <Instagram className="size-4" /> {CONTACT.instagramHandle}
+              </a>
+              <a
+                href={CONTACT.telHref}
+                dir="ltr"
+                className="inline-flex w-fit items-center gap-2 text-sm text-primary-foreground/85 transition-colors hover:text-primary-foreground"
+              >
+                <Phone className="size-4" /> {CONTACT.phoneDisplay}
+              </a>
+            </div>
           </div>
 
           {/* Link columns */}
@@ -110,7 +130,12 @@ export function SiteFooter() {
             <IlloPaw tone="peach" className="size-4" />
             {t.footerNote}
           </p>
-          <p className="text-xs text-primary-foreground/85">{t.footer}</p>
+          <div className="text-center sm:text-end">
+            <p className="text-xs text-primary-foreground/85">{copyright(locale)}</p>
+            <p className="mt-0.5 text-[11px] text-primary-foreground/60" dir={isAr ? "rtl" : "ltr"}>
+              {isAr ? LEGAL_ENTITY.ar : LEGAL_ENTITY.en}
+            </p>
+          </div>
         </div>
       </div>
 

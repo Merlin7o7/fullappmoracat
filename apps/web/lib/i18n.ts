@@ -49,7 +49,7 @@ export const dict = {
       sub: "دقيقتين وتكون الهوية بين يديك — ومعاينتها ببلاش.",
     },
     footerNote: "صُنعت بمحبة لأهل القطط — جدة والرياض",
-    footer: "© 2026 مرقط. كل الحقوق محفوظة.",
+    footer: "© 2026 مؤسسة عبدالرحمن منصور الغامدي التجارية. جميع الحقوق محفوظة.",
   },
   en: {
     dir: "ltr" as const,
@@ -93,7 +93,7 @@ export const dict = {
       sub: "Two minutes, and it's in your hands — the preview is free.",
     },
     footerNote: "Made with love for cat people — Jeddah & Riyadh",
-    footer: "© 2026 Moracat. All rights reserved.",
+    footer: "© 2026 Abdulrahman Mansour Alghamdi Trading Establishment. All rights reserved.",
   },
 } as const;
 

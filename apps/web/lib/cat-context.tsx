@@ -11,7 +11,9 @@
 
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { useLocale } from "@/app/providers";
 
 export type CatStatus = "ACTIVE" | "ARCHIVED" | "DECEASED";
 export type CatMembership = "ACTIVE" | "INACTIVE" | "PENDING";
@@ -47,6 +49,8 @@ interface CatContextValue {
   isLoading: boolean;
   /** True when the roster fetch failed — consumers must NOT treat [] as "no cats". */
   isError: boolean;
+  /** True while a (re)fetch is in flight — drives retry spinners. */
+  isFetching: boolean;
   /** Retry the roster fetch. */
   refetch: () => void;
   /** Instantly switch which cat the portal is acting on. */
@@ -68,10 +72,13 @@ const activeKey = (userId?: string) => `moraqat.activeCat.${userId ?? "anon"}`;
 
 export function CatProvider({ children }: { children: React.ReactNode }) {
   const { user, authedFetch, updateUser } = useAuth();
+  const { locale } = useLocale();
+  const { toast } = useToast();
+  const isAr = locale === "ar";
   const qc = useQueryClient();
   const [activeCatId, setActiveCatId] = React.useState<string | null>(null);
 
-  const { data: cats = [], isLoading, isError, refetch } = useQuery({
+  const { data: cats = [], isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["cats", user?.id],
     queryFn: () => authedFetch<PortalCat[]>("/cats"),
     enabled: !!user,
@@ -103,13 +110,35 @@ export function CatProvider({ children }: { children: React.ReactNode }) {
 
   const setPrimaryCat = React.useCallback(
     async (catId: string) => {
-      await authedFetch(`/cats/${catId}/primary`, { method: "POST", body: "{}" });
+      const key = ["cats", user?.id];
+      const previous = qc.getQueryData<PortalCat[]>(key);
+      const previousPrimaryId = previous?.find((c) => c.isPrimary)?.id ?? null;
+
+      // Optimistic: the star moves instantly so the choice feels immediate.
+      if (previous) {
+        qc.setQueryData<PortalCat[]>(key, previous.map((c) => ({ ...c, isPrimary: c.id === catId })));
+      }
       updateUser({ primaryCatId: catId });
       setActiveCat(catId);
-      await qc.invalidateQueries({ queryKey: ["cats"] });
-      await qc.invalidateQueries({ queryKey: ["overview"] });
+
+      try {
+        await authedFetch(`/cats/${catId}/primary`, { method: "POST", body: "{}" });
+        await qc.invalidateQueries({ queryKey: ["cats"] });
+        await qc.invalidateQueries({ queryKey: ["overview"] });
+      } catch (err) {
+        // Roll the optimistic change back and say so plainly — never leave a
+        // wrong "primary" showing after a failed write (R112).
+        if (previous) qc.setQueryData<PortalCat[]>(key, previous);
+        updateUser({ primaryCatId: previousPrimaryId });
+        toast({
+          title: isAr ? "تعذّر تعيين القط الأساسي" : "Couldn't set the primary cat",
+          description: err instanceof Error ? err.message : undefined,
+          variant: "error",
+        });
+        throw err; // callers' success chains must not run on failure
+      }
     },
-    [authedFetch, updateUser, setActiveCat, qc]
+    [authedFetch, updateUser, setActiveCat, qc, user?.id, toast, isAr]
   );
 
   const refresh = React.useCallback(() => {
@@ -130,12 +159,13 @@ export function CatProvider({ children }: { children: React.ReactNode }) {
       primaryCat,
       isLoading,
       isError,
+      isFetching,
       refetch,
       setActiveCat,
       setPrimaryCat,
       refresh,
     }),
-    [cats, activeCats, activeCat, primaryCat, isLoading, isError, refetch, setActiveCat, setPrimaryCat, refresh]
+    [cats, activeCats, activeCat, primaryCat, isLoading, isError, isFetching, refetch, setActiveCat, setPrimaryCat, refresh]
   );
 
   return <CatContext.Provider value={value}>{children}</CatContext.Provider>;

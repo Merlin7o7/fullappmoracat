@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays } from "lucide-react";
 import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
@@ -60,7 +61,7 @@ export default function SettingsPage() {
             }}
           />
           <PreferencesSection isAr={isAr} />
-          <PasswordSection isAr={isAr} authedFetch={authedFetch} onChanged={() => logout()} />
+          <PasswordSection isAr={isAr} authedFetch={authedFetch} logout={logout} />
           <TwoFactorSection isAr={isAr} enabled={profile.twoFactorEnabled} authedFetch={authedFetch} onChanged={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
         </>
       )}
@@ -224,21 +225,57 @@ function ProfileSection({ isAr, profile, authedFetch, onSaved }: {
   );
 }
 
-function PasswordSection({ isAr, authedFetch, onChanged }: {
-  isAr: boolean; authedFetch: ReturnType<typeof useAuth>["authedFetch"]; onChanged: () => void;
+function PasswordSection({ isAr, authedFetch, logout }: {
+  isAr: boolean; authedFetch: ReturnType<typeof useAuth>["authedFetch"]; logout: () => Promise<void>;
 }) {
+  const router = useRouter();
   const [f, setF] = React.useState({ currentPassword: "", newPassword: "" });
+  const [done, setDone] = React.useState(false);
   const change = useMutation({
     mutationFn: (body: Record<string, unknown>) => authedFetch("/account/change-password", { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: onChanged,
+    onSuccess: () => {
+      // Confirm success first, then wind the session down cleanly. Changing the
+      // password revokes every session, so we sign out and send them to /login
+      // with the reason — never a silent bounce, never a stuck spinner.
+      setF({ currentPassword: "", newPassword: "" });
+      setDone(true);
+      window.setTimeout(() => {
+        void logout().finally(() => router.replace("/login?reason=password-changed"));
+      }, 1600);
+    },
   });
+
+  if (done) {
+    return (
+      <SectionCard icon={Lock} title={isAr ? "كلمة المرور" : "Password"} desc={isAr ? "تم التحديث بنجاح" : "Updated successfully"}>
+        <div className="flex items-start gap-3 rounded-xl bg-primary/5 p-4">
+          <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/15 text-primary"><Check className="size-4" /></span>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">{isAr ? "تم تغيير كلمة المرور" : "Password changed"}</p>
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" />
+              {isAr
+                ? "لأمانك، سنسجّل خروجك من جميع الأجهزة وننقلك لتسجيل الدخول بكلمتك الجديدة…"
+                : "For your security, we're signing you out on all devices and taking you to sign in with your new password…"}
+            </p>
+          </div>
+        </div>
+      </SectionCard>
+    );
+  }
+
   return (
-    <SectionCard icon={Lock} title={isAr ? "كلمة المرور" : "Password"} desc={isAr ? "تغيير كلمة المرور يسجّل خروجك من الأجهزة الأخرى" : "Changing your password logs out other devices"}>
+    <SectionCard icon={Lock} title={isAr ? "كلمة المرور" : "Password"} desc={isAr ? "تغيير كلمة المرور يسجّل خروجك من كل الأجهزة" : "Changing your password signs you out on every device"}>
       <form onSubmit={(e) => { e.preventDefault(); change.mutate(f); }} className="grid gap-4">
         <Field label={isAr ? "كلمة المرور الحالية" : "Current password"} type="password" required value={f.currentPassword} onChange={(v) => setF({ ...f, currentPassword: v })} />
         <Field label={isAr ? "كلمة المرور الجديدة" : "New password"} type="password" required value={f.newPassword} onChange={(v) => setF({ ...f, newPassword: v })} />
+        <p className="text-xs text-muted-foreground">
+          {isAr
+            ? "بعد التغيير سنسجّل خروجك وتسجّل الدخول من جديد بكلمة المرور الجديدة."
+            : "After changing it, you'll be signed out and asked to sign in again with the new password."}
+        </p>
         {change.error && <p role="alert" className="text-sm text-destructive">{change.error.message}</p>}
-        <Button type="submit" variant="outline" disabled={change.isPending} className="w-fit">
+        <Button type="submit" variant="outline" disabled={change.isPending || !f.currentPassword || !f.newPassword} className="w-fit">
           {change.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تحديث كلمة المرور" : "Update password"}
         </Button>
       </form>

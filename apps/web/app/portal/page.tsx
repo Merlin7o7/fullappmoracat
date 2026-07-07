@@ -53,7 +53,10 @@ export default function OverviewPage() {
   const { authedFetch, user } = useAuth();
   const { locale } = useLocale();
   const isAr = locale === "ar";
-  const { primaryCat, activeCat, activeCats, setPrimaryCat, setActiveCat } = useCats();
+  const {
+    primaryCat, activeCat, activeCats, setPrimaryCat, setActiveCat,
+    isLoading: catsLoading, isError: catsError, isFetching: catsFetching, refetch: refetchCats,
+  } = useCats();
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["overview", user?.id],
@@ -100,8 +103,18 @@ export default function OverviewPage() {
         </p>
       </div>
 
-      {/* Featured Cat ID + household rail — the multi-cat hero (P09). */}
-      {activeCats.length > 0 && featured ? (
+      {/* Featured Cat ID + household rail — the multi-cat hero (P09).
+          A failed roster load must never masquerade as "no cats" (R112): show a
+          blameless retry, not the empty welcome. Only a real empty roster is a
+          welcome (R111). */}
+      {catsLoading ? (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr]">
+          <Skeleton className="h-56 w-full rounded-2xl" />
+          <Skeleton className="h-56 w-full rounded-2xl" />
+        </div>
+      ) : catsError ? (
+        <QueryError isAr={isAr} onRetry={() => refetchCats()} retrying={catsFetching} />
+      ) : activeCats.length > 0 && featured ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr]">
           <div className="space-y-3">
             <CatIdCard
@@ -124,7 +137,7 @@ export default function OverviewPage() {
             cats={activeCats}
             activeId={featured.id}
             onPick={setActiveCat}
-            onPrimary={(id) => void setPrimaryCat(id)}
+            onPrimary={(id) => { void setPrimaryCat(id).catch(() => {}); }}
           />
         </div>
       ) : (

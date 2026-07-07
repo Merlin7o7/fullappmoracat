@@ -155,7 +155,7 @@ export function CatSwitcher({ isAr }: { isAr: boolean }) {
                         type="button"
                         title={isAr ? "اجعله الأساسي" : "Make primary"}
                         aria-label={isAr ? "اجعله الأساسي" : "Make primary"}
-                        onClick={() => void setPrimaryCat(c.id)}
+                        onClick={() => { void setPrimaryCat(c.id).catch(() => {}); }}
                         className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/15 hover:text-accent-foreground"
                       >
                         <Star className="size-3.5" />

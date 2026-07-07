@@ -45,6 +45,16 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = React.useState("");
   const fullPhone = composePhone(dialCode, phone);
 
+  // A friendly reason banner when we bounced them here on purpose (e.g. after a
+  // password change) — set in an effect to keep SSR/first paint identical.
+  const [notice, setNotice] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get("reason");
+    if (reason === "password-changed") {
+      setNotice(isAr ? "تم تغيير كلمة المرور بنجاح. سجّل الدخول بكلمتك الجديدة." : "Your password was changed. Sign in with your new password.");
+    }
+  }, [isAr]);
+
   // Honour the ?next= the edge middleware appends so a bounced member lands back
   // where they were headed (only same-path internal targets, never an open
   // redirect). Read from the URL at call time — avoids the useSearchParams
@@ -133,6 +143,11 @@ export default function LoginPage() {
 
   return (
     <AuthShell isAr={isAr} title={isAr ? "مرحباً بعودتك" : "Welcome back"} subtitle={isAr ? "سجّل الدخول لإدارة عضويتك" : "Log in to manage your membership"}>
+      {notice && (
+        <div role="status" className="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-foreground">
+          {notice}
+        </div>
+      )}
       <div className="mb-5"><GoogleButton isAr={isAr} onCredential={onGoogle} /></div>
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" />

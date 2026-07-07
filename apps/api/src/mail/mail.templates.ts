@@ -28,6 +28,19 @@ const BRAND = {
   chipBg: "#f2ede2",
 };
 
+// The registered establishment operating the Moracat brand, plus real contact
+// channels — named in every email footer for trust and legal clarity.
+const LEGAL_ENTITY = {
+  ar: "مؤسسة عبدالرحمن منصور الغامدي التجارية",
+  en: "Abdulrahman Mansour Alghamdi Trading Establishment",
+};
+const CONTACT = {
+  phone: "+966551094814",
+  phoneDisplay: "+966 55 109 4814",
+  instagram: "@moracat.sa",
+  instagramUrl: "https://instagram.com/moracat.sa",
+};
+
 function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
 }
@@ -79,6 +92,9 @@ function layout(i: LayoutInput): string {
   const promise = rtl ? "مُرقّط — هوية قطك تبدأ من هنا." : "Moracat — where your cat's identity begins.";
   const help = rtl ? "تحتاج مساعدة؟" : "Need a hand?";
   const helpLink = rtl ? "الدعم" : "Contact support";
+  const entity = rtl ? LEGAL_ENTITY.ar : LEGAL_ENTITY.en;
+  const legalFoot = `<p style="margin:10px 0 0;font-size:11px;line-height:1.6;color:${BRAND.muted};">${entity}</p>
+          <p style="margin:4px 0 0;font-size:11px;line-height:1.6;color:${BRAND.muted};" dir="ltr"><a href="tel:${CONTACT.phone}" style="color:${BRAND.muted};text-decoration:none;">${CONTACT.phoneDisplay}</a> · <a href="${CONTACT.instagramUrl}" style="color:${BRAND.muted};text-decoration:none;">${CONTACT.instagram}</a></p>`;
 
   return `<!doctype html><html dir="${dir}" lang="${i.locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"></head>
 <body style="margin:0;padding:0;background:${BRAND.paper};font-family:${font};-webkit-font-smoothing:antialiased;">
@@ -103,6 +119,7 @@ function layout(i: LayoutInput): string {
         <tr><td style="padding:22px 10px 0;text-align:center;">
           <p style="margin:0 0 6px;font-size:12px;color:${BRAND.muted};">${help} <a href="${supportUrl()}" style="color:${BRAND.green};text-decoration:none;font-weight:600;">${helpLink}</a></p>
           <p style="margin:0;font-size:12px;color:${BRAND.muted};">${promise}</p>
+          ${legalFoot}
         </td></tr>
       </table>
     </td></tr>
@@ -136,7 +153,7 @@ function summary(rows: [string, string][], rtl: boolean): string {
 function toText(heading: string, body: string[], cta?: { label: string; url: string }, extraLines: string[] = []): string {
   const lines = [heading, "", ...body, ...extraLines];
   if (cta) lines.push("", `${cta.label}: ${cta.url}`);
-  lines.push("", "— Moracat");
+  lines.push("", "— Moracat", `${LEGAL_ENTITY.en} · ${CONTACT.phoneDisplay} · ${CONTACT.instagram}`);
   return lines.join("\n");
 }
 

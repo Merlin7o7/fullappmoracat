@@ -1,9 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { fetchWithTimeout, httpError, ApiError, friendly } from "./http";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 const STORAGE_KEY = "moraqat.auth";
+// Image/file uploads get a longer ceiling than JSON calls (mobile data), but
+// must still terminate rather than hang forever.
+const UPLOAD_TIMEOUT_MS = 30_000;
 
 export type Gender = "MALE" | "FEMALE" | "UNSPECIFIED";
 
@@ -82,16 +86,13 @@ export function useAuth() {
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, {
+  const res = await fetchWithTimeout(`${BASE}/api${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => null);
-  if (!res.ok) {
-    const message = Array.isArray(json?.message) ? json.message.join(", ") : json?.message;
-    throw new Error(message || `Request failed (${res.status})`);
-  }
+  if (!res.ok) throw httpError(res.status, json);
   return json as T;
 }
 
@@ -210,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const authedFetch = React.useCallback<AuthContextValue["authedFetch"]>(
     async (path, init = {}) => {
       const doFetch = (token: string) =>
-        fetch(`${BASE}/api${path}`, {
+        fetchWithTimeout(`${BASE}/api${path}`, {
           ...init,
           headers: {
             "content-type": "application/json",
@@ -234,17 +235,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const next = { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken };
           persist(state.user, next);
           res = await doFetch(next.accessToken);
-        } catch {
+        } catch (err) {
+          // A timeout/network blip on refresh must NOT nuke the session — only a
+          // genuine auth rejection should. Surface transient failures for retry.
+          if (err instanceof ApiError && (err.kind === "timeout" || err.kind === "network")) throw err;
           persist(null, null);
           throw new Error("Session expired");
         }
       }
 
       const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        const message = Array.isArray(json?.message) ? json.message.join(", ") : json?.message;
-        throw new Error(message || `Request failed (${res.status})`);
-      }
+      if (!res.ok) throw httpError(res.status, json);
       return json as never;
     },
     [persist, state.user]
@@ -253,7 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const authedBlob = React.useCallback<AuthContextValue["authedBlob"]>(
     async (path) => {
       const doFetch = (token: string) =>
-        fetch(`${BASE}/api${path}`, { headers: { authorization: `Bearer ${token}` } });
+        fetchWithTimeout(`${BASE}/api${path}`, { headers: { authorization: `Bearer ${token}` } });
 
       const tokens = tokensRef.current;
       if (!tokens) throw new Error("Not authenticated");
@@ -268,12 +269,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const next = { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken };
           persist(state.user, next);
           res = await doFetch(next.accessToken);
-        } catch {
+        } catch (err) {
+          if (err instanceof ApiError && (err.kind === "timeout" || err.kind === "network")) throw err;
           persist(null, null);
           throw new Error("Session expired");
         }
       }
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      if (!res.ok) throw httpError(res.status, await res.json().catch(() => null));
       return res.blob();
     },
     [persist, state.user]
@@ -283,11 +285,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (path, form, method = "POST") => {
       const doFetch = (token: string) =>
         // NOTE: no content-type header — the browser sets the multipart boundary.
-        fetch(`${BASE}/api${path}`, {
+        // Uploads get a longer ceiling than JSON calls: a photo on mobile data
+        // legitimately takes more than 10s, but must still never hang forever.
+        fetchWithTimeout(`${BASE}/api${path}`, {
           method,
           body: form,
           headers: { authorization: `Bearer ${token}` },
-        });
+        }, UPLOAD_TIMEOUT_MS);
 
       const tokens = tokensRef.current;
       if (!tokens) throw new Error("Not authenticated");
@@ -302,17 +306,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const next = { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken };
           persist(state.user, next);
           res = await doFetch(next.accessToken);
-        } catch {
+        } catch (err) {
+          if (err instanceof ApiError && (err.kind === "timeout" || err.kind === "network")) throw err;
           persist(null, null);
           throw new Error("Session expired");
         }
       }
 
       const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        const message = Array.isArray(json?.message) ? json.message.join(", ") : json?.message;
-        throw new Error(message || `Upload failed (${res.status})`);
-      }
+      if (!res.ok) throw httpError(res.status, json, "Upload failed");
       return json as never;
     },
     [persist, state.user]
@@ -325,6 +327,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const xhr = new XMLHttpRequest();
           xhr.open("POST", `${BASE}/api${path}`);
           xhr.setRequestHeader("authorization", `Bearer ${token}`);
+          // Bound the upload so a stalled connection surfaces as a friendly,
+          // retryable error instead of an endless progress bar.
+          xhr.timeout = UPLOAD_TIMEOUT_MS;
           xhr.upload.onprogress = (e) => {
             if (e.lengthComputable && opts?.onProgress) opts.onProgress(Math.round((e.loaded / e.total) * 100));
           };
@@ -339,6 +344,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             else reject({ status: xhr.status, json });
           };
           xhr.onerror = () => reject({ status: 0, json: null });
+          xhr.ontimeout = () => reject({ status: 0, json: null, timeout: true });
           const fd = new FormData();
           fd.append("file", blob, opts?.filename ?? "image.webp");
           xhr.send(fd);
@@ -350,7 +356,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         return (await send(tokens.accessToken)) as never;
       } catch (err) {
-        const e = err as { status?: number; json?: { message?: string | string[] } };
+        const e = err as { status?: number; json?: { message?: string | string[] }; timeout?: boolean };
         if (e.status === 401) {
           try {
             const refreshed = await apiPost<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
@@ -359,13 +365,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const next = { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken };
             persist(state.user, next);
             return (await send(next.accessToken)) as never;
-          } catch {
+          } catch (refreshErr) {
+            if (refreshErr instanceof ApiError && (refreshErr.kind === "timeout" || refreshErr.kind === "network")) throw refreshErr;
             persist(null, null);
             throw new Error("Session expired");
           }
         }
+        // status 0 = XHR timeout or network failure → friendly, retryable error.
+        if (!e.status) throw new ApiError(friendly(e.timeout ? "timeout" : "network"), e.timeout ? "timeout" : "network");
         const msg = Array.isArray(e.json?.message) ? e.json?.message.join(", ") : e.json?.message;
-        throw new Error(msg || `Upload failed (${e.status ?? "network"})`);
+        throw new Error(msg || `Upload failed (${e.status})`);
       }
     },
     [persist, state.user]

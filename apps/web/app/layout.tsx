@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { cookies } from "next/headers";
 import { Providers } from "./providers";
 import type { Locale } from "@/lib/i18n";
+import { BRAND, LEGAL_ENTITY, CONTACT } from "@/lib/org";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -79,6 +80,10 @@ export const metadata: Metadata = {
   // (The former en-SA → /en alternate 404'd; a real localized route doesn't exist.)
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
+  applicationName: BRAND.en,
+  // The registered establishment that operates the brand.
+  publisher: LEGAL_ENTITY.en,
+  creator: LEGAL_ENTITY.en,
 };
 
 export const viewport: Viewport = {
@@ -99,9 +104,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const locale: Locale = cookieLocale === "en" ? "en" : "ar";
   const dir = locale === "ar" ? "rtl" : "ltr";
 
+  // Organization structured data — names the legal entity behind the brand so
+  // search/knowledge surfaces attribute Moracat to its operating establishment.
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: BRAND.en,
+    legalName: LEGAL_ENTITY.en,
+    alternateName: [BRAND.ar, LEGAL_ENTITY.ar],
+    url: siteUrl,
+    logo: `${siteUrl}/opengraph-image`,
+    email: CONTACT.supportEmail,
+    telephone: CONTACT.phone,
+    sameAs: [CONTACT.instagramUrl],
+    address: { "@type": "PostalAddress", addressCountry: "SA", addressRegion: "Jeddah & Riyadh" },
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: CONTACT.phone,
+      contactType: "customer support",
+      email: CONTACT.supportEmail,
+      areaServed: "SA",
+      availableLanguage: ["ar", "en"],
+    },
+  };
+
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={`${inter.variable} ${fraunces.variable} ${arabic.variable} ${plexMono.variable} font-sans`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
         {/* Skip link — keyboard users jump past the nav to content (R097). */}
         <a
           href="#main"

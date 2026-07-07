@@ -1,4 +1,6 @@
 /** Thin typed client for the Moraqat API. */
+import { fetchWithTimeout, httpError } from "./http";
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
 export interface ProductListItem {
@@ -23,8 +25,8 @@ export interface ProductsResponse {
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, { headers: { accept: "application/json" } });
-  if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
+  const res = await fetchWithTimeout(`${BASE}/api${path}`, { headers: { accept: "application/json" } });
+  if (!res.ok) throw httpError(res.status, await res.json().catch(() => null), `API request to ${path} failed`);
   return res.json() as Promise<T>;
 }
 

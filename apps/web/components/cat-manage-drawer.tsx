@@ -101,7 +101,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
               variant={cat.isPrimary ? "outline" : "primary"}
               size="sm"
               disabled={cat.isPrimary}
-              onClick={() => setPrimaryCat(cat.id).then(() => done(isAr ? `${cat.name} صار القط الأساسي` : `${cat.name} is now primary`))}
+              onClick={() => { void setPrimaryCat(cat.id).then(() => done(isAr ? `${cat.name} صار القط الأساسي` : `${cat.name} is now primary`)).catch(() => {}); }}
             >
               <Star className="size-4" /> {cat.isPrimary ? (isAr ? "الأساسي" : "Primary") : (isAr ? "اجعله الأساسي" : "Make primary")}
             </Button>

@@ -128,7 +128,7 @@ export default function CatsPage() {
               onIdCard={() => setIdCardCat(cat)}
               onFeed={() => feed.mutate(cat.id)}
               onManage={() => setManageCat(cat)}
-              onPrimary={() => setPrimaryCat(cat.id)}
+              onPrimary={() => { void setPrimaryCat(cat.id).catch(() => {}); }}
             />
           ))}
         </div>
