@@ -45,6 +45,10 @@ interface CatContextValue {
   activeCatId: string | null;
   primaryCat: PortalCat | null;
   isLoading: boolean;
+  /** True when the roster fetch failed — consumers must NOT treat [] as "no cats". */
+  isError: boolean;
+  /** Retry the roster fetch. */
+  refetch: () => void;
   /** Instantly switch which cat the portal is acting on. */
   setActiveCat: (catId: string) => void;
   /** Persist a new Primary Cat (server + cached user). */
@@ -67,7 +71,7 @@ export function CatProvider({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
   const [activeCatId, setActiveCatId] = React.useState<string | null>(null);
 
-  const { data: cats = [], isLoading } = useQuery({
+  const { data: cats = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["cats", user?.id],
     queryFn: () => authedFetch<PortalCat[]>("/cats"),
     enabled: !!user,
@@ -125,11 +129,13 @@ export function CatProvider({ children }: { children: React.ReactNode }) {
       activeCatId: activeCat?.id ?? null,
       primaryCat,
       isLoading,
+      isError,
+      refetch,
       setActiveCat,
       setPrimaryCat,
       refresh,
     }),
-    [cats, activeCats, activeCat, primaryCat, isLoading, setActiveCat, setPrimaryCat, refresh]
+    [cats, activeCats, activeCat, primaryCat, isLoading, isError, refetch, setActiveCat, setPrimaryCat, refresh]
   );
 
   return <CatContext.Provider value={value}>{children}</CatContext.Provider>;

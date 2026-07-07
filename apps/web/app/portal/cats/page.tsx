@@ -13,6 +13,7 @@ import { exportCardPng, exportCardPdf, printCard, shareStoryPng, exportSafeSrc }
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatIdStory } from "@/components/cat-id-story";
 import { CatManageDrawer } from "@/components/cat-manage-drawer";
+import { QueryError } from "@/components/query-error";
 import { IlloCat, IlloMouse, IlloPaw } from "@/components/illustrations";
 
 interface Recommendation {
@@ -31,7 +32,7 @@ export default function CatsPage() {
   const { authedFetch } = useAuth();
   const { locale } = useLocale();
   const isAr = locale === "ar";
-  const { cats, isLoading, setPrimaryCat } = useCats();
+  const { cats, isLoading, isError, refetch, setPrimaryCat } = useCats();
 
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("ALL");
@@ -109,7 +110,11 @@ export default function CatsPage() {
         </div>
       )}
 
-      {isLoading ? (
+      {isError ? (
+        /* Never show the "add your first cat" welcome on a failed load — that
+           would tell a member with cats they have none (R112). */
+        <QueryError isAr={isAr} onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2">{[0, 1].map((i) => <Skeleton key={i} className="h-44 w-full" />)}</div>
       ) : filtered.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
