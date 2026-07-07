@@ -384,9 +384,13 @@ export class CatsService implements OnModuleInit {
 
   async restore(userId: string, id: string) {
     await this.ownedCat(userId, id);
+    // Restore the lifecycle status only — NEVER re-grant membership. Membership
+    // is earned by an active subscription (and is disabled in Community Mode);
+    // unconditionally setting ACTIVE here handed archived cats a free "Member"
+    // badge + membershipActive in /verify. Leave membershipStatus untouched.
     const cat = await this.prisma.cat.update({
       where: { id },
-      data: { status: "ACTIVE", archivedAt: null, deceasedAt: null, membershipStatus: "ACTIVE" },
+      data: { status: "ACTIVE", archivedAt: null, deceasedAt: null },
       include: catInclude,
     });
     const user = await this.prisma.user.findUnique({

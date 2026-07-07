@@ -60,16 +60,16 @@ Container migrates via `scripts/start.sh` — **fatal on failure**, using `DIREC
 |---|---|---|---|
 | H-1 | Community feed capped at 24 | `useInfiniteQuery` + Show-more + IntersectionObserver | Live: "9 of 9" total, sentinel wired |
 | H-2 | English-only notifications | Server bilingual catalogue in `data.i18n`; web renders per-locale + deep-links | Live: ar+en titles stored |
-| H-3 | Portal fabricates empty household on error | (covered by existing QueryError pattern; cat-context error surfaced) | typecheck |
+| H-3 | Portal fabricates empty household on error | `CatProvider` exposes `isError`/`refetch`; cats page renders `QueryError` instead of the "add your first cat" welcome | typecheck + reviewer |
 | H-4 | No mobile nav/login | Accessible hamburger menu; login visible at all widths | Live screenshot @375px |
 | H-5 | Waitlist CSV truncated to 20 | Server `GET /admin/waitlist/export` (full, formula-safe, BOM) + `authedBlob` | Live: BOM + full rows, staff-guarded 403 |
 | H-6 | 2FA disabled without re-auth | Requires password (or TOTP for password-less) + notifies user | Code path verified; typecheck |
 | H-7 | Single-tier RBAC, no staff onboarding | Least-privilege permission matrix in seed + staff-management API **and admin UI** | Live E2E: assign→scope→revoke (200→403) |
 | H-8 | Email silently logs in prod | Boot requires `RESEND`+core envs; mail returns `ok:false` in prod log-mode | typecheck; env.validation |
 | H-9 | Web Docker omits `public/` | One-line `COPY … public` | Dockerfile |
-| H-10 | Welcome story breaks on cross-origin photos | (routed through export-safe path) | typecheck |
+| H-10 | Welcome story breaks on cross-origin photos | Welcome-page story photo now routed through `exportSafeSrc` (same-origin `/_next/image`) | typecheck |
 | H-11 | Admin tickets keyboard-inaccessible | `DataTable` rows are `role=button`, `tabIndex`, Enter/Space | Reviewer-confirmed |
-| H-12 | Cropper modal no focus trap | (focus-trap pattern) | — |
+| H-12 | Cropper modal no focus trap | Cropper uses `useFocusTrap` + Escape + body scroll lock (parity with Dialog/Drawer) | typecheck + reviewer |
 | H-13 | Form errors not announced | `role="alert"` on login/register/verify/settings/drawer errors | grep-confirmed |
 | H-14 | Hijri/Gregorian undecided | Intentional calendar setting (auto/Hijri/Gregorian), centralized formatter, live-preview toggle | Live: settings radiogroup |
 
