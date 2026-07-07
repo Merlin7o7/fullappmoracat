@@ -175,6 +175,19 @@ export class Verify2faDto {
   code!: string;
 }
 
+export class Disable2faDto {
+  @ApiPropertyOptional({ description: "Account password (required unless password-less)" })
+  @IsOptional()
+  @IsString()
+  password?: string;
+
+  @ApiPropertyOptional({ example: "123456", description: "Current 2FA code (used when no password is set)" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "Code must be 6 digits" })
+  code?: string;
+}
+
 export class VerifyOtpDto {
   @ApiProperty({ example: "123456", description: "6-digit email verification code" })
   @IsString()

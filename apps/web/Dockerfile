@@ -31,6 +31,9 @@ WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
 COPY --from=build --chown=app:app /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=app:app /repo/apps/web/.next/static ./apps/web/.next/static
+# Next standalone does NOT bundle public/ — copy it explicitly or every static
+# asset (brand logo on the Cat ID card, favicons, OG images) 404s.
+COPY --from=build --chown=app:app /repo/apps/web/public ./apps/web/public
 USER app
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]

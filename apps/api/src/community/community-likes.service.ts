@@ -61,14 +61,8 @@ export class CommunityLikesService {
     if (created && cat.userId !== userId && LIKE_MILESTONES.has(likeCount)) {
       this.notifications.emit(cat.userId, {
         category: "COMMUNITY",
-        title:
-          likeCount === 1
-            ? `${cat.name} got their first like ❤️`
-            : `${cat.name} reached ${likeCount} likes ❤️`,
-        body:
-          likeCount === 1
-            ? `Someone loved ${cat.name} in the community.`
-            : `${cat.name} is being loved — ${likeCount} members and counting.`,
+        type: likeCount === 1 ? "cat_first_like" : "cat_like_milestone",
+        params: { name: cat.name, likeCount },
         data: { kind: "cat_like_milestone", slug: cat.publicSlug, likeCount },
       });
     }

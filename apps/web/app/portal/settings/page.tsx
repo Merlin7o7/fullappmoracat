@@ -200,6 +200,8 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
 }) {
   const [setup, setSetup] = React.useState<{ otpauthUrl: string; secret: string } | null>(null);
   const [code, setCode] = React.useState("");
+  const [disarming, setDisarming] = React.useState(false);
+  const [password, setPassword] = React.useState("");
 
   const begin = useMutation({
     mutationFn: () => authedFetch<{ otpauthUrl: string; secret: string }>("/auth/2fa/setup", { method: "POST", body: "{}" }),
@@ -207,11 +209,12 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
   });
   const enable = useMutation({
     mutationFn: () => authedFetch("/auth/2fa/enable", { method: "POST", body: JSON.stringify({ code }) }),
-    onSuccess: () => { setSetup(null); onChanged(); },
+    onSuccess: () => { setSetup(null); setCode(""); onChanged(); },
   });
   const disable = useMutation({
-    mutationFn: () => authedFetch("/auth/2fa/disable", { method: "POST", body: "{}" }),
-    onSuccess: onChanged,
+    // Re-authenticate before stripping the account's strongest control.
+    mutationFn: () => authedFetch("/auth/2fa/disable", { method: "POST", body: JSON.stringify({ password }) }),
+    onSuccess: () => { setDisarming(false); setPassword(""); onChanged(); },
   });
 
   return (
@@ -219,9 +222,11 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
       <div className="flex items-center justify-between">
         <Badge variant={enabled ? "success" : "secondary"}>{enabled ? (isAr ? "مفعّل" : "Enabled") : (isAr ? "غير مفعّل" : "Disabled")}</Badge>
         {enabled ? (
-          <Button variant="outline" size="sm" onClick={() => disable.mutate()} disabled={disable.isPending}>
-            {disable.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تعطيل" : "Disable"}
-          </Button>
+          !disarming ? (
+            <Button variant="outline" size="sm" onClick={() => { disable.reset(); setDisarming(true); }}>
+              {isAr ? "تعطيل" : "Disable"}
+            </Button>
+          ) : null
         ) : !setup ? (
           <Button variant="outline" size="sm" onClick={() => begin.mutate()} disabled={begin.isPending}>
             {begin.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تفعيل" : "Enable"}
@@ -229,12 +234,35 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
         ) : null}
       </div>
 
+      {enabled && disarming && (
+        <form
+          className="mt-4 space-y-3 rounded-xl bg-muted/50 p-4"
+          onSubmit={(e) => { e.preventDefault(); disable.mutate(); }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {isAr ? "أكّد كلمة مرورك لتعطيل المصادقة الثنائية." : "Confirm your password to turn off two-factor authentication."}
+          </p>
+          <Field type="password" label={isAr ? "كلمة المرور" : "Password"} value={password} onChange={setPassword} placeholder="••••••••" />
+          {disable.error && (
+            <p role="alert" className="text-sm text-destructive">{disable.error.message}</p>
+          )}
+          <div className="flex gap-2">
+            <Button type="submit" variant="outline" size="sm" disabled={disable.isPending || !password}>
+              {disable.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تأكيد التعطيل" : "Confirm & disable"}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setDisarming(false); setPassword(""); disable.reset(); }}>
+              {isAr ? "إلغاء" : "Cancel"}
+            </Button>
+          </div>
+        </form>
+      )}
+
       {setup && (
         <div className="mt-4 space-y-3 rounded-xl bg-muted/50 p-4">
           <p className="text-sm text-muted-foreground">{isAr ? "أضف هذا السر إلى تطبيق المصادقة، ثم أدخل الرمز:" : "Add this secret to your authenticator app, then enter the code:"}</p>
           <code className="block break-all rounded-lg bg-background p-2 text-xs">{setup.secret}</code>
           <Field label={isAr ? "الرمز" : "Code"} value={code} onChange={setCode} placeholder="123456" />
-          {enable.error && <p className="text-sm text-destructive">{enable.error.message}</p>}
+          {enable.error && <p role="alert" className="text-sm text-destructive">{enable.error.message}</p>}
           <Button size="sm" onClick={() => enable.mutate()} disabled={enable.isPending || code.length !== 6}>
             {enable.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تأكيد التفعيل" : "Confirm & enable"}
           </Button>

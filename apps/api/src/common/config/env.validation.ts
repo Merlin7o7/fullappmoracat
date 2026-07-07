@@ -29,6 +29,33 @@ export function assertProductionConfig(): void {
     }
   }
 
+  // Core infrastructure the app cannot function without in production. Missing
+  // any of these used to fail only later, at request time (or silently — see
+  // email below), stranding real users. Fail at boot instead.
+  const required: Array<[string, string]> = [
+    ["DATABASE_URL", "the database connection string"],
+    ["NEXT_PUBLIC_SITE_URL", "the public site URL (drives CORS + links)"],
+    ["S3_ENDPOINT", "object storage endpoint (cat photos)"],
+    ["S3_BUCKET", "object storage bucket"],
+    ["S3_ACCESS_KEY", "object storage access key"],
+    ["S3_SECRET_KEY", "object storage secret key"],
+    ["S3_PUBLIC_URL", "object storage public base URL"],
+  ];
+  for (const [key, what] of required) {
+    if (!process.env[key]) errors.push(`${key} is missing — ${what}.`);
+  }
+
+  // Transactional email is on the critical signup path (email-verification OTP
+  // gates the dashboard). Without a real provider the app would "succeed" while
+  // silently dropping every message to the log, so members could never verify.
+  const emailProvider = (process.env.EMAIL_PROVIDER ?? "").toLowerCase();
+  if (emailProvider !== "resend" || !process.env.RESEND_API_KEY) {
+    errors.push(
+      "EMAIL_PROVIDER=resend and RESEND_API_KEY are required in production — " +
+        "email-verification and password-reset must actually send."
+    );
+  }
+
   // Commerce must never run against the mock PSP with real customers.
   if (
     process.env.COMMERCE_ENABLED === "true" &&

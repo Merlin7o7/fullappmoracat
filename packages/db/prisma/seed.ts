@@ -169,34 +169,78 @@ async function main() {
       });
     }
   }
-  const roles: { key: string; name: string; scope: StaffScope }[] = [
-    { key: "super_admin", name: "Super Admin", scope: StaffScope.SUPER_ADMIN },
-    { key: "owner", name: "Owner", scope: StaffScope.OWNER },
-    { key: "manager", name: "Manager", scope: StaffScope.MANAGER },
-    { key: "warehouse", name: "Warehouse", scope: StaffScope.WAREHOUSE },
-    { key: "finance", name: "Finance", scope: StaffScope.FINANCE },
-    { key: "marketing", name: "Marketing", scope: StaffScope.MARKETING },
-    { key: "support", name: "Customer Support", scope: StaffScope.SUPPORT },
-    { key: "content", name: "Content Manager", scope: StaffScope.CONTENT },
-    { key: "delivery", name: "Delivery Team", scope: StaffScope.DELIVERY },
-    { key: "analyst", name: "Read-only Analyst", scope: StaffScope.ANALYST },
+  // Each role carries a declarative grant list. Grant specs expand as:
+  //   "*"              → every permission
+  //   "*.read"         → the read action on every resource
+  //   "customers.*"    → all actions on one resource
+  //   "orders.write"   → one exact permission
+  // Every system role gets a sensible default set (least-privilege per function),
+  // so onboarding a support agent or analyst grants only what that job needs —
+  // no more "only super_admin actually works". Re-seeding SYNCS grants (system
+  // roles are the source of truth), so tightening a role here rolls out on deploy.
+  const roles: { key: string; name: string; scope: StaffScope; grants: string[] }[] = [
+    { key: "super_admin", name: "Super Admin", scope: StaffScope.SUPER_ADMIN, grants: ["*"] },
+    { key: "owner", name: "Owner", scope: StaffScope.OWNER, grants: ["*"] },
+    {
+      key: "manager", name: "Manager", scope: StaffScope.MANAGER,
+      grants: ["dashboard.*", "customers.*", "orders.*", "products.*", "subscriptions.*", "inventory.*", "cms.*", "support.*", "payments.read", "settings.read"],
+    },
+    {
+      key: "warehouse", name: "Warehouse", scope: StaffScope.WAREHOUSE,
+      grants: ["dashboard.read", "orders.read", "orders.write", "inventory.read", "inventory.write", "products.read"],
+    },
+    {
+      key: "finance", name: "Finance", scope: StaffScope.FINANCE,
+      grants: ["dashboard.read", "payments.read", "payments.write", "orders.read", "subscriptions.read", "customers.read"],
+    },
+    {
+      key: "marketing", name: "Marketing", scope: StaffScope.MARKETING,
+      grants: ["dashboard.read", "cms.read", "cms.write", "cms.delete", "customers.read", "products.read"],
+    },
+    {
+      key: "support", name: "Customer Support", scope: StaffScope.SUPPORT,
+      grants: ["dashboard.read", "support.read", "support.write", "customers.read", "orders.read", "subscriptions.read"],
+    },
+    {
+      key: "content", name: "Content Manager", scope: StaffScope.CONTENT,
+      grants: ["dashboard.read", "cms.read", "cms.write", "cms.delete"],
+    },
+    {
+      key: "delivery", name: "Delivery Team", scope: StaffScope.DELIVERY,
+      grants: ["dashboard.read", "orders.read", "orders.write"],
+    },
+    { key: "analyst", name: "Read-only Analyst", scope: StaffScope.ANALYST, grants: ["*.read"] },
   ];
   const allPerms = await prisma.permission.findMany();
+  const permId = new Map(allPerms.map((p) => [p.key, p.id]));
+  const expandGrants = (grants: string[]): string[] => {
+    const keys = new Set<string>();
+    for (const g of grants) {
+      if (g === "*") allPerms.forEach((p) => keys.add(p.key));
+      else if (g.startsWith("*.")) {
+        const action = g.slice(2);
+        allPerms.filter((p) => p.action === action).forEach((p) => keys.add(p.key));
+      } else if (g.endsWith(".*")) {
+        const resource = g.slice(0, -2);
+        allPerms.filter((p) => p.resource === resource).forEach((p) => keys.add(p.key));
+      } else if (permId.has(g)) keys.add(g);
+    }
+    return [...keys];
+  };
   for (const r of roles) {
     const role = await prisma.role.upsert({
-      where: { key: r.key }, update: {},
+      where: { key: r.key }, update: { name: r.name, scope: r.scope },
       create: { key: r.key, name: r.name, scope: r.scope, isSystem: true },
     });
-    // Super admin gets every permission.
-    if (r.key === "super_admin") {
-      await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
-      await prisma.rolePermission.createMany({
-        data: allPerms.map((p) => ({ roleId: role.id, permissionId: p.id })),
-        skipDuplicates: true,
-      });
-    }
+    // Sync this system role's grants to the matrix (idempotent).
+    const wanted = expandGrants(r.grants);
+    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+    await prisma.rolePermission.createMany({
+      data: wanted.map((key) => ({ roleId: role.id, permissionId: permId.get(key)! })),
+      skipDuplicates: true,
+    });
   }
-  console.log(`  ✓ RBAC: ${roles.length} roles, ${allPerms.length} permissions`);
+  console.log(`  ✓ RBAC: ${roles.length} roles, ${allPerms.length} permissions (grants synced)`);
 
   // ── Super-admin staff user (for the admin panel) ────────────────────────
   // NEVER plant a known-credential backdoor in production. The seed admin is

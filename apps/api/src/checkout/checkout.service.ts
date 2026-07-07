@@ -160,10 +160,12 @@ export class CheckoutService {
 
     await this.notifications.notify(userId, {
       category: "ORDER",
-      title: isPending ? "Order awaiting payment" : "Order confirmed",
-      body: isPending
-        ? `${order.orderNumber} — complete payment to confirm your order.`
-        : `${order.orderNumber} — ${Number(order.grandTotal)} ${order.currency}. We're preparing your box!`,
+      type: isPending ? "order_pending" : "order_confirmed",
+      params: {
+        orderNumber: order.orderNumber,
+        total: Number(order.grandTotal),
+        currency: order.currency,
+      },
       data: { orderNumber: order.orderNumber },
     });
 

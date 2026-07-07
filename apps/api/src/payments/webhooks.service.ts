@@ -122,8 +122,8 @@ export class WebhooksService {
       ]);
       await this.notifications.notify(payment.order.userId, {
         category: "ORDER",
-        title: "Payment received — order confirmed",
-        body: `${payment.order.orderNumber} is confirmed. We're preparing your box!`,
+        type: "payment_received",
+        params: { orderNumber: payment.order.orderNumber },
         data: { orderNumber: payment.order.orderNumber },
       });
       this.logger.log(`captured ${payment.order.orderNumber} via webhook`);

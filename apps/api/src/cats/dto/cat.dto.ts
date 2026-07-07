@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from "@nestjs/swagger";
+import { Transform } from "class-transformer";
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -10,7 +12,12 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
 } from "class-validator";
+
+/** Trim incoming strings so " " can never masquerade as a real value. */
+const Trim = () =>
+  Transform(({ value }) => (typeof value === "string" ? value.trim() : value));
 
 export const GENDERS = ["MALE", "FEMALE", "UNKNOWN"] as const;
 export const ACTIVITY_LEVELS = ["LOW", "MODERATE", "HIGH"] as const;
@@ -25,7 +32,9 @@ export type CatStatus = (typeof CAT_STATUSES)[number];
 
 export class CreateCatDto {
   @ApiProperty({ example: "Simba" })
+  @Trim()
   @IsString()
+  @MinLength(1)
   @MaxLength(60)
   name!: string;
 
@@ -89,25 +98,33 @@ export class CreateCatDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(20)
   @IsString({ each: true })
+  @MaxLength(60, { each: true })
   favoriteFoods?: string[];
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(20)
   @IsString({ each: true })
+  @MaxLength(60, { each: true })
   preferredBrand?: string[];
 
   @ApiPropertyOptional({ type: [String], description: "Allergen names" })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(30)
   @IsString({ each: true })
+  @MaxLength(80, { each: true })
   allergies?: string[];
 
   @ApiPropertyOptional({ type: [String], description: "Health condition names" })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(30)
   @IsString({ each: true })
+  @MaxLength(80, { each: true })
   healthConditions?: string[];
 
   // ── Full-registration profile (#3) ──

@@ -34,6 +34,16 @@ export class MailService {
   /** Send an email. Never throws into the request path — logs and returns ok:false. */
   async send(input: SendMailInput): Promise<{ ok: boolean; id?: string }> {
     if (this.provider === "log") {
+      // In production, log-mode means the provider is misconfigured. Boot
+      // validation should have caught this, but never *pretend* to have sent —
+      // report failure loudly so it surfaces in Sentry/logs, not as a silent
+      // "check your email" dead-end.
+      if (process.env.NODE_ENV === "production") {
+        this.logger.error(
+          `Email NOT sent to ${input.to} ("${input.subject}") — no email provider configured in production.`
+        );
+        return { ok: false };
+      }
       this.logger.log(
         `[dev email → ${input.to}] ${input.subject}\n${stripToText(input.text).slice(0, 500)}`
       );

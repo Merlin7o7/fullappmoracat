@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, BellRing, Download } from "lucide-react";
-import { Button } from "@moraqat/ui";
+import { Button, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Pagination } from "@/app/admin/_components/pagination";
@@ -23,23 +23,13 @@ interface WaitlistResp {
   pagination: { total: number; page: number; totalPages: number };
 }
 
-/**
- * Quote-escape a CSV field and neutralize spreadsheet formula injection.
- * Every field is wrapped in double quotes with internal quotes doubled; a
- * leading =, +, -, @ (or tab/CR) is prefixed with a single quote so Excel /
- * Sheets treat it as text, not a formula.
- */
-function csvCell(value: string | null | undefined): string {
-  const raw = value ?? "";
-  const guarded = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
-  return `"${guarded.replace(/"/g, '""')}"`;
-}
-
 export default function AdminWaitlistPage() {
-  const { authedFetch } = useAuth();
+  const { authedFetch, authedBlob } = useAuth();
   const { locale } = useLocale();
+  const { toast } = useToast();
   const isAr = locale === "ar";
   const [page, setPage] = React.useState(1);
+  const [exporting, setExporting] = React.useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-waitlist", page],
@@ -48,17 +38,22 @@ export default function AdminWaitlistPage() {
 
   const entries = data?.items ?? [];
 
-  function exportCsv() {
-    const header = ["email", "plan_interest", "cat_name", "source", "joined_at"].map(csvCell).join(",") + "\r\n";
-    const rows = entries
-      .map((e) => [e.email, e.planInterest, e.catName, e.source, e.createdAt].map(csvCell).join(","))
-      .join("\r\n");
-    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "moracat-waitlist.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
+  // Export the ENTIRE waitlist from the server (formula-safe, UTF-8 BOM), not
+  // just the current page — the launch invite list must be complete.
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const blob = await authedBlob("/admin/waitlist/export");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "moracat-waitlist.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      toast({ title: isAr ? "تعذّر التصدير. حاول مرة أخرى." : "Export failed. Please try again." });
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -72,8 +67,11 @@ export default function AdminWaitlistPage() {
               : (isAr ? "أشخاص ينتظرون الإطلاق." : "People waiting for launch.")}
           </p>
         </div>
-        {entries.length > 0 && (
-          <Button size="sm" variant="outline" onClick={exportCsv}><Download className="size-4" /> {isAr ? "تصدير CSV" : "Export CSV"}</Button>
+        {(data?.pagination.total ?? 0) > 0 && (
+          <Button size="sm" variant="outline" onClick={exportCsv} disabled={exporting}>
+            {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            {isAr ? "تصدير الكل CSV" : "Export all CSV"}
+          </Button>
         )}
       </div>
 
@@ -88,8 +86,8 @@ export default function AdminWaitlistPage() {
         </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-2xl border border-border">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-2xl border border-border">
+            <table className="w-full min-w-[36rem] text-sm">
               <thead className="bg-muted/50 text-start text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="p-3 text-start">{isAr ? "البريد" : "Email"}</th>

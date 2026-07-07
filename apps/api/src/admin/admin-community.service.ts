@@ -64,10 +64,8 @@ export class AdminCommunityService {
     // it never silently vanishes from the community.
     this.notifications.emit(cat.userId, {
       category: "COMMUNITY",
-      title: `${cat.name} was hidden from the community`,
-      body: reason
-        ? `A moderator hid this public profile. Reason: ${reason}. Contact support if you have questions.`
-        : `A moderator hid this public profile. Contact support if you have questions.`,
+      type: "cat_hidden",
+      params: { name: cat.name, ...(reason ? { reason } : {}) },
       data: { kind: "cat_hidden", catId },
     });
     return { hidden: true };
@@ -94,8 +92,8 @@ export class AdminCommunityService {
     if (featured) {
       this.notifications.emit(cat.userId, {
         category: "COMMUNITY",
-        title: `${cat.name} is featured ⭐`,
-        body: `A moderator featured ${cat.name} in the community. They're front and centre now.`,
+        type: "cat_featured",
+        params: { name: cat.name },
         data: { kind: "cat_featured", slug: cat.publicSlug },
       });
     }
@@ -113,4 +111,44 @@ export class AdminCommunityService {
     ]);
     return { items: rows, pagination: { page, limit: PAGE_SIZE, total, totalPages: Math.ceil(total / PAGE_SIZE) } };
   }
+
+  /**
+   * The ENTIRE waitlist as a CSV string (not one page). The launch invite list
+   * is the point of this table — a page-limited export silently truncated it to
+   * 20 rows. Formula-injection-safe cells + a UTF-8 BOM so Arabic cat names
+   * survive Excel.
+   */
+  async exportWaitlistCsv(): Promise<string> {
+    const rows = await this.prisma.waitlistEntry.findMany({ orderBy: { createdAt: "desc" } });
+    const header = ["email", "catName", "planInterest", "source", "locale", "notifiedAt", "createdAt"];
+    const lines = [header.map(csvCell).join(",")];
+    for (const r of rows) {
+      lines.push(
+        [
+          r.email,
+          r.catName ?? "",
+          r.planInterest ?? "",
+          r.source ?? "",
+          r.locale,
+          r.notifiedAt ? r.notifiedAt.toISOString() : "",
+          r.createdAt.toISOString(),
+        ]
+          .map(csvCell)
+          .join(",")
+      );
+    }
+    // ﻿ BOM → Excel reads UTF-8; \r\n line endings per RFC 4180.
+    return "﻿" + lines.join("\r\n");
+  }
+}
+
+/**
+ * RFC-4180 quote + defuse spreadsheet formula injection: a leading =, +, -, @,
+ * tab or CR is prefixed with a single quote so Excel/Sheets treats it as text.
+ */
+function csvCell(value: string): string {
+  let v = value ?? "";
+  if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+  if (/[",\r\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+  return v;
 }
