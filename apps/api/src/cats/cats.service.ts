@@ -128,26 +128,43 @@ export class CatsService implements OnModuleInit {
    * these at create, so this is a no-op in steady state.
    */
   async onModuleInit() {
-    const stale = await this.prisma.cat.findMany({
-      where: {
-        deletedAt: null,
-        OR: [{ catIdNumber: null }, { qrToken: null }, { nameNormalized: null }],
-      },
-      select: { id: true, name: true, catIdNumber: true, qrToken: true, idIssuedAt: true },
-    });
-    if (!stale.length) return;
-    for (const c of stale) {
-      await this.prisma.cat.update({
-        where: { id: c.id },
-        data: {
-          catIdNumber: c.catIdNumber ?? (await this.ids.newCatId()),
-          qrToken: c.qrToken ?? (await this.ids.newQrToken()),
-          idIssuedAt: c.idIssuedAt ?? new Date(),
-          nameNormalized: normalizeName(c.name),
+    // Best-effort, bounded, and crash-proof: repairs at most BATCH legacy rows per
+    // boot and never throws (a unique-collision from two instances booting together
+    // must not crash-loop the deploy). New cats always get these fields at create,
+    // so this is a no-op in steady state and fully drains over a few restarts.
+    const BATCH = 500;
+    try {
+      const stale = await this.prisma.cat.findMany({
+        where: {
+          deletedAt: null,
+          OR: [{ catIdNumber: null }, { qrToken: null }, { nameNormalized: null }],
         },
+        select: { id: true, name: true, catIdNumber: true, qrToken: true, idIssuedAt: true },
+        take: BATCH,
       });
+      if (!stale.length) return;
+      let repaired = 0;
+      for (const c of stale) {
+        try {
+          await this.prisma.cat.update({
+            where: { id: c.id },
+            data: {
+              catIdNumber: c.catIdNumber ?? (await this.ids.newCatId()),
+              qrToken: c.qrToken ?? (await this.ids.newQrToken()),
+              idIssuedAt: c.idIssuedAt ?? new Date(),
+              nameNormalized: normalizeName(c.name),
+            },
+          });
+          repaired++;
+        } catch (err) {
+          // Another instance likely repaired this row first — skip, don't crash.
+          this.logger.warn(`Backfill skipped cat ${c.id}: ${(err as Error).message}`);
+        }
+      }
+      this.logger.log(`Backfilled identity/search fields for ${repaired} legacy cat(s).`);
+    } catch (err) {
+      this.logger.error(`Boot backfill failed (non-fatal): ${(err as Error).message}`);
     }
-    this.logger.log(`Backfilled identity/search fields for ${stale.length} legacy cat(s).`);
   }
 
   async create(userId: string, dto: CreateCatDto) {
