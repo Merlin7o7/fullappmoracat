@@ -1,6 +1,6 @@
 # ── Moraqat API — multi-stage production image ───────────────────────────
 # Build from the REPO ROOT:  docker build -f apps/api/Dockerfile .
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 # openssl: Prisma engine detection/runtime on alpine (linux-musl targets).
 RUN apk add --no-cache openssl && corepack enable
 WORKDIR /repo
@@ -36,7 +36,7 @@ RUN pnpm --filter @moraqat/api --prod deploy /app \
 WORKDIR /app
 
 # ── Runtime ───────────────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 RUN apk add --no-cache openssl && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 ENV NODE_ENV=production
