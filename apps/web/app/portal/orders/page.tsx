@@ -6,6 +6,7 @@ import { Package, FileText } from "lucide-react";
 import { Card, Skeleton, Button } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
+import { formatDate } from "@/lib/datetime";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
 import { IlloCan, IlloPaw } from "@/components/illustrations";
@@ -30,7 +31,7 @@ export default function OrdersPage() {
     enabled: !!user,
   });
 
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const fmtDate = (d: string) => formatDate(d, isAr ? "ar" : "en", { day: "numeric", month: "short", year: "numeric" });
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

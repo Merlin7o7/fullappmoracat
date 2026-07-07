@@ -13,6 +13,7 @@ import { useLocale } from "@/app/providers";
 import { QueryError } from "@/components/query-error";
 import { IlloMouse, IlloPaw } from "@/components/illustrations";
 import { notificationText, notificationHref } from "@/lib/notifications";
+import { formatDateTime } from "@/lib/datetime";
 
 interface NotificationItem {
   id: string;
@@ -81,8 +82,7 @@ export default function NotificationsPage() {
     },
   });
 
-  const fmtTime = (d: string) =>
-    new Date(d).toLocaleString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const fmtTime = (d: string) => formatDateTime(d, isAr ? "ar" : "en");
 
   const unread = data?.unread ?? 0;
   const totalPages = data?.pagination.totalPages ?? 1;

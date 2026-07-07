@@ -6,6 +6,7 @@ import { Pause, Play, SkipForward, X, Repeat, Loader2, Truck } from "lucide-reac
 import { Card, Badge, Button, Skeleton, Dialog, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
+import { formatDate } from "@/lib/datetime";
 import { QueryError } from "@/components/query-error";
 import { IlloCan, IlloPaw } from "@/components/illustrations";
 
@@ -53,7 +54,7 @@ export default function SubscriptionsPage() {
   });
 
   const fmtDate = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short" }) : "—";
+    d ? formatDate(d, isAr ? "ar" : "en", { day: "numeric", month: "short" }) : "—";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

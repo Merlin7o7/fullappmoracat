@@ -3,17 +3,14 @@
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useLocale } from "@/app/providers";
+import { formatDate } from "@/lib/datetime";
 import type { LegalDoc } from "@/lib/legal";
 
 export function LegalView({ doc }: { doc: LegalDoc }) {
   const { locale } = useLocale();
   const isAr = locale === "ar";
   const l = isAr ? "ar" : "en";
-  const updated = new Date(doc.updated).toLocaleDateString(isAr ? "ar-SA" : "en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const updated = formatDate(doc.updated, l, { day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div className="min-h-screen">

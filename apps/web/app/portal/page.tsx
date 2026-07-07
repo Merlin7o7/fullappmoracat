@@ -10,6 +10,7 @@ import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { buildGreeting, type Gender } from "@/lib/greeting";
 import { localizeName } from "@/lib/translit";
+import { formatDate } from "@/lib/datetime";
 import { CatIdCard } from "@/components/cat-id-card";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
@@ -61,7 +62,7 @@ export default function OverviewPage() {
   });
 
   const fmtDate = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+    d ? formatDate(d, isAr ? "ar" : "en", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
   // The warm Saudi greeting — resolved from owner gender + the primary cat (R001).
   const greeting = buildGreeting({
@@ -153,7 +154,7 @@ export default function OverviewPage() {
             className="pointer-events-none absolute -end-4 bottom-4 h-14 w-auto rotate-[-8deg] opacity-90"
           />
           <IlloPawSticker />
-          <p className="flex items-center gap-2 text-sm font-medium text-primary-foreground/70">
+          <p className="flex items-center gap-2 text-sm font-medium text-primary-foreground/85">
             <PiggyBank className="size-4" />
             {isAr ? "وفّرت معنا حتى اليوم" : "Saved with us so far"}
           </p>
@@ -162,10 +163,10 @@ export default function OverviewPage() {
           ) : (
             <p className="mt-2 font-display text-5xl font-semibold tabular tracking-tight sm:text-6xl">
               <AnimatedCounter value={data?.stats.totalSaved ?? 0} />
-              <span className="ms-2 text-lg font-medium text-primary-foreground/70">SAR</span>
+              <span className="ms-2 text-lg font-medium text-primary-foreground/85">SAR</span>
             </p>
           )}
-          <p className="mt-2 text-xs text-primary-foreground/60">
+          <p className="mt-2 text-xs text-primary-foreground/85">
             {isAr ? "سعر العضو مثبّت لك عند كل طلب — هذا الدليل" : "Your member rate, honoured on every order — this is the proof"}
           </p>
         </div>

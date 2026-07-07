@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { IlloCat, IlloMouse, IlloSprig, Sticker, type Tone } from "@/components/illustrations";
 import { useLocale } from "@/app/providers";
+import { formatDate } from "@/lib/datetime";
 import { api } from "@/lib/api";
 
 /** Rotating tints + cat tones for the article cover placeholders. */
@@ -25,7 +26,7 @@ export default function BlogPage() {
   const { data, isLoading, isError } = useQuery({ queryKey: ["blog"], queryFn: () => api.blog() });
 
   const fmtDate = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
+    d ? formatDate(d, isAr ? "ar" : "en", { day: "numeric", month: "long", year: "numeric" }) : "";
 
   return (
     <div className="min-h-screen">

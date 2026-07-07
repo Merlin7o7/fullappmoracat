@@ -6,6 +6,7 @@ import { Plus, Send, X, ArrowLeft } from "lucide-react";
 import { Card, Button, Skeleton, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
+import { formatDateTime } from "@/lib/datetime";
 import { Field, SelectField } from "@/components/field";
 import { TicketStatusBadge } from "@/components/ticket-status-badge";
 import { QueryError } from "@/components/query-error";
@@ -126,7 +127,7 @@ function TicketThread({ ticket, isAr, onBack, authedFetch, onChanged }: {
   });
 
   const isClosed = ticket.status === "CLOSED";
-  const fmtTime = (d: string) => new Date(d).toLocaleString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const fmtTime = (d: string) => formatDateTime(d, isAr ? "ar" : "en");
 
   return (
     <Card className="p-6">

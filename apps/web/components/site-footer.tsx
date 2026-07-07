@@ -61,7 +61,7 @@ export function SiteFooter() {
             <p className="font-display text-6xl font-semibold tracking-tight sm:text-7xl">
               {isAr ? "مرقط" : "Moracat"}
             </p>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-primary-foreground/70">
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-primary-foreground/85">
               {t.hero.subtitle}
             </p>
           </div>
@@ -70,7 +70,7 @@ export function SiteFooter() {
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
             {cols.map((col) => (
               <nav key={col.title} aria-label={col.title}>
-                <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground/50">
+                <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground/85">
                   {col.title}
                 </h3>
                 <ul className="space-y-2.5">
@@ -99,18 +99,18 @@ export function SiteFooter() {
             { href: "/legal/community-guidelines", label: isAr ? "إرشادات المجتمع" : "Community Guidelines" },
             { href: "/legal/content-policy", label: isAr ? "سياسة المحتوى" : "Content Policy" },
           ].map((l) => (
-            <Link key={l.href} href={l.href} className="text-xs text-primary-foreground/70 transition-colors hover:text-primary-foreground">
+            <Link key={l.href} href={l.href} className="text-xs text-primary-foreground/85 transition-colors hover:text-primary-foreground">
               {l.label}
             </Link>
           ))}
         </nav>
 
         <div className="mt-6 flex flex-col items-center justify-between gap-4 pt-2 sm:flex-row">
-          <p className="flex items-center gap-2 text-xs text-primary-foreground/60">
+          <p className="flex items-center gap-2 text-xs text-primary-foreground/85">
             <IlloPaw tone="peach" className="size-4" />
             {t.footerNote}
           </p>
-          <p className="text-xs text-primary-foreground/50">{t.footer}</p>
+          <p className="text-xs text-primary-foreground/85">{t.footer}</p>
         </div>
       </div>
 

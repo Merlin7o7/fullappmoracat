@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Syringe, Stethoscope, FileText, Plus, Loader2 } from "lucide-react";
 import { Badge, Button, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { formatDate } from "@/lib/datetime";
 import { Field, SelectField } from "@/components/field";
 
 /**
@@ -63,7 +64,7 @@ export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }
   });
 
   const fmt = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+    d ? formatDate(d, isAr ? "ar" : "en", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
   const tabs: { key: Tab; icon: typeof Syringe; ar: string; en: string; count: number }[] = [
     { key: "vaccinations", icon: Syringe, ar: "التطعيمات", en: "Vaccinations", count: data?.vaccinations.length ?? 0 },

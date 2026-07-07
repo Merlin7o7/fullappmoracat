@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Search, Eye, Star, Sparkles, PawPrint, Flame, Clock, Heart } from "lucide-react";
-import { Badge, Skeleton, cn } from "@moraqat/ui";
+import { useQuery, useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
+import { Search, Eye, Star, Sparkles, PawPrint, Flame, Clock, Heart, Loader2 } from "lucide-react";
+import { Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { useAuth } from "@/lib/auth";
 import { api, type CommunityCard, type LikeToggleResponse } from "@/lib/api";
@@ -211,10 +211,20 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
     return () => clearTimeout(t);
   }, [search]);
 
+  const hasActiveFilters = Boolean(debounced || gender || stage || breedId || cityId);
+  const clearFilters = () => {
+    setSearch("");
+    setDebounced("");
+    setGender("");
+    setStage("");
+    setBreedId("");
+    setCityId("");
+  };
+
   const facets = useQuery({ queryKey: ["community-facets"], queryFn: () => api.communityFacets() });
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["community", { section, gender, stage, breedId, cityId, debounced }],
-    queryFn: () =>
+    queryFn: ({ pageParam = 1 }) =>
       api.community({
         sort: section,
         gender: gender || undefined,
@@ -222,11 +232,30 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
         breedId: breedId || undefined,
         cityId: cityId || undefined,
         search: debounced || undefined,
+        page: pageParam,
       }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.pagination.hasMore ? last.pagination.page + 1 : undefined),
     placeholderData: keepPreviousData,
   });
 
-  const cats = data?.items ?? [];
+  const cats = data?.pages.flatMap((p) => p.items) ?? [];
+  const total = data?.pages[0]?.pagination.total ?? 0;
+
+  // Infinite scroll: load the next page when the sentinel scrolls into view.
+  const sentinelRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasNextPage) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) fetchNextPage();
+      },
+      { rootMargin: "600px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <div className={cn("mx-auto w-full", compact ? "max-w-5xl" : "max-w-6xl px-4")}>
@@ -328,27 +357,61 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
           body={isAr ? "حاول تحديث الصفحة." : "Please try refreshing the page."}
         />
       ) : cats.length === 0 ? (
-        <EmptyLike
-          icon={PawPrint}
-          title={isAr ? "لا توجد قطط هنا بعد" : "No cats here yet"}
-          body={
-            isAr
-              ? "كن أول من يشارك قطه مع المجتمع من صفحة القط."
-              : "Be the first to share your cat with the community from your cat's page."
-          }
-        />
+        hasActiveFilters ? (
+          <EmptyLike
+            icon={Search}
+            title={isAr ? "لا توجد نتائج مطابقة" : "No matches found"}
+            body={isAr ? "جرّب مصطلحاً آخر أو امسح المرشّحات." : "Try a different term or clear your filters."}
+            action={
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                {isAr ? "مسح المرشّحات" : "Clear filters"}
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyLike
+            icon={PawPrint}
+            title={isAr ? "لا توجد قطط هنا بعد" : "No cats here yet"}
+            body={
+              isAr
+                ? "كن أول من يشارك قطه مع المجتمع من صفحة القط."
+                : "Be the first to share your cat with the community from your cat's page."
+            }
+          />
+        )
       ) : (
-        <Grid>
-          {cats.map((cat) => (
-            <CommunityCatCard key={cat.slug} cat={cat} isAr={isAr} likes={likes} />
-          ))}
-        </Grid>
-      )}
+        <>
+          <Grid>
+            {cats.map((cat) => (
+              <CommunityCatCard key={cat.slug} cat={cat} isAr={isAr} likes={likes} />
+            ))}
+          </Grid>
 
-      {data && data.pagination.total > 0 && (
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          {isAr ? `${data.pagination.total} قط في المجتمع` : `${data.pagination.total} cats in the community`}
-        </p>
+          {/* Infinite-scroll sentinel + explicit fallback button (keyboard/SR). */}
+          {hasNextPage && (
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <div ref={sentinelRef} aria-hidden className="h-px w-full" />
+              <Button
+                variant="outline"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : null}
+                {isAr ? "عرض المزيد" : "Show more"}
+              </Button>
+            </div>
+          )}
+
+          {total > 0 && (
+            <p className="mt-6 text-center text-xs text-muted-foreground">
+              {isAr
+                ? `${cats.length} من ${total} قط في المجتمع`
+                : `Showing ${cats.length} of ${total} cats in the community`}
+            </p>
+          )}
+        </>
       )}
     </div>
   );
@@ -468,12 +531,13 @@ function Dropdown({
   );
 }
 
-function EmptyLike({ icon: Icon, title, body }: { icon: React.ElementType; title: string; body: string }) {
+function EmptyLike({ icon: Icon, title, body, action }: { icon: React.ElementType; title: string; body: string; action?: React.ReactNode }) {
   return (
     <div className="grid place-items-center rounded-3xl border border-dashed border-border py-16 text-center">
       <Icon className="size-10 text-muted-foreground/40" />
       <p className="mt-3 font-display text-lg font-semibold">{title}</p>
       <p className="mt-1 max-w-xs text-sm text-muted-foreground">{body}</p>
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }

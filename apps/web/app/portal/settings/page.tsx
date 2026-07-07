@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Lock, ShieldCheck, Loader2, Check } from "lucide-react";
+import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays } from "lucide-react";
 import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { buildGreeting, type Gender } from "@/lib/greeting";
+import { formatDate, type CalendarPref } from "@/lib/datetime";
 import { Field } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { QueryError } from "@/components/query-error";
@@ -58,11 +59,61 @@ export default function SettingsPage() {
               qc.invalidateQueries({ queryKey: ["overview"] }); // the greeting lives there
             }}
           />
+          <PreferencesSection isAr={isAr} />
           <PasswordSection isAr={isAr} authedFetch={authedFetch} onChanged={() => logout()} />
           <TwoFactorSection isAr={isAr} enabled={profile.twoFactorEnabled} authedFetch={authedFetch} onChanged={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
         </>
       )}
     </div>
+  );
+}
+
+/** Date-calendar preference — Hijri, Gregorian, or auto (by language). */
+function PreferencesSection({ isAr }: { isAr: boolean }) {
+  const { calendar, setCalendar } = useLocale();
+  const options: { value: CalendarPref; label: string; hint: string }[] = [
+    { value: "auto", label: isAr ? "تلقائي" : "Automatic", hint: isAr ? "هجري مع العربية، ميلادي مع الإنجليزية" : "Hijri in Arabic, Gregorian in English" },
+    { value: "hijri", label: isAr ? "هجري" : "Hijri", hint: isAr ? "تقويم أم القرى" : "Umm al-Qura calendar" },
+    { value: "gregorian", label: isAr ? "ميلادي" : "Gregorian", hint: isAr ? "التقويم الميلادي" : "Gregorian calendar" },
+  ];
+  // Live preview reflects the chosen preference immediately.
+  const preview = formatDate(new Date(), isAr ? "ar" : "en", { day: "numeric", month: "long", year: "numeric" });
+
+  return (
+    <SectionCard
+      icon={CalendarDays}
+      title={isAr ? "التقويم" : "Calendar"}
+      desc={isAr ? "كيف تُعرض التواريخ في كل المنصة" : "How dates are shown across the platform"}
+    >
+      <div role="radiogroup" aria-label={isAr ? "نوع التقويم" : "Calendar type"} className="grid gap-2 sm:grid-cols-3">
+        {options.map((o) => {
+          const active = calendar === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => setCalendar(o.value)}
+              className={cn(
+                "rounded-2xl border p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                active ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{o.label}</span>
+                {active && <Check className="size-4 text-primary" />}
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">{o.hint}</p>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">
+        {isAr ? "مثال: " : "Preview: "}
+        <span className="font-medium text-foreground" dir="auto">{preview}</span>
+      </p>
+    </SectionCard>
   );
 }
 

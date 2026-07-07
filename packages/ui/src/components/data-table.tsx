@@ -91,7 +91,25 @@ export function DataTable<T>({ columns, data, rowKey, loading, emptyState, onRow
               <tr
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={cn("transition-colors hover:bg-muted/40", onRowClick && "cursor-pointer")}
+                // Clickable rows are keyboard-operable: focusable, act as a link,
+                // and respond to Enter/Space — so admin tables (e.g. support
+                // tickets) can be driven without a mouse.
+                {...(onRowClick
+                  ? {
+                      role: "button" as const,
+                      tabIndex: 0,
+                      onKeyDown: (e: React.KeyboardEvent) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      },
+                    }
+                  : {})}
+                className={cn(
+                  "transition-colors hover:bg-muted/40",
+                  onRowClick && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                )}
               >
                 {columns.map((c) => (
                   <td key={c.key} className={cn("px-4 py-3", alignCls[c.align ?? "start"])}>{c.render(row)}</td>

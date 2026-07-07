@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
 import { localizeName } from "@/lib/translit";
+import { formatDate } from "@/lib/datetime";
 import { commerceEnabled } from "@/lib/features";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloPaw } from "@/components/illustrations";
@@ -62,7 +63,7 @@ export function CatIdCard({
   gender, birthDate, vaccinationStatus, qrToken, exportMode, className,
 }: CatIdCardProps) {
   const since = issuedAt
-    ? new Date(issuedAt).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { month: "short", year: "numeric" })
+    ? formatDate(issuedAt, isAr ? "ar" : "en", { month: "short", year: "numeric" })
     : null;
   const qrValue = qrToken ? `MRCV1:${qrToken}` : null;
   const loc = isAr ? "ar" : "en";
