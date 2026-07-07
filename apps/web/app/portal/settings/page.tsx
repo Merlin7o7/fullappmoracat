@@ -237,7 +237,7 @@ function PasswordSection({ isAr, authedFetch, onChanged }: {
       <form onSubmit={(e) => { e.preventDefault(); change.mutate(f); }} className="grid gap-4">
         <Field label={isAr ? "كلمة المرور الحالية" : "Current password"} type="password" required value={f.currentPassword} onChange={(v) => setF({ ...f, currentPassword: v })} />
         <Field label={isAr ? "كلمة المرور الجديدة" : "New password"} type="password" required value={f.newPassword} onChange={(v) => setF({ ...f, newPassword: v })} />
-        {change.error && <p className="text-sm text-destructive">{change.error.message}</p>}
+        {change.error && <p role="alert" className="text-sm text-destructive">{change.error.message}</p>}
         <Button type="submit" variant="outline" disabled={change.isPending} className="w-fit">
           {change.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تحديث كلمة المرور" : "Update password"}
         </Button>
