@@ -12,6 +12,8 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { QueryError } from "@/components/query-error";
 import { IlloMouse, IlloPaw } from "@/components/illustrations";
+import { notificationText, notificationHref } from "@/lib/notifications";
+import { formatDateTime } from "@/lib/datetime";
 
 interface NotificationItem {
   id: string;
@@ -80,8 +82,7 @@ export default function NotificationsPage() {
     },
   });
 
-  const fmtTime = (d: string) =>
-    new Date(d).toLocaleString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const fmtTime = (d: string) => formatDateTime(d, isAr ? "ar" : "en");
 
   const unread = data?.unread ?? 0;
   const totalPages = data?.pagination.totalPages ?? 1;
@@ -115,31 +116,50 @@ export default function NotificationsPage() {
             {data.items.map((n) => {
               const Icon = iconFor(n.category);
               const isUnread = !n.readAt;
-              return (
-                <button
-                  key={n.id}
-                  type="button"
-                  disabled={!isUnread || markRead.isPending}
-                  onClick={() => isUnread && markRead.mutate(n.id)}
-                  className={cn(
-                    "flex w-full items-start gap-4 p-5 text-start transition-colors",
-                    isUnread
-                      ? "border-s-2 border-s-primary bg-primary/[0.04] hover:bg-primary/[0.07]"
-                      : "border-s-2 border-s-transparent",
-                    isUnread && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  )}
-                >
+              const { title, body } = notificationText(n, isAr ? "ar" : "en");
+              const href = notificationHref(n);
+              const rowClass = cn(
+                "flex w-full items-start gap-4 p-5 text-start transition-colors",
+                isUnread
+                  ? "border-s-2 border-s-primary bg-primary/[0.04] hover:bg-primary/[0.07]"
+                  : "border-s-2 border-s-transparent hover:bg-muted/40",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              );
+              const inner = (
+                <>
                   <span className={cn("mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl", isUnread ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
                     <Icon className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className={cn("text-sm", isUnread ? "font-semibold" : "font-medium")}>{n.title}</p>
+                      <p className={cn("text-sm", isUnread ? "font-semibold" : "font-medium")}>{title}</p>
                       {isUnread && <span className="size-2 shrink-0 rounded-full bg-primary" aria-label={isAr ? "غير مقروءة" : "Unread"} />}
                     </div>
-                    <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{body}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{fmtTime(n.createdAt)}</p>
                   </div>
+                </>
+              );
+              // Actionable rows navigate to what they're about (and mark read on
+              // the way); non-actionable rows are a plain mark-read button.
+              return href ? (
+                <Link
+                  key={n.id}
+                  href={href}
+                  onClick={() => isUnread && markRead.mutate(n.id)}
+                  className={rowClass}
+                >
+                  {inner}
+                </Link>
+              ) : (
+                <button
+                  key={n.id}
+                  type="button"
+                  disabled={!isUnread || markRead.isPending}
+                  onClick={() => isUnread && markRead.mutate(n.id)}
+                  className={rowClass}
+                >
+                  {inner}
                 </button>
               );
             })}

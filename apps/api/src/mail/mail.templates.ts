@@ -226,6 +226,30 @@ export function passwordChangedTemplate(locale: Locale, name: string | null): Bu
   };
 }
 
+export function twoFactorDisabledTemplate(locale: Locale, name?: string | null): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = ar ? "تم تعطيل التحقق بخطوتين" : "Two-factor authentication was turned off";
+  const body = [
+    hiName(ar, name ?? null),
+    ar
+      ? "نأكّد أنه تم تعطيل التحقق بخطوتين على حسابك في مُرقّط للتو. إذا كنت أنت من قام بذلك، فلا حاجة لأي إجراء."
+      : "We're confirming that two-factor authentication was just turned off on your Moracat account. If this was you, there's nothing else to do.",
+  ];
+  return {
+    subject: ar ? "تم تعطيل التحقق بخطوتين — مُرقّط" : "Two-factor authentication turned off — Moracat",
+    html: layout({
+      locale,
+      preheader: heading,
+      heading,
+      body,
+      footnote: ar
+        ? "إذا لم تكن أنت، غيّر كلمة مرورك فوراً وأعد تفعيل التحقق بخطوتين، وتواصل مع الدعم."
+        : "If this wasn't you, reset your password, re-enable two-factor authentication, and contact support immediately.",
+    }),
+    text: toText(heading, body),
+  };
+}
+
 export function emailChangeTemplate(locale: Locale, url: string): BuiltEmail {
   const ar = locale === "ar";
   const heading = ar ? "أكّد بريدك الجديد" : "Confirm your new email";

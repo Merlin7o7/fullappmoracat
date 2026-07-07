@@ -10,7 +10,7 @@
 
 import * as React from "react";
 import { Camera, ImageUp, Loader2, X, ZoomIn, Check, RotateCw } from "lucide-react";
-import { Button, cn, useToast } from "@moraqat/ui";
+import { Button, cn, useToast, useFocusTrap } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 
@@ -271,6 +271,20 @@ function ImageCropper({ initialSrc, aspect, maxEdge, rounded, isAr, onCancel, on
   const FRAME_W = aspect >= 1 ? 300 : 300 * aspect;
   const FRAME_H = aspect >= 1 ? 300 / aspect : 300;
 
+  // Modal a11y: trap focus, close on Escape, and lock body scroll while open —
+  // parity with Dialog/Drawer/ceremony (this sits on the core onboarding path).
+  const trapRef = useFocusTrap<HTMLDivElement>(true);
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onCancel]);
+
   const [src, setSrc] = React.useState(initialSrc);
   const imgRef = React.useRef<HTMLImageElement | null>(null);
   const [nat, setNat] = React.useState<{ w: number; h: number } | null>(null);
@@ -358,6 +372,7 @@ function ImageCropper({ initialSrc, aspect, maxEdge, rounded, isAr, onCancel, on
 
   return (
     <div
+      ref={trapRef}
       className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"

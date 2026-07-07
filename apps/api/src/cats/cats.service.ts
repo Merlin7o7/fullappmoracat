@@ -49,6 +49,7 @@ type CatRow = {
   qrToken: string | null;
   idIssuedAt: Date | null;
   photoUrl: string | null;
+  coverUrl: string | null;
   gender: string;
   birthDate: Date | null;
   vaccinationStatus: string | null;
@@ -61,6 +62,10 @@ type CatRow = {
   archivedAt: Date | null;
   deceasedAt: Date | null;
   microchipNo: string | null;
+  coatColor: string | null;
+  isNeutered: boolean | null;
+  currentMedications: string | null;
+  emergencyNotes: string | null;
   diet: string | null;
   vetNotes: string | null;
   favoriteFoods: string[];
@@ -70,6 +75,39 @@ type CatRow = {
   healthConds?: { id: string; name: string; notes: string | null }[];
   allergies?: { id: string; allergen: string }[];
 };
+
+/**
+ * The single source of truth for cat *scalar* fields writable by an owner.
+ * Both create() and update() map through this, so a field can never again be
+ * accepted by the DTO yet silently dropped on one path (the "complete the file"
+ * data-loss bug). Prisma treats `undefined` as "leave unchanged", so on create
+ * the schema defaults apply and on update only provided fields move.
+ */
+function catScalarData(dto: Partial<CreateCatDto>) {
+  return {
+    name: dto.name,
+    // Keep the search-folded copy in step whenever the name changes.
+    ...(dto.name !== undefined ? { nameNormalized: normalizeName(dto.name) } : {}),
+    photoUrl: dto.photoUrl,
+    breedId: dto.breedId,
+    gender: dto.gender,
+    birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+    weightKg: dto.weightKg,
+    lifeStage: dto.lifeStage,
+    activityLevel: dto.activityLevel,
+    isIndoor: dto.isIndoor,
+    diet: dto.diet,
+    vetNotes: dto.vetNotes,
+    microchipNo: dto.microchipNo,
+    favoriteFoods: dto.favoriteFoods,
+    preferredBrand: dto.preferredBrand,
+    coatColor: dto.coatColor,
+    isNeutered: dto.isNeutered,
+    vaccinationStatus: dto.vaccinationStatus,
+    currentMedications: dto.currentMedications,
+    emergencyNotes: dto.emergencyNotes,
+  };
+}
 
 @Injectable()
 export class CatsService implements OnModuleInit {
@@ -90,26 +128,43 @@ export class CatsService implements OnModuleInit {
    * these at create, so this is a no-op in steady state.
    */
   async onModuleInit() {
-    const stale = await this.prisma.cat.findMany({
-      where: {
-        deletedAt: null,
-        OR: [{ catIdNumber: null }, { qrToken: null }, { nameNormalized: null }],
-      },
-      select: { id: true, name: true, catIdNumber: true, qrToken: true, idIssuedAt: true },
-    });
-    if (!stale.length) return;
-    for (const c of stale) {
-      await this.prisma.cat.update({
-        where: { id: c.id },
-        data: {
-          catIdNumber: c.catIdNumber ?? (await this.ids.newCatId()),
-          qrToken: c.qrToken ?? (await this.ids.newQrToken()),
-          idIssuedAt: c.idIssuedAt ?? new Date(),
-          nameNormalized: normalizeName(c.name),
+    // Best-effort, bounded, and crash-proof: repairs at most BATCH legacy rows per
+    // boot and never throws (a unique-collision from two instances booting together
+    // must not crash-loop the deploy). New cats always get these fields at create,
+    // so this is a no-op in steady state and fully drains over a few restarts.
+    const BATCH = 500;
+    try {
+      const stale = await this.prisma.cat.findMany({
+        where: {
+          deletedAt: null,
+          OR: [{ catIdNumber: null }, { qrToken: null }, { nameNormalized: null }],
         },
+        select: { id: true, name: true, catIdNumber: true, qrToken: true, idIssuedAt: true },
+        take: BATCH,
       });
+      if (!stale.length) return;
+      let repaired = 0;
+      for (const c of stale) {
+        try {
+          await this.prisma.cat.update({
+            where: { id: c.id },
+            data: {
+              catIdNumber: c.catIdNumber ?? (await this.ids.newCatId()),
+              qrToken: c.qrToken ?? (await this.ids.newQrToken()),
+              idIssuedAt: c.idIssuedAt ?? new Date(),
+              nameNormalized: normalizeName(c.name),
+            },
+          });
+          repaired++;
+        } catch (err) {
+          // Another instance likely repaired this row first — skip, don't crash.
+          this.logger.warn(`Backfill skipped cat ${c.id}: ${(err as Error).message}`);
+        }
+      }
+      this.logger.log(`Backfilled identity/search fields for ${repaired} legacy cat(s).`);
+    } catch (err) {
+      this.logger.error(`Boot backfill failed (non-fatal): ${(err as Error).message}`);
     }
-    this.logger.log(`Backfilled identity/search fields for ${stale.length} legacy cat(s).`);
   }
 
   async create(userId: string, dto: CreateCatDto) {
@@ -122,26 +177,10 @@ export class CatsService implements OnModuleInit {
         catIdNumber: await this.ids.newCatId(),
         qrToken: await this.ids.newQrToken(),
         idIssuedAt: new Date(),
+        ...catScalarData(dto),
+        // name is required on create (the shared helper types it optional for the
+        // update path); re-assert it so Prisma sees a definite string.
         name: dto.name,
-        nameNormalized: normalizeName(dto.name),
-        photoUrl: dto.photoUrl,
-        breedId: dto.breedId,
-        gender: dto.gender,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-        weightKg: dto.weightKg,
-        lifeStage: dto.lifeStage,
-        activityLevel: dto.activityLevel ?? "MODERATE",
-        isIndoor: dto.isIndoor ?? true,
-        diet: dto.diet,
-        vetNotes: dto.vetNotes,
-        microchipNo: dto.microchipNo,
-        favoriteFoods: dto.favoriteFoods ?? [],
-        preferredBrand: dto.preferredBrand ?? [],
-        coatColor: dto.coatColor,
-        isNeutered: dto.isNeutered,
-        vaccinationStatus: dto.vaccinationStatus,
-        currentMedications: dto.currentMedications,
-        emergencyNotes: dto.emergencyNotes,
         allergies: dto.allergies?.length
           ? { create: dto.allergies.map((allergen) => ({ allergen })) }
           : undefined,
@@ -177,8 +216,8 @@ export class CatsService implements OnModuleInit {
     if (cat.catIdNumber) {
       this.notifications.emit(userId, {
         category: "COMMUNITY",
-        title: `${cat.name}'s Cat ID is ready`,
-        body: `${cat.name} is now officially registered as ${cat.catIdNumber}. Tap to view the card.`,
+        type: "cat_id_issued",
+        params: { name: cat.name, catIdNumber: cat.catIdNumber },
         data: { kind: "cat_id_issued", catId: cat.id, catIdNumber: cat.catIdNumber },
       });
       if (user?.email) {
@@ -273,41 +312,32 @@ export class CatsService implements OnModuleInit {
   async update(userId: string, id: string, dto: UpdateCatDto) {
     await this.ownedCat(userId, id);
 
-    if (dto.allergies) {
-      await this.prisma.catAllergy.deleteMany({ where: { catId: id } });
-    }
-    if (dto.healthConditions) {
-      await this.prisma.catHealthCondition.deleteMany({ where: { catId: id } });
-    }
-
-    const cat = await this.prisma.cat.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        // Keep the search-folded copy in step whenever the name changes.
-        ...(dto.name !== undefined ? { nameNormalized: normalizeName(dto.name) } : {}),
-        photoUrl: dto.photoUrl,
-        breedId: dto.breedId,
-        gender: dto.gender,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-        weightKg: dto.weightKg,
-        lifeStage: dto.lifeStage,
-        activityLevel: dto.activityLevel,
-        isIndoor: dto.isIndoor,
-        diet: dto.diet,
-        vetNotes: dto.vetNotes,
-        microchipNo: dto.microchipNo,
-        favoriteFoods: dto.favoriteFoods,
-        preferredBrand: dto.preferredBrand,
-        allergies: dto.allergies?.length
-          ? { create: dto.allergies.map((allergen) => ({ allergen })) }
-          : undefined,
-        healthConds: dto.healthConditions?.length
-          ? { create: dto.healthConditions.map((name) => ({ name })) }
-          : undefined,
-      },
-      include: catInclude,
+    // Replace the health collections and the scalar fields atomically. Before,
+    // the deleteMany ran outside any transaction and *before* the update — a
+    // failed update (bad breedId FK, DB hiccup) permanently wiped allergies /
+    // conditions while the user saw "Couldn't save". Now it is all-or-nothing.
+    const cat = await this.prisma.$transaction(async (tx) => {
+      if (dto.allergies !== undefined) {
+        await tx.catAllergy.deleteMany({ where: { catId: id } });
+      }
+      if (dto.healthConditions !== undefined) {
+        await tx.catHealthCondition.deleteMany({ where: { catId: id } });
+      }
+      return tx.cat.update({
+        where: { id },
+        data: {
+          ...catScalarData(dto),
+          allergies: dto.allergies?.length
+            ? { create: dto.allergies.map((allergen) => ({ allergen })) }
+            : undefined,
+          healthConds: dto.healthConditions?.length
+            ? { create: dto.healthConditions.map((name) => ({ name })) }
+            : undefined,
+        },
+        include: catInclude,
+      });
     });
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { primaryCatId: true },
@@ -354,9 +384,13 @@ export class CatsService implements OnModuleInit {
 
   async restore(userId: string, id: string) {
     await this.ownedCat(userId, id);
+    // Restore the lifecycle status only — NEVER re-grant membership. Membership
+    // is earned by an active subscription (and is disabled in Community Mode);
+    // unconditionally setting ACTIVE here handed archived cats a free "Member"
+    // badge + membershipActive in /verify. Leave membershipStatus untouched.
     const cat = await this.prisma.cat.update({
       where: { id },
-      data: { status: "ACTIVE", archivedAt: null, deceasedAt: null, membershipStatus: "ACTIVE" },
+      data: { status: "ACTIVE", archivedAt: null, deceasedAt: null },
       include: catInclude,
     });
     const user = await this.prisma.user.findUnique({
@@ -618,8 +652,8 @@ export class CatsService implements OnModuleInit {
     if (newlyPublic) {
       this.notifications.emit(userId, {
         category: "COMMUNITY",
-        title: `${current?.name ?? "Your cat"} is live in the community`,
-        body: `Their public profile is now discoverable. Share the link and collect some love.`,
+        type: "cat_made_public",
+        params: { name: current?.name ?? "Your cat" },
         data: { kind: "cat_made_public", slug: updated.publicSlug },
       });
     }
@@ -685,6 +719,7 @@ export class CatsService implements OnModuleInit {
       qrToken: cat.qrToken,
       idIssuedAt: cat.idIssuedAt,
       photoUrl: cat.photoUrl,
+      coverUrl: cat.coverUrl,
       gender: cat.gender,
       birthDate: cat.birthDate,
       // On-card health signal (§05 job 2) — the ID shows vaccination standing.
@@ -698,14 +733,23 @@ export class CatsService implements OnModuleInit {
       archivedAt: cat.archivedAt,
       deceasedAt: cat.deceasedAt,
       microchipNo: cat.microchipNo,
+      coatColor: cat.coatColor,
+      isNeutered: cat.isNeutered,
+      currentMedications: cat.currentMedications,
+      emergencyNotes: cat.emergencyNotes,
       diet: cat.diet,
       vetNotes: cat.vetNotes,
       favoriteFoods: cat.favoriteFoods,
       preferredBrand: cat.preferredBrand,
       isPrimary: cat.id === primaryCatId,
       breed: cat.breed ?? null,
+      // Flat string arrays so the web never has to reach into row objects
+      // (the "[object Object]" prefill bug). Full objects stay on GET /cats/:id
+      // via the health panel; these power the card + the complete-file form.
       healthConds: cat.healthConds ?? [],
       allergies: cat.allergies ?? [],
+      allergyNames: (cat.allergies ?? []).map((a) => a.allergen),
+      healthConditionNames: (cat.healthConds ?? []).map((h) => h.name),
     };
   }
 }

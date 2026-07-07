@@ -123,7 +123,7 @@ export default function LoginPage() {
       <AuthShell isAr={isAr} title={isAr ? "نسيت كلمة المرور؟" : "Forgot password?"} subtitle={isAr ? "أدخل بريدك ونرسل لك رابط الاستعادة" : "Enter your email and we'll send a reset link"}>
         <form onSubmit={onForgot} className="flex flex-col gap-4">
           <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={forgotEmail} onChange={setForgotEmail} placeholder="you@example.com" autoComplete="email" />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" disabled={loading}>{loading && <Loader2 className="size-4 animate-spin" />}{isAr ? "أرسل الرابط" : "Send reset link"}</Button>
           <button type="button" onClick={() => { setForgot(false); setError(null); }} className="text-sm text-muted-foreground hover:text-foreground">{isAr ? "الرجوع لتسجيل الدخول" : "Back to login"}</button>
         </form>
@@ -154,7 +154,7 @@ export default function LoginPage() {
           <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={password} onChange={setPassword} placeholder="••••••••" autoComplete="current-password" />
           {needsTotp && <Field label={isAr ? "رمز التحقق (2FA)" : "2FA code"} value={totp} onChange={setTotp} inputMode="numeric" placeholder="123456" />}
           <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={() => { setForgot(true); setError(null); }} />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" disabled={loading}>{loading && <Loader2 className="size-4 animate-spin" />}{isAr ? "تسجيل الدخول" : "Log in"}</Button>
         </form>
       ) : (
@@ -164,7 +164,7 @@ export default function LoginPage() {
             <Field label={isAr ? "رمز الدخول" : "Login code"} value={otp} onChange={(v) => setOtp(v.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" required placeholder="••••••" hint={isAr ? "أرسلناه برسالة نصية" : "Sent to you by SMS"} />
           )}
           <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={() => { setForgot(true); setError(null); }} />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" disabled={loading}>
             {loading && <Loader2 className="size-4 animate-spin" />}
             {otpSent ? (isAr ? "دخول" : "Log in") : (isAr ? "أرسل رمز الدخول" : "Send login code")}

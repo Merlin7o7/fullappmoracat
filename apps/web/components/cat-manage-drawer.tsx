@@ -156,7 +156,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
                   ? (isAr ? `سنحفظ سجل ${cat.name} وهويته للأبد. تأكيد؟` : `We'll keep ${cat.name}'s record and Cat ID forever. Confirm?`)
                   : confirm === "archive"
                     ? (isAr ? `أرشفة ${cat.name}؟ يبقى سجله محفوظاً.` : `Archive ${cat.name}? Their record stays saved.`)
-                    : (isAr ? `إزالة ${cat.name}؟ يمكن التراجع لاحقاً.` : `Remove ${cat.name}? This can be undone later.`)}
+                    : (isAr ? `إزالة ${cat.name} نهائياً؟ سيُحذف ملفه وصوره ولا يمكن التراجع.` : `Permanently remove ${cat.name}? Their file and photos are deleted — this can't be undone.`)}
               </p>
               <div className="flex gap-2">
                 <Button size="sm" variant={confirm === "remove" ? "destructive" : "primary"} loading={action.isPending} onClick={() => runLifecycle(confirm)}>
@@ -205,7 +205,7 @@ function EditForm({ cat, isAr, onSaved }: { cat: PortalCat; isAr: boolean; onSav
   });
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); save.mutate({ name: f.name, weightKg: f.weightKg ? Number(f.weightKg) : undefined, activityLevel: f.activityLevel, isIndoor: f.isIndoor === "true", gender: f.gender }); }}
+      onSubmit={(e) => { e.preventDefault(); save.mutate({ name: f.name.trim(), weightKg: f.weightKg ? Number(f.weightKg) : undefined, activityLevel: f.activityLevel, isIndoor: f.isIndoor === "true", gender: f.gender }); }}
       className="grid gap-3 rounded-2xl bg-muted/40 p-4 sm:grid-cols-2"
     >
       <Field label={isAr ? "الاسم" : "Name"} required value={f.name} onChange={(v) => setF({ ...f, name: v })} />
@@ -217,8 +217,8 @@ function EditForm({ cat, isAr, onSaved }: { cat: PortalCat; isAr: boolean; onSav
       <SelectField label={isAr ? "البيئة" : "Environment"} value={f.isIndoor} onChange={(v) => setF({ ...f, isIndoor: v })}
         options={[{ value: "true", label: isAr ? "داخلي" : "Indoor" }, { value: "false", label: isAr ? "خارجي" : "Outdoor" }]} />
       <div className="sm:col-span-2">
-        <Button type="submit" size="sm" loading={save.isPending} disabled={!f.name}>{isAr ? "حفظ التعديلات" : "Save changes"}</Button>
-        {save.error && <p className="mt-1 text-xs text-destructive">{(save.error as Error).message}</p>}
+        <Button type="submit" size="sm" loading={save.isPending} disabled={!f.name.trim()}>{isAr ? "حفظ التعديلات" : "Save changes"}</Button>
+        {save.error && <p role="alert" className="mt-1 text-xs text-destructive">{(save.error as Error).message}</p>}
       </div>
     </form>
   );

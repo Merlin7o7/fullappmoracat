@@ -7,9 +7,17 @@ import { ToastProvider } from "@moraqat/ui";
 import { dict, type Locale } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { CookieConsent } from "@/components/cookie-consent";
+import { type CalendarPref, CALENDAR_STORAGE_KEY, setCurrentCalendar } from "@/lib/datetime";
 
 type Dictionary = (typeof dict)[Locale];
-type LocaleCtx = { locale: Locale; setLocale: (l: Locale) => void; t: Dictionary };
+type LocaleCtx = {
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  t: Dictionary;
+  /** Date-calendar preference (auto = Hijri for Arabic, Gregorian for English). */
+  calendar: CalendarPref;
+  setCalendar: (c: CalendarPref) => void;
+};
 const LocaleContext = React.createContext<LocaleCtx | null>(null);
 
 export function useLocale() {
@@ -28,6 +36,9 @@ export function Providers({
   initialLocale?: Locale;
 }) {
   const [locale, setLocaleState] = React.useState<Locale>(initialLocale);
+  // Calendar starts at "auto" (matches SSR); the persisted choice is applied on
+  // mount, so there's no hydration mismatch — only an override re-renders dates.
+  const [calendar, setCalendarState] = React.useState<CalendarPref>("auto");
   const [queryClient] = React.useState(
     () => new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 1 } } })
   );
@@ -43,6 +54,27 @@ export function Providers({
     // correctly — this is what makes the locale SSR-correct, not client-only.
     document.cookie = `locale=${l}; path=/; max-age=31536000; SameSite=Lax`;
   }, []);
+
+  const setCalendar = React.useCallback((c: CalendarPref) => {
+    setCalendarState(c);
+    setCurrentCalendar(c); // update the shared formatter singleton immediately
+    try {
+      localStorage.setItem(CALENDAR_STORAGE_KEY, c);
+    } catch {
+      /* storage unavailable */
+    }
+    if (typeof document !== "undefined") document.documentElement.dataset.calendar = c;
+  }, []);
+
+  // Apply the persisted calendar preference on mount.
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CALENDAR_STORAGE_KEY) as CalendarPref | null;
+      if (stored === "auto" || stored === "gregorian" || stored === "hijri") setCalendar(stored);
+    } catch {
+      /* ignore */
+    }
+  }, [setCalendar]);
 
   // Keep <html> in sync for instant client switches without a reload.
   React.useEffect(() => {
@@ -61,8 +93,8 @@ export function Providers({
   }, []);
 
   const value = React.useMemo<LocaleCtx>(
-    () => ({ locale, setLocale, t: dict[locale] }),
-    [locale, setLocale]
+    () => ({ locale, setLocale, t: dict[locale], calendar, setCalendar }),
+    [locale, setLocale, calendar, setCalendar]
   );
 
   return (

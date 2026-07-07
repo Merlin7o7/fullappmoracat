@@ -112,7 +112,7 @@ export default function RegisterPage() {
             placeholder="••••••"
             hint={isAr ? "٦ أرقام وصلتك برسالة نصية" : "6 digits sent by SMS"}
           />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" disabled={loading || otp.length < 4} className="mt-1">
             {loading && <Loader2 className="size-4 animate-spin" />}
             {isAr ? "أنشئ الحساب" : "Create account"}
@@ -162,7 +162,7 @@ export default function RegisterPage() {
           </span>
         </label>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button type="submit" size="lg" disabled={loading} className="mt-1">
           {loading ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
           {smsEnabled ? (isAr ? "تحقّق من الجوال وأكمل" : "Verify mobile & continue") : (isAr ? "إنشاء الحساب" : "Create account")}

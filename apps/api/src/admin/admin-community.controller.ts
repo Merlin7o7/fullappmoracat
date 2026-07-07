@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query } from "@nestjs/common";
+import { Body, Controller, Get, Header, Param, Patch, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { IsBoolean, IsOptional, IsString, MaxLength } from "class-validator";
 import { AdminCommunityService } from "./admin-community.service";
@@ -51,5 +51,14 @@ export class AdminCommunityController {
   @ApiOperation({ summary: "List membership-waitlist entries" })
   waitlist(@Query("page") page?: string) {
     return this.community.listWaitlist(page ? Number(page) : 1);
+  }
+
+  @Get("waitlist/export")
+  @RequirePermissions("customers.read")
+  @Header("Content-Type", "text/csv; charset=utf-8")
+  @Header("Content-Disposition", 'attachment; filename="moracat-waitlist.csv"')
+  @ApiOperation({ summary: "Export the ENTIRE membership waitlist as CSV" })
+  exportWaitlist() {
+    return this.community.exportWaitlistCsv();
   }
 }

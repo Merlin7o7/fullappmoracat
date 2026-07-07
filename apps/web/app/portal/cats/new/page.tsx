@@ -251,7 +251,9 @@ interface CatFileDetail {
   coatColor?: string | null; weightKg?: number | null;
   favoriteFoods?: string[]; isIndoor?: boolean; isNeutered?: boolean | null;
   vaccinationStatus?: string | null;
-  allergies?: string[]; healthConditions?: string[];
+  // Flat string arrays the API serializes for prefill (never the row objects,
+  // which stringified to "[object Object]").
+  allergyNames?: string[]; healthConditionNames?: string[];
   currentMedications?: string | null; emergencyNotes?: string | null;
 }
 
@@ -295,8 +297,8 @@ function CompleteFileForm({ catId }: { catId: string }) {
       isIndoor: cat.isIndoor === false ? "false" : "true",
       isNeutered: cat.isNeutered == null ? "unknown" : cat.isNeutered ? "true" : "false",
       vaccinationStatus: cat.vaccinationStatus ?? "UNKNOWN",
-      allergies: (cat.allergies ?? []).join(", "),
-      medicalConditions: (cat.healthConditions ?? []).join(", "),
+      allergies: (cat.allergyNames ?? []).join(", "),
+      medicalConditions: (cat.healthConditionNames ?? []).join(", "),
       currentMedications: cat.currentMedications ?? "",
       emergencyNotes: cat.emergencyNotes ?? "",
     });
@@ -412,7 +414,9 @@ function SectionTitle({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
-function splitList(s: string): string[] | undefined {
-  const arr = s.split(",").map((x) => x.trim()).filter(Boolean);
-  return arr.length ? arr : undefined;
+// The complete-file form always renders these fields, so we always send an
+// array (never undefined): a cleared field becomes [] and the API clears the
+// collection. De-duplicated so the same allergen can't be stored twice.
+function splitList(s: string): string[] {
+  return [...new Set(s.split(",").map((x) => x.trim()).filter(Boolean))];
 }

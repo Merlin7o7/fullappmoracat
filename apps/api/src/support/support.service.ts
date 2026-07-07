@@ -153,8 +153,8 @@ export class SupportService {
 
     await this.notifications.notify(ticket.userId, {
       category: "SYSTEM",
-      title: "Support replied to your ticket",
-      body: `${ticket.ticketNumber}: ${ticket.subject}`,
+      type: "support_replied",
+      params: { ticketNumber: ticket.ticketNumber, subject: ticket.subject },
       data: { ticketNumber: ticket.ticketNumber },
     });
     // Nudge the customer by email too, so a reply isn't missed.
@@ -171,8 +171,8 @@ export class SupportService {
     if (status === "RESOLVED") {
       await this.notifications.notify(ticket.userId, {
         category: "SYSTEM",
-        title: "Your ticket was resolved",
-        body: `${ticket.ticketNumber}: ${ticket.subject}`,
+        type: "support_resolved",
+        params: { ticketNumber: ticket.ticketNumber, subject: ticket.subject },
         data: { ticketNumber: ticket.ticketNumber },
       });
     }

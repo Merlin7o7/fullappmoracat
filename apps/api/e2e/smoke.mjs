@@ -65,7 +65,8 @@ console.log("━━ wallet pass (R034) ━━");
   const obj = claims.payload?.genericObjects?.[0];
   ok(claims.typ === "savetowallet" && claims.aud === "google", "JWT claims shaped for Save to Wallet");
   ok(obj?.id?.endsWith(cat.catIdNumber) && obj?.barcode?.value === `MRCV1:${cat.qrToken}`, "pass carries the Cat ID + secure QR token (never a URL)");
-  const pub = process.env.WALLET_GOOGLE_TEST_PUBLIC_KEY;
+  // The runner escapes newlines so the PEM survives Windows spawn env — restore them.
+  const pub = process.env.WALLET_GOOGLE_TEST_PUBLIC_KEY?.replace(/\\n/g, "\n");
   ok(!!pub && rsaVerify("RSA-SHA256", Buffer.from(`${h}.${p}`), pub, Buffer.from(sig, "base64url")), "JWT signature verifies (RS256)");
   // Cross-account isolation: another user's cat must 404, never leak a pass.
   const other = (await call("/auth/register", "POST", { email: `smoke+${rnd()}@e.com`, password: "S3cure!pass", firstName: "Other", acceptTerms: true })).json;

@@ -18,7 +18,15 @@ export class CommunityService {
   constructor(private readonly prisma: PrismaService) {}
 
   private baseWhere(): Prisma.CatWhereInput {
-    return { isPublic: true, hiddenAt: null, deletedAt: null, status: "ACTIVE" };
+    return {
+      isPublic: true,
+      hiddenAt: null,
+      deletedAt: null,
+      status: "ACTIVE",
+      // Never surface cats of a deactivated / soft-deleted owner (suspension also
+      // hides cats explicitly; this covers the other account states too).
+      user: { is: { status: "ACTIVE", deletedAt: null } },
+    };
   }
 
   async list(query: CommunityQueryDto) {
@@ -40,19 +48,28 @@ export class CommunityService {
       }
     }
     // City filter only matches cats that actually reveal their city (privacy).
+    // Merge into the owner constraint from baseWhere rather than replacing it.
     if (query.cityId) {
       where.showCity = true;
-      where.user = { addresses: { some: { isDefault: true, cityId: query.cityId } } };
+      where.user = {
+        is: {
+          status: "ACTIVE",
+          deletedAt: null,
+          addresses: { some: { isDefault: true, cityId: query.cityId } },
+        },
+      };
     }
 
+    // Every sort ends with a unique `id` tiebreaker so pages don't duplicate or
+    // skip rows when items share the primary sort value (offset pagination).
     const orderBy: Prisma.CatOrderByWithRelationInput[] =
       query.sort === "viewed"
-        ? [{ viewCount: "desc" }, { sharedAt: "desc" }]
+        ? [{ viewCount: "desc" }, { sharedAt: "desc" }, { id: "desc" }]
         : query.sort === "liked"
-          ? [{ likeCount: "desc" }, { sharedAt: "desc" }]
+          ? [{ likeCount: "desc" }, { sharedAt: "desc" }, { id: "desc" }]
           : query.sort === "featured"
-            ? [{ isFeatured: "desc" }, { viewCount: "desc" }]
-            : [{ sharedAt: "desc" }];
+            ? [{ isFeatured: "desc" }, { viewCount: "desc" }, { id: "desc" }]
+            : [{ sharedAt: "desc" }, { id: "desc" }];
 
     const [rows, total] = await Promise.all([
       this.prisma.cat.findMany({

@@ -1,23 +1,21 @@
 "use client";
 
+import { formatDate, formatDateTime } from "@/lib/datetime";
+
 /**
  * Shared bilingual helpers for the admin surface. Admin is Arabic-first
  * (R101) but staff-facing, so strings stay terse. Pages read `isAr` from
- * useLocale() and pass it here.
+ * useLocale() and pass it here. Dates route through the shared datetime module
+ * so the calendar preference (Hijri/Gregorian/auto) is consistent everywhere.
  */
 
-/** Locale-aware date formatting (numerals + calendar per locale). */
+/** Locale-aware date formatting (numerals + calendar per preference). */
 export function fmtDate(d: string | Date, isAr: boolean, opts?: Intl.DateTimeFormatOptions) {
-  return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-GB", opts ?? { day: "numeric", month: "short", year: "numeric" });
+  return formatDate(d, isAr ? "ar" : "en", opts ?? { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function fmtDateTime(d: string | Date, isAr: boolean) {
-  return new Date(d).toLocaleString(isAr ? "ar-SA" : "en-GB", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(d, isAr ? "ar" : "en");
 }
 
 /** Locale-aware number formatting (Arabic-Indic numerals in ar). */

@@ -8,6 +8,8 @@ import * as React from "react";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const { locale } = useLocale();
+  const isAr = locale === "ar";
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   const isDark = theme === "dark";
@@ -15,7 +17,7 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      aria-label="Toggle theme"
+      aria-label={isAr ? (isDark ? "الوضع الفاتح" : "الوضع الداكن") : isDark ? "Light mode" : "Dark mode"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {mounted && isDark ? <Sun /> : <Moon />}
@@ -29,7 +31,7 @@ export function LangToggle() {
     <Button
       variant="ghost"
       size="sm"
-      aria-label="Switch language"
+      aria-label={locale === "ar" ? "التبديل إلى الإنجليزية" : "Switch to Arabic"}
       onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
     >
       <Languages className="size-4" />

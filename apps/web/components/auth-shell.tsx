@@ -63,12 +63,12 @@ export function AuthShell({
               ? (isAr ? `هوية ${previewCatName} جاهزة تنطبع` : `${previewCatName}'s ID is ready to be stamped`)
               : `${t.hero.title} ${t.hero.titleAccent}`}
           </p>
-          <p className="mt-3 text-center text-sm leading-relaxed text-primary-foreground/70">
+          <p className="mt-3 text-center text-sm leading-relaxed text-primary-foreground/85">
             {t.hero.trust}
           </p>
         </div>
 
-        <p className="flex items-center gap-2 text-xs text-primary-foreground/50">
+        <p className="flex items-center gap-2 text-xs text-primary-foreground/85">
           <IlloPaw tone="peach" className="size-4" />
           {t.footerNote}
         </p>

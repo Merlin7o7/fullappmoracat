@@ -28,6 +28,16 @@ export function ImgWithFallback({
   if (!src || failed) return <>{fallback}</>;
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} className={className} loading={loading} onError={() => setFailed(true)} />
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      loading={loading}
+      // Async decode keeps large photos off the main thread. Safe for exports:
+      // the capture path awaits img.decode() explicitly. NB: we never default
+      // loading to "lazy" — the off-screen export twin must load eagerly.
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
   );
 }

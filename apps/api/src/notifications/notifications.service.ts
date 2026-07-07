@@ -1,5 +1,10 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  buildNotificationText,
+  type NotificationParams,
+  type NotificationType,
+} from "./notifications.messages";
 
 type Category =
   | "ORDER"
@@ -12,8 +17,11 @@ type Category =
 
 interface NotifyInput {
   category: Category;
-  title: string;
-  body: string;
+  /** Stable message key — text is localized from the catalogue at write time. */
+  type: NotificationType;
+  /** Interpolation values for the catalogue (cat name, order number, …). */
+  params?: NotificationParams;
+  /** Structured payload for deep-linking (catId, slug, ticketNumber, …). */
   data?: Record<string, unknown>;
 }
 
@@ -33,17 +41,21 @@ export class NotificationsService {
 
   /** Write an in-app notification. Safe to `void` — never throws to the caller. */
   async notify(userId: string, input: NotifyInput) {
+    // Localize once, at write time, for both languages. `title`/`body` keep the
+    // English copy as a fallback for any consumer that ignores `data.i18n`; the
+    // web renders `data.i18n[locale]` so the feed follows the member's language.
+    const i18n = buildNotificationText(input.type, input.params);
     const notification = await this.prisma.notification.create({
       data: {
         userId,
         channel: "IN_APP",
         category: input.category,
-        title: input.title,
-        body: input.body,
-        data: (input.data ?? undefined) as never,
+        title: i18n.en.title,
+        body: i18n.en.body,
+        data: { type: input.type, params: input.params ?? {}, i18n, ...(input.data ?? {}) } as never,
       },
     });
-    this.logger.log(`→ ${userId.slice(0, 8)}… [${input.category}] ${input.title}`);
+    this.logger.log(`→ ${userId.slice(0, 8)}… [${input.category}] ${input.type}`);
     return notification;
   }
 

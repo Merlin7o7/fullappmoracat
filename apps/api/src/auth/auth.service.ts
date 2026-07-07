@@ -18,6 +18,7 @@ import {
   welcomeTemplate,
   passwordResetTemplate,
   passwordChangedTemplate,
+  twoFactorDisabledTemplate,
   type Locale as MailLocale,
 } from "../mail/mail.templates";
 import type {
@@ -353,8 +354,7 @@ export class AuthService {
     // Keep the in-app record too, so the portal feed stays the source of truth.
     await this.notifications.notify(user.id, {
       category: "SYSTEM",
-      title: "إعادة تعيين كلمة المرور",
-      body: "طلبت إعادة تعيين كلمة المرور. الرابط صالح لمدة ساعة.",
+      type: "password_reset_requested",
     });
     this.logger.log(`Password reset requested for ${user.email}`);
     return { sent: true, ...(IS_PROD ? {} : { devToken: token }) };
@@ -556,8 +556,46 @@ export class AuthService {
     return { enabled: true, backupCodes };
   }
 
-  async disable2fa(userId: string) {
+  /**
+   * Disabling 2FA is a step-up action: it strips the account's strongest
+   * control, so we re-authenticate first. Password by default; for password-less
+   * (Google) accounts we require a current TOTP code instead. Either way the
+   * member is emailed that 2FA was turned off.
+   */
+  async disable2fa(userId: string, dto: { password?: string; code?: string }) {
+    const [user, tf] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { passwordHash: true, email: true, firstName: true, locale: true },
+      }),
+      this.prisma.twoFactor.findUnique({ where: { userId } }),
+    ]);
+    if (!user) throw new UnauthorizedException("Not authenticated");
+    if (!tf) return { enabled: false }; // already off — nothing to re-auth against
+
+    if (user.passwordHash) {
+      const ok = dto.password
+        ? await bcrypt.compare(dto.password, user.passwordHash)
+        : false;
+      if (!ok) throw new UnauthorizedException("Password is incorrect");
+    } else {
+      // No password on file — verify possession via a current TOTP code.
+      const ok = dto.code
+        ? authenticator.verify({ token: dto.code, secret: tf.secret })
+        : false;
+      if (!ok) throw new UnauthorizedException("A valid 2FA code is required");
+    }
+
     await this.prisma.twoFactor.deleteMany({ where: { userId } });
+
+    // Tell the member their strongest control was removed (parity with the
+    // password-changed alert) so an attacker can't silently disable it.
+    if (user.email) {
+      const tpl = twoFactorDisabledTemplate(this.mailLocale(user.locale), user.firstName ?? undefined);
+      void this.mail
+        .send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text })
+        .catch(() => undefined);
+    }
     return { enabled: false };
   }
 

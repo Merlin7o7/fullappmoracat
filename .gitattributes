@@ -1,0 +1,4 @@
+# Shell scripts must use LF — CRLF breaks `sh` on Alpine/Linux containers.
+*.sh text eol=lf
+# Prisma migration SQL is executed verbatim; keep it LF.
+*.sql text eol=lf

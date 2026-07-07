@@ -61,6 +61,8 @@ interface AuthContextValue extends AuthState {
   updateUser: (patch: Partial<AuthUser>) => void;
   /** Authenticated fetch against the API that refreshes on 401. */
   authedFetch: <T = unknown>(path: string, init?: RequestInit) => Promise<T>;
+  /** Authenticated download — returns the raw response Blob (e.g. CSV export). */
+  authedBlob: (path: string) => Promise<Blob>;
   /** Multipart upload (FormData) with the same token-attach + refresh flow. */
   authedUpload: <T = unknown>(path: string, form: FormData, method?: string) => Promise<T>;
   /** Image upload via XHR with real upload-progress events (0–100). */
@@ -248,6 +250,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [persist, state.user]
   );
 
+  const authedBlob = React.useCallback<AuthContextValue["authedBlob"]>(
+    async (path) => {
+      const doFetch = (token: string) =>
+        fetch(`${BASE}/api${path}`, { headers: { authorization: `Bearer ${token}` } });
+
+      const tokens = tokensRef.current;
+      if (!tokens) throw new Error("Not authenticated");
+
+      let res = await doFetch(tokens.accessToken);
+      if (res.status === 401) {
+        try {
+          const refreshed = await apiPost<{ accessToken: string; refreshToken: string }>(
+            "/auth/refresh",
+            { refreshToken: tokens.refreshToken }
+          );
+          const next = { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken };
+          persist(state.user, next);
+          res = await doFetch(next.accessToken);
+        } catch {
+          persist(null, null);
+          throw new Error("Session expired");
+        }
+      }
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      return res.blob();
+    },
+    [persist, state.user]
+  );
+
   const authedUpload = React.useCallback<AuthContextValue["authedUpload"]>(
     async (path, form, method = "POST") => {
       const doFetch = (token: string) =>
@@ -353,10 +384,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       updateUser,
       authedFetch,
+      authedBlob,
       authedUpload,
       uploadImage,
     }),
-    [state, login, loginWithPhone, loginWithGoogle, register, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedUpload, uploadImage]
+    [state, login, loginWithPhone, loginWithGoogle, register, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedBlob, authedUpload, uploadImage]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

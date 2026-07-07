@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Lock, ShieldCheck, Loader2, Check } from "lucide-react";
+import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays } from "lucide-react";
 import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { buildGreeting, type Gender } from "@/lib/greeting";
+import { formatDate, type CalendarPref } from "@/lib/datetime";
 import { Field } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { QueryError } from "@/components/query-error";
@@ -58,11 +59,61 @@ export default function SettingsPage() {
               qc.invalidateQueries({ queryKey: ["overview"] }); // the greeting lives there
             }}
           />
+          <PreferencesSection isAr={isAr} />
           <PasswordSection isAr={isAr} authedFetch={authedFetch} onChanged={() => logout()} />
           <TwoFactorSection isAr={isAr} enabled={profile.twoFactorEnabled} authedFetch={authedFetch} onChanged={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
         </>
       )}
     </div>
+  );
+}
+
+/** Date-calendar preference — Hijri, Gregorian, or auto (by language). */
+function PreferencesSection({ isAr }: { isAr: boolean }) {
+  const { calendar, setCalendar } = useLocale();
+  const options: { value: CalendarPref; label: string; hint: string }[] = [
+    { value: "auto", label: isAr ? "تلقائي" : "Automatic", hint: isAr ? "هجري مع العربية، ميلادي مع الإنجليزية" : "Hijri in Arabic, Gregorian in English" },
+    { value: "hijri", label: isAr ? "هجري" : "Hijri", hint: isAr ? "تقويم أم القرى" : "Umm al-Qura calendar" },
+    { value: "gregorian", label: isAr ? "ميلادي" : "Gregorian", hint: isAr ? "التقويم الميلادي" : "Gregorian calendar" },
+  ];
+  // Live preview reflects the chosen preference immediately.
+  const preview = formatDate(new Date(), isAr ? "ar" : "en", { day: "numeric", month: "long", year: "numeric" });
+
+  return (
+    <SectionCard
+      icon={CalendarDays}
+      title={isAr ? "التقويم" : "Calendar"}
+      desc={isAr ? "كيف تُعرض التواريخ في كل المنصة" : "How dates are shown across the platform"}
+    >
+      <div role="radiogroup" aria-label={isAr ? "نوع التقويم" : "Calendar type"} className="grid gap-2 sm:grid-cols-3">
+        {options.map((o) => {
+          const active = calendar === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => setCalendar(o.value)}
+              className={cn(
+                "rounded-2xl border p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                active ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{o.label}</span>
+                {active && <Check className="size-4 text-primary" />}
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">{o.hint}</p>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">
+        {isAr ? "مثال: " : "Preview: "}
+        <span className="font-medium text-foreground" dir="auto">{preview}</span>
+      </p>
+    </SectionCard>
   );
 }
 
@@ -186,7 +237,7 @@ function PasswordSection({ isAr, authedFetch, onChanged }: {
       <form onSubmit={(e) => { e.preventDefault(); change.mutate(f); }} className="grid gap-4">
         <Field label={isAr ? "كلمة المرور الحالية" : "Current password"} type="password" required value={f.currentPassword} onChange={(v) => setF({ ...f, currentPassword: v })} />
         <Field label={isAr ? "كلمة المرور الجديدة" : "New password"} type="password" required value={f.newPassword} onChange={(v) => setF({ ...f, newPassword: v })} />
-        {change.error && <p className="text-sm text-destructive">{change.error.message}</p>}
+        {change.error && <p role="alert" className="text-sm text-destructive">{change.error.message}</p>}
         <Button type="submit" variant="outline" disabled={change.isPending} className="w-fit">
           {change.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تحديث كلمة المرور" : "Update password"}
         </Button>
@@ -200,6 +251,8 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
 }) {
   const [setup, setSetup] = React.useState<{ otpauthUrl: string; secret: string } | null>(null);
   const [code, setCode] = React.useState("");
+  const [disarming, setDisarming] = React.useState(false);
+  const [password, setPassword] = React.useState("");
 
   const begin = useMutation({
     mutationFn: () => authedFetch<{ otpauthUrl: string; secret: string }>("/auth/2fa/setup", { method: "POST", body: "{}" }),
@@ -207,11 +260,12 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
   });
   const enable = useMutation({
     mutationFn: () => authedFetch("/auth/2fa/enable", { method: "POST", body: JSON.stringify({ code }) }),
-    onSuccess: () => { setSetup(null); onChanged(); },
+    onSuccess: () => { setSetup(null); setCode(""); onChanged(); },
   });
   const disable = useMutation({
-    mutationFn: () => authedFetch("/auth/2fa/disable", { method: "POST", body: "{}" }),
-    onSuccess: onChanged,
+    // Re-authenticate before stripping the account's strongest control.
+    mutationFn: () => authedFetch("/auth/2fa/disable", { method: "POST", body: JSON.stringify({ password }) }),
+    onSuccess: () => { setDisarming(false); setPassword(""); onChanged(); },
   });
 
   return (
@@ -219,9 +273,11 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
       <div className="flex items-center justify-between">
         <Badge variant={enabled ? "success" : "secondary"}>{enabled ? (isAr ? "مفعّل" : "Enabled") : (isAr ? "غير مفعّل" : "Disabled")}</Badge>
         {enabled ? (
-          <Button variant="outline" size="sm" onClick={() => disable.mutate()} disabled={disable.isPending}>
-            {disable.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تعطيل" : "Disable"}
-          </Button>
+          !disarming ? (
+            <Button variant="outline" size="sm" onClick={() => { disable.reset(); setDisarming(true); }}>
+              {isAr ? "تعطيل" : "Disable"}
+            </Button>
+          ) : null
         ) : !setup ? (
           <Button variant="outline" size="sm" onClick={() => begin.mutate()} disabled={begin.isPending}>
             {begin.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تفعيل" : "Enable"}
@@ -229,12 +285,35 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
         ) : null}
       </div>
 
+      {enabled && disarming && (
+        <form
+          className="mt-4 space-y-3 rounded-xl bg-muted/50 p-4"
+          onSubmit={(e) => { e.preventDefault(); disable.mutate(); }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {isAr ? "أكّد كلمة مرورك لتعطيل المصادقة الثنائية." : "Confirm your password to turn off two-factor authentication."}
+          </p>
+          <Field type="password" label={isAr ? "كلمة المرور" : "Password"} value={password} onChange={setPassword} placeholder="••••••••" />
+          {disable.error && (
+            <p role="alert" className="text-sm text-destructive">{disable.error.message}</p>
+          )}
+          <div className="flex gap-2">
+            <Button type="submit" variant="outline" size="sm" disabled={disable.isPending || !password}>
+              {disable.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تأكيد التعطيل" : "Confirm & disable"}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setDisarming(false); setPassword(""); disable.reset(); }}>
+              {isAr ? "إلغاء" : "Cancel"}
+            </Button>
+          </div>
+        </form>
+      )}
+
       {setup && (
         <div className="mt-4 space-y-3 rounded-xl bg-muted/50 p-4">
           <p className="text-sm text-muted-foreground">{isAr ? "أضف هذا السر إلى تطبيق المصادقة، ثم أدخل الرمز:" : "Add this secret to your authenticator app, then enter the code:"}</p>
           <code className="block break-all rounded-lg bg-background p-2 text-xs">{setup.secret}</code>
           <Field label={isAr ? "الرمز" : "Code"} value={code} onChange={setCode} placeholder="123456" />
-          {enable.error && <p className="text-sm text-destructive">{enable.error.message}</p>}
+          {enable.error && <p role="alert" className="text-sm text-destructive">{enable.error.message}</p>}
           <Button size="sm" onClick={() => enable.mutate()} disabled={enable.isPending || code.length !== 6}>
             {enable.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تأكيد التفعيل" : "Confirm & enable"}
           </Button>

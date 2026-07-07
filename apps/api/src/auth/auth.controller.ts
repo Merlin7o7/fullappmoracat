@@ -29,6 +29,7 @@ import {
   RequestOtpDto,
   ResetPasswordDto,
   Verify2faDto,
+  Disable2faDto,
   VerifyOtpDto,
 } from "./dto/auth.dto";
 import { Public } from "../common/decorators/public.decorator";
@@ -162,8 +163,8 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Post("2fa/disable")
-  @ApiOperation({ summary: "Disable 2FA" })
-  disable2fa(@CurrentUser("id") userId: string) {
-    return this.auth.disable2fa(userId);
+  @ApiOperation({ summary: "Disable 2FA — requires the account password (or a current code)" })
+  disable2fa(@CurrentUser("id") userId: string, @Body() dto: Disable2faDto) {
+    return this.auth.disable2fa(userId, dto);
   }
 }

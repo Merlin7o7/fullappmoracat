@@ -1,29 +1,22 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, ServiceUnavailableException } from "@nestjs/common";
 import { ApiTags, ApiOkResponse } from "@nestjs/swagger";
-import { PrismaService } from "../prisma/prisma.service";
+import { HealthService } from "./health.service";
 import { Public } from "../common/decorators/public.decorator";
 
 @ApiTags("health")
 @Controller("health")
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly health: HealthService) {}
 
   @Public()
   @Get()
-  @ApiOkResponse({ description: "Liveness + database connectivity probe" })
+  @ApiOkResponse({ description: "Liveness + database connectivity + schema-compatibility probe" })
   async check() {
-    let db = "down";
-    try {
-      await this.prisma.$queryRaw`SELECT 1`;
-      db = "up";
-    } catch {
-      db = "down";
-    }
-    return {
-      status: db === "up" ? "ok" : "degraded",
-      service: "moraqat-api",
-      db,
-      timestamp: new Date().toISOString(),
-    };
+    const report = await this.health.check();
+    // Answer 503 when degraded (DB down or schema drift) so health-gated deploys
+    // and uptime monitors keep the previous healthy revision instead of serving
+    // on a stale schema.
+    if (report.status !== "ok") throw new ServiceUnavailableException(report);
+    return report;
   }
 }

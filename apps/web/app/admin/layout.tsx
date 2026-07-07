@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing,
+  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing, UserCog,
 } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -21,6 +21,7 @@ const NAV = [
   { href: "/admin/community", icon: Cat, en: "Community", ar: "المجتمع" },
   { href: "/admin/waitlist", icon: BellRing, en: "Waitlist", ar: "قائمة الانتظار" },
   { href: "/admin/support", icon: LifeBuoy, en: "Support", ar: "الدعم" },
+  { href: "/admin/staff", icon: UserCog, en: "Staff", ar: "الفريق" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

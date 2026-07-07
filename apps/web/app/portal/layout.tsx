@@ -76,7 +76,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                     "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                     active
                       ? "bg-primary-foreground/[0.14] text-primary-foreground"
-                      : "text-primary-foreground/65 hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
+                      : "text-primary-foreground/85 hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
                   )}
                 >
                   <item.icon className="size-4" />
@@ -102,7 +102,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           <button
             type="button"
             onClick={() => { void logout(); router.push("/login"); }}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-primary-foreground/65 transition-colors hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
           >
             <LogOut className="size-4" />
             {isAr ? "تسجيل الخروج" : "Log out"}

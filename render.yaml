@@ -52,6 +52,12 @@ services:
       # exhaust Neon's connection cap under load.
       - key: DATABASE_URL
         sync: false
+      # The DIRECT (non-pooled) Neon URL — host has NO "-pooler". Used ONLY by
+      # `prisma migrate deploy` at container start (start.sh); Prisma cannot run
+      # migrations through pgbouncer. A failed migration now aborts boot, so this
+      # must be set in production. Falls back to DATABASE_URL if unset.
+      - key: DIRECT_DATABASE_URL
+        sync: false
       # ── Observability (Sentry + logs) ───────────────────────────────────
       # Paste the API DSN in the dashboard; empty = disabled (no-op).
       - key: SENTRY_DSN

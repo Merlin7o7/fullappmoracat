@@ -24,7 +24,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatIdStory } from "@/components/cat-id-story";
-import { shareStoryPng } from "@/lib/card-export";
+import { shareStoryPng, exportSafeSrc } from "@/lib/card-export";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 
 interface WelcomeCat {
@@ -312,7 +312,9 @@ function WelcomeInner() {
               catName={cat.name}
               catIdNumber={cat.catIdNumber}
               issuedAt={cat.idIssuedAt}
-              photoUrl={cat.photoUrl}
+              // Route R2 photos through same-origin /_next/image so html-to-image
+              // can capture them (cross-origin photos otherwise fail the export).
+              photoUrl={exportSafeSrc(cat.photoUrl)}
               qrToken={cat.qrToken}
               isAr={isAr}
             />
