@@ -14,15 +14,24 @@ export function OtpBoxes({
   onComplete,
   disabled,
   isAr,
+  autoFocus,
 }: {
   value: string;
   onChange: (v: string) => void;
   onComplete?: (v: string) => void;
   disabled?: boolean;
   isAr?: boolean;
+  /** Focus the first box on mount so the member can type immediately (R002). */
+  autoFocus?: boolean;
 }) {
   const refs = React.useRef<(HTMLInputElement | null)[]>([]);
   const digits = React.useMemo(() => value.padEnd(6, " ").slice(0, 6).split(""), [value]);
+
+  React.useEffect(() => {
+    if (autoFocus && !disabled) refs.current[0]?.focus();
+    // Only on mount — re-focusing on every keystroke would fight the auto-advance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function setAt(i: number, d: string) {
     const arr = value.padEnd(6, " ").slice(0, 6).split("");
@@ -82,8 +91,8 @@ export function OtpBoxes({
           onFocus={(e) => e.target.select()}
           aria-label={`${isAr ? "الرقم" : "Digit"} ${i + 1}`}
           className={cn(
-            "size-12 rounded-xl border border-border bg-card text-center font-mono text-xl font-semibold tabular-nums outline-none transition",
-            "focus:border-primary focus:ring-2 focus:ring-primary/20",
+            "size-12 rounded-xl border border-input bg-card text-center font-mono text-xl font-semibold tabular-nums outline-none transition",
+            "focus:border-primary focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background",
             "disabled:opacity-60 sm:size-14"
           )}
         />

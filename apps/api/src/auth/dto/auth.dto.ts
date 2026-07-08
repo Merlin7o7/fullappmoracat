@@ -81,6 +81,13 @@ export class RegisterDto {
   @IsString()
   @Matches(/^\d{4,6}$/, { message: "OTP must be 4–6 digits" })
   otp?: string;
+
+  /** Referral code from ?ref= — attributes the signup to the inviting member. */
+  @ApiPropertyOptional({ example: "7QK4M2P" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  ref?: string;
 }
 
 export class LoginDto {

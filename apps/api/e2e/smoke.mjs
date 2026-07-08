@@ -36,6 +36,10 @@ ok((await call("/auth/refresh", "POST", { refreshToken: reg.refreshToken })).sta
 
 console.log("━━ email OTP + community + uploads ━━");
 ok((await call("/auth/email/otp/verify", "POST", { code: "000000" }, C)).status === 400, "wrong email OTP rejected (400)");
+// UGC writes are gated on a verified email server-side (EmailVerifiedGuard).
+ok((await call("/cats", "POST", { name: "Nope", activityLevel: "LOW", isIndoor: true }, C)).status === 403, "cat write blocked before email verified (403)");
+ok(!!reg.devEmailCode, "dev email code returned in non-prod");
+ok((await call("/auth/email/otp/verify", "POST", { code: reg.devEmailCode }, C)).json?.verified === true, "email verified with correct code");
 const community = await call("/community/cats");
 ok(community.status === 200 && typeof community.json?.pagination?.total === "number", "community browse is public");
 ok((await call("/uploads/image", "POST", {})).status === 401, "image upload requires auth (401)");
@@ -139,6 +143,8 @@ ok(shared.isPublic === true && !!shared.publicSlug, "cat made public with a slug
 const slug = shared.publicSlug;
 const liker = (await call("/auth/register", "POST", { email: `liker-${rnd()}@smoke.test`, password: "Passw0rd!23", fullName: "Liker Smoke", acceptTerms: true })).json;
 const L = liker.accessToken;
+// Liking is an email-verified community write — verify first.
+await call("/auth/email/otp/verify", "POST", { code: liker.devEmailCode }, L);
 const like1 = (await call(`/community/cats/${slug}/like`, "POST", undefined, L)).json;
 ok(like1.liked === true && like1.likeCount === 1, "like registers (count 1)");
 const like2 = (await call(`/community/cats/${slug}/like`, "POST", undefined, L)).json;
@@ -149,6 +155,17 @@ const loved = (await call("/community/cats?sort=liked")).json;
 ok(loved.items[0]?.slug === slug && loved.items[0]?.likeCount === 1, "Most-Loved sort ranks by likeCount");
 const unlike = (await call(`/community/cats/${slug}/like`, "DELETE", undefined, L)).json;
 ok(unlike.liked === false && unlike.likeCount === 0, "unlike decrements to 0");
+
+// Reported content → moderation queue → audit trail (C3/C4).
+const rep = (await call(`/community/cats/${slug}/report`, "POST", { reason: "SPAM", detail: "smoke report" }, L)).json;
+ok(rep.reported === true, "member can report a public cat");
+const reports = (await call("/admin/community/reports?status=PENDING", "GET", undefined, A)).json;
+const myReport = reports.items?.find((r) => r.cat.publicSlug === slug);
+ok(!!myReport, "report appears in the moderation queue");
+const resolved = (await call(`/admin/community/reports/${myReport.id}/resolve`, "PATCH", { action: "dismiss" }, A)).json;
+ok(resolved.resolved === true, "admin resolves (dismisses) a report");
+const audit = (await call("/admin/audit?action=community.report", "GET", undefined, A)).json;
+ok(audit.items?.some((e) => e.action === "community.report.dismiss"), "audit log viewer records the dismissal");
 // The owner sees in-app community notifications with a readable API.
 const feed = (await call("/notifications", "GET", undefined, C)).json;
 ok(Array.isArray(feed.items) && typeof feed.unread === "number", "notifications read API returns items + unread");
@@ -159,6 +176,14 @@ const readAll = (await call("/notifications/read-all", "PATCH", undefined, C)).j
 ok(readAll.success === true, "mark-all-read works");
 const uc2 = (await call("/notifications/unread-count", "GET", undefined, C)).json;
 ok(uc2.unread === 0, "unread drops to 0 after mark-all-read");
+
+// Wave 8: referral loop, notification preferences, profile completion.
+const ref = (await call("/account/referral", "GET", undefined, C)).json;
+ok(!!ref.code && ref.link.includes(ref.code), "referral code + invite link issued");
+const prefs = (await call("/account/notification-preferences", "GET", undefined, C)).json;
+ok(Array.isArray(prefs) && prefs.some((p) => p.category === "COMMUNITY"), "notification preferences load");
+const ovc = (await call("/account/overview", "GET", undefined, C)).json;
+ok(ovc.primaryCat?.completion && typeof ovc.primaryCat.completion.percent === "number", "profile completion computed on overview");
 // Arabic search normalization: a diacritic-free query finds a diacritic name.
 const arCat = (await call("/cats", "POST", { name: "مِشْمِش", activityLevel: "LOW", isIndoor: true }, C)).json;
 await call(`/cats/${arCat.id}/visibility`, "PATCH", { isPublic: true }, C);

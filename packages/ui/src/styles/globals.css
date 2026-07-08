@@ -36,10 +36,14 @@
     --muted: 36 30% 90%;
     --muted-foreground: 165 12% 32%;
 
-    /* Orange #f86c2f — primary CTAs + highlights */
+    /* Orange #f86c2f — primary CTAs + highlights. This is a FILL colour: it
+     * passes AA as a button background with ink foreground, but fails as text
+     * on paper (2.78:1). For orange *text* / gradient text use --accent-ink. */
     --accent: 18 93% 58%;
     --accent-foreground: 165 45% 8%;
     --accent-hover: 18 93% 50%;
+    /* Text-safe orange — darkened to clear 4.5:1 on the paper ground (R091). */
+    --accent-ink: 16 92% 38%;
 
     /* ── Sticker accents (decorative, from the illustration set) ── */
     --cream: 30 68% 90%;             /* section tint — the old ground   */
@@ -55,14 +59,17 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 44%;
     --warning-foreground: 30 45% 10%;
-    --info: 200 82% 38%;
+    --info: 200 82% 33%;             /* darkened from 38% → clears 4.5:1 text */
     --info-foreground: 0 0% 100%;
     --destructive: 0 74% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Lines + focus */
-    --border: 35 25% 84%;
-    --input: 35 25% 80%;
+    /* Lines + focus. --border is a decorative hairline (dividers, card edges —
+     * not state-carrying, exempt from 1.4.11). --input is a *control boundary*
+     * and is the sole indicator of the field, so it must clear 3:1 (WCAG 1.4.11):
+     * darkened from 25%/80% to a warm taupe that reads as an edge for low vision. */
+    --border: 35 22% 80%;
+    --input: 32 18% 52%;
     --ring: 166 91% 24%;
 
     --radius: 1rem;
@@ -107,6 +114,8 @@
     --accent: 18 93% 58%;
     --accent-foreground: 168 45% 6%;
     --accent-hover: 18 94% 64%;
+    /* On the dark ground, the bright orange already clears 4.5:1 as text. */
+    --accent-ink: 20 96% 66%;
 
     --cream: 166 24% 12%;
     --cream-foreground: 38 50% 93%;
@@ -122,11 +131,12 @@
     --warning-foreground: 168 45% 6%;
     --info: 200 84% 62%;
     --info-foreground: 168 45% 6%;
-    --destructive: 0 70% 57%;
+    --destructive: 0 78% 63%;        /* lightened from 57% → clears 4.5:1 on dark */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 168 15% 17%;
-    --input: 168 15% 20%;
+    /* --border stays a soft divider; --input lifted to a perceptible field edge (3:1). */
+    --border: 168 14% 20%;
+    --input: 168 12% 38%;
     --ring: 158 56% 50%;
 
     --shadow-color: 168 65% 2%;
@@ -247,9 +257,18 @@
     content: "";
   }
 
-  /* Brand gradient text for hero accents. */
+  /* Brand gradient text for hero accents. Uses --accent-ink (not the fill
+   * orange) so the lightest sampled pixels still clear contrast on paper. */
   .text-gradient {
-    @apply bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent;
+    background-image: linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--accent-ink)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Text-safe orange for the rare orange *word* (labels, links) — WCAG AA. */
+  .text-accent-ink {
+    color: hsl(var(--accent-ink));
   }
 
   /* Subtle ambient mesh backdrop for hero / auth surfaces. */
@@ -297,6 +316,19 @@
 }
 
 @layer utilities {
+  /* ── Safe-area (notch / home indicator) — paired with viewport-fit=cover.
+   * env() resolves to 0 on non-notched devices, so these are always safe. ── */
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .ps-safe { padding-inline-start: env(safe-area-inset-left); }
+  .pe-safe { padding-inline-end: env(safe-area-inset-right); }
+  /* Floating bottom bar: keep a min gap, but clear the home indicator when present. */
+  .bottom-safe { bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+  /* Bottom-sheet inner padding that clears the home indicator. */
+  .pb-safe-6 { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+  /* Reserve scroll room under a fixed bottom bar (nav height + inset). */
+  .pb-nav { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+
   /* Staggered entrance helpers (respect reduced-motion via base rule). */
   .animate-delay-75 { animation-delay: 75ms; }
   .animate-delay-150 { animation-delay: 150ms; }

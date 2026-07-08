@@ -27,7 +27,9 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        sm: "h-9 px-4",
+        // sm is for dense desktop rows; primary mobile actions should use md+.
+        // Lifted 36→40px to reduce the gap to the 44px touch target (R092).
+        sm: "h-10 px-4",
         md: "h-11 px-6",
         lg: "h-13 px-8 text-base",
         xl: "h-14 px-9 text-base",

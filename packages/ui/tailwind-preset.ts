@@ -39,6 +39,8 @@ const preset: Partial<Config> = {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+          // Text-safe orange (AA on paper) — for orange words, not fills.
+          ink: "hsl(var(--accent-ink))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",

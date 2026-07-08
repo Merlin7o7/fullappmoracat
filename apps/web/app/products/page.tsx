@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Star, BellRing, SlidersHorizontal } from "lucide-react";
+import { Star, BellRing, SlidersHorizontal, Search } from "lucide-react";
 import { Card, Badge, Skeleton, buttonVariants, cn } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -25,10 +25,16 @@ export default function ProductsPage() {
   const isAr = locale === "ar";
   const [type, setType] = React.useState("");
   const [sort, setSort] = React.useState("newest");
+  const [search, setSearch] = React.useState("");
+  const [debounced, setDebounced] = React.useState("");
+  React.useEffect(() => {
+    const t = window.setTimeout(() => setDebounced(search.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [search]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["products", type, sort],
-    queryFn: () => api.products({ type: type || undefined, sort }),
+    queryKey: ["products", type, sort, debounced],
+    queryFn: () => api.products({ type: type || undefined, sort, search: debounced || undefined }),
   });
 
   return (
@@ -68,6 +74,17 @@ export default function ProductsPage() {
             ))}
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={isAr ? "ابحث في المتجر…" : "Search the shop…"}
+                aria-label={isAr ? "ابحث في المنتجات" : "Search products"}
+                className="w-44 rounded-full border border-input bg-card ps-9 pe-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-52"
+              />
+            </div>
             <SlidersHorizontal className="size-4 text-muted-foreground" />
             <select
               value={sort}
@@ -87,8 +104,8 @@ export default function ProductsPage() {
         {/* Grid */}
         {isError ? (
           <EmptyState
-            title={isAr ? "تعذّر تحميل المنتجات" : "Couldn't load products"}
-            body={isAr ? "تأكد أن الخادم يعمل على المنفذ 4000." : "Make sure the API is running on port 4000."}
+            title={isAr ? "تعذّر تحميل المنتجات" : "We couldn't load the shop"}
+            body={isAr ? "قد تكون هفوة مؤقتة — حدّث الصفحة بعد لحظات." : "This might be a hiccup on our side — refresh in a moment."}
           />
         ) : isLoading ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -161,6 +178,9 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
         <div className="mt-3 flex items-center justify-between">
           <span className="font-display text-lg font-bold">
             {product.price} <span className="text-xs font-normal text-muted-foreground">SAR</span>
+            {product.compareAtPrice && product.compareAtPrice > product.price && (
+              <span className="ms-1.5 align-middle text-xs font-normal text-muted-foreground line-through">{product.compareAtPrice}</span>
+            )}
           </span>
           {/* Community Mode: no checkout yet. Funnel interest to the launch waitlist. */}
           <Link

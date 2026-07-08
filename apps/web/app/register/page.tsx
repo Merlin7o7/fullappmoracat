@@ -15,6 +15,13 @@ import { AuthShell } from "@/components/auth-shell";
 export default function RegisterPage() {
   const router = useRouter();
   const { register, requestOtp, loginWithGoogle } = useAuth();
+  // Referral code from ?ref= — read from the URL without useSearchParams so the
+  // page needn't be wrapped in a Suspense boundary at build time.
+  const [refCode, setRefCode] = React.useState<string | undefined>(undefined);
+  React.useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get("ref");
+    if (r) setRefCode(r);
+  }, []);
   const { locale } = useLocale();
   const { toast } = useToast();
   const isAr = locale === "ar";
@@ -48,6 +55,7 @@ export default function RegisterPage() {
       ...(fullPhone ? { phone: fullPhone, dialCode: form.dialCode } : {}),
       acceptTerms: true,
       ...(withOtp ? { otp: withOtp } : {}),
+      ...(refCode ? { ref: refCode } : {}),
     });
     // Verify email by OTP first; then straight into naming their cat.
     router.push(`/verify-email?next=${encodeURIComponent("/portal/cats/new")}`);

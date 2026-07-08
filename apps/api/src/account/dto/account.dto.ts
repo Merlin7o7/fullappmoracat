@@ -50,6 +50,23 @@ export class UpdateProfileDto {
   avatarUrl?: string;
 }
 
+export class DeleteAccountDto {
+  @ApiPropertyOptional({ description: "Current password (required for password accounts)" })
+  @IsOptional()
+  @IsString()
+  password?: string;
+
+  @ApiPropertyOptional({ description: "Explicit confirmation for password-less (Google) accounts" })
+  @IsOptional()
+  confirm?: boolean;
+
+  @ApiPropertyOptional({ maxLength: 300 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  reason?: string;
+}
+
 export class ChangePasswordDto {
   @ApiProperty()
   @IsString()

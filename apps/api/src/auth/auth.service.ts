@@ -13,6 +13,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { IdsService } from "../ids/ids.service";
 import { MailService } from "../mail/mail.service";
+import { resolveJwtSecret } from "../common/config/secrets";
 import {
   otpEmailTemplate,
   welcomeTemplate,
@@ -46,8 +47,10 @@ const REFRESH_TTL = Number(process.env.JWT_REFRESH_TTL ?? 1_209_600); // 14 days
 // "Remember me" trades a longer-lived session for fewer re-logins (R002 —
 // effort is the enemy). Default 60 days.
 const REMEMBER_TTL = Number(process.env.JWT_REMEMBER_TTL ?? 5_184_000);
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "change-me-access-secret";
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? "change-me-refresh-secret";
+// No hardcoded default — resolveJwtSecret fails closed in prod (env.validation
+// also refuses to boot) and mints a random per-process secret in dev/test.
+const ACCESS_SECRET = resolveJwtSecret("JWT_ACCESS_SECRET");
+const REFRESH_SECRET = resolveJwtSecret("JWT_REFRESH_SECRET");
 const OTP_TTL_MS = Number(process.env.OTP_TTL_SECONDS ?? 300) * 1000; // 5 min
 const OTP_MAX_ATTEMPTS = 5;
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -103,6 +106,14 @@ export class AuthService {
     const { firstName, lastName } = splitName(dto.fullName, dto.firstName, dto.lastName);
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
+    // Attribute the signup to an inviting member only if the ref code is real
+    // (never store junk from a hand-typed URL).
+    let referredByCode: string | undefined;
+    if (dto.ref) {
+      const referrer = await this.prisma.user.findUnique({ where: { referralCode: dto.ref }, select: { id: true } });
+      if (referrer) referredByCode = dto.ref;
+    }
+
     const user = await this.prisma.user.create({
       data: {
         email,
@@ -115,6 +126,7 @@ export class AuthService {
         gender: dto.gender ?? "UNSPECIFIED",
         status: "ACTIVE",
         phoneVerified,
+        referredByCode,
         termsAcceptedAt: new Date(),
         // Provision wallet + loyalty on signup.
         wallet: { create: {} },
@@ -123,11 +135,24 @@ export class AuthService {
     });
 
     // Send a 6-digit OTP. The account is authenticated but stays UNVERIFIED
-    // until the code is confirmed — the dashboard is gated on emailVerified.
-    void this.sendEmailOtp(user.id);
+    // until the code is confirmed — community/cat writes are gated on emailVerified
+    // (EmailVerifiedGuard). In prod the send is non-blocking; in dev/test we await
+    // so the flow (and the e2e harness) can retrieve the code without email.
+    let devEmailCode: string | undefined;
+    if (IS_PROD) {
+      void this.sendEmailOtp(user.id);
+    } else {
+      const res = await this.sendEmailOtp(user.id);
+      devEmailCode = (res as { devCode?: string }).devCode;
+    }
 
     const tokens = await this.issueSession(user.id, user.email, user.isStaff, meta, REFRESH_TTL);
-    return { user: this.publicUser(user), ...tokens, needsEmailVerification: true };
+    return {
+      user: this.publicUser(user),
+      ...tokens,
+      needsEmailVerification: true,
+      ...(devEmailCode ? { devEmailCode } : {}),
+    };
   }
 
   // ── Login (email + password) ──────────────────────────────────────────────
@@ -413,7 +438,8 @@ export class AuthService {
     const tpl = otpEmailTemplate(this.mailLocale(user.locale), user.firstName, code);
     await this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
     if (!IS_PROD) this.logger.log(`Email OTP for ${user.email}: ${code}`);
-    return { sent: true };
+    // Dev/test convenience, mirroring the SMS path — never leaked in production.
+    return { sent: true, ...(IS_PROD ? {} : { devCode: code }) };
   }
 
   /** Verify a 6-digit code for the current user; attempt-limited + brute-safe. */
@@ -536,7 +562,7 @@ export class AuthService {
       update: { secret, enabled: false, verifiedAt: null },
       create: { userId, secret, enabled: false },
     });
-    const otpauthUrl = authenticator.keyuri(email, "Moraqat", secret);
+    const otpauthUrl = authenticator.keyuri(email, "Moracat", secret);
     return { secret, otpauthUrl };
   }
 

@@ -319,6 +319,10 @@ model User {
   /// (Stage 4 ceremony hand-off). Null = never onboarded yet, so the very next
   /// Cat ID issuance routes them to /portal/welcome exactly once.
   onboardedAt   DateTime?
+  /// Referral: this member's own shareable code, and the code that referred them
+  /// (captured from ?ref= at signup). Powers the invite loop + "invited N friends".
+  referralCode   String?   @unique
+  referredByCode String?
   lastLoginAt   DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -350,6 +354,8 @@ model User {
   wishlist       WishlistItem[]
   recentlyViewed RecentlyViewed[]
   catLikes       CatLike[]
+  reportsMade      CatReport[] @relation("CatReportReporter")
+  reportsResolved  CatReport[] @relation("CatReportResolver")
   notifications  Notification[]
   notifPrefs     NotificationPreference[]
   tickets        SupportTicket[]
@@ -725,6 +731,7 @@ model Cat {
   subscriptions   SubscriptionCat[]
   photos          CatPhoto[]
   likes           CatLike[]
+  reports         CatReport[]
 
   @@index([userId])
   @@index([userId, status])
@@ -754,6 +761,47 @@ model CatLike {
   @@index([catId])
   @@index([userId])
   @@map("cat_likes")
+}
+
+/// A member's report of a public cat — the primary moderation signal at scale.
+/// Reactive browse-and-hide doesn't scale, so reports feed a queue admins work
+/// (sort by pending + age). One member may only report a given cat once.
+model CatReport {
+  id           String          @id @default(cuid())
+  catId        String
+  reporterId   String? // nullable so an anonymized reporter (post-deletion) survives
+  reason       CatReportReason
+  detail       String?
+  status       ReportStatus    @default(PENDING)
+  resolvedById String?
+  resolvedAt   DateTime?
+  resolution   String? // "hidden" / "dismissed" + optional note
+  createdAt    DateTime        @default(now())
+
+  cat        Cat   @relation(fields: [catId], references: [id], onDelete: Cascade)
+  reporter   User? @relation("CatReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  resolvedBy User? @relation("CatReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  // One report per member per cat — dedupes brigading into a single signal.
+  @@unique([catId, reporterId])
+  // The moderation queue: pending first, oldest first.
+  @@index([status, createdAt])
+  @@index([catId])
+  @@map("cat_reports")
+}
+
+enum CatReportReason {
+  INAPPROPRIATE
+  SPAM
+  FAKE
+  HARASSMENT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
 }
 
 /// A gallery photo for a cat (profile shots beyond the primary `photoUrl`).

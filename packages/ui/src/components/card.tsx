@@ -8,21 +8,38 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, glass, interactive, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "rounded-2xl border text-card-foreground transition-all duration-300 ease-out",
-        glass
-          ? "glass"
-          : "border-border bg-card shadow-e1 ring-hairline",
-        interactive &&
-          "cursor-pointer hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e2",
-        className
-      )}
-      {...props}
-    />
-  )
+  ({ className, glass, interactive, onClick, onKeyDown, role, tabIndex, ...props }, ref) => {
+    // A clickable card must be operable by keyboard (WCAG 2.1.1): give it a
+    // button role, make it focusable, and fire onClick on Enter/Space.
+    const clickable = interactive && !!onClick;
+    return (
+      <div
+        ref={ref}
+        onClick={onClick}
+        role={clickable ? role ?? "button" : role}
+        tabIndex={clickable ? tabIndex ?? 0 : tabIndex}
+        onKeyDown={
+          clickable
+            ? (e) => {
+                onKeyDown?.(e);
+                if ((e.key === "Enter" || e.key === " ") && e.currentTarget === e.target) {
+                  e.preventDefault();
+                  onClick?.(e as unknown as React.MouseEvent<HTMLDivElement>);
+                }
+              }
+            : onKeyDown
+        }
+        className={cn(
+          "rounded-2xl border text-card-foreground transition-all duration-300 ease-out",
+          glass ? "glass" : "border-border bg-card shadow-e1 ring-hairline",
+          interactive &&
+            "cursor-pointer hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-e2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          className
+        )}
+        {...props}
+      />
+    );
+  }
 );
 Card.displayName = "Card";
 

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Header, Param, Patch, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
-import { IsBoolean, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 import { AdminCommunityService } from "./admin-community.service";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -10,6 +10,10 @@ class HideDto {
 }
 class FeatureDto {
   @IsBoolean() featured!: boolean;
+}
+class ResolveReportDto {
+  @IsIn(["hide", "dismiss"]) action!: "hide" | "dismiss";
+  @IsOptional() @IsString() @MaxLength(280) note?: string;
 }
 
 @ApiTags("admin")
@@ -44,6 +48,24 @@ export class AdminCommunityController {
   @ApiOperation({ summary: "Feature / unfeature a community cat" })
   feature(@CurrentUser("id") actorId: string, @Param("id") id: string, @Body() dto: FeatureDto) {
     return this.community.setFeatured(actorId, id, dto.featured);
+  }
+
+  // ── Reported content queue ──────────────────────────────────────────────
+  @Get("community/reports")
+  @RequirePermissions("cms.read")
+  @ApiOperation({ summary: "Moderation queue of reported community cats" })
+  listReports(
+    @Query("page") page?: string,
+    @Query("status") status?: "PENDING" | "RESOLVED" | "DISMISSED",
+  ) {
+    return this.community.listReports(page ? Number(page) : 1, status ?? "PENDING");
+  }
+
+  @Patch("community/reports/:id/resolve")
+  @RequirePermissions("cms.write")
+  @ApiOperation({ summary: "Resolve a report — hide the cat or dismiss the report" })
+  resolveReport(@CurrentUser("id") actorId: string, @Param("id") id: string, @Body() dto: ResolveReportDto) {
+    return this.community.resolveReport(actorId, id, dto.action, dto.note);
   }
 
   @Get("waitlist")

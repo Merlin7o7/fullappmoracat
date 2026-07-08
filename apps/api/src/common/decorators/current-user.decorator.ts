@@ -4,6 +4,8 @@ export interface AuthUser {
   id: string;
   email: string;
   isStaff: boolean;
+  /** Whether the account's email OTP has been confirmed (gates UGC writes). */
+  emailVerified: boolean;
 }
 
 /** Injects the authenticated user (populated by JwtStrategy.validate). */

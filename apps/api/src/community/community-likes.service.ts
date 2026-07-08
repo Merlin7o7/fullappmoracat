@@ -96,6 +96,21 @@ export class CommunityLikesService {
     return { liked: false, likeCount };
   }
 
+  /**
+   * Report a public cat. Idempotent per (cat, reporter) — a member reporting the
+   * same cat twice updates their existing report rather than stacking. Feeds the
+   * admin moderation queue (the primary at-scale signal).
+   */
+  async report(userId: string, slug: string, reason: string, detail?: string) {
+    const cat = await this.publicCatBySlug(slug);
+    await this.prisma.catReport.upsert({
+      where: { catId_reporterId: { catId: cat.id, reporterId: userId } },
+      update: { reason: reason as never, detail, status: "PENDING", resolvedAt: null, resolvedById: null },
+      create: { catId: cat.id, reporterId: userId, reason: reason as never, detail },
+    });
+    return { reported: true };
+  }
+
   /** Slugs the member has liked — lets the browse grid render filled hearts. */
   async myLikedSlugs(userId: string): Promise<string[]> {
     const rows = await this.prisma.catLike.findMany({

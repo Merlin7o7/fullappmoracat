@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AdminAnalyticsService } from "./analytics.service";
+import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
 import { AdminProductsService } from "./admin-products.service";
@@ -19,7 +20,8 @@ export class AdminController {
     private readonly customers: AdminCustomersService,
     private readonly orders: AdminOrdersService,
     private readonly products: AdminProductsService,
-    private readonly refunds: RefundsService
+    private readonly refunds: RefundsService,
+    private readonly audit: AdminAuditService
   ) {}
 
   // ── Analytics ─────────────────────────────────────────────────────────
@@ -28,6 +30,21 @@ export class AdminController {
   @ApiOperation({ summary: "Admin analytics dashboard" })
   dashboard() {
     return this.analytics.dashboard();
+  }
+
+  // ── Audit log (read-only accountability surface) ───────────────────────
+  // Gated on settings.read (super-admin/owner/manager/analyst) — an existing
+  // permission, so the viewer works on deploy without a re-seed.
+  @Get("audit")
+  @RequirePermissions("settings.read")
+  @ApiOperation({ summary: "Read the audit trail (filter by action prefix / entity / actor)" })
+  auditLog(
+    @Query("page") page?: string,
+    @Query("action") action?: string,
+    @Query("entityType") entityType?: string,
+    @Query("actorId") actorId?: string,
+  ) {
+    return this.audit.list(page ? Number(page) : 1, { action, entityType, actorId });
   }
 
   // ── Customers ─────────────────────────────────────────────────────────

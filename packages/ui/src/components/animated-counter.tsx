@@ -9,10 +9,17 @@ interface AnimatedCounterProps {
   prefix?: string;
   suffix?: string;
   className?: string;
+  /**
+   * BCP-47 locale for number formatting (R110). Pass "ar" for Arabic-Indic
+   * digits on member-facing value (e.g. the savings tally). Defaults to
+   * "en-US" — deterministic Latin numerals, which also avoids an SSR/CSR
+   * hydration mismatch when the caller doesn't know the locale at render.
+   */
+  locale?: string;
 }
 
 /** Counts up to `value` on mount/change. Respects prefers-reduced-motion. */
-export function AnimatedCounter({ value, durationMs = 900, decimals = 0, prefix = "", suffix = "", className }: AnimatedCounterProps) {
+export function AnimatedCounter({ value, durationMs = 900, decimals = 0, prefix = "", suffix = "", className, locale = "en-US" }: AnimatedCounterProps) {
   const [display, setDisplay] = React.useState(0);
   const fromRef = React.useRef(0);
 
@@ -35,6 +42,6 @@ export function AnimatedCounter({ value, durationMs = 900, decimals = 0, prefix 
     return () => cancelAnimationFrame(raf);
   }, [value, durationMs]);
 
-  const formatted = display.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  const formatted = display.toLocaleString(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   return <span className={className}>{prefix}{formatted}{suffix}</span>;
 }

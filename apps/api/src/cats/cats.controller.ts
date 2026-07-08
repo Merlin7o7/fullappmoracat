@@ -29,9 +29,13 @@ import {
   CreateVetVisitDto,
 } from "./dto/cat-health.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequireEmailVerified } from "../common/decorators/email-verified.decorator";
 
 @ApiTags("cats")
 @ApiBearerAuth()
+// A cat file is member content (and can be published to the community), so the
+// whole surface requires a verified email — no throwaway-account UGC (R006).
+@RequireEmailVerified()
 @Controller("cats")
 export class CatsController {
   constructor(private readonly cats: CatsService) {}

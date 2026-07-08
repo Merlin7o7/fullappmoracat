@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
 import { AccountService } from "./account.service";
-import { ChangePasswordDto, UpdateProfileDto } from "./dto/account.dto";
+import { ChangePasswordDto, DeleteAccountDto, UpdateProfileDto } from "./dto/account.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 
 interface UploadedImageFile {
@@ -77,5 +77,38 @@ export class AccountController {
   @ApiOperation({ summary: "Mark a notification read" })
   markRead(@CurrentUser("id") userId: string, @Param("id") id: string) {
     return this.account.markNotificationRead(userId, id);
+  }
+
+  // ── Referral + notification preferences ───────────────────────────────────
+  @Get("referral")
+  @ApiOperation({ summary: "My referral code, invite link, and count of members invited" })
+  referral(@CurrentUser("id") userId: string) {
+    return this.account.referral(userId);
+  }
+
+  @Get("notification-preferences")
+  @ApiOperation({ summary: "Email notification preferences by category" })
+  notificationPreferences(@CurrentUser("id") userId: string) {
+    return this.account.notificationPreferences(userId);
+  }
+
+  @Patch("notification-preferences")
+  @ApiOperation({ summary: "Toggle an email notification category" })
+  setNotificationPreference(@CurrentUser("id") userId: string, @Body() body: { category: string; enabled: boolean }) {
+    return this.account.setNotificationPreference(userId, body.category, body.enabled);
+  }
+
+  // ── PDPL: data portability + erasure ──────────────────────────────────────
+  @Get("export")
+  @ApiOperation({ summary: "Export all of my data (PDPL right of access)" })
+  exportData(@CurrentUser("id") userId: string) {
+    return this.account.exportMyData(userId);
+  }
+
+  @Post("delete")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Delete my account (PDPL erasure — anonymized, re-auth required)" })
+  deleteAccount(@CurrentUser("id") userId: string, @Body() dto: DeleteAccountDto) {
+    return this.account.deleteAccount(userId, dto);
   }
 }

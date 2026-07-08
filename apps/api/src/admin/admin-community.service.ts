@@ -100,6 +100,95 @@ export class AdminCommunityService {
     return { isFeatured: featured };
   }
 
+  // ── Reported content — the moderation queue (the at-scale signal) ─────────
+
+  async listReports(page = 1, status: "PENDING" | "RESOLVED" | "DISMISSED" = "PENDING") {
+    const where: Prisma.CatReportWhereInput = { status };
+    const [rows, total] = await Promise.all([
+      this.prisma.catReport.findMany({
+        where,
+        // Pending: oldest first (work the backlog). Resolved: newest first.
+        orderBy: { createdAt: status === "PENDING" ? "asc" : "desc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+        select: {
+          id: true,
+          reason: true,
+          detail: true,
+          status: true,
+          createdAt: true,
+          resolvedAt: true,
+          resolution: true,
+          reporter: { select: { email: true } },
+          cat: {
+            select: { id: true, name: true, publicSlug: true, photoUrl: true, isPublic: true, hiddenAt: true, likeCount: true },
+          },
+        },
+      }),
+      this.prisma.catReport.count({ where }),
+    ]);
+    // Surface how many reports each cat has accrued (brigade signal).
+    const catIds = [...new Set(rows.map((r) => r.cat.id))];
+    const counts = await this.prisma.catReport.groupBy({
+      by: ["catId"],
+      where: { catId: { in: catIds }, status: "PENDING" },
+      _count: true,
+    });
+    const countByCat = new Map(counts.map((c) => [c.catId, c._count]));
+    const items = rows.map((r) => ({ ...r, catReportCount: countByCat.get(r.cat.id) ?? 1 }));
+
+    const pendingTotal = status === "PENDING" ? total : await this.prisma.catReport.count({ where: { status: "PENDING" } });
+    return {
+      items,
+      pendingTotal,
+      pagination: { page, limit: PAGE_SIZE, total, totalPages: Math.ceil(total / PAGE_SIZE) },
+    };
+  }
+
+  /**
+   * Resolve a report. "hide" hides the cat AND resolves every pending report
+   * against it (a cat is judged once, not per-report); "dismiss" clears just
+   * this report. Both are audited.
+   */
+  async resolveReport(actorId: string, reportId: string, action: "hide" | "dismiss", note?: string) {
+    const report = await this.prisma.catReport.findUnique({
+      where: { id: reportId },
+      select: { id: true, catId: true, cat: { select: { name: true, userId: true } } },
+    });
+    if (!report) throw new NotFoundException("Report not found");
+
+    if (action === "hide") {
+      await this.prisma.$transaction([
+        this.prisma.cat.update({ where: { id: report.catId }, data: { hiddenAt: new Date(), hiddenReason: note ?? "Reported by the community" } }),
+        this.prisma.catReport.updateMany({
+          where: { catId: report.catId, status: "PENDING" },
+          data: { status: "RESOLVED", resolvedById: actorId, resolvedAt: new Date(), resolution: note ? `hidden: ${note}` : "hidden" },
+        }),
+        this.prisma.auditLog.create({
+          data: { userId: actorId, action: "community.report.hide", entityType: "Cat", entityId: report.catId, metadata: { reportId, note: note ?? null } },
+        }),
+      ]);
+      this.notifications.emit(report.cat.userId, {
+        category: "COMMUNITY",
+        type: "cat_hidden",
+        params: { name: report.cat.name },
+        data: { kind: "cat_hidden", catId: report.catId },
+      });
+      return { resolved: true, hidden: true };
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.catReport.update({
+        where: { id: reportId },
+        data: { status: "DISMISSED", resolvedById: actorId, resolvedAt: new Date(), resolution: note ? `dismissed: ${note}` : "dismissed" },
+      }),
+      this.prisma.auditLog.create({
+        data: { userId: actorId, action: "community.report.dismiss", entityType: "CatReport", entityId: reportId, metadata: { note: note ?? null } },
+      }),
+    ]);
+    return { resolved: true, hidden: false };
+  }
+
   async listWaitlist(page = 1) {
     const [rows, total] = await Promise.all([
       this.prisma.waitlistEntry.findMany({

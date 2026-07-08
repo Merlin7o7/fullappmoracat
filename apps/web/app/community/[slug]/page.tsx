@@ -6,6 +6,7 @@ import { CommunityProfileView } from "@/components/community-profile-view";
 import type { CommunityProfile } from "@/lib/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
 
 async function fetchCat(slug: string): Promise<CommunityProfile | null> {
   try {
@@ -25,13 +26,16 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!cat) return { title: "Moracat Community" };
   const title = `${cat.name} · Moracat`;
   const description = cat.bio || `${cat.name} — a member of the Moracat community.`;
+  const url = `${SITE}/community/${params.slug}`;
   return {
     title,
     description,
+    alternates: { canonical: url },
     openGraph: {
       title,
       description,
       type: "profile",
+      url,
       images: cat.photoUrl ? [{ url: cat.photoUrl }] : undefined,
     },
     twitter: { card: "summary_large_image", title, description, images: cat.photoUrl ? [cat.photoUrl] : undefined },
@@ -42,9 +46,22 @@ export default async function CommunityProfilePage({ params }: { params: { slug:
   const cat = await fetchCat(params.slug);
   if (!cat) notFound();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    mainEntity: {
+      "@type": "Thing",
+      name: cat.name,
+      description: cat.bio || `${cat.name} — a member of the Moracat community.`,
+      image: cat.photoUrl ?? undefined,
+      url: `${SITE}/community/${params.slug}`,
+    },
+  };
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <CommunityProfileView cat={cat} slug={params.slug} />
       <SiteFooter />
     </div>

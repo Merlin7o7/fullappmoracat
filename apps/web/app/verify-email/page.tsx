@@ -124,6 +124,7 @@ function VerifyEmailInner() {
           onComplete={submit}
           disabled={verifying}
           isAr={isAr}
+          autoFocus
         />
 
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

@@ -7,6 +7,7 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { Throttle } from "@nestjs/throttler";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { StorageService } from "../storage/storage.service";
@@ -32,6 +33,9 @@ export class UploadsController {
   constructor(private readonly storage: StorageService) {}
 
   @Post("image")
+  // Tighter than the global 120/min: an 8 MB × N/min write path is a storage-cost
+  // abuse vector, so cap raw image uploads well below the default.
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_IMAGE_BYTES } }))
   @ApiConsumes("multipart/form-data")
   @ApiOperation({ summary: "Upload an image, returns its public URL" })

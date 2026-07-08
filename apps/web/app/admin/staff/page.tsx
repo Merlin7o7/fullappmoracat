@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { fmtDate } from "@/app/admin/_components/i18n";
+import { ConfirmDialog } from "@/app/admin/_components/confirm";
 
 interface Role {
   id: string;
@@ -40,6 +41,7 @@ export default function AdminStaffPage() {
   const [email, setEmail] = React.useState("");
   const [roleKey, setRoleKey] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [revoking, setRevoking] = React.useState<StaffMember | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["admin-staff"] });
@@ -161,11 +163,7 @@ export default function AdminStaffPage() {
                         size="sm"
                         disabled={isSelf || revoke.isPending}
                         title={isSelf ? (isAr ? "لا يمكنك إزالة نفسك" : "You can't remove yourself") : undefined}
-                        onClick={() => {
-                          if (confirm(isAr ? `إلغاء صلاحية ${m.email}؟` : `Revoke staff access for ${m.email}?`)) {
-                            revoke.mutate(m.id);
-                          }
-                        }}
+                        onClick={() => setRevoking(m)}
                         className={cn(!isSelf && "text-destructive hover:text-destructive")}
                       >
                         <Trash2 className="size-4" /> {isAr ? "إلغاء" : "Revoke"}
@@ -178,6 +176,18 @@ export default function AdminStaffPage() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!revoking}
+        onClose={() => setRevoking(null)}
+        onConfirm={() => { if (revoking) revoke.mutate(revoking.id); setRevoking(null); }}
+        title={isAr ? "إلغاء صلاحية الفريق؟" : "Revoke staff access?"}
+        description={revoking ? (isAr ? `${revoking.email} سيفقد كل صلاحيات الإدارة فوراً.` : `${revoking.email} will lose all admin access immediately.`) : undefined}
+        confirmLabel={isAr ? "إلغاء الصلاحية" : "Revoke access"}
+        destructive
+        pending={revoke.isPending}
+        isAr={isAr}
+      />
     </div>
   );
 }

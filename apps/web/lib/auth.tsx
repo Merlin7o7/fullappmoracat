@@ -50,6 +50,8 @@ export interface RegisterInput {
   gender?: Gender;
   acceptTerms: boolean;
   otp?: string;
+  /** Referral code from ?ref= — attributes the signup to the inviting member. */
+  ref?: string;
 }
 
 interface AuthContextValue extends AuthState {

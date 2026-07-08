@@ -87,6 +87,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // viewport-fit=cover lets the app paint into the notch/home-indicator area;
+  // components then reclaim safe space with env(safe-area-inset-*) (see globals
+  // .pb-safe / .bottom-safe). Without this, iOS letterboxes the app in white.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#faf7f1" },
     { media: "(prefers-color-scheme: dark)", color: "#0a1712" },

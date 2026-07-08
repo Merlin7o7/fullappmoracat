@@ -3,10 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users,
-  LifeBuoy, Bell, LogOut, Loader2, ShieldCheck,
-} from "lucide-react";
+import { LogOut, Loader2, ShieldCheck } from "lucide-react";
 import { cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -18,18 +15,8 @@ import { Logo } from "@/components/logo";
 import { IlloPaw } from "@/components/illustrations";
 import { NotificationsBell } from "@/app/portal/notifications/notifications-bell";
 import { localizeName } from "@/lib/translit";
-
-const NAV = [
-  { href: "/portal", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة", exact: true },
-  { href: "/portal/subscriptions", icon: Repeat, en: "Subscriptions", ar: "الاشتراكات" },
-  { href: "/portal/cats", icon: Cat, en: "My Cats", ar: "قططي" },
-  { href: "/portal/community", icon: Users, en: "Community", ar: "المجتمع" },
-  { href: "/portal/orders", icon: Package, en: "Orders", ar: "الطلبات" },
-  { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين" },
-  { href: "/portal/notifications", icon: Bell, en: "Notifications", ar: "الإشعارات" },
-  { href: "/portal/support", icon: LifeBuoy, en: "Support", ar: "الدعم" },
-  { href: "/portal/settings", icon: Settings, en: "Settings", ar: "الإعدادات" },
-];
+import { visiblePortalNav } from "./nav";
+import { PortalMobileNav } from "./portal-mobile-nav";
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const { user, ready, logout } = useAuth();
@@ -37,6 +24,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const isAr = locale === "ar";
   const router = useRouter();
   const pathname = usePathname();
+  const nav = visiblePortalNav();
+  const handleLogout = React.useCallback(() => { void logout(); router.push("/login"); }, [logout, router]);
 
   // Redirect unauthenticated visitors to login once hydration settles.
   React.useEffect(() => {
@@ -61,12 +50,12 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <CatProvider>
       <div className="flex min-h-screen">
         {/* ── The clubhouse rail — deep green, members only ── */}
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-primary p-4 text-primary-foreground md:flex">
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-primary p-4 pt-safe text-primary-foreground md:flex">
           <Link href="/" aria-label="Moracat" className="mb-8 flex px-2 pt-1">
             <Logo className="h-9" priority onDark />
           </Link>
           <nav className="flex flex-1 flex-col gap-1">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
               return (
                 <Link
@@ -101,7 +90,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           )}
           <button
             type="button"
-            onClick={() => { void logout(); router.push("/login"); }}
+            onClick={handleLogout}
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
           >
             <LogOut className="size-4" />
@@ -111,7 +100,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
         {/* ── Main ── */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur sm:px-6">
+          <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 pt-safe backdrop-blur sm:px-6">
             <Link href="/" aria-label="Moracat" className="flex md:hidden">
               <Logo className="h-8" priority />
             </Link>
@@ -123,33 +112,13 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <ThemeToggle />
             </div>
           </header>
-          <main id="main" tabIndex={-1} className="flex-1 p-4 pb-28 outline-none sm:p-6 md:pb-6">{children}</main>
+          {/* pb-nav reserves room for the floating mobile nav + home indicator. */}
+          <main id="main" tabIndex={-1} className="pb-nav flex-1 p-4 outline-none sm:p-6 md:pb-6">{children}</main>
         </div>
       </div>
 
-      {/* ── Mobile: thumb-zone bottom nav (R100), ≥44px targets (R092) ── */}
-      <nav
-        aria-label={isAr ? "التنقل" : "Navigation"}
-        className="glass fixed inset-x-3 bottom-3 z-40 flex items-center justify-between gap-1 overflow-x-auto rounded-full px-2 py-1.5 md:hidden"
-      >
-        {NAV.map((item) => {
-          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-label={isAr ? item.ar : item.en}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "grid size-11 shrink-0 place-items-center rounded-full transition-colors",
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <item.icon className="size-[18px]" />
-            </Link>
-          );
-        })}
-      </nav>
+      {/* ── Mobile: thumb-zone bottom nav (R100), ≥44px targets (R092), 320px-safe ── */}
+      <PortalMobileNav items={nav} isAr={isAr} isStaff={!!user.isStaff} onLogout={handleLogout} />
     </CatProvider>
   );
 }

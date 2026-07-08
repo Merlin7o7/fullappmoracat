@@ -36,7 +36,9 @@ export function Drawer({ open, onClose, title, children, className }: DrawerProp
         tabIndex={-1}
         aria-labelledby={title ? titleId : undefined}
         className={cn(
-          "absolute inset-x-0 bottom-0 max-h-[85dvh] animate-slide-in-up overflow-y-auto rounded-t-2xl border border-border bg-card p-6 shadow-e3",
+          // px/pt/pb split so the bottom sheet's footer clears the iOS home
+          // indicator (pb-safe-6) without doubling padding on desktop.
+          "absolute inset-x-0 bottom-0 max-h-[85dvh] animate-slide-in-up overflow-y-auto rounded-t-2xl border border-border bg-card px-6 pt-6 pb-safe-6 shadow-e3",
           "sm:inset-y-0 sm:end-0 sm:inset-x-auto sm:h-full sm:max-h-none sm:w-full sm:max-w-md sm:rounded-none sm:rounded-s-2xl",
           className
         )}

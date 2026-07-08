@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays } from "lucide-react";
+import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays, Download, Trash2, AlertTriangle, BellRing } from "lucide-react";
 import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -61,11 +61,167 @@ export default function SettingsPage() {
             }}
           />
           <PreferencesSection isAr={isAr} />
+          <NotificationsSection isAr={isAr} authedFetch={authedFetch} />
           <PasswordSection isAr={isAr} authedFetch={authedFetch} logout={logout} />
           <TwoFactorSection isAr={isAr} enabled={profile.twoFactorEnabled} authedFetch={authedFetch} onChanged={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
+          <DangerZoneSection isAr={isAr} authedFetch={authedFetch} logout={logout} />
         </>
       )}
     </div>
+  );
+}
+
+/** Email notification preferences by category (R107 prayer-aware timing later). */
+function NotificationsSection({ isAr, authedFetch }: { isAr: boolean; authedFetch: ReturnType<typeof useAuth>["authedFetch"] }) {
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ["notif-prefs"],
+    queryFn: () => authedFetch<{ category: string; enabled: boolean }[]>("/account/notification-preferences"),
+  });
+  const toggle = useMutation({
+    mutationFn: (body: { category: string; enabled: boolean }) =>
+      authedFetch("/account/notification-preferences", { method: "PATCH", body: JSON.stringify(body) }),
+    onMutate: async (body) => {
+      await qc.cancelQueries({ queryKey: ["notif-prefs"] });
+      const prev = qc.getQueryData<{ category: string; enabled: boolean }[]>(["notif-prefs"]);
+      qc.setQueryData<{ category: string; enabled: boolean }[]>(["notif-prefs"], (old) => old?.map((p) => (p.category === body.category ? body : p)));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["notif-prefs"], ctx.prev); },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["notif-prefs"] }),
+  });
+
+  const LABELS: Record<string, { en: string; ar: string; desc_en: string; desc_ar: string }> = {
+    COMMUNITY: { en: "Community", ar: "المجتمع", desc_en: "Likes, features and moderation on your cats", desc_ar: "الإعجابات والتمييز والإشراف على قططك" },
+    SYSTEM: { en: "Account & security", ar: "الحساب والأمان", desc_en: "Sign-in, password and important notices", desc_ar: "تسجيل الدخول وكلمة المرور والتنبيهات المهمة" },
+    PROMOTION: { en: "News & offers", ar: "الأخبار والعروض", desc_en: "Occasional product news (off by default)", desc_ar: "أخبار المنتج من حين لآخر (معطّلة افتراضياً)" },
+  };
+
+  return (
+    <SectionCard icon={BellRing} title={isAr ? "الإشعارات" : "Notifications"} desc={isAr ? "تحكّم في رسائل البريد حسب الفئة" : "Control email by category"}>
+      <div className="divide-y divide-border">
+        {(data ?? []).map((p) => {
+          const l = LABELS[p.category];
+          return (
+            <div key={p.category} className="flex items-center justify-between gap-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{l ? (isAr ? l.ar : l.en) : p.category}</p>
+                {l && <p className="text-xs text-muted-foreground">{isAr ? l.desc_ar : l.desc_en}</p>}
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={p.enabled}
+                aria-label={l ? (isAr ? l.ar : l.en) : p.category}
+                onClick={() => toggle.mutate({ category: p.category, enabled: !p.enabled })}
+                className={cn("relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background", p.enabled ? "bg-primary" : "bg-input")}
+              >
+                <span className={cn("inline-block size-4 rounded-full bg-white transition-transform", p.enabled ? "translate-x-6 rtl:-translate-x-6" : "translate-x-1 rtl:-translate-x-1")} />
+              </button>
+            </div>
+          );
+        })}
+        {!data && <Skeleton className="h-24 w-full" />}
+      </div>
+    </SectionCard>
+  );
+}
+
+/** PDPL rights — export everything we hold, and leave with dignity (R010/R106). */
+function DangerZoneSection({ isAr, authedFetch, logout }: {
+  isAr: boolean; authedFetch: ReturnType<typeof useAuth>["authedFetch"]; logout: () => Promise<void>;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [password, setPassword] = React.useState("");
+  const [confirm, setConfirm] = React.useState(false);
+
+  const exportData = useMutation({
+    mutationFn: () => authedFetch<Record<string, unknown>>("/account/export"),
+    onSuccess: (data) => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "moracat-my-data.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+
+  const del = useMutation({
+    mutationFn: () =>
+      authedFetch("/account/delete", { method: "POST", body: JSON.stringify({ password: password || undefined, confirm }) }),
+    onSuccess: () => {
+      void logout().finally(() => router.replace("/?farewell=1"));
+    },
+  });
+
+  return (
+    <SectionCard
+      icon={AlertTriangle}
+      title={isAr ? "بياناتك وحسابك" : "Your data & account"}
+      desc={isAr ? "صدّر بياناتك أو احذف حسابك في أي وقت" : "Export your data or delete your account anytime"}
+    >
+      <div className="grid gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{isAr ? "تصدير بياناتي" : "Export my data"}</p>
+            <p className="text-xs text-muted-foreground">
+              {isAr ? "نزّل نسخة كاملة (JSON) من كل ما نحتفظ به عنك." : "Download a complete copy (JSON) of everything we hold about you."}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => exportData.mutate()} disabled={exportData.isPending} className="w-fit">
+            {exportData.isPending ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            {isAr ? "تصدير" : "Export"}
+          </Button>
+        </div>
+
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          {!open ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-destructive">{isAr ? "حذف الحساب" : "Delete account"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isAr
+                    ? "سنخفي قططك من المجتمع ونُخفي هويتك. سجلات الفواتير تُحفظ مجهّلة كما يقتضي النظام."
+                    : "We'll remove your cats from the community and anonymize your identity. Billing records are kept de-identified as required by law."}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="w-fit border-destructive/40 text-destructive hover:bg-destructive/10">
+                <Trash2 className="size-4" />
+                {isAr ? "حذف حسابي" : "Delete my account"}
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={(e) => { e.preventDefault(); del.mutate(); }} className="grid gap-3">
+              <p className="text-sm font-medium text-destructive">{isAr ? "هل أنت متأكد؟ لا يمكن التراجع." : "Are you sure? This can't be undone."}</p>
+              <Field
+                label={isAr ? "كلمة المرور (إن وُجدت)" : "Password (if you have one)"}
+                type="password"
+                value={password}
+                onChange={setPassword}
+                hint={isAr ? "حسابات جوجل: فعّل التأكيد بالأسفل بدلًا من ذلك." : "Google accounts: tick the confirmation below instead."}
+              />
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} className="mt-0.5 size-4 accent-[hsl(var(--destructive))]" />
+                <span>{isAr ? "أفهم أنه سيتم حذف حسابي وإخفاء قططي من المجتمع." : "I understand my account will be deleted and my cats removed from the community."}</span>
+              </label>
+              {del.error && <p role="alert" className="text-sm text-destructive">{del.error.message}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" variant="destructive" size="sm" disabled={del.isPending || (!password && !confirm)} className="w-fit">
+                  {del.isPending && <Loader2 className="size-4 animate-spin" />}
+                  {isAr ? "احذف حسابي نهائيًا" : "Permanently delete"}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setOpen(false); setPassword(""); setConfirm(false); }} className="w-fit">
+                  {isAr ? "إلغاء" : "Cancel"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 

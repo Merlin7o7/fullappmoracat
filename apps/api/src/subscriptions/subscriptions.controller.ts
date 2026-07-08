@@ -30,25 +30,32 @@ export class SubscriptionsController {
     return this.subs.findOne(userId, id);
   }
 
+  // Lifecycle transitions mutate membership state (resume/cancel flip a cat's
+  // membershipStatus), so they're frozen in Community Mode too — not just
+  // create. GETs stay open so the "coming soon" page can still read state.
   @Post(":id/pause")
+  @Commercial()
   @ApiOperation({ summary: "Pause a subscription" })
   pause(@CurrentUser("id") userId: string, @Param("id") id: string, @Body() dto: PauseDto) {
     return this.subs.pause(userId, id, dto.until);
   }
 
   @Post(":id/resume")
+  @Commercial()
   @ApiOperation({ summary: "Resume a paused subscription" })
   resume(@CurrentUser("id") userId: string, @Param("id") id: string) {
     return this.subs.resume(userId, id);
   }
 
   @Post(":id/skip")
+  @Commercial()
   @ApiOperation({ summary: "Skip the next delivery" })
   skip(@CurrentUser("id") userId: string, @Param("id") id: string) {
     return this.subs.skip(userId, id);
   }
 
   @Post(":id/cancel")
+  @Commercial()
   @ApiOperation({ summary: "Cancel a subscription" })
   cancel(@CurrentUser("id") userId: string, @Param("id") id: string) {
     return this.subs.cancel(userId, id);

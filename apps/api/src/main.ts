@@ -85,8 +85,8 @@ async function bootstrap() {
     process.env.NODE_ENV !== "production" || process.env.ENABLE_SWAGGER === "true";
   if (swaggerEnabled) {
     const config = new DocumentBuilder()
-      .setTitle("Moraqat API")
-      .setDescription("Moraqat (مرقط) — cat essentials subscription platform API")
+      .setTitle("Moracat API")
+      .setDescription("Moracat (موراكات) — cat membership & community platform API")
       .setVersion("0.1.0")
       .addBearerAuth()
       .build();

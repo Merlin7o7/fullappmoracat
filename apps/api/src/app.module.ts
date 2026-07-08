@@ -24,6 +24,7 @@ import { GeoModule } from "./geo/geo.module";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard";
 import { PermissionsGuard } from "./auth/permissions.guard";
 import { CommerceGuard } from "./common/guards/commerce.guard";
+import { EmailVerifiedGuard } from "./common/guards/email-verified.guard";
 import { AdminModule } from "./admin/admin.module";
 import { ContentModule } from "./content/content.module";
 import { NotificationsModule } from "./notifications/notifications.module";
@@ -102,6 +103,8 @@ import { WalletModule } from "./wallet/wallet.module";
     { provide: APP_GUARD, useClass: CommerceGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    // Runs after auth: gates @RequireEmailVerified UGC-write routes.
+    { provide: APP_GUARD, useClass: EmailVerifiedGuard },
     // Report 5xx/unhandled faults to Sentry (no-op without SENTRY_DSN).
     { provide: APP_FILTER, useClass: SentryExceptionFilter },
   ],

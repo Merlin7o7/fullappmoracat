@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ThemeProvider } from "next-themes";
+import { MotionConfig } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "@moraqat/ui";
 import { dict, type Locale } from "@/lib/i18n";
@@ -98,17 +99,22 @@ export function Providers({
   );
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ToastProvider>
-            <LocaleContext.Provider value={value}>
-              {children}
-              <CookieConsent />
-            </LocaleContext.Provider>
-          </ToastProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    // reducedMotion="user" makes EVERY framer-motion animation honour
+    // prefers-reduced-motion globally (R075) — including whileInView entrances
+    // the CSS reduced-motion rule can't reach (transforms, not CSS animations).
+    <MotionConfig reducedMotion="user">
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <ToastProvider>
+              <LocaleContext.Provider value={value}>
+                {children}
+                <CookieConsent />
+              </LocaleContext.Provider>
+            </ToastProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </MotionConfig>
   );
 }

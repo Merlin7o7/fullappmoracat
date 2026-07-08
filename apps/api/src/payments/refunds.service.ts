@@ -1,11 +1,13 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
+import { commerceEnabled } from "../common/config/features";
 import {
   PAYMENT_PROVIDER_FACTORY,
   type IPaymentProviderFactory,
@@ -20,6 +22,11 @@ export class RefundsService {
 
   /** Full or partial refund of an order's captured payment (admin action). */
   async refundOrder(actorId: string, orderNumber: string, amount?: number, reason?: string) {
+    // Fail closed at the service boundary too — never rely solely on the
+    // @Commercial route decorator (CommerceGuard is default-allow/opt-in).
+    if (!commerceEnabled()) {
+      throw new ForbiddenException({ code: "MEMBERSHIPS_COMING_SOON", message: "Payments are disabled." });
+    }
     const order = await this.prisma.order.findUnique({
       where: { orderNumber },
       include: { payments: { orderBy: { createdAt: "desc" } }, invoice: true },

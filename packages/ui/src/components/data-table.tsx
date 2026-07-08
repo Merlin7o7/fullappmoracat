@@ -64,10 +64,15 @@ export function DataTable<T>({ columns, data, rowKey, loading, emptyState, onRow
                   {c.sortable ? (
                     <button
                       onClick={() => toggleSort(c.key)}
+                      aria-label={
+                        active
+                          ? `${c.header}, sorted ${sort.dir === "asc" ? "ascending" : "descending"}. Activate to change sort.`
+                          : `${c.header}, sort column`
+                      }
                       className={cn("inline-flex items-center gap-1 rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", active && "text-foreground")}
                     >
                       {c.header}
-                      <span className="text-[10px]">{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+                      <span className="text-[10px]" aria-hidden>{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
                     </button>
                   ) : (
                     c.header

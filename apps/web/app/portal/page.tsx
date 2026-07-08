@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Cat as CatIcon, Wallet, PiggyBank, Truck, ArrowRight, CreditCard, Star, IdCard, HeartPulse, Plus } from "lucide-react";
-import { Card, Badge, Button, Skeleton, AnimatedCounter, Avatar, cn } from "@moraqat/ui";
+import { Package, Cat as CatIcon, Wallet, PiggyBank, Truck, ArrowRight, CreditCard, Star, IdCard, HeartPulse, Plus, Users, Sparkles, Gift, Copy, Check } from "lucide-react";
+import { Card, Badge, Button, Skeleton, AnimatedCounter, Avatar, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { commerceEnabled } from "@/lib/features";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { buildGreeting, type Gender } from "@/lib/greeting";
@@ -26,9 +27,10 @@ function IlloPawSticker() {
   );
 }
 
+interface Completion { percent: number; done: number; total: number; missing: string[] }
 interface Overview {
-  owner: { firstName: string | null; gender: Gender };
-  primaryCat: { id: string; name: string; catIdNumber: string | null; photoUrl: string | null } | null;
+  owner: { firstName: string | null; gender: Gender; memberSince: string | null };
+  primaryCat: { id: string; name: string; catIdNumber: string | null; photoUrl: string | null; completion: Completion | null } | null;
   activeSubscription: null | {
     id: string;
     plan: { nameEn: string; nameAr: string; tier: string } | null;
@@ -75,12 +77,23 @@ export default function OverviewPage() {
     firstName: data?.owner.firstName ?? user?.firstName,
   });
 
+  // Community Mode: no commercial surfaces on the home screen — belonging leads,
+  // and we never show a "Saved 0 SAR" zero where value should be (R048/R041).
+  const commerce = commerceEnabled();
+  const numLocale = isAr ? "ar" : "en";
+
   // Value stays visible (R041/R048); no points-scheme framing (Dossier §04).
-  const proofs = [
-    { icon: Package, label: isAr ? "الطلبات" : "Orders", num: data?.stats.orders ?? 0 },
-    { icon: CatIcon, label: isAr ? "القطط" : "Cats", num: data?.stats.catCounts.active ?? 0 },
-    { icon: Wallet, label: isAr ? "المحفظة" : "Wallet", num: data?.stats.walletBalance ?? 0, suffix: " SAR" },
-  ];
+  const proofs = commerce
+    ? [
+        { icon: Package, label: isAr ? "الطلبات" : "Orders", num: data?.stats.orders ?? 0 },
+        { icon: CatIcon, label: isAr ? "القطط" : "Cats", num: data?.stats.catCounts.active ?? 0 },
+        { icon: Wallet, label: isAr ? "المحفظة" : "Wallet", num: data?.stats.walletBalance ?? 0, suffix: " SAR" },
+      ]
+    : [
+        // Non-monetary value that actually accrues in a payments-off beta (R049).
+        { icon: CatIcon, label: isAr ? "قطط نشطة" : "Active cats", num: data?.stats.catCounts.active ?? 0 },
+        { icon: IdCard, label: isAr ? "هويات صادرة" : "Cat IDs issued", num: data?.stats.catCounts.total ?? 0 },
+      ];
 
   // The featured cat = the one currently in focus (defaults to primary).
   const featured = activeCat ?? primaryCat;
@@ -92,6 +105,9 @@ export default function OverviewPage() {
         {user?.memberIdNumber && (
           <p className="mt-1 font-mono text-xs tracking-wider text-muted-foreground/70" dir="ltr">
             {isAr ? "عضو مرقط" : "Moracat member"} · {user.memberIdNumber}
+            {data?.owner.memberSince && (
+              <span className="text-muted-foreground/60"> · {isAr ? "عضو منذ" : "since"} {fmtDate(data.owner.memberSince)}</span>
+            )}
           </p>
         )}
         <p className="mt-1 text-sm text-muted-foreground">
@@ -159,32 +175,71 @@ export default function OverviewPage() {
         <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
       ) : (
         <>
-      {/* Value strip — the anti-churn number, honoured in the open (R041/R043). */}
+      {/* Value strip. In Community Mode belonging leads — a "Saved 0 SAR" number
+          would put a zero where value should be (R048). The savings hero returns
+          the moment memberships (and real savings) go live. */}
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-e2 ring-hairline sm:p-7">
-          <IlloFish
-            tone="orange"
-            className="pointer-events-none absolute -end-4 bottom-4 h-14 w-auto rotate-[-8deg] opacity-90"
-          />
-          <IlloPawSticker />
-          <p className="flex items-center gap-2 text-sm font-medium text-primary-foreground/85">
-            <PiggyBank className="size-4" />
-            {isAr ? "وفّرت معنا حتى اليوم" : "Saved with us so far"}
-          </p>
-          {isLoading ? (
-            <Skeleton className="mt-3 h-12 w-40 bg-primary-foreground/10" />
-          ) : (
-            <p className="mt-2 font-display text-5xl font-semibold tabular tracking-tight sm:text-6xl">
-              <AnimatedCounter value={data?.stats.totalSaved ?? 0} />
-              <span className="ms-2 text-lg font-medium text-primary-foreground/85">SAR</span>
+        {commerce ? (
+          <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-e2 ring-hairline sm:p-7">
+            <IlloFish
+              tone="orange"
+              className="pointer-events-none absolute -end-4 bottom-4 h-14 w-auto rotate-[-8deg] opacity-90"
+            />
+            <IlloPawSticker />
+            <p className="flex items-center gap-2 text-sm font-medium text-primary-foreground/85">
+              <PiggyBank className="size-4" />
+              {isAr ? "وفّرت معنا حتى اليوم" : "Saved with us so far"}
             </p>
-          )}
-          <p className="mt-2 text-xs text-primary-foreground/85">
-            {isAr ? "سعر العضو مثبّت لك عند كل طلب — هذا الدليل" : "Your member rate, honoured on every order — this is the proof"}
-          </p>
-        </div>
+            {isLoading ? (
+              <Skeleton className="mt-3 h-12 w-40 bg-primary-foreground/10" />
+            ) : (
+              <p className="mt-2 font-display text-5xl font-semibold tabular tracking-tight sm:text-6xl">
+                <AnimatedCounter value={data?.stats.totalSaved ?? 0} locale={numLocale} />
+                <span className="ms-2 text-lg font-medium text-primary-foreground/85">SAR</span>
+              </p>
+            )}
+            <p className="mt-2 text-xs text-primary-foreground/85">
+              {isAr ? "سعر العضو مثبّت لك عند كل طلب — هذا الدليل" : "Your member rate, honoured on every order — this is the proof"}
+            </p>
+          </div>
+        ) : (
+          <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-e2 ring-hairline sm:p-7">
+            <IlloPawSticker />
+            <p className="flex items-center gap-2 text-sm font-medium text-primary-foreground/85">
+              <Sparkles className="size-4" />
+              {isAr ? "أنت عضو في مرقط" : "You're a Moracat member"}
+            </p>
+            <p className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+              {featured
+                ? isAr
+                  ? `${localizeName(featured.name, "ar")} صار له هوية`
+                  : `${localizeName(featured.name, "en")} has an identity`
+                : isAr ? "قطك يستاهل هوية" : "Your cat deserves an identity"}
+            </p>
+            <p className="mt-2 max-w-md text-xs leading-relaxed text-primary-foreground/85">
+              {isAr
+                ? "الانتماء والهوية والسجل الصحي — لك من أول يوم. أسعار الأعضاء والتوصيل يجون لما تنزل العضويات."
+                : "Belonging, an identity and a health record — yours from day one. Member rates and delivery arrive when memberships launch."}
+            </p>
+            {data?.primaryCat?.completion && data.primaryCat.completion.percent < 100 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs text-primary-foreground/85">
+                  <span>{isAr ? `ملف ${localizeName(data.primaryCat.name, "ar")} مكتمل` : `${localizeName(data.primaryCat.name, "en")}'s file`}</span>
+                  <span className="tabular">{data.primaryCat.completion.percent}%</span>
+                </div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-primary-foreground/20">
+                  <div className="h-full rounded-full bg-primary-foreground/90 transition-[width] duration-700" style={{ width: `${data.primaryCat.completion.percent}%` }} />
+                </div>
+              </div>
+            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/portal/community"><Button variant="glass" size="sm"><Users className="size-4" /> {isAr ? "استكشف المجتمع" : "Explore community"}</Button></Link>
+              <Link href="/portal/cats"><Button variant="glass" size="sm"><IdCard className="size-4" /> {isAr ? "أكمل ملف قطك" : "Complete your cat's file"}</Button></Link>
+            </div>
+          </div>
+        )}
 
-        <div className="grid grid-cols-3 gap-4 lg:grid-cols-1 lg:content-between">
+        <div className={cn("grid gap-4 lg:grid-cols-1 lg:content-between", proofs.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
           {proofs.map((s) => (
             <Card key={s.label} className="flex items-center gap-3 p-4">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -195,7 +250,7 @@ export default function OverviewPage() {
                   <Skeleton className="h-6 w-12" />
                 ) : (
                   <p className="truncate font-display text-xl font-bold tabular leading-tight">
-                    <AnimatedCounter value={s.num} suffix={s.suffix ?? ""} />
+                    <AnimatedCounter value={s.num} suffix={s.suffix ?? ""} locale={numLocale} />
                   </p>
                 )}
                 <p className="truncate text-xs text-muted-foreground">{s.label}</p>
@@ -205,56 +260,74 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Active subscription */}
-      <Card className="p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">{isAr ? "اشتراكك النشط" : "Active subscription"}</h2>
-          <Link href="/portal/subscriptions"><Button variant="ghost" size="sm">{isAr ? "إدارة" : "Manage"} <ArrowRight className="size-4" /></Button></Link>
-        </div>
-        {isLoading ? (
-          <Skeleton className="h-20 w-full" />
-        ) : data?.activeSubscription ? (
-          <div className="flex flex-wrap items-center gap-6 rounded-xl bg-muted/50 p-4">
-            <Badge>{data.activeSubscription.plan ? (isAr ? data.activeSubscription.plan.nameAr : data.activeSubscription.plan.nameEn) : (isAr ? "مخصص" : "Custom")}</Badge>
-            <InfoBit icon={CreditCard} label={isAr ? "السعر" : "Price"} value={`${data.activeSubscription.price} SAR`} />
-            <InfoBit icon={Truck} label={isAr ? "التوصيل القادم" : "Next delivery"} value={fmtDate(data.activeSubscription.nextDeliveryAt)} />
-            <InfoBit icon={CreditCard} label={isAr ? "الفوترة القادمة" : "Next billing"} value={fmtDate(data.activeSubscription.nextBillingAt)} />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-8 text-center">
-            <p className="text-sm text-muted-foreground">{isAr ? "لا يوجد اشتراك نشط بعد" : "No active subscription yet"}</p>
-            <Link href="/#plans"><Button size="sm">{isAr ? "ابدأ اشتراكاً" : "Start a subscription"}</Button></Link>
-          </div>
-        )}
-      </Card>
-
-      {/* Recent orders */}
-      <Card className="p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">{isAr ? "أحدث الطلبات" : "Recent orders"}</h2>
-          <Link href="/portal/orders"><Button variant="ghost" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4" /></Button></Link>
-        </div>
-        {isLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : data && data.recentOrders.length > 0 ? (
-          <div className="divide-y divide-border">
-            {data.recentOrders.map((o) => (
-              <div key={o.orderNumber} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium">{o.orderNumber}</p>
-                  <p className="text-xs text-muted-foreground">{fmtDate(o.placedAt)}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <OrderStatusBadge status={o.status} isAr={isAr} />
-                  <span className="font-display font-semibold">{o.grandTotal} SAR</span>
-                </div>
+      {/* Commercial surfaces (subscription + orders) only when payments are live —
+          in beta they'd be permanently empty, so we don't show hollow cards. */}
+      {commerce ? (
+        <>
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-display text-lg font-semibold">{isAr ? "اشتراكك النشط" : "Active subscription"}</h2>
+              <Link href="/portal/subscriptions"><Button variant="ghost" size="sm">{isAr ? "إدارة" : "Manage"} <ArrowRight className="size-4" /></Button></Link>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-20 w-full" />
+            ) : data?.activeSubscription ? (
+              <div className="flex flex-wrap items-center gap-6 rounded-xl bg-muted/50 p-4">
+                <Badge>{data.activeSubscription.plan ? (isAr ? data.activeSubscription.plan.nameAr : data.activeSubscription.plan.nameEn) : (isAr ? "مخصص" : "Custom")}</Badge>
+                <InfoBit icon={CreditCard} label={isAr ? "السعر" : "Price"} value={`${data.activeSubscription.price} SAR`} />
+                <InfoBit icon={Truck} label={isAr ? "التوصيل القادم" : "Next delivery"} value={fmtDate(data.activeSubscription.nextDeliveryAt)} />
+                <InfoBit icon={CreditCard} label={isAr ? "الفوترة القادمة" : "Next billing"} value={fmtDate(data.activeSubscription.nextBillingAt)} />
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="py-6 text-center text-sm text-muted-foreground">{isAr ? "لا توجد طلبات بعد" : "No orders yet"}</p>
-        )}
-      </Card>
+            ) : (
+              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-8 text-center">
+                <p className="text-sm text-muted-foreground">{isAr ? "لا يوجد اشتراك نشط بعد" : "No active subscription yet"}</p>
+                <Link href="/#plans"><Button size="sm">{isAr ? "ابدأ اشتراكاً" : "Start a subscription"}</Button></Link>
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-display text-lg font-semibold">{isAr ? "أحدث الطلبات" : "Recent orders"}</h2>
+              <Link href="/portal/orders"><Button variant="ghost" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4" /></Button></Link>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : data && data.recentOrders.length > 0 ? (
+              <div className="divide-y divide-border">
+                {data.recentOrders.map((o) => (
+                  <div key={o.orderNumber} className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="font-medium">{o.orderNumber}</p>
+                      <p className="text-xs text-muted-foreground">{fmtDate(o.placedAt)}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <OrderStatusBadge status={o.status} isAr={isAr} />
+                      <span className="font-display font-semibold">{o.grandTotal} SAR</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm text-muted-foreground">{isAr ? "لا توجد طلبات بعد" : "No orders yet"}</p>
+            )}
+          </Card>
+        </>
+      ) : (
+        /* Beta: belonging + referral where the commercial cards would be. */
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+            <IlloPaw tone="peach" className="size-8 rotate-[10deg]" />
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {isAr
+                ? "شارك قطك في المجتمع، شوف قطط الأعضاء الآخرين، واجمع الإعجابات — كل هذا مجاناً في مرقط."
+                : "Share your cat, meet other members' cats, and collect love — all free on Moracat."}
+            </p>
+            <Link href="/portal/community"><Button size="sm"><Users className="size-4" /> {isAr ? "افتح المجتمع" : "Open the community"}</Button></Link>
+          </Card>
+          <ReferralCard isAr={isAr} />
+        </div>
+      )}
         </>
       )}
     </div>
@@ -336,6 +409,67 @@ function CatRail({
           )}
         </Link>
       </div>
+    </Card>
+  );
+}
+
+/** Invite-with-recognition (§High) — a member's shareable code + count invited. */
+function ReferralCard({ isAr }: { isAr: boolean }) {
+  const { authedFetch, user } = useAuth();
+  const { toast } = useToast();
+  const [copied, setCopied] = React.useState(false);
+
+  const { data } = useQuery({
+    queryKey: ["referral", user?.id],
+    queryFn: () => authedFetch<{ code: string; invited: number; link: string }>("/account/referral"),
+    enabled: !!user,
+  });
+
+  const share = async () => {
+    if (!data) return;
+    const text = isAr
+      ? `انضم لي في مرقط — عضوية وهوية لقطك: ${data.link}`
+      : `Join me on Moracat — a membership and identity for your cat: ${data.link}`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try { await navigator.share({ title: "Moracat", text, url: data.link }); return; } catch { /* cancelled */ }
+    }
+    try {
+      await navigator.clipboard.writeText(data.link);
+      setCopied(true);
+      toast({ title: isAr ? "تم نسخ الرابط" : "Link copied", variant: "success" });
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: isAr ? "تعذّر النسخ" : "Couldn’t copy", variant: "error" });
+    }
+  };
+
+  return (
+    <Card className="flex flex-col gap-3 p-6">
+      <div className="flex items-center gap-2">
+        <span className="grid size-9 place-items-center rounded-xl bg-secondary/40 text-secondary-foreground"><Gift className="size-5" /></span>
+        <div>
+          <p className="font-display font-semibold">{isAr ? "ادعُ صديقاً" : "Invite a friend"}</p>
+          <p className="text-xs text-muted-foreground">{isAr ? "شارك مرقط مع محبّي القطط" : "Share Moracat with cat people"}</p>
+        </div>
+      </div>
+      {data ? (
+        <>
+          <div className="flex items-center justify-between rounded-xl border border-dashed border-border px-3 py-2.5">
+            <code className="truncate font-mono text-sm" dir="ltr">{data.code}</code>
+            {data.invited > 0 && (
+              <span className="ms-2 shrink-0 text-xs text-muted-foreground">
+                {isAr ? `دعوت ${data.invited.toLocaleString("ar-SA")}` : `${data.invited} invited`}
+              </span>
+            )}
+          </div>
+          <Button size="sm" variant="outline" onClick={share} className="w-fit">
+            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+            {isAr ? "شارك رابط الدعوة" : "Share invite link"}
+          </Button>
+        </>
+      ) : (
+        <Skeleton className="h-20 w-full" />
+      )}
     </Card>
   );
 }
