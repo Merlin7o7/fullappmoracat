@@ -19,6 +19,7 @@ export function SiteFooter() {
     {
       title: isAr ? "العضوية" : "Membership",
       links: [
+        { href: "/about", label: isAr ? "ما هو مرقط؟" : "What is Moracat?" },
         { href: "/#how", label: t.nav.how },
         { href: "/#plans", label: t.nav.plans },
         { href: "/register", label: t.hero.cta },

@@ -20,7 +20,7 @@ async function slugs(path: string, pick: (json: unknown) => string[]): Promise<s
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const staticRoutes = ["", "/community", "/products", "/blog", "/tools/feeding", "/contact", "/login", "/register"].map(
+  const staticRoutes = ["", "/about", "/community", "/products", "/blog", "/tools/feeding", "/contact", "/login", "/register"].map(
     (path) => ({
       url: `${SITE}${path}`,
       lastModified: now,

@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users, LifeBuoy, Bell,
+  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users, LifeBuoy, Bell, Info,
 } from "lucide-react";
 import { commerceEnabled } from "@/lib/features";
 
@@ -32,6 +32,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين" },
   { href: "/portal/support", icon: LifeBuoy, en: "Support", ar: "الدعم", primary: true },
   { href: "/portal/settings", icon: Settings, en: "Settings", ar: "الإعدادات" },
+  { href: "/about", icon: Info, en: "About Moracat", ar: "عن مرقط" },
 ];
 
 /** Nav items visible in the current commerce mode (drops commercial surfaces in beta). */

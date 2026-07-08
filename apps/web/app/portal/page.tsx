@@ -117,6 +117,12 @@ export default function OverviewPage() {
               : `${localizeName(featured.name, "en")}'s membership, at a glance`
             : isAr ? "إليك ملخص حسابك" : "Here's your account at a glance"}
         </p>
+        <Link
+          href="/about"
+          className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          <Sparkles className="size-4" /> {isAr ? "تعرّف على مرقط" : "Learn about Moracat"}
+        </Link>
       </div>
 
       {/* Featured Cat ID + household rail — the multi-cat hero (P09).

@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays, Download, Trash2, AlertTriangle, BellRing } from "lucide-react";
+import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays, Download, Trash2, AlertTriangle, BellRing, Sparkles, ArrowRight } from "lucide-react";
 import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -61,6 +62,7 @@ export default function SettingsPage() {
             }}
           />
           <PreferencesSection isAr={isAr} />
+          <AboutMoracatSection isAr={isAr} />
           <NotificationsSection isAr={isAr} authedFetch={authedFetch} />
           <PasswordSection isAr={isAr} authedFetch={authedFetch} logout={logout} />
           <TwoFactorSection isAr={isAr} enabled={profile.twoFactorEnabled} authedFetch={authedFetch} onChanged={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
@@ -270,6 +272,17 @@ function PreferencesSection({ isAr }: { isAr: boolean }) {
         {isAr ? "مثال: " : "Preview: "}
         <span className="font-medium text-foreground" dir="auto">{preview}</span>
       </p>
+    </SectionCard>
+  );
+}
+
+/** A quiet entry point back to the "What is Moracat?" story (revisitable anytime). */
+function AboutMoracatSection({ isAr }: { isAr: boolean }) {
+  return (
+    <SectionCard icon={Sparkles} title={isAr ? "عن مرقط" : "About Moracat"} desc={isAr ? "ما هو مرقط وما الذي تفتحه العضوية" : "What Moracat is and what membership unlocks"}>
+      <Link href="/about" className="inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline">
+        {isAr ? "اقرأ قصة مرقط" : "Read the Moracat story"} <ArrowRight className="size-4 rtl:rotate-180" />
+      </Link>
     </SectionCard>
   );
 }
