@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
+import type { CatProfile } from "@/lib/cat-profile";
 
 export type CatStatus = "ACTIVE" | "ARCHIVED" | "DECEASED";
 export type CatMembership = "ACTIVE" | "INACTIVE" | "PENDING";
@@ -38,6 +39,11 @@ export interface PortalCat {
   deceasedAt: string | null;
   favoriteFoods?: string[];
   breed: { nameEn: string; nameAr: string } | null;
+  /** Character & keepsake layer — drives the personalised card + profile journey. */
+  profile?: CatProfile | null;
+  coatColor?: string | null;
+  isNeutered?: boolean | null;
+  microchipNo?: string | null;
 }
 
 interface CatContextValue {

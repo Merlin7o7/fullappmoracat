@@ -3,12 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer, Stethoscope, Wallet, Share2 } from "lucide-react";
+import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer, Wallet, Share2 } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
+import { profileCompleteness, resolvePersonalization } from "@/lib/cat-profile";
 import { exportCardPng, exportCardPdf, printCard, shareStoryPng, exportSafeSrc } from "@/lib/card-export";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatIdStory } from "@/components/cat-id-story";
@@ -229,18 +230,35 @@ function CatCard({
         </Button>
       </div>
 
-      {/* The postponed profile, invited later as a benefit to the cat (R002/R017). */}
-      {!inactive && !cat.breed && !cat.weightKg && (
-        <Link
-          href={`/portal/cats/new?cat=${cat.id}`}
-          className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-        >
-          <Stethoscope className="size-3.5" />
-          {isAr
-            ? `أكمل ملف ${localizeName(cat.name, "ar")} — يساعد أي عيادة تساعده أسرع`
-            : `Complete ${localizeName(cat.name, "en")}'s file — it helps any clinic help faster`}
-        </Link>
-      )}
+      {/* The postponed profile, invited later as a benefit to the cat (R002/R017) —
+          now completeness-aware: it keeps inviting until the file feels whole,
+          and shows the progress so the ask never feels like nagging (R084). */}
+      {!inactive && (() => {
+        const pct = profileCompleteness({
+          name: cat.name, photoUrl: cat.photoUrl, birthDate: cat.birthDate, breedId: cat.breed ? "x" : null,
+          breed: cat.breed, weightKg: cat.weightKg, coatColor: cat.coatColor, isIndoor: cat.isIndoor,
+          isNeutered: cat.isNeutered, microchipNo: cat.microchipNo, vaccinationStatus: cat.vaccinationStatus,
+          favoriteFoods: cat.favoriteFoods, profile: cat.profile,
+        }).percent;
+        if (pct >= 100) return null;
+        return (
+          <Link
+            href={`/portal/cats/new?cat=${cat.id}`}
+            className="group mt-3 block rounded-xl border border-dashed border-border px-3 py-2.5 transition-colors hover:border-primary"
+          >
+            <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground group-hover:text-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Sparkles className="size-3.5" />
+                {isAr ? `أكمل ملف ${localizeName(cat.name, "ar")}` : `Complete ${localizeName(cat.name, "en")}'s profile`}
+              </span>
+              <span className="tabular-nums">{pct}%</span>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${Math.max(6, pct)}%` }} />
+            </div>
+          </Link>
+        );
+      })()}
 
       {rec && <RecCard rec={rec} isAr={isAr} />}
     </Card>
@@ -341,6 +359,9 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
     }
   }
 
+  // The owner's personalisation travels with the card — drawer, export, and the
+  // shared PNG all render the theme / accent / frame / stickers they chose.
+  const rp = resolvePersonalization(cat.profile?.personalization);
   const cardProps = {
     detailed: true,
     catName: cat.name,
@@ -356,6 +377,10 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
     birthDate: cat.birthDate ?? null,
     vaccinationStatus: cat.vaccinationStatus ?? null,
     qrToken: cat.qrToken,
+    themeField: rp.themeField,
+    accentHsl: rp.accentHsl,
+    frame: rp.frame,
+    stickers: rp.stickers,
   } as const;
 
   return (

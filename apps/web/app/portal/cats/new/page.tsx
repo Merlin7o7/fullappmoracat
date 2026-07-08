@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, ArrowLeft, Loader2, ShieldCheck, Cat as CatIcon } from "lucide-react";
 import { Card, Button, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -11,10 +11,9 @@ import { Field, SelectField } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { CatIdCeremony } from "@/components/cat-id-ceremony";
 import { CatIdCard } from "@/components/cat-id-card";
+import { CatOnboardingJourney } from "@/components/cat-onboarding-journey";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 import type { PortalCat } from "@/lib/cat-context";
-
-interface Breed { id: string; nameEn: string; nameAr: string }
 
 /**
  * Issuing a Cat ID — the cat's name comes FIRST, and almost nothing else is
@@ -243,180 +242,16 @@ function IssueIdFlow() {
   );
 }
 
-/* ══ The invited follow-up · complete the cat's file (postponed on purpose) ═ */
+/* ══ The invited follow-up · the "welcome a family member" journey ═════════ */
 
-interface CatFileDetail {
-  id: string; name: string;
-  birthDate?: string | null; breedId?: string | null; breed?: { id: string } | null;
-  coatColor?: string | null; weightKg?: number | null;
-  favoriteFoods?: string[]; isIndoor?: boolean; isNeutered?: boolean | null;
-  vaccinationStatus?: string | null;
-  // Flat string arrays the API serializes for prefill (never the row objects,
-  // which stringified to "[object Object]").
-  allergyNames?: string[]; healthConditionNames?: string[];
-  currentMedications?: string | null; emergencyNotes?: string | null;
-}
-
+/**
+ * The postponed profile (R002/R017), reimagined. What used to be a three-card
+ * form is now a chaptered, emotional experience — personality, favourites,
+ * health, fun, and card personalisation — with a live personalised Cat ID, a
+ * gentle completeness ring, recognition badges, and one restrained celebration.
+ * All of it lives in `CatOnboardingJourney`; this stays a thin route wrapper so
+ * the page file exports only its default component (engineering convention).
+ */
 function CompleteFileForm({ catId }: { catId: string }) {
-  const router = useRouter();
-  const { authedFetch, user } = useAuth();
-  const { locale } = useLocale();
-  const { toast } = useToast();
-  const isAr = locale === "ar";
-  const qc = useQueryClient();
-
-  const { data: cat, isLoading } = useQuery({
-    queryKey: ["cat-file", catId],
-    queryFn: () => authedFetch<CatFileDetail>(`/cats/${catId}`),
-    enabled: !!user,
-  });
-  const { data: breeds } = useQuery({
-    queryKey: ["breeds"],
-    queryFn: () => authedFetch<Breed[]>("/cats/meta/breeds"),
-    enabled: !!user,
-  });
-
-  const [f, setF] = React.useState({
-    birthDate: "", breedId: "", coatColor: "", weightKg: "",
-    favoriteFood: "", isIndoor: "true", isNeutered: "unknown",
-    vaccinationStatus: "UNKNOWN", allergies: "", medicalConditions: "", currentMedications: "", emergencyNotes: "",
-  });
-  const set = (patch: Partial<typeof f>) => setF((s) => ({ ...s, ...patch }));
-
-  // Prefill once from the record — never make the member repeat themselves (R117).
-  const filled = React.useRef(false);
-  React.useEffect(() => {
-    if (!cat || filled.current) return;
-    filled.current = true;
-    setF({
-      birthDate: cat.birthDate ? cat.birthDate.slice(0, 10) : "",
-      breedId: cat.breedId ?? cat.breed?.id ?? "",
-      coatColor: cat.coatColor ?? "",
-      weightKg: cat.weightKg != null ? String(cat.weightKg) : "",
-      favoriteFood: cat.favoriteFoods?.[0] ?? "",
-      isIndoor: cat.isIndoor === false ? "false" : "true",
-      isNeutered: cat.isNeutered == null ? "unknown" : cat.isNeutered ? "true" : "false",
-      vaccinationStatus: cat.vaccinationStatus ?? "UNKNOWN",
-      allergies: (cat.allergyNames ?? []).join(", "),
-      medicalConditions: (cat.healthConditionNames ?? []).join(", "),
-      currentMedications: cat.currentMedications ?? "",
-      emergencyNotes: cat.emergencyNotes ?? "",
-    });
-  }, [cat]);
-
-  const save = useMutation({
-    mutationFn: () =>
-      authedFetch(`/cats/${catId}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          birthDate: f.birthDate || undefined,
-          breedId: f.breedId || undefined,
-          coatColor: f.coatColor || undefined,
-          weightKg: f.weightKg ? Number(f.weightKg) : undefined,
-          favoriteFoods: f.favoriteFood ? [f.favoriteFood] : undefined,
-          isIndoor: f.isIndoor === "true",
-          isNeutered: f.isNeutered === "unknown" ? undefined : f.isNeutered === "true",
-          vaccinationStatus: f.vaccinationStatus,
-          allergies: splitList(f.allergies),
-          healthConditions: splitList(f.medicalConditions),
-          currentMedications: f.currentMedications || undefined,
-          emergencyNotes: f.emergencyNotes || undefined,
-        }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["cats"] });
-      qc.invalidateQueries({ queryKey: ["cat-file", catId] });
-      toast({ title: isAr ? `ملف ${cat?.name ?? ""} اكتمل 🐾` : `${cat?.name ?? "The"} file is complete 🐾` });
-      router.push("/portal/cats");
-    },
-    onError: (e: Error) => toast({ title: isAr ? "ما قدرنا نحفظ" : "Couldn't save", description: e.message, variant: "error" }),
-  });
-
-  if (isLoading || !cat) {
-    return <div className="grid place-items-center py-20"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
-  }
-
-  return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="relative">
-        <IlloPaw tone="peach" className="pointer-events-none absolute -top-3 end-0 size-10 rotate-[14deg] opacity-40" />
-        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          {isAr ? `أكمل ملف ${cat.name}` : `Complete ${cat.name}'s file`}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {isAr
-            ? "كل معلومة تضيفها تخلّي أي عيادة تساعده أسرع — وكلها اختيارية"
-            : "Every detail helps any clinic help them faster — and all of it is optional"}
-        </p>
-      </div>
-
-      <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-6">
-        <Card className="p-6">
-          <SectionTitle title={isAr ? "تعريفه" : "About them"} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={isAr ? "تاريخ الميلاد" : "Date of birth"} type="date" value={f.birthDate} onChange={(v) => set({ birthDate: v })} />
-            <SelectField label={isAr ? "الفصيلة" : "Breed"} value={f.breedId} onChange={(v) => set({ breedId: v })}
-              options={[{ value: "", label: isAr ? "غير محدد" : "Not sure" }, ...(breeds ?? []).map((b) => ({ value: b.id, label: isAr ? b.nameAr : b.nameEn }))]} />
-            <Field label={isAr ? "لون الفراء" : "Coat colour"} value={f.coatColor} onChange={(v) => set({ coatColor: v })} placeholder={isAr ? "مثلاً: مشمشي" : "e.g. Ginger"} />
-            <Field label={isAr ? "الوزن (كجم)" : "Weight (kg)"} type="number" value={f.weightKg} onChange={(v) => set({ weightKg: v })} placeholder="4.5" />
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <SectionTitle title={isAr ? "حياته وطعامه" : "Lifestyle & food"} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={isAr ? "الطعام المفضّل" : "Favourite food"} value={f.favoriteFood} onChange={(v) => set({ favoriteFood: v })} placeholder="Royal Canin" />
-            <SelectField label={isAr ? "البيئة" : "Environment"} value={f.isIndoor} onChange={(v) => set({ isIndoor: v })}
-              options={[{ value: "true", label: isAr ? "داخلي" : "Indoor" }, { value: "false", label: isAr ? "خارجي" : "Outdoor" }]} />
-            <SelectField label={isAr ? "معقّم/محيّد؟" : "Neutered / spayed?"} value={f.isNeutered} onChange={(v) => set({ isNeutered: v })}
-              options={[{ value: "true", label: isAr ? "نعم" : "Yes" }, { value: "false", label: isAr ? "لا" : "No" }, { value: "unknown", label: isAr ? "غير متأكد" : "Not sure" }]} />
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <SectionTitle title={isAr ? "ملفه الصحي" : "Health file"} hint={isAr ? "يظهر لأي عيادة شريكة عند مسح هويته" : "Shown to any partner clinic that scans their ID"} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField label={isAr ? "حالة التطعيم" : "Vaccination status"} value={f.vaccinationStatus} onChange={(v) => set({ vaccinationStatus: v })}
-              options={[
-                { value: "UP_TO_DATE", label: isAr ? "محدّثة" : "Up to date" },
-                { value: "PARTIAL", label: isAr ? "جزئية" : "Partial" },
-                { value: "NONE", label: isAr ? "لا يوجد" : "None" },
-                { value: "UNKNOWN", label: isAr ? "غير معروف" : "Unknown" },
-              ]} />
-            <Field label={isAr ? "الحساسيات (افصلها بفواصل)" : "Allergies (comma-separated)"} value={f.allergies} onChange={(v) => set({ allergies: v })} />
-            <Field label={isAr ? "حالات مرضية (افصلها بفواصل)" : "Medical conditions (comma-separated)"} value={f.medicalConditions} onChange={(v) => set({ medicalConditions: v })} />
-            <Field label={isAr ? "أدوية حالية" : "Current medications"} value={f.currentMedications} onChange={(v) => set({ currentMedications: v })} />
-            <div className="sm:col-span-2">
-              <Field label={isAr ? "ملاحظات طوارئ" : "Emergency notes"} value={f.emergencyNotes} onChange={(v) => set({ emergencyNotes: v })} />
-            </div>
-          </div>
-        </Card>
-
-        <div className="flex items-center justify-between gap-3">
-          <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")} disabled={save.isPending}>
-            <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "لاحقاً" : "Later"}
-          </Button>
-          <Button type="submit" size="lg" loading={save.isPending}>
-            {isAr ? `احفظ ملف ${cat.name}` : `Save ${cat.name}'s file`}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function SectionTitle({ title, hint }: { title: string; hint?: string }) {
-  return (
-    <div className="mb-4">
-      <h2 className="font-display text-lg font-semibold">{title}</h2>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
-// The complete-file form always renders these fields, so we always send an
-// array (never undefined): a cleared field becomes [] and the API clears the
-// collection. De-duplicated so the same allergen can't be stored twice.
-function splitList(s: string): string[] {
-  return [...new Set(s.split(",").map((x) => x.trim()).filter(Boolean))];
+  return <CatOnboardingJourney catId={catId} />;
 }

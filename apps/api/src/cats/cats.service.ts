@@ -7,6 +7,7 @@ import {
   PayloadTooLargeException,
 } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
+import { Prisma } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
 import { IdsService } from "../ids/ids.service";
 import { StorageService } from "../storage/storage.service";
@@ -70,6 +71,7 @@ type CatRow = {
   vetNotes: string | null;
   favoriteFoods: string[];
   preferredBrand: string[];
+  profile: unknown;
   createdAt: Date;
   breed?: { nameEn: string; nameAr: string } | null;
   healthConds?: { id: string; name: string; notes: string | null }[];
@@ -106,7 +108,101 @@ function catScalarData(dto: Partial<CreateCatDto>) {
     vaccinationStatus: dto.vaccinationStatus,
     currentMedications: dto.currentMedications,
     emergencyNotes: dto.emergencyNotes,
+    // Undefined leaves it unchanged (Prisma); an object replaces it wholesale —
+    // the journey always sends the complete merged profile, so replace is safe
+    // and simpler than a deep server merge. Always sanitised first (never raw).
+    profile: dto.profile === undefined ? undefined : sanitizeProfile(dto.profile),
   };
+}
+
+/* ── Profile sanitiser ──────────────────────────────────────────────────────
+ * The `profile` blob is owner-authored and free-form by design. It is never
+ * trusted raw: we whitelist the four sections, coerce every leaf to a bounded
+ * string / number / boolean, and cap counts — so it can never grow unbounded,
+ * smuggle nested objects, or carry markup into the record. Shape mirrors the
+ * web `CatProfile` type; anything unexpected is dropped, not rejected, so a
+ * newer client can't 500 an older server.
+ */
+const PROFILE_SECTIONS = ["about", "personality", "favorites", "fun"] as const;
+const MAX_ANSWERS_PER_SECTION = 40;
+const MAX_ANSWER_LEN = 160;
+const MAX_MULTI = 24;
+const MAX_STICKERS = 14;
+
+function str(v: unknown, max: number): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const t = v.trim().slice(0, max);
+  return t || undefined;
+}
+function num(v: unknown, lo: number, hi: number): number | undefined {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.min(hi, Math.max(lo, n));
+}
+
+function sanitizeAnswers(raw: unknown): Record<string, string | string[]> {
+  const out: Record<string, string | string[]> = {};
+  if (!raw || typeof raw !== "object") return out;
+  let count = 0;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (count >= MAX_ANSWERS_PER_SECTION) break;
+    const key = str(k, 40);
+    if (!key) continue;
+    if (Array.isArray(v)) {
+      const arr = v.map((x) => str(x, MAX_ANSWER_LEN)).filter((x): x is string => !!x).slice(0, MAX_MULTI);
+      if (arr.length) { out[key] = arr; count++; }
+    } else {
+      const val = str(v, MAX_ANSWER_LEN);
+      if (val) { out[key] = val; count++; }
+    }
+  }
+  return out;
+}
+
+function sanitizeProfile(raw: unknown): Prisma.InputJsonValue {
+  if (!raw || typeof raw !== "object") return {};
+  const src = raw as Record<string, unknown>;
+  const out: Record<string, Prisma.InputJsonValue> = {};
+
+  for (const section of PROFILE_SECTIONS) {
+    const answers = sanitizeAnswers(src[section]);
+    if (Object.keys(answers).length) out[section] = answers;
+  }
+
+  const p = src.personalization;
+  if (p && typeof p === "object") {
+    const pp = p as Record<string, unknown>;
+    const personalization: Record<string, Prisma.InputJsonValue> = {};
+    const theme = str(pp.theme, 40);
+    const accent = str(pp.accent, 40);
+    const frame = str(pp.frame, 40);
+    if (theme) personalization.theme = theme;
+    if (accent) personalization.accent = accent;
+    if (frame) personalization.frame = frame;
+    if (Array.isArray(pp.stickers)) {
+      const stickers = pp.stickers
+        .map((s) => {
+          if (!s || typeof s !== "object") return null;
+          const so = s as Record<string, unknown>;
+          const id = str(so.id, 40);
+          if (!id) return null;
+          return {
+            id,
+            x: num(so.x, 0, 1) ?? 0.5,
+            y: num(so.y, 0, 1) ?? 0.5,
+            scale: num(so.scale, 0.3, 3) ?? 1,
+            rotate: num(so.rotate, -180, 180) ?? 0,
+            ...(so.flip === true ? { flip: true } : {}),
+          };
+        })
+        .filter(Boolean)
+        .slice(0, MAX_STICKERS);
+      if (stickers.length) personalization.stickers = stickers;
+    }
+    if (Object.keys(personalization).length) out.personalization = personalization;
+  }
+
+  return out;
 }
 
 @Injectable()
@@ -741,6 +837,9 @@ export class CatsService implements OnModuleInit {
       vetNotes: cat.vetNotes,
       favoriteFoods: cat.favoriteFoods,
       preferredBrand: cat.preferredBrand,
+      // The character & keepsake layer (personality/favourites/fun +
+      // personalisation) — powers the profile journey and the personalised card.
+      profile: (cat.profile ?? null) as Record<string, unknown> | null,
       isPrimary: cat.id === primaryCatId,
       breed: cat.breed ?? null,
       // Flat string arrays so the web never has to reach into row objects

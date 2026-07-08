@@ -678,6 +678,13 @@ model Cat {
   vaccinationStatus  String? // UP_TO_DATE / PARTIAL / NONE / UNKNOWN
   currentMedications String?
   emergencyNotes     String?
+  /// The cat's *character & keepsake* layer — everything the fast Cat-ID issue
+  /// deliberately postpones (R002/R016): personality, favourites, playful "fun"
+  /// answers, and the owner's card personalisation (theme, accent, stickers,
+  /// frame). A single JSON blob keeps the schema calm while the invited
+  /// "complete the file" journey grows; it is owner-authored, server-sanitised
+  /// (shape + size capped in CatsService), and never gates membership or safety.
+  profile            Json?
   /// Household lifecycle. A cat is never silently dropped: removal soft-deletes,
   /// and a passing is archived as DECEASED so the record and Cat ID endure.
   status           CatStatus           @default(ACTIVE)

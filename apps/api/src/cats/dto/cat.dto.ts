@@ -7,6 +7,7 @@ import {
   IsDateString,
   IsIn,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Max,
@@ -155,6 +156,21 @@ export class CreateCatDto {
   @IsString()
   @MaxLength(500)
   emergencyNotes?: string;
+
+  /**
+   * The character & keepsake layer (personality, favourites, playful "fun"
+   * answers, and card personalisation). Owner-authored and free-form by design —
+   * accepted as an object here and strictly sanitised in CatsService
+   * (`sanitizeProfile`): key/value whitelisting, length + count caps, and a hard
+   * serialized-size ceiling. Never trusted raw into the DB.
+   */
+  @ApiPropertyOptional({
+    description:
+      "Character & keepsake layer: { personality, favorites, fun, personalization }. Sanitised server-side.",
+  })
+  @IsOptional()
+  @IsObject()
+  profile?: Record<string, unknown>;
 }
 
 export class UpdateCatDto extends PartialType(CreateCatDto) {}

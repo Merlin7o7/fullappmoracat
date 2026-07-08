@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
@@ -41,7 +42,43 @@ interface CatIdCardProps {
   /** Static export rendering — drops the drop-shadow so the captured PNG has no
    *  clipped shadow halo; geometry is identical (everything is sized in cqw). */
   exportMode?: boolean;
+  // ── Personalisation (the keepsake layer) — all optional, all additive. The
+  //    default (no props) renders the untouched classic green civic card. ──
+  /** CSS background-image for the field; defaults to the classic deep green. */
+  themeField?: string;
+  /** Accent colour as raw "H S% L%" — a quiet signature hairline under the name. */
+  accentHsl?: string;
+  /** Frame treatment id (minimal / gold / neon / floral / birthday). */
+  frame?: string;
+  /** Owner-placed stickers, positioned as fractions of the card (LTR origin). */
+  stickers?: { glyph: string; x: number; y: number; scale: number; rotate: number; flip?: boolean }[];
   className?: string;
+}
+
+/** The classic field — the brand's own deep-green civic chrome (the default). */
+const CLASSIC_FIELD =
+  "radial-gradient(130% 130% at 0% 0%,hsl(168 72% 19%),hsl(169 82% 11%) 52%,hsl(174 82% 6%))";
+
+/** Frame → inset ring + optional corner glyphs. Insets (not outer glows) so the
+ *  captured PNG never clips a halo (R034); neon reads as a bright inner ring. */
+function frameStyle(frame: string | undefined, accentHsl: string): {
+  boxShadow?: string;
+  corners?: string[];
+} {
+  switch (frame) {
+    case "minimal":
+      return { boxShadow: "inset 0 0 0 0.5cqw hsl(0 0% 100% / 0.35)" };
+    case "gold":
+      return { boxShadow: "inset 0 0 0 1cqw hsl(43 74% 58%), inset 0 0 0 1.5cqw hsl(43 40% 28%)" };
+    case "neon":
+      return { boxShadow: `inset 0 0 0 0.8cqw hsl(${accentHsl}), inset 0 0 6cqw hsl(${accentHsl} / 0.55)` };
+    case "floral":
+      return { boxShadow: "inset 0 0 0 0.7cqw hsl(352 80% 80% / 0.7)", corners: ["🌸", "🌷", "🌿", "🌸"] };
+    case "birthday":
+      return { boxShadow: "inset 0 0 0 0.7cqw hsl(43 82% 62% / 0.8)", corners: ["🎈", "🎉", "🎂", "🎈"] };
+    default:
+      return {};
+  }
 }
 
 /**
@@ -60,8 +97,11 @@ interface CatIdCardProps {
 export function CatIdCard({
   catName, catIdNumber, issuedAt, photoUrl, coverUrl, isAr, preview, hideStatus,
   membershipActive, animated, detailed, ownerName, ownerPhone, breed, favoriteFood,
-  gender, birthDate, vaccinationStatus, qrToken, exportMode, className,
+  gender, birthDate, vaccinationStatus, qrToken, exportMode,
+  themeField, accentHsl, frame, stickers, className,
 }: CatIdCardProps) {
+  const fieldBg = themeField || CLASSIC_FIELD;
+  const frameFx = frameStyle(frame, accentHsl || "18 93% 62%");
   const since = issuedAt
     ? formatDate(issuedAt, isAr ? "ar" : "en", { month: "short", year: "numeric" })
     : null;
@@ -93,8 +133,11 @@ export function CatIdCard({
         }
         className="relative isolate flex aspect-[85.6/54] flex-col overflow-hidden rounded-[5cqw]"
       >
-        {/* ── The green field — the brand's chrome, deep and calm ── */}
-        <div className="relative flex min-h-0 flex-1 flex-col justify-between px-[5.5cqw] pb-[3cqw] pt-[3.4cqw] text-white [background-image:radial-gradient(130%_130%_at_0%_0%,hsl(168_72%_19%),hsl(169_82%_11%)_52%,hsl(174_82%_6%))]">
+        {/* ── The field — the brand's chrome, deep and calm (themeable) ── */}
+        <div
+          className="relative flex min-h-0 flex-1 flex-col justify-between px-[5.5cqw] pb-[3cqw] pt-[3.4cqw] text-white"
+          style={{ backgroundImage: fieldBg }}
+        >
           {/* Optional cover wash — the cat's world, barely there. */}
           {coverUrl && (
             <ImgWithFallback
@@ -176,6 +219,14 @@ export function CatIdCard({
               >
                 {dispName}
               </p>
+              {/* A quiet signature — the owner's accent, one hairline, no more (R080). */}
+              {accentHsl && (
+                <span
+                  aria-hidden
+                  className="mt-[1.4cqw] block h-[0.7cqw] w-[10cqw] rounded-full"
+                  style={{ backgroundColor: `hsl(${accentHsl})` }}
+                />
+              )}
               {detailed && meta && (
                 <p className="mt-[1cqw] truncate text-[2.6cqw] leading-snug text-white/75">{meta}</p>
               )}
@@ -221,10 +272,43 @@ export function CatIdCard({
             </span>
           )}
         </div>
+
+        {/* ── The keepsake layer — owner frame + placed stickers, over everything
+              but never interactive; positions are LTR fractions so they read
+              identically in AR/RTL and in the exported PNG. ── */}
+        {(frameFx.boxShadow || frameFx.corners || (stickers && stickers.length > 0)) && (
+          <span aria-hidden className="pointer-events-none absolute inset-0 z-10 rounded-[5cqw]" style={{ boxShadow: frameFx.boxShadow }}>
+            {frameFx.corners?.map((g, i) => (
+              <span key={`corner-${i}`} className="absolute text-[5cqw] leading-none" style={CORNER_POS[i]}>{g}</span>
+            ))}
+            {stickers?.map((s, i) => (
+              <span
+                key={`sticker-${i}`}
+                className="absolute select-none leading-none drop-shadow-[0_1cqw_1.5cqw_rgba(0,0,0,0.28)]"
+                style={{
+                  left: `${s.x * 100}%`,
+                  top: `${s.y * 100}%`,
+                  fontSize: `${8 * s.scale}cqw`,
+                  transform: `translate(-50%,-50%) rotate(${s.rotate}deg) scaleX(${s.flip ? -1 : 1})`,
+                }}
+              >
+                {s.glyph}
+              </span>
+            ))}
+          </span>
+        )}
       </div>
     </div>
   );
 }
+
+/** Four-corner slots for framed motifs, kept clear of the paper band (~19cqw). */
+const CORNER_POS: CSSProperties[] = [
+  { top: "2.5cqw", left: "2.5cqw" },
+  { top: "2.5cqw", right: "2.5cqw" },
+  { bottom: "21cqw", left: "2.5cqw" },
+  { bottom: "21cqw", right: "2.5cqw" },
+];
 
 /** White QR tile on the paper band — maximum contrast, honest quiet zone. */
 function QrTile({ value, isAr }: { value: string; isAr: boolean }) {
