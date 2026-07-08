@@ -232,8 +232,12 @@ function IssueIdFlow() {
           onClose={() =>
             router.push(
               firstIssue
+                // First-ever ID → the one-time welcome/story, which now leads
+                // straight into the journey with a prominent "bring them to life".
                 ? `/portal/welcome?cat=${ceremonyCat.id}`
-                : "/portal/cats"
+                // Every subsequent cat flows directly into the profile journey —
+                // the natural next step after issuing, never a dead-end (R005).
+                : `/portal/cats/new?cat=${ceremonyCat.id}`
             )
           }
         />

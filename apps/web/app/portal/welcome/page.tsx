@@ -126,13 +126,31 @@ function WelcomeInner() {
               )}
               <Badge variant="secondary" dot><Clock className="size-3.5" /> {isAr ? "غير مفعّلة" : "Inactive"}</Badge>
             </div>
-            {/* Primary next step — surfaced immediately, not buried (R005). */}
+            {/* Primary next step — bring the new member to life. Framed as a gift
+                to the cat (R017), it flows straight into the profile journey. */}
             <div className="mt-6 flex flex-wrap gap-3">
-              {ContinueButton}
+              {catId ? (
+                <Button onClick={() => router.push(`/portal/cats/new?cat=${catId}`)} size="lg" className="w-full sm:w-auto">
+                  <Sparkles className="size-4" /> {isAr ? `عرّفنا على ${name} أكثر` : `Bring ${name} to life`} <ArrowRight className="size-4 rtl:rotate-180" />
+                </Button>
+              ) : ContinueButton}
               <Button onClick={share} loading={shareBusy} disabled={!cat?.catIdNumber} variant="secondary" size="lg">
                 <Share2 className="size-4" /> {isAr ? `شارك هوية ${name}` : `Share ${name}'s ID`}
               </Button>
             </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {isAr
+                ? "أضف شخصيته ومفضّلاته، وصمّم بطاقته بالثيمات والملصقات — دقيقتان تخلّي هويته تشبهه."
+                : "Add their personality & favourites, and style their card with themes and stickers — two minutes to make the ID truly theirs."}
+            </p>
+            {catId && (
+              <button
+                onClick={() => router.push("/portal")}
+                className="mt-2 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                {isAr ? "لاحقاً — أكمل إلى لوحتي" : "Later — continue to my dashboard"}
+              </button>
+            )}
           </div>
 
           {/* The real card — the hero of the moment. */}
