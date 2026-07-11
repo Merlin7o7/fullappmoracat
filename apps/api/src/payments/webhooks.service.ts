@@ -8,6 +8,12 @@ import {
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { MailService } from "../mail/mail.service";
+import {
+  orderConfirmationTemplate,
+  paymentReceiptTemplate,
+  subscriptionConfirmedTemplate,
+} from "../mail/mail.templates";
 import type { WebhookEvent } from "./payment-provider.interface";
 
 /**
@@ -26,7 +32,8 @@ export class WebhooksService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly mail: MailService
   ) {}
 
   // ── Verification + parsing per provider ──────────────────────────────────
@@ -98,7 +105,11 @@ export class WebhooksService {
   async settle(event: WebhookEvent) {
     const payment = await this.prisma.payment.findFirst({
       where: { providerRef: event.providerRef },
-      include: { order: { select: { id: true, orderNumber: true, status: true, userId: true } } },
+      include: {
+        order: {
+          select: { id: true, orderNumber: true, status: true, userId: true, subscriptionId: true },
+        },
+      },
     });
     if (!payment) throw new NotFoundException("Payment not found for webhook");
 
@@ -126,6 +137,18 @@ export class WebhooksService {
         params: { orderNumber: payment.order.orderNumber },
         data: { orderNumber: payment.order.orderNumber },
       });
+
+      // A redirect-flow membership persists as DRAFT until the PSP confirms —
+      // this capture is the moment it goes live (mirrors activate()'s
+      // non-pending path: dates, cat membership, the member's confirmation).
+      const activatedPlanName = await this.activateDraftSubscription(
+        payment.order.subscriptionId,
+        payment.order.orderNumber
+      );
+
+      // Receipts land the moment money moves, even on redirect flows (R024).
+      await this.sendCaptureEmails(payment.order, activatedPlanName);
+
       this.logger.log(`captured ${payment.order.orderNumber} via webhook`);
       return { orderNumber: payment.order.orderNumber, status: "captured" };
     }
@@ -142,6 +165,9 @@ export class WebhooksService {
         this.prisma.order.update({ where: { id: payment.orderId }, data: { status: "FAILED" } }),
         this.prisma.invoice.updateMany({ where: { orderId: payment.orderId }, data: { status: "VOID" } }),
       ]);
+      // A DRAFT membership whose first charge failed never began — close it
+      // out honestly rather than leaving a phantom subscription (R118).
+      await this.cancelDraftSubscription(payment.order.subscriptionId, payment.order.orderNumber);
       return { orderNumber: payment.order.orderNumber, status: "failed" };
     }
 
@@ -149,6 +175,122 @@ export class WebhooksService {
     await this.prisma.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } });
     return { orderNumber: payment.order.orderNumber, status: "refunded" };
   }
+
+  // ── Subscription settlement (redirect flows persist as DRAFT) ────────────
+
+  /** Flips a DRAFT membership live once its first charge captures. */
+  private async activateDraftSubscription(
+    subscriptionId: string | null,
+    orderNumber: string
+  ): Promise<{ plan: { nameEn: string; nameAr: string }; next: Date } | null> {
+    if (!subscriptionId) return null;
+    const sub = await this.prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        plan: { select: { nameEn: true, nameAr: true } },
+        cats: { select: { catId: true } },
+      },
+    });
+    if (!sub || sub.status !== "DRAFT" || !sub.plan) return null;
+
+    const now = new Date();
+    const next = addMonthsClamped(now, 1);
+    await this.prisma.$transaction([
+      this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          status: "ACTIVE",
+          startedAt: now,
+          nextBillingAt: next,
+          nextDeliveryAt: next,
+          events: { create: { type: "activated", metadata: { orderNumber, via: "webhook" } } },
+        },
+      }),
+      this.prisma.cat.updateMany({
+        where: { id: { in: sub.cats.map((c) => c.catId) } },
+        data: { membershipStatus: "ACTIVE" },
+      }),
+    ]);
+    this.logger.log(`subscription ${sub.id} activated via webhook (${orderNumber})`);
+    return { plan: sub.plan, next };
+  }
+
+  /** A DRAFT membership whose first charge failed is closed, never left hanging. */
+  private async cancelDraftSubscription(subscriptionId: string | null, orderNumber: string) {
+    if (!subscriptionId) return;
+    const sub = await this.prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      select: { id: true, status: true },
+    });
+    if (!sub || sub.status !== "DRAFT") return;
+    await this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        events: { create: { type: "activation_failed", metadata: { orderNumber } } },
+      },
+    });
+  }
+
+  /** Receipts + confirmation the moment money moves, even on redirect flows (R024). */
+  private async sendCaptureEmails(
+    order: { id: string; orderNumber: string; userId: string },
+    activated: { plan: { nameEn: string; nameAr: string }; next: Date } | null
+  ) {
+    const buyer = await this.prisma.user.findUnique({
+      where: { id: order.userId },
+      select: { email: true, firstName: true, locale: true },
+    });
+    if (!buyer?.email) return;
+    const loc = buyer.locale === "en" ? "en" : "ar";
+
+    const full = await this.prisma.order.findUniqueOrThrow({
+      where: { id: order.id },
+      include: { items: true, payments: true },
+    });
+    const total = Number(full.grandTotal);
+    const tax = Number(full.taxTotal);
+
+    if (activated) {
+      const nextAt = activated.next.toLocaleDateString(loc === "ar" ? "ar-SA" : "en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      const planName = loc === "ar" ? activated.plan.nameAr : activated.plan.nameEn;
+      const conf = subscriptionConfirmedTemplate(loc, buyer.firstName, planName, nextAt);
+      void this.mail.send({ to: buyer.email, subject: conf.subject, html: conf.html, text: conf.text });
+    } else {
+      const items = full.items.map((it) => ({
+        name: loc === "ar" ? it.nameAr : it.nameEn,
+        qty: it.quantity,
+      }));
+      const conf = orderConfirmationTemplate(loc, buyer.firstName, order.orderNumber, total, items);
+      void this.mail.send({ to: buyer.email, subject: conf.subject, html: conf.html, text: conf.text });
+    }
+
+    const rcpt = paymentReceiptTemplate(
+      loc,
+      buyer.firstName,
+      order.orderNumber,
+      total,
+      tax,
+      full.payments[0]?.provider ?? "—"
+    );
+    void this.mail.send({ to: buyer.email, subject: rcpt.subject, html: rcpt.html, text: rcpt.text });
+  }
+}
+
+/** Month arithmetic that never overflows (Jan 31 + 1mo → Feb 28/29). */
+function addMonthsClamped(d: Date, months: number): Date {
+  const r = new Date(d);
+  const day = r.getDate();
+  r.setDate(1);
+  r.setMonth(r.getMonth() + months);
+  const last = new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate();
+  r.setDate(Math.min(day, last));
+  return r;
 }
 
 function safeEqual(a: string, b: string): boolean {

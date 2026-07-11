@@ -703,14 +703,24 @@ export class CatsService implements OnModuleInit {
     viewCount: true,
     isFeatured: true,
     sharedAt: true,
+    shareConsentAt: true,
   } as const;
 
   async getVisibility(userId: string, catId: string) {
     await this.ownedCat(userId, catId);
-    return this.prisma.cat.findUnique({
-      where: { id: catId },
-      select: CatsService.VISIBILITY_SELECT,
-    });
+    // The owner's public handle lives on the User (one identity across all
+    // their cats) — surfaced here so the panel can edit it in place.
+    const [cat, user] = await Promise.all([
+      this.prisma.cat.findUnique({
+        where: { id: catId },
+        select: CatsService.VISIBILITY_SELECT,
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { ownerNickname: true },
+      }),
+    ]);
+    return cat ? { ...cat, ownerNickname: user?.ownerNickname ?? null } : cat;
   }
 
   async updateVisibility(userId: string, catId: string, dto: UpdateVisibilityDto) {
@@ -725,6 +735,18 @@ export class CatsService implements OnModuleInit {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
     if (dto.bio !== undefined) data.bio = dto.bio.trim() || null;
+
+    // PDPL photo-consent attestation (R106): the client only ever says "the
+    // owner confirmed" — the timestamp is minted here, never trusted from input.
+    if (dto.consent === true) data.shareConsentAt = new Date();
+
+    // The owner's public display name (share-time identity fork, D6). Stored on
+    // the User so one handle follows them across every cat; "" clears it.
+    let ownerNickname: string | null | undefined;
+    if (dto.ownerNickname !== undefined) {
+      ownerNickname = dto.ownerNickname.trim() || null;
+      await this.prisma.user.update({ where: { id: userId }, data: { ownerNickname } });
+    }
 
     let newlyPublic = false;
     if (dto.isPublic !== undefined) {
@@ -754,7 +776,16 @@ export class CatsService implements OnModuleInit {
       });
     }
 
-    return updated;
+    // Keep the response shape identical to getVisibility so client caches
+    // written from either stay aligned.
+    if (ownerNickname === undefined) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { ownerNickname: true },
+      });
+      ownerNickname = user?.ownerNickname ?? null;
+    }
+    return { ...updated, ownerNickname };
   }
 
   /** Stable, URL-safe public handle: latinized name + short random suffix. */

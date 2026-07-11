@@ -171,9 +171,9 @@ const preset: Partial<Config> = {
         },
       },
       animation: {
-        "fade-up": "fade-up 0.6s var(--ease-out) both",
-        "fade-in": "fade-in 0.5s var(--ease-out) both",
-        "scale-in": "scale-in 0.4s var(--ease-out) both",
+        "fade-up": "fade-up 0.4s var(--ease-out) both",
+        "fade-in": "fade-in 0.35s var(--ease-out) both",
+        "scale-in": "scale-in 0.3s var(--ease-out) both",
         "slide-in-up": "slide-in-up 0.35s var(--ease-out) both",
         shimmer: "shimmer 1.8s infinite",
         float: "float 7s ease-in-out infinite",

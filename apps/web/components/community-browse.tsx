@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { api, type CommunityCard, type LikeToggleResponse } from "@/lib/api";
 import { localizeName } from "@/lib/translit";
 import { ImgWithFallback } from "@/components/img-with-fallback";
+import { ReportCatButton } from "@/components/community-report";
 
 /**
  * Community browse experience, shared by the public /community page (marketing
@@ -273,10 +274,25 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
               ? "تصفّح قطط المجتمع التي شاركها أصحابها — كل واحدة بهويتها الخاصة."
               : "Meet the community's cats, shared by their people — each with a Cat ID of their own."}
           </p>
+          {/* Quiet trust link — the house rules are one tap away (trust precedes ask). */}
+          <Link
+            href="/legal/community-guidelines"
+            className="mt-2 inline-block min-h-[44px] pt-2.5 text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            {isAr ? "إرشادات المجتمع" : "Community guidelines"}
+          </Link>
         </header>
       )}
       {compact && (
-        <h1 className="mb-3 font-display text-2xl font-bold tracking-tight">{isAr ? "المجتمع" : "Community"}</h1>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "المجتمع" : "Community"}</h1>
+          <Link
+            href="/legal/community-guidelines"
+            className="text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            {isAr ? "إرشادات المجتمع" : "Community guidelines"}
+          </Link>
+        </div>
       )}
 
       {/* ── Section dock — sticky + horizontally scrollable, always visible ── */}
@@ -369,13 +385,19 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
             }
           />
         ) : (
+          // R111: an empty community is a welcome with a reserved seat, never a void.
           <EmptyLike
             icon={PawPrint}
-            title={isAr ? "لا توجد قطط هنا بعد" : "No cats here yet"}
+            title={isAr ? "حياك الله في مجتمع مرقط 👋" : "Welcome to the Moracat community 👋"}
             body={
               isAr
-                ? "كن أول من يشارك قطه مع المجتمع من صفحة القط."
-                : "Be the first to share your cat with the community from your cat's page."
+                ? "هنا بتلقى قطط الأعضاء — وقطك له مكان محجوز."
+                : "This is where member cats live — and there's a spot reserved for yours."
+            }
+            action={
+              <Link href={likes.hasUser ? "/portal/cats" : "/register"}>
+                <Button size="sm">{isAr ? "شارك قطك" : "Share your cat"}</Button>
+              </Link>
             }
           />
         )
@@ -428,15 +450,23 @@ function CommunityCatCard({ cat, isAr, likes }: { cat: CommunityCard; isAr: bool
     .join(isAr ? " · " : " · ");
   return (
     <div className="group relative">
-      {/* The like control lives outside the <Link> so its 44px target never navigates. */}
-      <LikeButton
-        slug={cat.slug}
-        name={name}
-        initialCount={cat.likeCount}
-        likes={likes}
-        isAr={isAr}
-        className="absolute end-1 top-1 z-10 rounded-full bg-background/85 px-2 shadow-e1 backdrop-blur"
-      />
+      {/* Like + report live outside the <Link> so their 44px targets never navigate. */}
+      <div className="absolute end-1 top-1 z-10 flex items-center gap-1">
+        <LikeButton
+          slug={cat.slug}
+          name={name}
+          initialCount={cat.likeCount}
+          likes={likes}
+          isAr={isAr}
+          className="rounded-full bg-background/85 px-2 shadow-e1 backdrop-blur"
+        />
+        <ReportCatButton
+          slug={cat.slug}
+          name={name}
+          isAr={isAr}
+          className="bg-background/85 shadow-e1 backdrop-blur"
+        />
+      </div>
       <Link href={`/community/${cat.slug}`} className="block">
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-e1 transition-transform duration-200 group-hover:-translate-y-0.5">
           <div className="relative aspect-square overflow-hidden bg-muted">

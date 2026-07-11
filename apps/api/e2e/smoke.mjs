@@ -109,6 +109,24 @@ ok(badHook.status === 401, "webhook bad signature 401");
 const hook = await call("/payments/webhooks/mock", "POST", { providerRef: pending.payment.providerRef, status: "CAPTURED" }, undefined, { "x-webhook-secret": process.env.MOCK_WEBHOOK_SECRET ?? "mock-webhook-secret" });
 ok(hook.json?.status === "captured", "webhook captures pending order");
 
+console.log("━━ membership activation (plan builder → checkout) ━━");
+// The plan is computed from the cat and bought on one honest page (D2/D3):
+// charge-first, VAT broken out, first renewal exactly one month out (R021).
+const cities = (await call("/cities")).json;
+const addr = (await call("/addresses", "POST", { recipient: "Smoke Tester", phone: "+966500000001", cityId: cities[0].id, street: "Smoke St 1" }, C)).json;
+ok(!!addr.id, "delivery address saved");
+const sub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat.id], addressId: addr.id, provider: "MADA" }, C)).json;
+ok(sub.status === "ACTIVE" && !!sub.nextBillingAt, `membership activated (${sub.orderNumber})`);
+ok(Math.abs(sub.grandTotal / 1.15 + sub.taxTotal - sub.grandTotal) < 0.05, "membership VAT broken out (15%)");
+const billAt = new Date(sub.nextBillingAt);
+const expectBill = new Date(); expectBill.setMonth(expectBill.getMonth() + 1);
+ok(Math.abs(billAt - expectBill) < 36e5 * 25, "first renewal is one month out (R021/R025)");
+const coveredCat = (await call(`/cats/${cat.id}`, "GET", undefined, C)).json;
+ok(coveredCat.membershipStatus === "ACTIVE", "cat membership flips ACTIVE on capture");
+// One cat, one membership — the double-charge is prevented, never refunded (R115).
+const dupe = await call("/subscriptions/activate", "POST", { planId: plans[1].id, catIds: [cat.id], addressId: addr.id, provider: "MADA" }, C);
+ok(dupe.status === 400, "second membership for a covered cat is rejected (400)");
+
 console.log("━━ refunds + RBAC ━━");
 ok((await call("/admin/dashboard", "GET", undefined, C)).status === 403, "customer blocked from admin (403)");
 const refund = (await call(`/admin/orders/${order.orderNumber}/refund`, "POST", { amount: 10, reason: "smoke" }, A)).json;

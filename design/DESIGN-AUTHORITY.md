@@ -13,6 +13,16 @@ modern cat owner — savings are proof of value; belonging is the product.**
 Tie-breaker for every ambiguous decision: *does this make a person feel like a
 recognised, cared-for member — or like someone hunting for a code?*
 
+### Amendment (2026-07-10) — the box's role
+
+The revenue engine is the monthly care plan (food, litter, essentials,
+delivered kingdom-wide); the membership identity is the moat. The box is never
+sold *as a box*: it is "your cat's care, handled", and **the plan is computed
+from the cat's own profile (weight, age, household), never chosen from a tier
+table.** Savings at founding partners remain proof of value; belonging remains
+the product. Copy must never pit the identity against the box — they are one
+membership.
+
 ## The six emotions, in priority order
 
 1. **Belonging** — "I'm part of this." Everything is downstream of this.

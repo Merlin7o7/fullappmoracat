@@ -17,6 +17,7 @@ import {
 import { useLocale } from "./providers";
 import { PLANS } from "@/lib/plans";
 import { api } from "@/lib/api";
+import { commerceEnabled } from "@/lib/features";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -105,6 +106,15 @@ export default function HomePage() {
                 </Link>
               </div>
               <p className="mt-3.5 text-xs text-muted-foreground">{t.hero.trust}</p>
+              {/* Quiet secondary path for the unconvinced (R005: still one primary action). */}
+              <p className="mt-2.5 text-sm">
+                <Link
+                  href="/#how"
+                  className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {t.hero.ctaSecondary}
+                </Link>
+              </p>
             </motion.form>
           </div>
 
@@ -160,7 +170,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Membership tiers · boarding passes, not pricing tables ───────── */}
+      {/* ── One membership, built from the cat (D2/R021/R085) — the plan is
+           computed from the cat's profile, never chosen from a tier table. ── */}
       <section id="plans" className="border-y border-border/70 bg-cream/60 py-20 sm:py-24">
         <div className="container">
           <div className="mx-auto mb-14 max-w-2xl text-center">
@@ -168,18 +179,12 @@ export default function HomePage() {
             <p className="mt-4 text-lg text-muted-foreground">{t.plans.subtitle}</p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {PLANS.map((plan, i) => (
-              <motion.div
-                key={plan.tier}
-                variants={fadeUp} initial="hidden" whileInView="show"
-                viewport={{ once: true, margin: "-60px" }} custom={i}
-                className={cn(plan.popular && "md:-rotate-1")}
-              >
-                <PlanTicket plan={plan} isAr={isAr} t={t} />
-              </motion.div>
-            ))}
-          </div>
+          <motion.div
+            variants={fadeUp} initial="hidden" whileInView="show"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            <MembershipPanel t={t} />
+          </motion.div>
         </div>
       </section>
 
@@ -262,7 +267,15 @@ function BenefitsRibbon({ items }: { items: string[] }) {
   // the animation math holds in both locales; each item renders its own dir.
   const track = [...items, ...items];
   return (
-    <div aria-hidden className="marquee-pause overflow-hidden border-y border-border/70 bg-cream py-4" dir="ltr">
+    <>
+      {/* The moving ribbon is decorative; its promises must still exist for
+          screen readers (R095) — a static, visually-hidden copy carries them. */}
+      <ul className="sr-only">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+      <div aria-hidden className="marquee-pause overflow-hidden border-y border-border/70 bg-cream py-4" dir="ltr">
       <div className="animate-marquee flex w-max items-center gap-10">
         {track.map((item, i) => (
           <span key={i} className="flex items-center gap-10">
@@ -272,8 +285,9 @@ function BenefitsRibbon({ items }: { items: string[] }) {
             {icons[i % icons.length]}
           </span>
         ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -356,62 +370,51 @@ function FeatureRow({ index, eyebrow, title, body, flip }: { index: number; eyeb
   );
 }
 
-/* ── Membership tickets ─────────────────────────────────────────────────── */
+/* ── The membership panel — one plan, computed from the cat (D2) ────────── */
 
-function PlanTicket({
-  plan, isAr, t,
-}: {
-  plan: (typeof PLANS)[number];
-  isAr: boolean;
-  t: ReturnType<typeof useLocale>["t"];
-}) {
-  const name = isAr ? plan.nameAr : plan.nameEn;
-  const tagline = isAr ? plan.taglineAr : plan.taglineEn;
-  const features = isAr ? plan.featuresAr : plan.featuresEn;
+function MembershipPanel({ t }: { t: ReturnType<typeof useLocale>["t"] }) {
+  const commerce = commerceEnabled();
+  const fromPrice = Math.min(...PLANS.map((p) => p.price));
 
   return (
-    <div
-      className={cn(
-        "relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:shadow-e2",
-        plan.popular ? "border-accent/60 ring-2 ring-accent/50" : "border-border"
-      )}
-    >
-      {plan.popular && (
-        <span className="absolute -end-1 top-5 rotate-3 rounded-s-full bg-accent px-4 py-1 text-xs font-bold text-accent-foreground shadow-e1">
-          {t.plans.popular}
-        </span>
-      )}
-
-      {/* Stub top: identity of the plan */}
-      <div className="flex-1 p-6 pb-5">
-        <h3 className="font-display text-2xl font-semibold tracking-tight">{name}</h3>
-        <p className="mt-1.5 text-sm text-muted-foreground">{tagline}</p>
-        <ul className="mt-6 flex flex-col gap-3">
-          {features.map((feat) => (
-            <li key={feat} className="flex items-start gap-2.5 text-sm">
-              <Check className="mt-0.5 size-4 shrink-0 text-success" strokeWidth={3} />
-              <span>{feat}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Perforation — the ticket tears here */}
-      <div aria-hidden className="relative">
-        <span className="absolute -start-3 top-1/2 size-6 -translate-y-1/2 rounded-full border border-border bg-background sm:bg-cream" />
-        <span className="absolute -end-3 top-1/2 size-6 -translate-y-1/2 rounded-full border border-border bg-background sm:bg-cream" />
-        <div className="mx-6 border-t-2 border-dashed border-border" />
-      </div>
-
-      {/* Stub bottom: the honest price + one action (R021/R086) */}
-      <div className="p-6 pt-5">
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-display text-4xl font-semibold tabular">{plan.price}</span>
-          <span className="text-sm text-muted-foreground">SAR {t.plans.month}</span>
+    <div className="relative mx-auto max-w-4xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-e2">
+      <div className="grid lg:grid-cols-[1.2fr_1fr]">
+        {/* What the membership carries */}
+        <div className="p-8 sm:p-10">
+          <ul className="flex flex-col gap-4">
+            {t.plans.includes.map((item) => (
+              <li key={item} className="flex items-start gap-3 text-base">
+                <Check className="mt-1 size-5 shrink-0 text-success" strokeWidth={3} />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-7 text-xs text-muted-foreground">{t.plans.vatNote}</p>
         </div>
-        <Link href="/register" className="mt-4 block">
-          <Button className="w-full" variant={plan.popular ? "primary" : "outline"}>{t.plans.choose}</Button>
-        </Link>
+
+        {/* The honest price + one action (R021/R086) */}
+        <div className="relative flex flex-col items-center justify-center gap-4 border-t border-dashed border-border bg-cream/70 p-8 text-center sm:p-10 lg:border-s lg:border-t-0 dark:bg-cream/10">
+          {!commerce && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1 text-xs font-bold text-accent-foreground shadow-e1">
+              {t.plans.soonBadge}
+            </span>
+          )}
+          <div>
+            <p className="text-sm text-muted-foreground">{t.plans.from}</p>
+            <p className="mt-1 flex items-baseline justify-center gap-1.5">
+              <span className="font-display text-5xl font-semibold tabular">{fromPrice}</span>
+              <span className="text-sm text-muted-foreground">SAR {t.plans.month}</span>
+            </p>
+          </div>
+          <Link href="/register" className="w-full max-w-60">
+            <Button size="lg" className="w-full">
+              {t.plans.cta} <ArrowRight className="size-4 rtl:rotate-180" />
+            </Button>
+          </Link>
+          {!commerce && (
+            <p className="max-w-64 text-xs leading-relaxed text-muted-foreground">{t.plans.soonNote}</p>
+          )}
+        </div>
       </div>
     </div>
   );

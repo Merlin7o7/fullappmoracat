@@ -89,6 +89,26 @@ function VerifyEmailInner() {
     [authedFetch, updateUser, router, next, isAr]
   );
 
+  // Escape hatch for a mistyped email (R112/R117): seed the register page's
+  // draft (same key it reads on mount) with what we already know, so they only
+  // fix the email — never retype everything.
+  const fixEmail = React.useCallback(() => {
+    try {
+      const dialCode = user?.dialCode || "+966";
+      const phone = user?.phone?.startsWith(dialCode) ? user.phone.slice(dialCode.length) : user?.phone ?? "";
+      localStorage.setItem(
+        "moraqat.signupDraft",
+        JSON.stringify({
+          fullName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
+          dialCode,
+          phone,
+          email: user?.email ?? "",
+        })
+      );
+    } catch { /* ignore */ }
+    router.push("/register");
+  }, [user, router]);
+
   if (done) {
     return (
       <AuthShell
@@ -153,6 +173,20 @@ function VerifyEmailInner() {
               ? "إعادة إرسال الرمز"
               : "Resend code"}
         </button>
+
+        {/* Quiet helpers — no one gets trapped here (R112/R113). */}
+        <div className="flex flex-col items-center gap-1.5 text-center">
+          <p className="text-xs text-muted-foreground">
+            {isAr ? "ما وصلك شيء؟ شيّك على مجلد الرسائل غير المرغوبة." : "Nothing arriving? Check your spam folder."}
+          </p>
+          <button
+            type="button"
+            onClick={fixEmail}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {isAr ? "كتبت البريد غلط؟ عدّله من هنا" : "Wrong email? Fix it here"}
+          </button>
+        </div>
       </div>
     </AuthShell>
   );

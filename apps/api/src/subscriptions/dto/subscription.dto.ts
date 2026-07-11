@@ -79,3 +79,36 @@ export class PauseDto {
   @IsString()
   until?: string;
 }
+
+/** Payment providers accepted for a membership's first charge (KSA-first order). */
+const ACTIVATION_PROVIDERS = [
+  "MADA", "APPLE_PAY", "STC_PAY", "VISA", "MASTERCARD", "TABBY", "TAMARA",
+] as const;
+
+export type ActivationProvider = (typeof ACTIVATION_PROVIDERS)[number];
+
+/**
+ * D3 — "subscribe + initial charge" in one honest step: charge the first month
+ * FIRST (checkout.service.ts discipline), then persist subscription + order +
+ * invoice atomically. Monthly only — the commitment line the member saw (R021)
+ * promises "{price} SAR / month", so the API accepts nothing else here.
+ */
+export class ActivateSubscriptionDto {
+  @ApiProperty({ description: "Plan id (the computed recommendation, or the member's adjustment)" })
+  @IsString()
+  planId!: string;
+
+  @ApiProperty({ type: [String], description: "Cat ids this membership covers" })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  catIds!: string[];
+
+  @ApiProperty({ description: "Delivery address id (kingdom-wide)" })
+  @IsString()
+  addressId!: string;
+
+  @ApiProperty({ enum: ACTIVATION_PROVIDERS, example: "MADA" })
+  @IsIn(ACTIVATION_PROVIDERS)
+  provider!: ActivationProvider;
+}

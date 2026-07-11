@@ -21,7 +21,10 @@ export function NotificationsBell({ className }: { className?: string }) {
     queryKey: ["notifications-unread", user?.id],
     queryFn: () => authedFetch<{ unread: number }>("/notifications/unread-count"),
     enabled: !!user,
-    refetchInterval: 60000,
+    // Fresh enough to feel alive without hammering the API: poll every 30s
+    // and refetch the moment the tab regains focus (M12 — real-time later).
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
   });
 
   const unread = data?.unread ?? 0;

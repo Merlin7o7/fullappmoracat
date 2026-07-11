@@ -17,6 +17,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "push": "prisma db push",
     "seed": "tsx prisma/seed.ts",
+    "seed:community": "tsx prisma/seed-community.ts",
     "local": "node scripts/pg-local.mjs",
     "studio": "prisma studio",
     "typecheck": "tsc --noEmit"

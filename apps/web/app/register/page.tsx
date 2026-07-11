@@ -11,6 +11,16 @@ import { Field } from "@/components/field";
 import { PhoneField, composePhone } from "@/components/phone-field";
 import { GoogleButton } from "@/components/google-button";
 import { AuthShell } from "@/components/auth-shell";
+import { ApiError } from "@/lib/http";
+
+// Draft persistence (R117 — never lose entered data). Name, phone and email
+// only — NEVER the password, never the terms tick.
+const DRAFT_KEY = "moraqat.signupDraft";
+type SignupDraft = { fullName?: string; dialCode?: string; phone?: string; email?: string };
+
+function clearSignupDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -40,6 +50,38 @@ export default function RegisterPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
+  // Restore a saved draft on mount — but never clobber anything already typed.
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as SignupDraft;
+      setForm((f) => ({
+        ...f,
+        fullName: f.fullName || draft.fullName || "",
+        dialCode: draft.dialCode || f.dialCode,
+        phone: f.phone || draft.phone || "",
+        email: f.email || draft.email || "",
+      }));
+    } catch { /* ignore */ }
+  }, []);
+
+  // Persist the draft as they type (debounced) so a refresh, crash or wrong
+  // turn never costs them their details (R117).
+  const { fullName: draftName, dialCode: draftDial, phone: draftPhone, email: draftEmail } = form;
+  React.useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (!draftName && !draftPhone && !draftEmail) return;
+      try {
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ fullName: draftName, dialCode: draftDial, phone: draftPhone, email: draftEmail } satisfies SignupDraft)
+        );
+      } catch { /* ignore */ }
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [draftName, draftDial, draftPhone, draftEmail]);
+
   const phoneDigits = form.phone.replace(/\D/g, "");
   // Phone is optional now that OTP is off; include it only if a real number is given.
   const fullPhone = phoneDigits.length >= 8 ? composePhone(form.dialCode, form.phone) : undefined;
@@ -57,6 +99,8 @@ export default function RegisterPage() {
       ...(withOtp ? { otp: withOtp } : {}),
       ...(refCode ? { ref: refCode } : {}),
     });
+    // Account created — the draft has done its job.
+    clearSignupDraft();
     // Verify email by OTP first; then straight into naming their cat.
     router.push(`/verify-email?next=${encodeURIComponent("/portal/cats/new")}`);
   }
@@ -78,7 +122,7 @@ export default function RegisterPage() {
       setStep("verify");
       if (devCode) toast({ title: isAr ? "رمز التحقق (وضع التطوير)" : "Verification code (dev)", description: devCode });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create account");
+      setError(registerErrorMessage(err, isAr));
     } finally {
       setLoading(false);
     }
@@ -91,7 +135,7 @@ export default function RegisterPage() {
     try {
       await doRegister(otp);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(registerErrorMessage(err, isAr));
     } finally {
       setLoading(false);
     }
@@ -101,6 +145,7 @@ export default function RegisterPage() {
     setError(null);
     try {
       await loginWithGoogle(idToken);
+      clearSignupDraft();
       router.push(pendingCat ? "/portal/cats/new" : "/portal");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google sign-in failed");
@@ -152,11 +197,15 @@ export default function RegisterPage() {
       <div className="mb-5">
         <GoogleButton isAr={isAr} onCredential={onGoogle} />
       </div>
-      <Divider isAr={isAr} />
+      <Divider isAr={isAr} withPhone={smsEnabled} />
 
       <form onSubmit={startVerification} className="mt-5 flex flex-col gap-4">
         <Field label={isAr ? "الاسم الكامل" : "Full name"} value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} placeholder={isAr ? "مثلاً: سارة العتيبي" : "e.g. Sara Al-Otaibi"} autoComplete="name" />
-        <PhoneField isAr={isAr} label={isAr ? "رقم الجوال (اختياري)" : "Mobile number (optional)"} dialCode={form.dialCode} onDialCode={(v) => setForm({ ...form, dialCode: v })} value={form.phone} onValue={(v) => setForm({ ...form, phone: v })} />
+        {/* The phone field only appears when SMS verification is live — asking
+            for a number we'd silently discard breaks trust (R086/R113). */}
+        {smsEnabled && (
+          <PhoneField isAr={isAr} label={isAr ? "رقم الجوال" : "Mobile number"} required dialCode={form.dialCode} onDialCode={(v) => setForm({ ...form, dialCode: v })} value={form.phone} onValue={(v) => setForm({ ...form, phone: v })} />
+        )}
         <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" autoComplete="email" />
         <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder={isAr ? "٨ أحرف على الأقل" : "At least 8 characters"} autoComplete="new-password" />
 
@@ -186,12 +235,29 @@ export default function RegisterPage() {
   );
 }
 
-function Divider({ isAr }: { isAr: boolean }) {
+function Divider({ isAr, withPhone }: { isAr: boolean; withPhone: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <span className="h-px flex-1 bg-border" />
-      <span className="text-xs text-muted-foreground">{isAr ? "أو بالبريد والجوال" : "or with email & mobile"}</span>
+      <span className="text-xs text-muted-foreground">
+        {withPhone ? (isAr ? "أو بالبريد والجوال" : "or with email & mobile") : (isAr ? "أو بالبريد الإلكتروني" : "or with email")}
+      </span>
       <span className="h-px flex-1 bg-border" />
     </div>
   );
+}
+
+/**
+ * A failed signup must never blame the member (R084/R113): a network blip says
+ * so plainly and reassures them the draft is safe; a server rejection surfaces
+ * the API's own (already localized) message.
+ */
+function registerErrorMessage(err: unknown, isAr: boolean): string {
+  if (err instanceof ApiError && (err.kind === "network" || err.kind === "timeout")) {
+    return isAr
+      ? "ما قدرنا نوصل للخادم — بياناتك محفوظة عندنا، حاول مرة ثانية."
+      : "We couldn't reach the server — your details are kept, try again.";
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return isAr ? "تعذّر إنشاء الحساب — حاول مرة ثانية بعد لحظات." : "We couldn't create your account — try again in a moment.";
 }

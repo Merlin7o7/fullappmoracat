@@ -37,6 +37,7 @@ export default function SupportPage() {
     mutationFn: (body: Record<string, unknown>) =>
       authedFetch<Ticket>("/support/tickets", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: (t) => {
+      try { sessionStorage.removeItem(TICKET_DRAFT_KEY); } catch { /* ignore */ }
       qc.invalidateQueries({ queryKey: ["tickets"] });
       setShowForm(false);
       setSelected(t.ticketNumber);
@@ -52,7 +53,7 @@ export default function SupportPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "الدعم" : "Support"}</h1>
-          <p className="text-sm text-muted-foreground">{isAr ? "نرد عادة خلال ساعات العمل نفسها" : "We usually reply within the same working day"}</p>
+          <p className="text-sm text-muted-foreground">{isAr ? "نرد خلال ٢٤ ساعة — وغالباً أسرع" : "We reply within 24 hours — usually much faster"}</p>
         </div>
         {!active && (
           <Button size="sm" onClick={() => setShowForm((v) => !v)}><Plus className="size-4" /> {isAr ? "تذكرة جديدة" : "New ticket"}</Button>
@@ -183,10 +184,25 @@ function TicketThread({ ticket, isAr, onBack, authedFetch, onChanged }: {
   );
 }
 
+const TICKET_DRAFT_KEY = "moraqat.ticketDraft";
+
 function TicketForm({ isAr, onSubmit, pending, onClose }: {
   isAr: boolean; onSubmit: (b: Record<string, unknown>) => void; pending: boolean; onClose: () => void;
 }) {
-  const [f, setF] = React.useState({ subject: "", message: "", category: "order" });
+  // A long support message must survive a session hiccup or accidental close
+  // (R117) — draft to sessionStorage, cleared on successful submit.
+  const [f, setF] = React.useState(() => {
+    try {
+      const raw = sessionStorage.getItem(TICKET_DRAFT_KEY);
+      if (raw) return { subject: "", message: "", category: "order", ...JSON.parse(raw) as object };
+    } catch { /* ignore */ }
+    return { subject: "", message: "", category: "order" };
+  });
+  React.useEffect(() => {
+    try {
+      if (f.subject || f.message) sessionStorage.setItem(TICKET_DRAFT_KEY, JSON.stringify(f));
+    } catch { /* ignore */ }
+  }, [f]);
   return (
     <Card className="p-6">
       <div className="mb-4 flex items-center justify-between">

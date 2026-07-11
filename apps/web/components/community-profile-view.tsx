@@ -9,6 +9,7 @@ import { useLocale } from "@/app/providers";
 import { CatIdCard } from "@/components/cat-id-card";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 import { LikeButton, useCommunityLikes } from "@/components/community-browse";
+import { ReportCatButton } from "@/components/community-report";
 import { localizeName } from "@/lib/translit";
 import type { CommunityProfile } from "@/lib/api";
 
@@ -113,6 +114,8 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
               isAr={isAr}
               className="border border-border px-3 hover:bg-muted"
             />
+            {/* Quiet trust affordance — reporting is always within reach, never loud. */}
+            <ReportCatButton slug={slug} name={name} isAr={isAr} className="border border-border hover:bg-muted" />
             <div className="rounded-xl bg-white p-1.5 shadow-e1 ring-hairline" title={isAr ? "امسح للزيارة" : "Scan to visit"}>
               <QRCodeSVG value={shareUrl} size={48} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
             </div>

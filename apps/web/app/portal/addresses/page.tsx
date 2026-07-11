@@ -2,28 +2,13 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Plus, Trash2, Loader2, Star, X } from "lucide-react";
+import { MapPin, Plus, Trash2, Loader2, Star } from "lucide-react";
 import { Card, Badge, Button, Skeleton, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
-import { Field, SelectField } from "@/components/field";
 import { QueryError } from "@/components/query-error";
 import { IlloPaw } from "@/components/illustrations";
-import { fetchWithTimeout, httpError } from "@/lib/http";
-
-interface Address {
-  id: string;
-  label: string | null;
-  recipient: string;
-  phone: string;
-  street: string;
-  district: string | null;
-  isDefault: boolean;
-  city: { nameEn: string; nameAr: string };
-}
-interface City { id: string; nameEn: string; nameAr: string }
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+import { AddressForm, useCities, type SavedAddress as Address } from "@/components/address-form";
 
 export default function AddressesPage() {
   const { authedFetch, user } = useAuth();
@@ -38,20 +23,11 @@ export default function AddressesPage() {
     queryFn: () => authedFetch<Address[]>("/addresses"),
     enabled: !!user,
   });
-  // Cities feed the form's picker. It's a public endpoint, but it still needs a
-  // timeout and an honest error+retry — without cities the form can't be used,
-  // so a silent failure would leave the "Add" button doing nothing.
+  // Cities feed the form's picker — shared with checkout (see address-form.tsx).
   const {
     data: cities, isLoading: citiesLoading, isError: citiesError,
     refetch: refetchCities, isFetching: citiesFetching,
-  } = useQuery({
-    queryKey: ["cities"],
-    queryFn: async () => {
-      const res = await fetchWithTimeout(`${API}/api/cities`, { headers: { accept: "application/json" } });
-      if (!res.ok) throw httpError(res.status, await res.json().catch(() => null), "Couldn't load cities");
-      return res.json() as Promise<City[]>;
-    },
-  });
+  } = useCities();
 
   const create = useMutation({
     mutationFn: (body: Record<string, unknown>) => authedFetch("/addresses", { method: "POST", body: JSON.stringify(body) }),
@@ -141,32 +117,5 @@ export default function AddressesPage() {
         </Card>
       )}
     </div>
-  );
-}
-
-function AddressForm({ isAr, cities, onSubmit, pending, error, onClose }: {
-  isAr: boolean; cities: City[]; onSubmit: (b: Record<string, unknown>) => void; pending: boolean; error?: string; onClose: () => void;
-}) {
-  const [f, setF] = React.useState({ label: "", recipient: "", phone: "", cityId: cities[0]?.id ?? "", district: "", street: "" });
-  return (
-    <Card className="p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-display font-semibold">{isAr ? "عنوان جديد" : "New address"}</h3>
-        <button onClick={onClose} aria-label="close"><X className="size-4 text-muted-foreground" /></button>
-      </div>
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(f); }} className="grid gap-4 sm:grid-cols-2">
-        <Field label={isAr ? "التسمية" : "Label"} value={f.label} onChange={(v) => setF({ ...f, label: v })} placeholder={isAr ? "المنزل" : "Home"} />
-        <Field label={isAr ? "المستلم" : "Recipient"} required value={f.recipient} onChange={(v) => setF({ ...f, recipient: v })} />
-        <Field label={isAr ? "الجوال" : "Phone"} required value={f.phone} onChange={(v) => setF({ ...f, phone: v })} placeholder="+9665..." />
-        <SelectField label={isAr ? "المدينة" : "City"} value={f.cityId} onChange={(v) => setF({ ...f, cityId: v })}
-          options={cities.map((c) => ({ value: c.id, label: isAr ? c.nameAr : c.nameEn }))} />
-        <Field label={isAr ? "الحي" : "District"} value={f.district} onChange={(v) => setF({ ...f, district: v })} />
-        <Field label={isAr ? "الشارع" : "Street"} required value={f.street} onChange={(v) => setF({ ...f, street: v })} />
-        {error && <p className="text-sm text-destructive sm:col-span-2">{error}</p>}
-        <div className="sm:col-span-2">
-          <Button type="submit" disabled={pending || !f.recipient || !f.street}>{pending && <Loader2 className="size-4 animate-spin" />} {isAr ? "حفظ العنوان" : "Save address"}</Button>
-        </div>
-      </form>
-    </Card>
   );
 }

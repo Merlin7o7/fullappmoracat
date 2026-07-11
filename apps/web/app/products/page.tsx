@@ -12,6 +12,7 @@ import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloCan, IlloFish, IlloMouse, IlloPaw, Sticker } from "@/components/illustrations";
 import { useLocale } from "@/app/providers";
 import { api, PRODUCT_TYPES, type ProductListItem } from "@/lib/api";
+import { commerceEnabled } from "@/lib/features";
 
 const SORTS = [
   { key: "newest", en: "Newest", ar: "الأحدث" },
@@ -54,6 +55,22 @@ export default function ProductsPage() {
             {isAr ? "منتجات مختارة لقطك" : "Curated products for your cat"}
           </h1>
         </div>
+
+        {/* Community Mode — say plainly why there's no checkout yet, and what
+            "Notify me" actually does (R004/R006: honest by default, no dead ends). */}
+        {!commerceEnabled() && (
+          <div
+            role="status"
+            className="mx-auto mb-8 flex max-w-2xl items-center gap-3 rounded-2xl border border-border bg-cream/70 px-5 py-4 text-sm text-foreground/80 dark:bg-cream/40"
+          >
+            <BellRing className="size-5 shrink-0 text-primary" aria-hidden />
+            <p>
+              {isAr
+                ? "المتجر يفتح مع إطلاق العضويات — اضغط «أعلمني» ونخبرك أول ما يجهز."
+                : "The shop opens with memberships — tap “Notify me” and we’ll tell you the moment it’s ready."}
+            </p>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -165,7 +182,8 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
           />
           {product.compareAtPrice && (
             <Badge variant="destructive" className="absolute start-2 top-2">
-              {isAr ? "خصم" : "Sale"}
+              {/* "Offer", never "discount" — member recognition, not coupon talk (R085). */}
+              {isAr ? "عرض" : "Offer"}
             </Badge>
           )}
         </div>

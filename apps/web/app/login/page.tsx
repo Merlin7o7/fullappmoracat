@@ -24,7 +24,9 @@ export default function LoginPage() {
   const [method, setMethod] = React.useState<Method>("email");
   // Mobile + OTP login needs a live SMS provider; hide it until one is wired.
   const smsEnabled = process.env.NEXT_PUBLIC_SMS_ENABLED === "true";
-  const [rememberMe, setRememberMe] = React.useState(true);
+  // Default OFF — staying signed in is the member's explicit choice, never a
+  // silent default (trust precedes convenience).
+  const [rememberMe, setRememberMe] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 

@@ -706,6 +706,11 @@ model Cat {
   bio            String?
   coverUrl       String?
   sharedAt       DateTime?
+  /// PDPL photo-consent attestation (R106): stamped server-side the first time
+  /// the owner confirms that any people visible in the cat's photos agreed to
+  /// their publication. Null = never attested → the web asks once, before the
+  /// profile first goes public. Never written from a client-supplied timestamp.
+  shareConsentAt DateTime?
   viewCount      Int       @default(0)
   /// Denormalized like tally — kept in lock-step with the CatLike rows via an
   /// atomic increment/decrement so "Most Loved" sorts on an index, not a count().

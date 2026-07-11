@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { SubscriptionsService } from "./subscriptions.service";
-import { CreateSubscriptionDto, PauseDto } from "./dto/subscription.dto";
+import { ActivateSubscriptionDto, CreateSubscriptionDto, PauseDto } from "./dto/subscription.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Commercial } from "../common/decorators/commercial.decorator";
 
@@ -16,6 +16,14 @@ export class SubscriptionsController {
   @ApiOperation({ summary: "Build a subscription (plan + cats + custom items)" })
   create(@CurrentUser("id") userId: string, @Body() dto: CreateSubscriptionDto) {
     return this.subs.create(userId, dto);
+  }
+
+  @Post("activate")
+  @Commercial() // Money moves here — hard-blocked in Community Mode.
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Activate a membership: charge the first month, then create the subscription + order + invoice" })
+  activate(@CurrentUser("id") userId: string, @Body() dto: ActivateSubscriptionDto) {
+    return this.subs.activate(userId, dto);
   }
 
   @Get()

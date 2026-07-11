@@ -340,11 +340,13 @@ function StatusPill({ active, comingSoon, isAr }: { active: boolean; comingSoon:
       </span>
     );
   }
-  // Commerce era: leaf-green when the membership is active, muted when lapsed.
+  // Commerce era: leaf-green when the membership is active; lapsed keeps full
+  // legibility (≥4.5:1 on the deep-green field, R091) with an amber dot so the
+  // state never rides on colour alone next to the "Inactive" label (R093/R006).
   const tone = active
     ? "bg-[hsl(150_60%_45%/0.16)] text-[hsl(150_60%_82%)] ring-[hsl(150_60%_60%/0.35)]"
-    : "bg-white/10 text-white/60 ring-white/20";
-  const dot = active ? "bg-[hsl(150_60%_60%)]" : "bg-white/40";
+    : "bg-white/10 text-white/90 ring-white/20";
+  const dot = active ? "bg-[hsl(150_60%_60%)]" : "bg-amber-300";
   const label = active ? (isAr ? "فعّالة" : "Active") : isAr ? "غير مفعّلة" : "Inactive";
   return (
     <span className={cn("inline-flex shrink-0 items-center gap-[1.3cqw] rounded-full px-[2.2cqw] py-[0.9cqw] text-[2cqw] font-semibold uppercase tracking-[0.16em] ring-1", tone)}>

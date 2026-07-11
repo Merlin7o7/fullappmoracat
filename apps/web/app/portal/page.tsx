@@ -47,6 +47,10 @@ interface Overview {
     loyaltyPoints: number;
     loyaltyTier: string;
     unreadNotifications: number;
+    /** The beta value ledger (R041/R048/R049) — care accrued, not money. */
+    healthRecords: number;
+    photos: number;
+    communityLikes: number;
   };
   recentOrders: { orderNumber: string; status: string; grandTotal: number; placedAt: string }[];
 }
@@ -98,6 +102,19 @@ export default function OverviewPage() {
   // The featured cat = the one currently in focus (defaults to primary).
   const featured = activeCat ?? primaryCat;
 
+  // The beta value ledger (R048/R041/R049) — the home screen proves what the
+  // membership already holds, it never advertises what's coming. Every counter
+  // is real, and a zero is omitted rather than shown as an empty brag (R115).
+  const memberDays = data?.owner.memberSince
+    ? Math.floor((Date.now() - new Date(data.owner.memberSince).getTime()) / 86_400_000)
+    : 0;
+  const ledger = [
+    { num: data?.stats.healthRecords ?? 0, label: isAr ? "سجل صحي محفوظ" : "health records kept" },
+    { num: data?.stats.photos ?? 0, label: isAr ? "صورة بأمان" : "photos kept safe" },
+    { num: memberDays, label: isAr ? "يوم في العضوية" : "days a member" },
+    { num: data?.stats.communityLikes ?? 0, label: isAr ? "قلب من المجتمع" : "hearts from the community" },
+  ].filter((s) => s.num > 0);
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
@@ -131,7 +148,9 @@ export default function OverviewPage() {
           welcome (R111). */}
       {catsLoading ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr]">
-          <Skeleton className="h-56 w-full rounded-2xl" />
+          {/* Match the real Cat ID column (max-w-sm inside minmax(0,20rem)) so the
+              loaded card lands exactly where the skeleton was — no layout shift. */}
+          <Skeleton className="h-56 w-[min(24rem,100%)] rounded-2xl lg:w-full" />
           <Skeleton className="h-56 w-full rounded-2xl" />
         </div>
       ) : catsError ? (
@@ -207,6 +226,7 @@ export default function OverviewPage() {
             <p className="mt-2 text-xs text-primary-foreground/85">
               {isAr ? "سعر العضو مثبّت لك عند كل طلب — هذا الدليل" : "Your member rate, honoured on every order — this is the proof"}
             </p>
+            {/* TODO(R043): value-received vs fee-paid once order history totals are exposed on overview */}
           </div>
         ) : (
           <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-e2 ring-hairline sm:p-7">
@@ -222,11 +242,29 @@ export default function OverviewPage() {
                   : `${localizeName(featured.name, "en")} has an identity`
                 : isAr ? "قطك يستاهل هوية" : "Your cat deserves an identity"}
             </p>
-            <p className="mt-2 max-w-md text-xs leading-relaxed text-primary-foreground/85">
-              {isAr
-                ? "الانتماء والهوية والسجل الصحي — لك من أول يوم. أسعار الأعضاء والتوصيل يجون لما تنزل العضويات."
-                : "Belonging, an identity and a health record — yours from day one. Member rates and delivery arrive when memberships launch."}
-            </p>
+            {/* The value ledger — proof of what the membership already holds
+                (R041/R048/R049). Zeros are omitted, never bragged (R115); a
+                brand-new member gets the warm welcome line instead (R111). */}
+            {isLoading ? (
+              <Skeleton className="mt-4 h-10 w-56 bg-primary-foreground/10" />
+            ) : ledger.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-x-7 gap-y-3">
+                {ledger.map((s) => (
+                  <div key={s.label} className="min-w-0">
+                    <p className="font-display text-2xl font-semibold tabular leading-tight">
+                      <AnimatedCounter value={s.num} locale={numLocale} />
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-primary-foreground/75">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 max-w-md text-xs leading-relaxed text-primary-foreground/85">
+                {isAr
+                  ? "الانتماء والهوية والسجل الصحي — لك من أول يوم."
+                  : "Belonging, an identity and a health record — yours from day one."}
+              </p>
+            )}
             {data?.primaryCat?.completion && data.primaryCat.completion.percent < 100 && (
               <div className="mt-4">
                 <div className="flex items-center justify-between text-xs text-primary-foreground/85">
@@ -242,6 +280,12 @@ export default function OverviewPage() {
               <Link href="/portal/community"><Button variant="glass" size="sm"><Users className="size-4" /> {isAr ? "استكشف المجتمع" : "Explore community"}</Button></Link>
               <Link href="/portal/cats"><Button variant="glass" size="sm"><IdCard className="size-4" /> {isAr ? "أكمل ملف قطك" : "Complete your cat's file"}</Button></Link>
             </div>
+            {/* One quiet forward-looking line — a footnote, never the headline (R048). */}
+            <p className="mt-4 text-[11px] text-primary-foreground/60">
+              {isAr
+                ? "أسعار الأعضاء والتوصيل يجون لما تنزل العضويات."
+                : "Member rates and delivery arrive when memberships launch."}
+            </p>
           </div>
         )}
 

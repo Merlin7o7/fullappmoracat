@@ -4,16 +4,16 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, ArrowLeft, Loader2, ShieldCheck, Cat as CatIcon } from "lucide-react";
-import { Card, Button, cn, useToast } from "@moraqat/ui";
+import { Card, Button, Dialog, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
-import { CatIdCeremony } from "@/components/cat-id-ceremony";
+import { CatIdCeremony, type ShareChoice } from "@/components/cat-id-ceremony";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatOnboardingJourney } from "@/components/cat-onboarding-journey";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
-import type { PortalCat } from "@/lib/cat-context";
+import { useCats, type PortalCat } from "@/lib/cat-context";
 
 /**
  * Issuing a Cat ID — the cat's name comes FIRST, and almost nothing else is
@@ -46,11 +46,15 @@ function IssueIdFlow() {
   const { toast } = useToast();
   const isAr = locale === "ar";
   const qc = useQueryClient();
+  const { cats } = useCats();
 
   const [step, setStep] = React.useState<0 | 1>(0);
   const [ceremonyCat, setCeremonyCat] = React.useState<PortalCat | null>(null);
   // First-ever Cat ID → after the ceremony, route through the one-time welcome.
   const [firstIssue, setFirstIssue] = React.useState(false);
+  // Duplicate-name guard (R115): pause, don't block — two Simbas is allowed,
+  // but never by accident.
+  const [dupConfirmOpen, setDupConfirmOpen] = React.useState(false);
   const [f, setF] = React.useState({
     name: "",
     photoUrl: "",
@@ -106,6 +110,14 @@ function IssueIdFlow() {
   });
 
   const catName = f.name.trim();
+  // Another living, active cat already carrying this exact name?
+  const duplicateName = React.useMemo(
+    () => cats.some((c) => c.status === "ACTIVE" && c.name.trim().toLowerCase() === catName.toLowerCase()),
+    [cats, catName]
+  );
+  // The member's first name — offered in the ceremony's share fork ("appear as
+  // my first name"). Prefer what they just typed; fall back to the account.
+  const ownerFirstName = f.ownerName.trim().split(/\s+/)[0] || user?.firstName || "";
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -142,6 +154,8 @@ function IssueIdFlow() {
                 onChange={(v) => set({ name: v.slice(0, 60) })}
                 placeholder={isAr ? "مثلاً: سمسم" : "e.g. Simba"}
                 autoFocus
+                // Quiet counter only once the name runs long — 60 is the cap.
+                hint={f.name.length >= 50 ? `${f.name.length}/60` : undefined}
               />
               <SelectField
                 label={isAr ? "الجنس (اختياري)" : "Sex (optional)"}
@@ -173,7 +187,16 @@ function IssueIdFlow() {
               </div>
             </form>
           ) : (
-            <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="flex flex-col gap-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                // Prevent, don't apologise (R115): a second cat with the same
+                // name is fine on purpose, never by accident.
+                if (duplicateName) setDupConfirmOpen(true);
+                else create.mutate();
+              }}
+              className="flex flex-col gap-4"
+            >
               <Field label={isAr ? "اسمك الكامل" : "Your full name"} required value={f.ownerName} onChange={(v) => set({ ownerName: v })} />
               <Field label={isAr ? "رقم جوالك" : "Your mobile number"} value={f.ownerPhone} onChange={(v) => set({ ownerPhone: v })} inputMode="tel" />
               {/* Trust precedes the ask (R004): say plainly why we want a number. */}
@@ -188,8 +211,12 @@ function IssueIdFlow() {
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "رجوع" : "Back"}
                 </Button>
                 <Button type="submit" size="lg" disabled={!catName || create.isPending}>
-                  {create.isPending ? <Loader2 className="size-4 animate-spin" /> : <CatIcon className="size-4" />}
-                  {isAr ? `أصدر هوية ${catName || "القط"}` : catName ? `Issue ${catName}'s Cat ID` : "Issue the Cat ID"}
+                  {create.isPending ? (
+                    // The wait has a purpose, and it says so (R119).
+                    <><Loader2 className="size-4 animate-spin" /> {isAr ? "جارٍ إصدار الهوية…" : "Issuing the ID…"}</>
+                  ) : (
+                    <><CatIcon className="size-4" /> {isAr ? `أصدر هوية ${catName || "القط"}` : catName ? `Issue ${catName}'s Cat ID` : "Issue the Cat ID"}</>
+                  )}
                 </Button>
               </div>
             </form>
@@ -206,6 +233,7 @@ function IssueIdFlow() {
             catName={catName || (isAr ? "قطك" : "Your cat")}
             catIdNumber="MRC-····-····"
             photoUrl={f.photoUrl.trim() || null}
+            gender={f.gender === "UNKNOWN" ? undefined : f.gender}
             isAr={isAr}
             preview
           />
@@ -215,20 +243,56 @@ function IssueIdFlow() {
         </div>
       </div>
 
+      {/* Same-name pause (R115/R116): confirm on purpose, never trap. */}
+      <Dialog
+        open={dupConfirmOpen}
+        onClose={() => setDupConfirmOpen(false)}
+        title={isAr ? `عندك قط اسمه ${catName}` : `You already have a cat named ${catName}`}
+        description={isAr ? "تبي تسوي هوية ثانية بنفس الاسم؟" : "Create another with the same name?"}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDupConfirmOpen(false)}>
+              {isAr ? "لا، بعدّل الاسم" : "No, I'll change the name"}
+            </Button>
+            <Button onClick={() => { setDupConfirmOpen(false); create.mutate(); }}>
+              {isAr ? "نعم، أصدر هوية ثانية" : "Yes, issue another ID"}
+            </Button>
+          </>
+        }
+      />
+
+      {/* The ceremony only ever opens on a real, created cat with a real number
+          (set in create.onSuccess) — never on hope (R115/R117). */}
       {ceremonyCat?.catIdNumber && (
         <CatIdCeremony
           cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl }}
           isAr={isAr}
-          onShareChoice={async (makePublic) => {
-            try {
-              await authedFetch(`/cats/${ceremonyCat.id}/visibility`, {
-                method: "PATCH",
-                body: JSON.stringify({ isPublic: makePublic }),
-              });
-            } catch {
-              /* non-blocking — they can change it later in settings */
-            }
-          }}
+          // The full rite is for the household's first ID; every next family
+          // member gets the warm, familiar mini welcome (R031/R009).
+          variant={firstIssue ? "full" : "mini"}
+          ownerFirstName={ownerFirstName || null}
+          onShareChoice={
+            firstIssue
+              ? async (choice: ShareChoice) => {
+                  const body: Record<string, unknown> = { isPublic: choice.public };
+                  if (choice.public) {
+                    // PDPL attestation gathered inside the ceremony (R106);
+                    // the server stamps shareConsentAt itself.
+                    body.consent = true;
+                    body.showOwnerName = choice.appearance != null && choice.appearance !== "anonymous";
+                    if (choice.nickname) body.ownerNickname = choice.nickname;
+                  }
+                  // No catch here on purpose: a failure must reach the ceremony
+                  // so it can say so and offer a retry — never close pretending
+                  // the choice was saved (R115/R117).
+                  await authedFetch(`/cats/${ceremonyCat.id}/visibility`, {
+                    method: "PATCH",
+                    body: JSON.stringify(body),
+                  });
+                  qc.invalidateQueries({ queryKey: ["visibility", ceremonyCat.id] });
+                }
+              : undefined
+          }
           onClose={() =>
             router.push(
               firstIssue

@@ -20,6 +20,7 @@
     "db:migrate": "pnpm --filter @moraqat/db migrate",
     "db:push": "pnpm --filter @moraqat/db push",
     "db:seed": "pnpm --filter @moraqat/db seed",
+    "db:seed:community": "pnpm --filter @moraqat/db seed:community",
     "db:studio": "pnpm --filter @moraqat/db studio",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",

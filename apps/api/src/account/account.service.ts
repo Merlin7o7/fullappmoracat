@@ -102,7 +102,10 @@ export class AccountService {
 
   /** Dashboard aggregate — one call powers the portal overview. */
   async overview(userId: string) {
-    const [user, activeSub, ordersCount, wallet, loyalty, recentOrders, unreadNotifs, savings, cats] =
+    const [
+      user, activeSub, ordersCount, wallet, loyalty, recentOrders, unreadNotifs, savings, cats,
+      vaccinationCount, vetVisitCount, photoCount,
+    ] =
       await Promise.all([
         // The greeting is built from the owner's gender + their primary cat
         // (Recognition first, Principle 01). Both travel on the user record.
@@ -142,8 +145,14 @@ export class AccountService {
             photoUrl: true,
             status: true,
             membershipStatus: true,
+            likeCount: true,
           },
         }),
+        // Beta value ledger (R048/R049): the non-monetary value the membership
+        // actually holds — records kept, photos kept safe, love received.
+        this.prisma.catVaccination.count({ where: { cat: { userId, deletedAt: null } } }),
+        this.prisma.catVetVisit.count({ where: { cat: { userId, deletedAt: null } } }),
+        this.prisma.catPhoto.count({ where: { cat: { userId, deletedAt: null } } }),
       ]);
 
     // Resolve the featured (primary) cat, self-healing to the first active one.
@@ -197,6 +206,10 @@ export class AccountService {
         loyaltyPoints: loyalty?.points ?? 0,
         loyaltyTier: loyalty?.tier ?? "BRONZE",
         unreadNotifications: unreadNotifs,
+        // The beta value ledger (R041/R048/R049) — proof of accrued care, not money.
+        healthRecords: vaccinationCount + vetVisitCount,
+        photos: photoCount,
+        communityLikes: cats.reduce((sum, c) => sum + c.likeCount, 0),
       },
       // Back-compat alias for the previous overview shape.
       firstCat: primaryCat ? { name: primaryCat.name, catIdNumber: primaryCat.catIdNumber } : null,

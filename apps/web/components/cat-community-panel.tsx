@@ -3,19 +3,23 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Globe, Lock, Copy, ExternalLink, Check, Users } from "lucide-react";
-import { Button, cn, useToast } from "@moraqat/ui";
+import { Button, Dialog, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 
 interface Visibility {
   isPublic: boolean;
   publicSlug: string | null;
   bio: string | null;
+  /** The owner's public display name (lives on the account, one across all cats). */
+  ownerNickname: string | null;
   showOwnerName: boolean;
   showCity: boolean;
   showGallery: boolean;
   showAge: boolean;
   showBreed: boolean;
   viewCount: number;
+  /** PDPL photo-consent attestation (R106); null = never attested. */
+  shareConsentAt: string | null;
 }
 
 /**
@@ -35,16 +39,28 @@ export function CatCommunityPanel({ catId, catName, isAr }: { catId: string; cat
   });
 
   const patch = useMutation({
-    mutationFn: (body: Partial<Visibility>) =>
+    mutationFn: (body: Partial<Visibility> & { consent?: boolean }) =>
       authedFetch<Visibility>(`/cats/${catId}/visibility`, { method: "PATCH", body: JSON.stringify(body) }),
     onSuccess: (next) => qc.setQueryData(["visibility", catId], next),
     onError: (e: Error) => toast({ title: e.message, variant: "error" }),
   });
 
+  // PDPL photo-consent attestation (R106): asked exactly once, the first time
+  // the profile goes public. After that the stored `shareConsentAt` stands.
+  const [consentOpen, setConsentOpen] = React.useState(false);
+  const [consentChecked, setConsentChecked] = React.useState(false);
+
   const [bio, setBio] = React.useState<string | null>(null);
   React.useEffect(() => {
     if (v && bio === null) setBio(v.bio ?? "");
   }, [v, bio]);
+
+  // The owner's public display name — the "how do I appear with them?" choice
+  // from the ceremony (D6), editable here anytime, as promised there.
+  const [nick, setNick] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (v && nick === null) setNick(v.ownerNickname ?? "");
+  }, [v, nick]);
 
   if (isLoading || !v) {
     return <div className="h-24 animate-pulse rounded-2xl bg-muted/50" />;
@@ -87,9 +103,62 @@ export function CatCommunityPanel({ catId, catName, isAr }: { catId: string; cat
           onIcon={Globe}
           offIcon={Lock}
           disabled={patch.isPending}
-          onChange={(on) => patch.mutate({ isPublic: on })}
+          onChange={(on) => {
+            // Going public shows photos to the world — attest photo consent once
+            // (PDPL, R106) before the toggle commits. Turning off never asks.
+            if (on && !v.shareConsentAt) {
+              setConsentChecked(false);
+              setConsentOpen(true);
+              return;
+            }
+            patch.mutate({ isPublic: on });
+          }}
         />
       </div>
+
+      <Dialog
+        open={consentOpen}
+        onClose={() => setConsentOpen(false)}
+        title={isAr ? `قبل ما يصير ملف ${catName} عاماً` : `Before ${catName}'s profile goes public`}
+        description={
+          isAr
+            ? "خطوة وحدة صغيرة تحفظ خصوصية الجميع."
+            : "One small step that protects everyone's privacy."
+        }
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConsentOpen(false)} disabled={patch.isPending}>
+              {isAr ? "ليس الآن" : "Not now"}
+            </Button>
+            <Button
+              disabled={!consentChecked}
+              loading={patch.isPending}
+              onClick={() =>
+                patch.mutate(
+                  { isPublic: true, consent: true },
+                  { onSuccess: () => setConsentOpen(false) }
+                )
+              }
+            >
+              {isAr ? `شارك ${catName} مع المجتمع` : `Share ${catName} with the community`}
+            </Button>
+          </>
+        }
+      >
+        <label className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/40 p-3 text-sm leading-relaxed">
+          <input
+            type="checkbox"
+            checked={consentChecked}
+            onChange={(e) => setConsentChecked(e.target.checked)}
+            className="mt-0.5 size-4 shrink-0"
+          />
+          <span>
+            {isAr
+              ? `صور ${catName} ممكن تظهر فيها وجوه أشخاص — أؤكد أن عندي موافقتهم على نشرها.`
+              : `If ${catName}'s photos show people, I confirm I have their permission to share them.`}
+          </span>
+        </label>
+      </Dialog>
 
       {v.isPublic && (
         <div className="mt-4 space-y-4 border-t border-border pt-4">
@@ -134,6 +203,23 @@ export function CatCommunityPanel({ catId, catName, isAr }: { catId: string; cat
               <FieldToggle label={isAr ? "المدينة" : "City"} on={v.showCity} onChange={(b) => patch.mutate({ showCity: b })} />
               <FieldToggle label={isAr ? "المعرض" : "Gallery"} on={v.showGallery} onChange={(b) => patch.mutate({ showGallery: b })} />
               <FieldToggle label={isAr ? "اسمك" : "Your name"} on={v.showOwnerName} onChange={(b) => patch.mutate({ showOwnerName: b })} />
+              {v.showOwnerName && (
+                <div className="px-1 pb-1 pt-0.5">
+                  <label htmlFor={`nick-${catId}`} className="mb-1 block text-xs font-medium text-muted-foreground">
+                    {isAr ? "الاسم اللي يظهر معه" : "The name shown with them"}
+                  </label>
+                  <input
+                    id={`nick-${catId}`}
+                    type="text"
+                    value={nick ?? ""}
+                    maxLength={60}
+                    onChange={(e) => setNick(e.target.value)}
+                    onBlur={() => nick !== (v.ownerNickname ?? "") && patch.mutate({ ownerNickname: nick ?? "" })}
+                    placeholder={isAr ? "بدون اسم — اكتب واحد يظهر" : "Empty means no name shows"}
+                    className="h-11 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none ring-primary/20 transition focus:ring-2"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
