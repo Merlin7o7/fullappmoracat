@@ -1,6 +1,6 @@
 # ── Moraqat Web — multi-stage production image (Next.js standalone) ──────
 # Build from the REPO ROOT:  docker build -f apps/web/Dockerfile .
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
@@ -25,7 +25,7 @@ ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL \
 RUN pnpm --filter @moraqat/core build && pnpm --filter @moraqat/web build
 
 # ── Runtime — Next standalone output only (small image) ──────────────────
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
