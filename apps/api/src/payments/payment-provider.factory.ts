@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import {
   type IPaymentProvider,
   type IPaymentProviderFactory,
@@ -13,8 +13,10 @@ import { TamaraAdapter } from "./adapters/tamara.adapter";
  * Routes each provider key to its adapter.
  *
  *   PAYMENTS_MODE=mock  → everything uses the mock (default for dev).
- *   PAYMENTS_MODE=live  → route per provider *if credentials exist*, else fall
- *                         back to mock with a loud warning (never crash checkout).
+ *   PAYMENTS_MODE=live  → route per provider *if credentials exist*. If an external
+ *                         rail is unconfigured we REFUSE and throw 503 — never fall
+ *                         back to the mock, which approves charges (a misconfigured
+ *                         prod would activate memberships with zero money moved).
  *
  * Card rails (MADA/VISA/MC/APPLE_PAY/STC_PAY) run through Moyasar; the BNPLs
  * have their own adapters. WALLET/GIFT_CARD settle internally → mock.
@@ -35,8 +37,16 @@ export class PaymentProviderFactory implements IPaymentProviderFactory {
 
     const pick = (adapter: IPaymentProvider, configured: boolean): IPaymentProvider => {
       if (configured) return adapter;
-      this.logger.warn(`${provider}: ${adapter.name} not configured — falling back to mock`);
-      return this.mock;
+      // In live mode an unconfigured external rail must FAIL LOUDLY. Falling back
+      // to the mock — which approves charges — would tell members "membership
+      // active, receipt on the way" while zero money moved and the Cat ID
+      // activates (Blocker #2, R006/R118). A 503 surfaces as the checkout's
+      // dignified "payment didn't go through — nothing was charged" retry, and
+      // pages the team instead of silently faking revenue.
+      this.logger.error(
+        `${provider}: ${adapter.name} not configured in live mode — refusing mock fallback`
+      );
+      throw new ServiceUnavailableException(`Payment provider for ${provider} is not configured`);
     };
 
     switch (provider) {

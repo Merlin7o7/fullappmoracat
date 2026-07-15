@@ -48,10 +48,26 @@ export interface RefundResult {
   failureReason?: string;
 }
 
+export interface CaptureResult {
+  success: boolean;
+  /** The provider's capture reference, if it mints a distinct one. */
+  providerRef?: string;
+  failureReason?: string;
+}
+
 export interface IPaymentProvider {
   readonly name: string;
   charge(req: ChargeRequest): Promise<ChargeResult>;
   refund(providerRef: string, amount: number, currency: string): Promise<RefundResult>;
+  /**
+   * Optional explicit capture. Some rails only *authorise* when the shopper
+   * approves (Tamara: order_approved) and require a separate call to actually
+   * collect. Providers that capture synchronously (Moyasar invoice, Tabby
+   * "closed") omit this — the webhook capture IS the money movement. When
+   * present, settlement calls this before marking an order paid, so a
+   * membership is never activated against money we haven't collected (R006).
+   */
+  capture?(providerRef: string, amount: number, currency: string): Promise<CaptureResult>;
 }
 
 /** Normalized event parsed from a PSP webhook. */

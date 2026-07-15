@@ -149,15 +149,19 @@ export const LEGAL_DOCS: LegalDoc[] = [
         },
       },
       {
-        heading: { ar: "المرحلة الحالية — بدون مدفوعات", en: "Current phase — no payments" },
+        heading: { ar: "الاشتراكات والدفع", en: "Subscriptions & payment" },
         body: {
           ar: [
-            "خدمات مرقط الحالية مجانية وتشمل الحساب وهوية القط والمجتمع.",
-            "العضويات المدفوعة والاشتراكات غير مفعّلة بعد؛ سنعلن عنها وشروطها قبل تفعيلها.",
+            "الحساب وهوية القط والمجتمع مجانية. اشتراكات العناية الشهرية (المبتدئة، القياسية، المميّزة) مدفوعة.",
+            "الحد الأدنى لمدة الاشتراك ثلاثة (٣) أشهر. تختار مدة الالتزام (٣ أو ٦ أو ١٢ شهراً) وتدفع كامل المدة مقدّماً عبر تمارا (دفعة واحدة أو أقساط)، ويُوصَّل الصندوق شهرياً طوال المدة.",
+            "الأسعار بالريال السعودي. مرقط غير مسجّلة في ضريبة القيمة المضافة حالياً، فلا تُضاف ضريبة على الأسعار.",
+            "يتجدّد الاشتراك في نهاية المدة، ونذكّرك قبل التجديد. يمكنك إيقاف التجديد أو الإلغاء قبل نهاية المدة الحالية.",
           ],
           en: [
-            "Moracat's current services are free and include your account, Cat ID, and the community.",
-            "Paid memberships and subscriptions are not yet enabled; we will announce them and their terms before launch.",
+            "Your account, Cat ID, and the community are free. Monthly care subscriptions (Starter, Standard, Premium) are paid.",
+            "The minimum subscription term is three (3) months. You choose your commitment (3, 6, or 12 months) and pay the full term upfront via Tamara (in full or in instalments); the box is delivered monthly across the term.",
+            "Prices are in Saudi Riyals. Moracat is not currently VAT-registered, so no VAT is added to prices.",
+            "Subscriptions renew at the end of the term, and we remind you before renewal. You may stop renewal or cancel before the current term ends.",
           ],
         },
       },

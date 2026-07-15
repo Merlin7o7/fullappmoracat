@@ -88,52 +88,39 @@ async function main() {
   }
   console.log(`  ✓ products: ${productData.length}`);
 
-  // ── Plans + contents (directly from the financial model) ────────────────
-  // COGS/box and price from Unit Economics tab.
+  // ── Official plans (2026-07): Starter / Standard / Premium ──────────────
+  // Prices/COGS from the financial model at 0% VAT. `pnpm db:seed:catalog`
+  // rebuilds these from the REAL supplier catalog; this dev seed mirrors them
+  // using placeholder products so a bare `db:seed` is self-consistent.
   const plans = [
     {
-      tier: PlanTier.ESSENTIAL, slug: "essential", nameEn: "Essential", nameAr: "الأساسية",
-      basePrice: 179, cogs: 96.2,
+      tier: PlanTier.STARTER, slug: "starter", nameEn: "Starter", nameAr: "المبتدئة",
+      basePrice: 249, cogs: 104.75,
       contents: [
-        { label: "Dry food — mass (kg)", quantity: 2, unit: "kg", product: "dry-food-mass-2kg" },
-        { label: "Wet pouch — mass", quantity: 15, unit: "pouch", product: "wet-pouch-mass-85g" },
-        { label: "Litter (kg)", quantity: 7, unit: "kg", product: "clumping-litter-10kg" },
-        { label: "Treats (packs)", quantity: 1, unit: "pack", product: "cat-treats-pack" },
+        { label: "Wet food pouches", quantity: 15, unit: "pouch", product: "wet-pouch-mass-85g" },
+        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-mass-2kg" },
+        { label: "Creamy treats", quantity: 1, unit: "pack", product: "cat-treats-pack" },
       ],
     },
     {
-      tier: PlanTier.PREMIUM, slug: "premium", nameEn: "Premium", nameAr: "المميزة",
-      basePrice: 269, cogs: 148.2,
+      tier: PlanTier.STANDARD, slug: "standard", nameEn: "Standard", nameAr: "القياسية",
+      basePrice: 349, cogs: 150.75,
       contents: [
-        { label: "Dry food — premium (kg)", quantity: 2, unit: "kg", product: "dry-food-premium-2kg" },
-        { label: "Wet pouch — premium", quantity: 20, unit: "pouch", product: "wet-pouch-premium-85g" },
-        { label: "Litter (kg)", quantity: 7, unit: "kg", product: "clumping-litter-10kg" },
-        { label: "Treats (packs)", quantity: 1, unit: "pack", product: "cat-treats-pack" },
-        { label: "Toy / enrichment", quantity: 1, unit: "each", product: "enrichment-toy" },
+        { label: "Premium wet cans", quantity: 15, unit: "can", product: "wet-pouch-premium-85g" },
+        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-mass-2kg" },
+        { label: "Clumping litter 10L", quantity: 1, unit: "bag", product: "clumping-litter-10kg" },
+        { label: "Calming treats", quantity: 1, unit: "pack", product: "cat-treats-pack" },
       ],
     },
     {
-      tier: PlanTier.COMPLETE_CARE, slug: "complete-care", nameEn: "Complete Care", nameAr: "العناية الكاملة",
-      basePrice: 389, cogs: 215.3,
+      tier: PlanTier.PREMIUM, slug: "premium", nameEn: "Premium", nameAr: "المميّزة",
+      basePrice: 529, cogs: 245.25,
       contents: [
-        { label: "Dry food — premium (kg)", quantity: 2.5, unit: "kg", product: "dry-food-premium-2kg" },
-        { label: "Wet pouch — premium", quantity: 25, unit: "pouch", product: "wet-pouch-premium-85g" },
-        { label: "Litter (kg)", quantity: 8, unit: "kg", product: "clumping-litter-10kg" },
-        { label: "Treats (packs)", quantity: 2, unit: "pack", product: "cat-treats-pack" },
-        { label: "Dental (each)", quantity: 1, unit: "each", product: "dental-care-item" },
-        { label: "Supplement (each)", quantity: 1, unit: "each", product: "monthly-supplement" },
-        { label: "Toy / enrichment", quantity: 1, unit: "each", product: "enrichment-toy" },
-      ],
-    },
-    {
-      tier: PlanTier.MULTI_CAT, slug: "multi-cat", nameEn: "Multi-Cat", nameAr: "متعدد القطط",
-      basePrice: 329, cogs: 190.4,
-      contents: [
-        { label: "Dry food — mass (kg)", quantity: 3.5, unit: "kg", product: "dry-food-mass-2kg" },
-        { label: "Wet pouch — mass", quantity: 30, unit: "pouch", product: "wet-pouch-mass-85g" },
-        { label: "Litter (kg)", quantity: 14, unit: "kg", product: "clumping-litter-10kg" },
-        { label: "Treats (packs)", quantity: 2, unit: "pack", product: "cat-treats-pack" },
-        { label: "Toy / enrichment", quantity: 1, unit: "each", product: "enrichment-toy" },
+        { label: "Premium wet pouches", quantity: 24, unit: "pouch", product: "wet-pouch-premium-85g" },
+        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-premium-2kg" },
+        { label: "Premium litter 10L", quantity: 1, unit: "bag", product: "clumping-litter-10kg" },
+        { label: "Grooming wipes", quantity: 1, unit: "pack", product: "monthly-supplement" },
+        { label: "Creamy treats", quantity: 1, unit: "pack", product: "cat-treats-pack" },
       ],
     },
   ];
@@ -141,10 +128,10 @@ async function main() {
   for (const [i, p] of plans.entries()) {
     const plan = await prisma.plan.upsert({
       where: { tier: p.tier },
-      update: { basePrice: p.basePrice, cogs: p.cogs },
+      update: { basePrice: p.basePrice, cogs: p.cogs, minTermMonths: 3, isActive: true, sortOrder: i },
       create: {
         tier: p.tier, slug: p.slug, nameEn: p.nameEn, nameAr: p.nameAr,
-        basePrice: p.basePrice, cogs: p.cogs, sortOrder: i,
+        basePrice: p.basePrice, cogs: p.cogs, sortOrder: i, minTermMonths: 3,
       },
     });
     await prisma.planContent.deleteMany({ where: { planId: plan.id } });
@@ -155,7 +142,12 @@ async function main() {
       })),
     });
   }
-  console.log(`  ✓ plans: ${plans.length} (with contents)`);
+  // Legacy tiers stay in the enum for old rows but are never active/offered.
+  await prisma.plan.updateMany({
+    where: { tier: { in: [PlanTier.ESSENTIAL, PlanTier.COMPLETE_CARE, PlanTier.MULTI_CAT] } },
+    data: { isActive: false },
+  });
+  console.log(`  ✓ plans: ${plans.length} official (Starter/Standard/Premium), legacy deactivated`);
 
   // ── RBAC: system roles + core permissions ───────────────────────────────
   const resources = ["dashboard", "customers", "orders", "products", "subscriptions", "inventory", "payments", "cms", "support", "settings"];
@@ -379,15 +371,13 @@ async function main() {
   console.log(`  ✓ blog: 2 categories, ${posts.length} published posts`);
 
   // ── Testimonials ──────────────────────────────────────────────────────────
+  // Intentionally empty. Testimonials must be REAL member voices captured after
+  // launch — never invented (R006, honest by default). The prior seed shipped
+  // fabricated delivery/savings quotes ("food arrives before we run out", "the
+  // plan paid for itself") for experiences no one could have had pre-launch; those
+  // are removed. Re-populate only from consented, real members via the admin CMS.
   await prisma.testimonial.deleteMany({});
-  await prisma.testimonial.createMany({
-    data: [
-      { authorName: "Sara M.", role: "Riyadh", quoteEn: "The feeding calculator nailed my Persian's portions — he finally stopped begging at 2am.", quoteAr: "حاسبة التغذية ضبطت وجبات قطي الشيرازي — أخيراً توقف عن التسوّل الساعة ٢ فجراً.", rating: 5, sortOrder: 1 },
-      { authorName: "Abdullah K.", role: "Jeddah", quoteEn: "Litter and food arrive before we run out. I genuinely forgot what a pet-store run feels like.", quoteAr: "الرمل والطعام يصلان قبل أن ينفدا. نسيت فعلاً شكل مشوار محل الحيوانات.", rating: 5, sortOrder: 2 },
-      { authorName: "Noura A.", role: "Riyadh", quoteEn: "Three cats, one box, zero math. The multi-cat plan paid for itself in the first month.", quoteAr: "ثلاث قطط، صندوق واحد، صفر حسابات. باقة متعدد القطط عوّضت ثمنها من أول شهر.", rating: 5, sortOrder: 3 },
-    ],
-  });
-  console.log("  ✓ testimonials: 3");
+  console.log("  ✓ testimonials: 0 (real voices only — see comment)");
 
   console.log("✅ Seed complete.");
 }

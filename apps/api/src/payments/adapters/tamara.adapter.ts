@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import type {
+  CaptureResult,
   ChargeRequest,
   ChargeResult,
   IPaymentProvider,
@@ -11,7 +12,10 @@ import type {
  * Docs: https://docs.tamara.co  (API: https://api.tamara.co, sandbox: https://api-sandbox.tamara.co)
  *
  * Flow: create a checkout session → redirect shopper to `checkout_url` →
- * Tamara webhook (`order_approved`) → capture.
+ * shopper approves → Tamara webhook (`order_approved`) → we authorise + CAPTURE
+ * (see capture(), called from settlement). Approval alone does NOT collect money;
+ * without the capture call Tamara auto-voids the authorisation and nothing is
+ * charged — so a membership must never go live on approval alone.
  */
 @Injectable()
 export class TamaraAdapter implements IPaymentProvider {
@@ -80,6 +84,42 @@ export class TamaraAdapter implements IPaymentProvider {
     }
 
     return { success: true, status: "PENDING", providerRef: body.order_id, redirectUrl: body.checkout_url };
+  }
+
+  /**
+   * Collect an approved order: authorise (idempotent — some accounts
+   * auto-authorise, so an already-authorised order is not an error) then
+   * capture the full amount. Called from webhook settlement the moment Tamara
+   * reports the order approved. NOTE: verify against the Tamara sandbox — the
+   * authorise/capture endpoints and payloads are implemented per the public
+   * docs but haven't been round-tripped against a live sandbox order yet.
+   */
+  async capture(orderId: string, amount: number, currency: string): Promise<CaptureResult> {
+    // 1) Authorise. A 409/"already authorised" is benign; only a hard error stops us.
+    const auth = await fetch(`${this.baseUrl}/orders/${orderId}/authorise`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${this.token}` },
+    });
+    if (!auth.ok && auth.status !== 409) {
+      const b = (await auth.json().catch(() => null)) as { message?: string } | null;
+      this.logger.warn(`authorise ${orderId} returned ${auth.status}: ${b?.message ?? "?"} (continuing to capture)`);
+    }
+
+    // 2) Capture the full amount — this is the money movement.
+    const res = await fetch(`${this.baseUrl}/payments/capture`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${this.token}` },
+      body: JSON.stringify({
+        order_id: orderId,
+        total_amount: { amount: amount.toFixed(2), currency },
+      }),
+    });
+    const body = (await res.json().catch(() => null)) as { capture_id?: string; message?: string } | null;
+    if (!res.ok) {
+      this.logger.warn(`capture failed for ${orderId} (${res.status}): ${body?.message ?? "unknown"}`);
+      return { success: false, failureReason: body?.message ?? `Tamara capture error ${res.status}` };
+    }
+    return { success: true, providerRef: body?.capture_id };
   }
 
   async refund(providerRef: string, amount: number, currency: string): Promise<RefundResult> {

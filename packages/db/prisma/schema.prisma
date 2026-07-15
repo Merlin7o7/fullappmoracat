@@ -92,8 +92,13 @@ enum LifeStage {
 }
 
 enum PlanTier {
-  ESSENTIAL
+  // Current official tiers (2026-07). STARTER/STANDARD/PREMIUM are the live plans.
+  STARTER
+  STANDARD
   PREMIUM
+  // Legacy tiers — retained so pre-existing plan rows/subscriptions stay valid.
+  // Deactivated (isActive=false); never offered to new subscribers. Do not reuse.
+  ESSENTIAL
   COMPLETE_CARE
   MULTI_CAT
 }
@@ -993,6 +998,22 @@ model Product {
   ratingCount    Int         @default(0)
   isActive       Boolean     @default(true)
   isSubscribable Boolean     @default(true)
+  // ── Catalog / merchandising flags (2026-07 supplier import) ──────────────
+  /// Surfaced in the public store. Store is not yet public — imported products
+  /// stay isStorePublished=false until the storefront launches.
+  isStorePublished Boolean   @default(false)
+  isFeatured     Boolean     @default(false)
+  /// Not eligible inside subscription boxes (store-only merchandise).
+  isStoreOnly    Boolean     @default(false)
+  /// Only offered to Premium-tier members / boxes.
+  isPremiumOnly  Boolean     @default(false)
+  /// Space-separated search keywords (name/brand/variant), ar+en, for lookup.
+  searchKeywords String?     @db.Text
+  /// Per-product low-stock alert threshold (0 = use warehouse reorderLevel).
+  lowStockThreshold Int      @default(0)
+  /// Original supplier image reference (screenshot filename) — NOT shown to
+  /// customers; kept so official manufacturer images can replace it later.
+  supplierImageRef String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   deletedAt      DateTime?
@@ -1217,11 +1238,13 @@ model Plan {
   nameAr        String
   descriptionEn String?
   descriptionAr String?
-  basePrice     Decimal  @db.Decimal(10, 2) // from financial model
+  basePrice     Decimal  @db.Decimal(10, 2) // monthly price, from financial model
   cogs          Decimal  @db.Decimal(10, 2)
   currency      String   @default("SAR")
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
+  /// Minimum committed subscription length in months (KSA policy: 3-month minimum).
+  minTermMonths Int      @default(3)
 
   contents      PlanContent[]
   subscriptions Subscription[]
@@ -1252,8 +1275,13 @@ model Subscription {
   status         SubscriptionStatus @default(DRAFT)
   interval       BillingInterval    @default(MONTHLY)
   intervalDays   Int? // for CUSTOM
-  price          Decimal            @db.Decimal(10, 2)
+  price          Decimal            @db.Decimal(10, 2) // monthly price snapshot
   currency       String             @default("SAR")
+  /// Committed term in months (>= plan.minTermMonths, default 3). The member
+  /// pays price*termMonths upfront (Tamara), delivered monthly across the term.
+  termMonths     Int                @default(3)
+  /// When the committed term ends — renewal/next-charge is due at this date.
+  endsAt         DateTime?
   isGift         Boolean            @default(false)
   giftRecipient  String?
   startedAt      DateTime?

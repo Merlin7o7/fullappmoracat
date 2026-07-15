@@ -1,35 +1,30 @@
 import { describe, expect, it } from "vitest";
 import { recommendPlan, type ApiPlan, type RecommendableCat } from "./plan-recommend";
 
-/** Mirror of the seeded catalogue's food quantities (packages/db seed). */
+/** Mirror of the seeded catalogue's food quantities (packages/db seed-catalog). */
 const PLANS: ApiPlan[] = [
   {
-    id: "p-ess", tier: "ESSENTIAL", nameEn: "Essential", nameAr: "الأساسية", price: 179,
+    id: "p-starter", tier: "STARTER", nameEn: "Starter", nameAr: "المبتدئة", price: 249,
     contents: [
-      { label: "Dry food — mass (kg)", quantity: 2, unit: "kg" },
-      { label: "Wet pouch — mass", quantity: 15, unit: "pouch" },
-      { label: "Treats (packs)", quantity: 1, unit: "pack" },
+      { label: "Dry food 2kg", quantity: 2, unit: "kg" },
+      { label: "Wet food pouches", quantity: 15, unit: "pouch" },
+      { label: "Creamy treats", quantity: 1, unit: "pack" },
     ],
   },
   {
-    id: "p-pre", tier: "PREMIUM", nameEn: "Premium", nameAr: "المميزة", price: 269,
+    id: "p-standard", tier: "STANDARD", nameEn: "Standard", nameAr: "القياسية", price: 349,
     contents: [
-      { label: "Dry food — premium (kg)", quantity: 2, unit: "kg" },
-      { label: "Wet pouch — premium", quantity: 20, unit: "pouch" },
+      { label: "Dry food 2kg", quantity: 2, unit: "kg" },
+      { label: "Premium wet pouches", quantity: 15, unit: "pouch" },
+      { label: "Clumping litter 10L", quantity: 1, unit: "bag" },
     ],
   },
   {
-    id: "p-cc", tier: "COMPLETE_CARE", nameEn: "Complete Care", nameAr: "العناية الكاملة", price: 389,
+    id: "p-premium", tier: "PREMIUM", nameEn: "Premium", nameAr: "المميّزة", price: 529,
     contents: [
-      { label: "Dry food — premium (kg)", quantity: 2.5, unit: "kg" },
-      { label: "Wet pouch — premium", quantity: 25, unit: "pouch" },
-    ],
-  },
-  {
-    id: "p-mc", tier: "MULTI_CAT", nameEn: "Multi-Cat", nameAr: "متعدد القطط", price: 329,
-    contents: [
-      { label: "Dry food — mass (kg)", quantity: 3.5, unit: "kg" },
-      { label: "Wet pouch — mass", quantity: 30, unit: "pouch" },
+      { label: "Dry food 2kg", quantity: 2, unit: "kg" },
+      { label: "Premium wet pouches", quantity: 24, unit: "pouch" },
+      { label: "Premium litter 10L", quantity: 1, unit: "bag" },
     ],
   },
 ];
@@ -52,33 +47,33 @@ describe("recommendPlan — the plan is computed from the cat", () => {
     expect(recommendPlan([], PLANS)).toBeNull();
   });
 
-  it("a typical neutered indoor adult fits Essential", () => {
+  it("a typical neutered indoor adult fits Starter", () => {
     const rec = recommendPlan([cat()], PLANS);
-    expect(rec?.tier).toBe("ESSENTIAL");
+    expect(rec?.tier).toBe("STARTER");
     // Transparent reasons: weight is named with the cat.
     expect(rec?.reasons.some((r) => r.en.includes("Simba's weight (4.5 kg)"))).toBe(true);
     expect(rec!.confidence).toBeGreaterThanOrEqual(0.9);
   });
 
-  it("a big high-activity cat outgrows Essential → Premium", () => {
+  it("a big high-activity cat outgrows Starter → Standard", () => {
     const rec = recommendPlan([cat({ weightKg: 6.5, activityLevel: "HIGH", isNeutered: false })], PLANS);
+    expect(rec?.tier).toBe("STANDARD");
+  });
+
+  it("a senior maps to Premium", () => {
+    const rec = recommendPlan([cat({ birthDate: yearsAgo(12) })], PLANS);
     expect(rec?.tier).toBe("PREMIUM");
   });
 
-  it("a senior maps to Complete Care", () => {
-    const rec = recommendPlan([cat({ birthDate: yearsAgo(12) })], PLANS);
-    expect(rec?.tier).toBe("COMPLETE_CARE");
-  });
-
-  it("health conditions map to Complete Care", () => {
+  it("health conditions map to Premium", () => {
     const rec = recommendPlan([cat({ healthConditionNames: ["CKD"] })], PLANS);
-    expect(rec?.tier).toBe("COMPLETE_CARE");
+    expect(rec?.tier).toBe("PREMIUM");
     expect(rec?.reasons.some((r) => r.en.includes("health record"))).toBe(true);
   });
 
-  it("two or more cats map to Multi-Cat regardless of profiles", () => {
+  it("two or more cats map to Premium regardless of profiles", () => {
     const rec = recommendPlan([cat(), cat({ id: "c2", name: "Luna", birthDate: yearsAgo(12) })], PLANS);
-    expect(rec?.tier).toBe("MULTI_CAT");
+    expect(rec?.tier).toBe("PREMIUM");
   });
 
   it("missing weight falls back honestly with lowered confidence + a nudge", () => {

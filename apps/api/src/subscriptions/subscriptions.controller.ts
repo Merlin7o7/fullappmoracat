@@ -32,6 +32,14 @@ export class SubscriptionsController {
     return this.subs.findAll(userId);
   }
 
+  // Polled by the PSP-return ceremony while the webhook settles. A GET, so it
+  // stays reachable (not @Commercial-frozen) and is scoped to the member.
+  @Get("order-status/:ref")
+  @ApiOperation({ summary: "Poll a membership activation's settlement state (PSP return page)" })
+  orderStatus(@CurrentUser("id") userId: string, @Param("ref") ref: string) {
+    return this.subs.getActivationStatus(userId, ref);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get one subscription" })
   findOne(@CurrentUser("id") userId: string, @Param("id") id: string) {

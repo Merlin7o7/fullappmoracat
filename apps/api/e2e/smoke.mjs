@@ -79,25 +79,28 @@ console.log("━━ wallet pass (R034) ━━");
 
 console.log("━━ storefront + checkout (direct capture) ━━");
 const plans = (await call("/plans")).json;
-ok(plans.length === 4 && plans.every((p) => p.nameAr), "4 plans with Arabic names");
-const dry = (await call("/products?type=DRY_FOOD&sort=price_asc")).json.items[0];
+ok(plans.length === 3 && plans.every((p) => p.nameAr), "3 official plans with Arabic names");
+// Admin login early: the storefront test buys an admin-created product, since the
+// imported supplier catalog stays unpublished (individual store not public yet).
+const admin = (await call("/auth/login", "POST", { email: "admin@moraqat.sa", password: "Admin!2026" })).json;
+const A = admin.accessToken;
+ok(!!A, "admin login");
+const ss = rnd();
+const dry = (await call("/admin/products", "POST", { slug: `smoke-dry-${ss}`, sku: `SMKD-${ss.toUpperCase()}`, type: "DRY_FOOD", nameEn: "Smoke Dry", nameAr: "جاف", price: 49 }, A)).json;
 let cart = (await call("/cart", "POST")).json;
 cart = (await call(`/cart/${cart.id}/items`, "POST", { productId: dry.id, quantity: 2 })).json;
 cart = (await call(`/cart/${cart.id}/coupon`, "POST", { code: "WELCOME10" })).json;
 ok(cart.totals.discountTotal > 0, "coupon applied");
 const order = (await call("/checkout", "POST", { cartId: cart.id, provider: "MADA" }, C)).json;
 ok(order.status === "CONFIRMED" && order.invoice?.status === "PAID", `order ${order.orderNumber} confirmed+paid`);
-ok(Math.abs(order.grandTotal / 1.15 + order.taxTotal - order.grandTotal) < 0.05, "15% VAT broken out");
+ok(Math.abs(order.taxTotal) < 0.01, "0% VAT (Moracat not VAT-registered)");
 // Value made visible (R041): the savings tally reflects the coupon discount.
 const ov = (await call("/account/overview", "GET", undefined, C)).json;
 ok(ov.stats.totalSaved > 0, `savings tally visible (${ov.stats.totalSaved} SAR saved)`);
 ok(ov.firstCat?.name === "Smokey" && !!ov.firstCat?.catIdNumber, "overview greets the cat by name + ID");
 
 console.log("━━ pending flow + webhook ━━");
-// Admin creates a product priced to trigger the mock PENDING path (total .77).
-const admin = (await call("/auth/login", "POST", { email: "admin@moraqat.sa", password: "Admin!2026" })).json;
-const A = admin.accessToken;
-ok(!!A, "admin login");
+// Admin (logged in above) creates a product priced to trigger mock PENDING (.77).
 const s = rnd();
 const bnplProduct = (await call("/admin/products", "POST", { slug: `smoke-bnpl-${s}`, sku: `SMK-${s.toUpperCase()}`, type: "TOY", nameEn: "Smoke BNPL", nameAr: "دخان", price: 52.77 }, A)).json;
 let cart2 = (await call("/cart", "POST")).json;
@@ -115,12 +118,14 @@ console.log("━━ membership activation (plan builder → checkout) ━━");
 const cities = (await call("/cities")).json;
 const addr = (await call("/addresses", "POST", { recipient: "Smoke Tester", phone: "+966500000001", cityId: cities[0].id, street: "Smoke St 1" }, C)).json;
 ok(!!addr.id, "delivery address saved");
-const sub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat.id], addressId: addr.id, provider: "MADA" }, C)).json;
+const term = 3; // minimum committed term; member pays monthly × term upfront
+const sub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat.id], addressId: addr.id, provider: "MADA", termMonths: term }, C)).json;
 ok(sub.status === "ACTIVE" && !!sub.nextBillingAt, `membership activated (${sub.orderNumber})`);
-ok(Math.abs(sub.grandTotal / 1.15 + sub.taxTotal - sub.grandTotal) < 0.05, "membership VAT broken out (15%)");
+ok(Math.abs(sub.grandTotal - plans[0].price * term) < 0.01, `upfront total = monthly × ${term} months`);
+ok(Math.abs(sub.taxTotal) < 0.01, "membership 0% VAT (not VAT-registered)");
 const billAt = new Date(sub.nextBillingAt);
-const expectBill = new Date(); expectBill.setMonth(expectBill.getMonth() + 1);
-ok(Math.abs(billAt - expectBill) < 36e5 * 25, "first renewal is one month out (R021/R025)");
+const expectBill = new Date(); expectBill.setMonth(expectBill.getMonth() + term);
+ok(Math.abs(billAt - expectBill) < 36e5 * 25, `renewal at term end (${term} months, R021/R025)`);
 const coveredCat = (await call(`/cats/${cat.id}`, "GET", undefined, C)).json;
 ok(coveredCat.membershipStatus === "ACTIVE", "cat membership flips ACTIVE on capture");
 // One cat, one membership — the double-charge is prevented, never refunded (R115).

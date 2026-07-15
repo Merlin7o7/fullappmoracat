@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { fetchWithTimeout, httpError, ApiError, friendly } from "./http";
+import { clearAllCachedCats } from "./offline";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 const STORAGE_KEY = "moraqat.auth";
@@ -196,6 +197,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (refreshToken) {
       await apiPost("/auth/logout", { refreshToken }).catch(() => {});
     }
+    // Leave nothing behind on a shared device — the offline Cat ID cache is
+    // cleared alongside the session tokens.
+    clearAllCachedCats();
     persist(null, null);
   }, [persist]);
 

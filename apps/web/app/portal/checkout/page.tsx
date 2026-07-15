@@ -44,7 +44,10 @@ import { AddressForm, useCities, type SavedAddress } from "@/components/address-
 import { QueryError } from "@/components/query-error";
 import { IlloPaw } from "@/components/illustrations";
 
-const TIERS: PlanTier[] = ["ESSENTIAL", "PREMIUM", "COMPLETE_CARE", "MULTI_CAT"];
+const TIERS: PlanTier[] = ["STARTER", "STANDARD", "PREMIUM"];
+
+/** Committed term options (months). Minimum 3 — members pay price × term upfront. */
+const TERM_OPTIONS = [3, 6, 12] as const;
 
 /** KSA-first payment order — mada & Apple Pay lead, then STC Pay, then cards. */
 const PAYMENT_METHODS = [
@@ -71,15 +74,6 @@ interface ActivateResponse {
   payment: { provider: string; status: string };
   plan: { tier: PlanTier; nameEn: string; nameAr: string };
   cats: { id: string; name: string }[];
-}
-
-/** One calendar month ahead, clamped to shorter months (matches the API). */
-function addOneMonth(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDate();
-  d.setMonth(d.getMonth() + 1);
-  if (d.getDate() < day) d.setDate(0);
-  return d;
 }
 
 export default function CheckoutPage() {
@@ -162,7 +156,12 @@ function CheckoutInner() {
     },
   });
 
-  // ── Payment ───────────────────────────────────────────────────────────────
+  // ── Term commitment (min 3 months, paid upfront) + Payment ──────────────────
+  const minTerm = plan?.minTermMonths ?? 3;
+  const [termMonths, setTermMonths] = React.useState<number>(3);
+  React.useEffect(() => {
+    if (termMonths < minTerm) setTermMonths(minTerm);
+  }, [minTerm, termMonths]);
   const [provider, setProvider] = React.useState<ProviderKey>("MADA");
   const [done, setDone] = React.useState<ActivateResponse | null>(null);
 
@@ -174,8 +173,12 @@ function CheckoutInner() {
     .map((c) => localizeName(c.name, uiLocale))
     .join(isAr ? "، " : ", ");
 
-  const nextRenewal = React.useMemo(() => addOneMonth(new Date()), []);
-  const renewalDate = formatDate(nextRenewal, uiLocale, { day: "numeric", month: "long", year: "numeric" });
+  // Renewal falls at the end of the committed term (whole term prepaid).
+  const renewalDate = React.useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + termMonths);
+    return formatDate(d, uiLocale, { day: "numeric", month: "long", year: "numeric" });
+  }, [termMonths, uiLocale]);
 
   const activate = useMutation({
     mutationFn: () =>
@@ -186,6 +189,7 @@ function CheckoutInner() {
           catIds: targetCats.map((c) => c.id),
           addressId,
           provider,
+          termMonths,
         }),
       }),
     onSuccess: (res) => {
@@ -405,7 +409,41 @@ function CheckoutInner() {
         )}
       </Card>
 
-      {/* ── 3 · Payment ──────────────────────────────────────────────────── */}
+      {/* ── 3 · Term commitment (min 3 months, paid upfront) ─────────────── */}
+      <Card className="space-y-4 p-6">
+        <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+          <CalendarClock className="size-4 text-primary" aria-hidden />
+          {isAr ? "مدة الاشتراك" : "Subscription length"}
+        </h2>
+        <div role="radiogroup" aria-label={isAr ? "مدة الاشتراك" : "Subscription length"} className="grid grid-cols-3 gap-2">
+          {TERM_OPTIONS.filter((t) => t >= minTerm).map((t) => {
+            const selected = t === termMonths;
+            return (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setTermMonths(t)}
+                className={cn(
+                  "min-h-11 rounded-xl border p-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  selected ? "border-primary bg-primary/[0.06]" : "border-border hover:bg-muted/50"
+                )}
+              >
+                <span className="block font-display text-lg font-bold tabular" dir="ltr">{t}</span>
+                <span className="block text-xs text-muted-foreground">{isAr ? "أشهر" : "months"}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {isAr
+            ? `الحد الأدنى ${minTerm} أشهر — تدفع كامل المدة مقدّماً، والتوصيل شهري.`
+            : `Minimum ${minTerm} months — you pay the full term upfront, delivered monthly.`}
+        </p>
+      </Card>
+
+      {/* ── 4 · Payment ──────────────────────────────────────────────────── */}
       <Card className="space-y-5 p-6">
         <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
           <CreditCard className="size-4 text-primary" aria-hidden />
@@ -445,22 +483,30 @@ function CheckoutInner() {
           })}
         </div>
 
-        {/* The commitment line (R021) + the reminder promise (R025). */}
+        {/* The commitment line (R021): the exact upfront total + the reminder (R025).
+            0% VAT while not VAT-registered. */}
         <div className="space-y-1.5 rounded-xl bg-muted/50 p-4 text-center">
           <p className="text-sm font-medium">
             {isAr ? (
               <>
-                <span className="tabular" dir="ltr">{plan.price}</span> ر.س / شهرياً، شامل الضريبة — التجديد الأول في {renewalDate}
+                <span className="tabular" dir="ltr">{plan.price}</span> ر.س × {termMonths} أشهر ={" "}
+                <span className="tabular font-bold" dir="ltr">{plan.price * termMonths}</span> ر.س تُدفع الآن
               </>
             ) : (
               <>
-                <span className="tabular" dir="ltr">{plan.price}</span> SAR / month, VAT included — first renewal on {renewalDate}
+                <span className="tabular" dir="ltr">{plan.price}</span> SAR × {termMonths} months ={" "}
+                <span className="tabular font-bold" dir="ltr">{plan.price * termMonths}</span> SAR paid now
               </>
             )}
           </p>
+          <p className="text-xs text-muted-foreground">
+            {isAr
+              ? `توصيل شهري طوال ${termMonths} أشهر — التجديد في ${renewalDate}`
+              : `Monthly delivery for ${termMonths} months — renews ${renewalDate}`}
+          </p>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <BellRing className="size-3.5 shrink-0" aria-hidden />
-            {isAr ? "نذكّرك قبل كل تجديد" : "We remind you before every renewal"}
+            {isAr ? "نذكّرك قبل التجديد" : "We remind you before renewal"}
           </p>
         </div>
 

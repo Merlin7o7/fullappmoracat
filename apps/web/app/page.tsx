@@ -426,6 +426,12 @@ const VOICE_TONES: Tone[] = ["green", "orange", "pink"];
 
 function MemberVoices({ isAr, title }: { isAr: boolean; title: string }) {
   const { data } = useQuery({ queryKey: ["testimonials"], queryFn: () => api.testimonials() });
+  // Honest by default (R006): a subscription testimonial ("food arrives before we
+  // run out", "the plan paid for itself") is impossible before a single box ships.
+  // We never present invented members as social proof — the voices section stays
+  // dark until memberships are live and testimonials are real. Pre-launch trust is
+  // carried by the live community (real cats, real members) instead.
+  if (!commerceEnabled()) return null;
   if (!data || data.length === 0) return null;
   return (
     <section className="container py-20 sm:py-24">

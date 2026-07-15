@@ -331,7 +331,9 @@ export default function OverviewPage() {
             ) : (
               <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-8 text-center">
                 <p className="text-sm text-muted-foreground">{isAr ? "لا يوجد اشتراك نشط بعد" : "No active subscription yet"}</p>
-                <Link href="/#plans"><Button size="sm">{isAr ? "ابدأ اشتراكاً" : "Start a subscription"}</Button></Link>
+                {/* Intent stays inside the portal — the plan is computed from the
+                    cat, never chosen from the marketing tier table (Amendment 2026-07-10). */}
+                <Link href="/portal/subscribe"><Button size="sm">{isAr ? "فعّل عضوية قطك" : "Activate your cat's membership"}</Button></Link>
               </div>
             )}
           </Card>

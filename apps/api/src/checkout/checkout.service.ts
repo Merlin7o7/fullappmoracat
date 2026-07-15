@@ -19,9 +19,7 @@ import {
 } from "../payments/payment-provider.interface";
 import type { CheckoutDto } from "./dto/checkout.dto";
 import { commerceEnabled } from "../common/config/features";
-
-/** KSA standard VAT — prices are VAT-inclusive; the invoice breaks it out. */
-const VAT_RATE = 0.15;
+import { splitVat } from "../common/config/pricing";
 
 @Injectable()
 export class CheckoutService {
@@ -88,9 +86,8 @@ export class CheckoutService {
 
     const isPending = charge.status === "PENDING" || charge.status === "AUTHORIZED";
 
-    // VAT component of a VAT-inclusive total.
-    const netSubtotal = round(grandTotal / (1 + VAT_RATE));
-    const taxTotal = round(grandTotal - netSubtotal);
+    // VAT component (0 while not VAT-registered; splitVat honours the toggle).
+    const { net: netSubtotal, tax: taxTotal } = splitVat(grandTotal);
 
     // 2) Persist order + items + payment + invoice atomically, then clear cart.
     //    Redirect flows persist as PENDING; the PSP webhook confirms later.
@@ -213,5 +210,3 @@ function makeNumber(prefix: string): string {
   const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
   return `${prefix}-${date}-${randomBytes(3).toString("hex").toUpperCase()}`;
 }
-
-const round = (n: number) => Math.round(n * 100) / 100;

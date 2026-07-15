@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -14,7 +15,12 @@ import {
   paymentReceiptTemplate,
   subscriptionConfirmedTemplate,
 } from "../mail/mail.templates";
-import type { WebhookEvent } from "./payment-provider.interface";
+import {
+  PAYMENT_PROVIDER_FACTORY,
+  type IPaymentProviderFactory,
+  type PaymentProviderKey,
+  type WebhookEvent,
+} from "./payment-provider.interface";
 
 /**
  * Verifies and settles PSP webhooks. Each provider authenticates differently:
@@ -33,7 +39,8 @@ export class WebhooksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
-    private readonly mail: MailService
+    private readonly mail: MailService,
+    @Inject(PAYMENT_PROVIDER_FACTORY) private readonly payments: IPaymentProviderFactory
   ) {}
 
   // ── Verification + parsing per provider ──────────────────────────────────
@@ -117,6 +124,36 @@ export class WebhooksService {
       if (payment.status === "CAPTURED") {
         return { orderNumber: payment.order.orderNumber, status: "already_captured" };
       }
+
+      // Some rails (Tamara) only authorise on approval and need an explicit
+      // capture to actually collect. Do it BEFORE we mark the order paid and
+      // flip the membership live — never activate against money we haven't
+      // captured (R006). Providers that capture synchronously omit capture().
+      const adapter = this.payments.resolve(payment.provider as PaymentProviderKey);
+      if (adapter.capture) {
+        const cap = await adapter.capture(
+          event.providerRef,
+          Number(payment.amount),
+          payment.currency
+        );
+        if (!cap.success) {
+          this.logger.warn(
+            `capture failed for ${payment.order.orderNumber}: ${cap.failureReason ?? "unknown"}`
+          );
+          await this.prisma.$transaction([
+            this.prisma.payment.update({
+              where: { id: payment.id },
+              data: { status: "FAILED", failureReason: cap.failureReason ?? "Capture failed" },
+            }),
+            this.prisma.order.update({ where: { id: payment.orderId }, data: { status: "FAILED" } }),
+            this.prisma.invoice.updateMany({ where: { orderId: payment.orderId }, data: { status: "VOID" } }),
+          ]);
+          // The DRAFT membership never truly began — close it out honestly (R118).
+          await this.cancelDraftSubscription(payment.order.subscriptionId, payment.order.orderNumber);
+          return { orderNumber: payment.order.orderNumber, status: "capture_failed" };
+        }
+      }
+
       await this.prisma.$transaction([
         this.prisma.payment.update({
           where: { id: payment.id },
@@ -194,15 +231,19 @@ export class WebhooksService {
     if (!sub || sub.status !== "DRAFT" || !sub.plan) return null;
 
     const now = new Date();
-    const next = addMonthsClamped(now, 1);
+    // The whole committed term was paid upfront, so renewal is due at term end;
+    // deliveries stay monthly.
+    const termEnd = addMonthsClamped(now, sub.termMonths ?? 3);
+    const firstDelivery = addMonthsClamped(now, 1);
     await this.prisma.$transaction([
       this.prisma.subscription.update({
         where: { id: sub.id },
         data: {
           status: "ACTIVE",
           startedAt: now,
-          nextBillingAt: next,
-          nextDeliveryAt: next,
+          endsAt: termEnd,
+          nextBillingAt: termEnd,
+          nextDeliveryAt: firstDelivery,
           events: { create: { type: "activated", metadata: { orderNumber, via: "webhook" } } },
         },
       }),
@@ -212,7 +253,7 @@ export class WebhooksService {
       }),
     ]);
     this.logger.log(`subscription ${sub.id} activated via webhook (${orderNumber})`);
-    return { plan: sub.plan, next };
+    return { plan: sub.plan, next: termEnd };
   }
 
   /** A DRAFT membership whose first charge failed is closed, never left hanging. */

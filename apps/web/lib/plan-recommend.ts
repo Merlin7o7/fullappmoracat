@@ -21,7 +21,7 @@ import { localizeName } from "./translit"; // relative so the unit tests resolve
 
 /* ── Contracts ─────────────────────────────────────────────────────────────── */
 
-export type PlanTier = "ESSENTIAL" | "PREMIUM" | "COMPLETE_CARE" | "MULTI_CAT";
+export type PlanTier = "STARTER" | "STANDARD" | "PREMIUM";
 
 /** GET /plans response shape (shared by subscribe + checkout). */
 export interface ApiPlan {
@@ -29,7 +29,8 @@ export interface ApiPlan {
   tier: PlanTier;
   nameEn: string;
   nameAr: string;
-  price: number;
+  price: number; // monthly price (SAR); customer pays price × termMonths upfront
+  minTermMonths?: number;
   contents: { label: string; quantity: number; unit: string }[];
 }
 
@@ -187,15 +188,15 @@ export function recommendPlan(
       });
     } else if (rec.rationale.lifeStage === "SENIOR") {
       reasons.push({
-        ar: `${nameAr} كبير بالعمر — سعرات أهدأ ومكمّل شهري ضمن العناية الكاملة`,
-        en: `${nameEn} is a senior — gentler calories plus a monthly supplement under Complete Care`,
+        ar: `${nameAr} كبير بالعمر — سعرات أهدأ وعناية إضافية ضمن الباقة المميّزة`,
+        en: `${nameEn} is a senior — gentler calories plus extra care under the Premium box`,
       });
     }
 
     if (input.hasHealthConditions) {
       reasons.push({
-        ar: `ملف ${nameAr} الصحي يستدعي مستوى العناية الكاملة`,
-        en: `${nameEn}'s health record calls for the Complete Care level`,
+        ar: `ملف ${nameAr} الصحي يستدعي الباقة المميّزة`,
+        en: `${nameEn}'s health record calls for the Premium box`,
       });
     }
   }
@@ -210,35 +211,35 @@ export function recommendPlan(
     en: `Monthly need: ${fmtEn(totals.dryFoodKgPerMonth)} kg dry food, ${fmtEn(totals.wetPouchesPerMonth)} wet pouches, ${fmtEn(totals.litterKgPerMonth)} kg litter`,
   });
 
-  // ── Tier mapping ──────────────────────────────────────────────────────────
+  // ── Tier mapping (3 official boxes: Starter / Standard / Premium) ─────────
+  // Sized to the cat, never upsold (R006). Multi-cat, senior, or health needs
+  // map to Premium (the fullest box); otherwise Starter if its food energy
+  // covers the monthly need, else Standard.
   let tier: PlanTier;
   if (cats.length >= 2) {
-    tier = "MULTI_CAT";
+    tier = "PREMIUM";
     reasons.push({
-      ar: `عندكم ${fmtAr(cats.length)} قطط — باقة العائلة تغطيهم كلهم بصندوق واحد`,
-      en: `You have ${fmtEn(cats.length)} cats — the family plan covers them all in one box`,
+      ar: `عندكم ${fmtAr(cats.length)} قطط — الباقة المميّزة تغطي احتياجهم بصندوق واحد`,
+      en: `You have ${fmtEn(cats.length)} cats — the Premium box covers the household in one delivery`,
     });
   } else if (anySenior || anyHealth) {
-    tier = "COMPLETE_CARE";
+    tier = "PREMIUM";
   } else {
-    // Essential vs Premium: does the Essential box's food energy actually
-    // cover the computed monthly need? If not, Premium. Never upsold — sized
-    // to the cat (R006).
     const monthlyKcalNeed = dailyCaloriesTotal * DAYS_PER_MONTH;
-    const essential = plans.find((p) => p.tier === "ESSENTIAL");
-    // Fallback mirrors the seeded Essential box (2 kg dry + 15 pouches).
-    const essentialKcal = essential ? planMonthlyKcal(essential) : 2 * 1000 * DRY_FOOD_KCAL_PER_G + 15 * WET_POUCH_KCAL;
-    const fitsEssential = essentialKcal >= monthlyKcalNeed;
-    tier = fitsEssential ? "ESSENTIAL" : "PREMIUM";
+    const starter = plans.find((p) => p.tier === "STARTER");
+    // Fallback mirrors the Starter box (2 kg dry + 15 pouches).
+    const starterKcal = starter ? planMonthlyKcal(starter) : 2 * 1000 * DRY_FOOD_KCAL_PER_G + 15 * WET_POUCH_KCAL;
+    const fitsStarter = starterKcal >= monthlyKcalNeed;
+    tier = fitsStarter ? "STARTER" : "STANDARD";
     reasons.push(
-      fitsEssential
+      fitsStarter
         ? {
-            ar: "كمية الباقة الأساسية تغطي احتياجهم الشهري كاملاً — بلا زيادة ولا نقص",
-            en: "The Essential box fully covers the monthly need — nothing more, nothing less",
+            ar: "كمية الباقة المبتدئة تغطي احتياجهم الشهري كاملاً — بلا زيادة ولا نقص",
+            en: "The Starter box fully covers the monthly need — nothing more, nothing less",
           }
         : {
-            ar: "احتياجهم الشهري أكبر من الباقة الأساسية، فالمميزة هي المقاس الصحيح",
-            en: "The monthly need outgrows the Essential box, so Premium is the right size",
+            ar: "احتياجهم الشهري أكبر من الباقة المبتدئة، فالقياسية هي المقاس الصحيح",
+            en: "The monthly need outgrows the Starter box, so Standard is the right size",
           }
     );
   }

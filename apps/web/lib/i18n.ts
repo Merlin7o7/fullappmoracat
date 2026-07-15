@@ -31,7 +31,7 @@ export const dict = {
       items: [
         { eyebrow: "هويته", title: "هوية رسمية", body: "كل قط له هوية خاصة فيها اسمه وصورته ورقمه — نفس الهوية اللي يحملها طول عمره." },
         { eyebrow: "عنايته الشهرية", title: "احتياجاته توصل لبابك", body: "خطة شهرية تنبني من وزن قطك وعمره — أكل ورمل واحتياجاته، محسوبة عليه بالضبط، توصل لأي مدينة في السعودية." },
-        { eyebrow: "ملفه الصحي", title: "سجله يمشي معه", body: "التطعيمات والوزن وملاحظات الطبيب — كلها في هويته، حاضرة عند أي عيادة بمسحة وحدة." },
+        { eyebrow: "ملفه الصحي", title: "سجله يمشي معه", body: "التطعيمات والوزن وملاحظات الطبيب — كلها في هويته، حاضرة معك في كل زيارة للعيادة." },
         { eyebrow: "مجتمعه", title: "معروف ومحبوب", body: "شارك هوية قطك مع مجتمع من أهل القطط في السعودية — أو خلّه خاص. القرار لك دايم." },
       ],
     },
@@ -42,7 +42,7 @@ export const dict = {
       month: "/ شهرياً",
       cta: "ابنِ خطة قطك",
       soonBadge: "قريب",
-      soonNote: "العضويات تنطلق خلال أسابيع — سوِّ هوية قطك اليوم وكن من الأعضاء المؤسسين.",
+      soonNote: "العضويات قريب — سوِّ هوية قطك اليوم وتكون من أول الأعضاء المؤسسين.",
       includes: [
         "عناية شهرية على مقاس قطك — أكل ورمل ومكافآت",
         "الهوية الرسمية وسجل صحي يمشي معه",
@@ -52,10 +52,10 @@ export const dict = {
       vatNote: "الأسعار شاملة ضريبة القيمة المضافة · التوصيل لكل مدن السعودية",
     },
     voices: { title: "كلام أعضائنا" },
-    marquee: ["هوية رسمية لقطك", "سجل صحي يمشي معه", "مجتمع من أهل القطط", "إرشاد تغذية ذكي", "الانضمام ببلاش"],
+    marquee: ["هوية رسمية لقطك", "سجل صحي يمشي معه", "مجتمع من أهل القطط", "إرشاد تغذية ذكي", "الانضمام مجاناً"],
     closing: {
       title: "قطك جاهز لهويته؟",
-      sub: "دقيقتين وتكون الهوية بين يديك — ومعاينتها ببلاش.",
+      sub: "دقيقتين وتكون الهوية بين يديك — ومعاينتها مجاناً.",
     },
     footerNote: "صُنعت بمحبة لأهل القطط في السعودية",
     footer: "© 2026 مؤسسة عبدالرحمن منصور الغامدي التجارية. جميع الحقوق محفوظة.",
@@ -84,7 +84,7 @@ export const dict = {
       items: [
         { eyebrow: "Their identity", title: "An identity, officially", body: "Every cat gets a unique Cat ID with their name, photo and number — the same one they'll carry for life." },
         { eyebrow: "Their monthly care", title: "Care that arrives", body: "A monthly plan built from your cat's weight and age — food, litter and essentials, sized exactly to them, delivered to any city in Saudi Arabia." },
-        { eyebrow: "Their health record", title: "A record that travels", body: "Vaccinations, weight and vet notes live on their ID — ready at any clinic with a single scan." },
+        { eyebrow: "Their health record", title: "A record that travels", body: "Vaccinations, weight and vet notes live on their ID — in your pocket at every vet visit." },
         { eyebrow: "Their community", title: "Seen and celebrated", body: "Share your cat's identity in a growing community of Saudi cat people — or keep them private. The choice is always yours." },
       ],
     },
@@ -95,7 +95,7 @@ export const dict = {
       month: "/ month",
       cta: "Build your cat's plan",
       soonBadge: "Soon",
-      soonNote: "Memberships launch in the coming weeks — create your cat's ID today and join as a founding member.",
+      soonNote: "Memberships open soon — create your cat's ID today and you'll be first in line as a founding member.",
       includes: [
         "Monthly care sized to your cat — food, litter and treats",
         "The official Cat ID and a health record that travels",

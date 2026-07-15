@@ -59,6 +59,7 @@ export function SiteHeader() {
 
   const navItems = [
     { href: "/#how", label: t.nav.how },
+    { href: "/#plans", label: t.nav.plans },
     { href: "/community", label: t.nav.community },
     { href: "/products", label: t.nav.products },
     { href: "/blog", label: t.nav.blog },

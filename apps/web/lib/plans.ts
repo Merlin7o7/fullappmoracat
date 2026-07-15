@@ -1,9 +1,13 @@
 /**
- * Plan catalogue — mirrors the seed + financial model so the marketing site
- * renders correct pricing even before the API is wired. Single source: the
- * Moraqat_Financial_Model.xlsx Unit Economics tab.
+ * Plan catalogue — the 3 official Moracat boxes. Mirrors the DB (seed-catalog)
+ * and the financial model so marketing renders correct pricing even before the
+ * API responds. Single source of truth: seed-catalog.ts / GET /plans.
+ *
+ * Pricing is per MONTH; a member commits to a minimum term (3 months) and pays
+ * price × term upfront via Tamara. 0% VAT (Moracat is not VAT-registered yet;
+ * VAT is a one-flag toggle in the API — see common/config/pricing.ts).
  */
-export type PlanTier = "essential" | "premium" | "complete-care" | "multi-cat";
+export type PlanTier = "starter" | "standard" | "premium";
 
 export interface Plan {
   tier: PlanTier;
@@ -17,46 +21,41 @@ export interface Plan {
   popular?: boolean;
 }
 
+/** Minimum committed subscription term, in months (KSA policy). */
+export const MIN_TERM_MONTHS = 3;
+/** Term options offered at checkout. */
+export const TERM_OPTIONS = [3, 6, 12] as const;
+
 export const PLANS: Plan[] = [
   {
-    tier: "essential",
-    nameEn: "Essential",
-    nameAr: "الأساسية",
-    price: 179,
-    taglineEn: "Everyday nutrition for one happy cat",
-    taglineAr: "تغذية يومية لقط سعيد واحد",
-    featuresEn: ["2kg everyday dry food", "15 wet pouches", "7kg clumping litter", "1 treat pack"],
-    featuresAr: ["٢كجم طعام جاف يومي", "١٥ كيس رطب", "٧كجم رمل متكتل", "علبة مكافآت"],
+    tier: "starter",
+    nameEn: "Starter",
+    nameAr: "المبتدئة",
+    price: 249,
+    taglineEn: "Everyday food for one cat",
+    taglineAr: "تغذية يومية لقط واحد",
+    featuresEn: ["15 wet food pouches", "2kg dry food", "Creamy treats", "Light box, no litter"],
+    featuresAr: ["١٥ كيس طعام رطب", "٢كجم طعام جاف", "مكافآت كريمية", "صندوق خفيف بدون رمل"],
+  },
+  {
+    tier: "standard",
+    nameEn: "Standard",
+    nameAr: "القياسية",
+    price: 349,
+    taglineEn: "Food + litter, everything handled",
+    taglineAr: "طعام ورمل — كل شيء يُدار",
+    featuresEn: ["15 premium wet cans", "2kg dry food", "10L clumping litter", "Calming treats"],
+    featuresAr: ["١٥ معلبة رطبة فاخرة", "٢كجم طعام جاف", "١٠ لتر رمل متكتل", "مكافآت مهدّئة"],
+    popular: true,
   },
   {
     tier: "premium",
     nameEn: "Premium",
-    nameAr: "المميزة",
-    price: 269,
-    taglineEn: "Premium food + enrichment",
-    taglineAr: "طعام فاخر + إثراء",
-    featuresEn: ["2kg premium dry food", "20 premium wet pouches", "7kg litter", "Treats + enrichment toy"],
-    featuresAr: ["٢كجم طعام جاف فاخر", "٢٠ كيس رطب فاخر", "٧كجم رمل", "مكافآت + لعبة تفاعلية"],
-    popular: true,
-  },
-  {
-    tier: "complete-care",
-    nameEn: "Complete Care",
-    nameAr: "العناية الكاملة",
-    price: 389,
-    taglineEn: "The full wellness box",
-    taglineAr: "صندوق العناية الكامل",
-    featuresEn: ["2.5kg premium dry food", "25 premium wet pouches", "8kg litter", "Dental, supplement & toy"],
-    featuresAr: ["٢.٥كجم طعام جاف فاخر", "٢٥ كيس رطب فاخر", "٨كجم رمل", "عناية بالأسنان ومكمل ولعبة"],
-  },
-  {
-    tier: "multi-cat",
-    nameEn: "Multi-Cat",
-    nameAr: "متعدد القطط",
-    price: 329,
-    taglineEn: "Scaled for a full household",
-    taglineAr: "مصمم لعدة قطط",
-    featuresEn: ["3.5kg dry food", "30 wet pouches", "14kg litter", "2 treat packs + toy"],
-    featuresAr: ["٣.٥كجم طعام جاف", "٣٠ كيس رطب", "١٤كجم رمل", "علبتا مكافآت + لعبة"],
+    nameAr: "المميّزة",
+    price: 529,
+    taglineEn: "Premium food, litter, grooming & treats",
+    taglineAr: "طعام فاخر ورمل وعناية ومكافآت",
+    featuresEn: ["24 premium wet pouches", "2kg dry food", "Premium 10L litter", "Grooming wipes + treats"],
+    featuresAr: ["٢٤ كيس رطب فاخر", "٢كجم طعام جاف", "رمل فاخر ١٠ لتر", "مناديل عناية + مكافآت"],
   },
 ];

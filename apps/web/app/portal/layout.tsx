@@ -3,11 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Loader2, ShieldCheck } from "lucide-react";
+import { LogOut, Loader2, ShieldCheck, WifiOff } from "lucide-react";
 import { cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { CatProvider, useCats } from "@/lib/cat-context";
+import { useOnline } from "@/lib/offline";
 import { buildGreeting, type Gender } from "@/lib/greeting";
 import { CatSwitcher } from "@/components/cat-switcher";
 import { ThemeToggle, LangToggle } from "@/components/toggles";
@@ -112,6 +113,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <ThemeToggle />
             </div>
           </header>
+          <OfflineBanner isAr={isAr} />
           {/* pb-nav reserves room for the floating mobile nav + home indicator. */}
           <main id="main" tabIndex={-1} className="pb-nav flex-1 p-4 outline-none sm:p-6 md:pb-6">{children}</main>
         </div>
@@ -120,6 +122,34 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       {/* ── Mobile: thumb-zone bottom nav (R100), ≥44px targets (R092), 320px-safe ── */}
       <PortalMobileNav items={nav} isAr={isAr} isStaff={!!user.isStaff} onLogout={handleLogout} />
     </CatProvider>
+  );
+}
+
+/**
+ * Offline is a *state*, not an error — so this is calm and reassuring, never
+ * alarming (R007 calm over clever, R080 restraint). It confirms the cat's saved
+ * ID is still in hand, which is the whole point of the offline cache (R036/R114).
+ */
+function OfflineBanner({ isAr }: { isAr: boolean }) {
+  const online = useOnline();
+  const { primaryCat } = useCats();
+  if (online) return null;
+  const name = primaryCat ? localizeName(primaryCat.name, isAr ? "ar" : "en") : null;
+  const message = name
+    ? isAr
+      ? `لا يوجد اتصال — هوية ${name} المحفوظة ما زالت معك`
+      : `You're offline — ${name}'s saved ID is still here`
+    : isAr
+      ? "لا يوجد اتصال — بياناتك المحفوظة ما زالت معك"
+      : "You're offline — your saved ID is still with you";
+  return (
+    <div
+      role="status"
+      className="flex items-center justify-center gap-2 border-b border-border bg-muted px-4 py-2 text-center text-xs font-medium text-muted-foreground"
+    >
+      <WifiOff className="size-3.5 shrink-0" aria-hidden />
+      {message}
+    </div>
   );
 }
 

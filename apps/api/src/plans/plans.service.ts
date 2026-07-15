@@ -20,8 +20,12 @@ export class PlansService {
       slug: p.slug,
       nameEn: p.nameEn,
       nameAr: p.nameAr,
-      price: Number(p.basePrice),
-      cogs: Number(p.cogs),
+      descriptionEn: p.descriptionEn,
+      descriptionAr: p.descriptionAr,
+      price: Number(p.basePrice), // monthly price
+      minTermMonths: p.minTermMonths,
+      // cogs is an internal margin figure — never serialised to the public plans
+      // endpoint. Exposing it lets anyone compute our per-box margin (R006).
       currency: p.currency,
       contents: p.contents.map((c) => ({
         label: c.label,

@@ -15,6 +15,7 @@ import { useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import type { CatProfile } from "@/lib/cat-profile";
+import { readCachedCats, writeCachedCats } from "@/lib/offline";
 
 export type CatStatus = "ACTIVE" | "ARCHIVED" | "DECEASED";
 export type CatMembership = "ACTIVE" | "INACTIVE" | "PENDING";
@@ -84,11 +85,20 @@ export function CatProvider({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
   const [activeCatId, setActiveCatId] = React.useState<string | null>(null);
 
-  const { data: cats = [], isLoading, isError, isFetching, refetch } = useQuery({
+  const { data: cats = [], isLoading, isError: rosterFetchFailed, isFetching, refetch } = useQuery({
     queryKey: ["cats", user?.id],
     queryFn: () => authedFetch<PortalCat[]>("/cats"),
     enabled: !!user,
+    // Seed from the offline cache so a signal-less reload renders the real card
+    // instantly (R036/R114); the background refetch still runs to refresh it.
+    initialData: () => readCachedCats(user?.id),
   });
+
+  // Persist the roster for the next dead zone. Written whenever a real roster is
+  // in hand (network or optimistic update); silently no-ops on storage failure.
+  React.useEffect(() => {
+    if (user?.id && cats.length > 0) writeCachedCats(user.id, cats);
+  }, [cats, user?.id]);
 
   const activeCats = React.useMemo(() => cats.filter((c) => c.status === "ACTIVE"), [cats]);
   const primaryCat = React.useMemo(
@@ -164,14 +174,18 @@ export function CatProvider({ children }: { children: React.ReactNode }) {
       activeCatId: activeCat?.id ?? null,
       primaryCat,
       isLoading,
-      isError,
+      // Only a *true* void is an error: if we have cats to show (from the network
+      // or the offline cache), a failed background refetch must not blank the Cat
+      // ID behind a retry wall — we show the card and let the offline banner
+      // explain (R112, R114). An error surfaces only when there's nothing to show.
+      isError: rosterFetchFailed && cats.length === 0,
       isFetching,
       refetch,
       setActiveCat,
       setPrimaryCat,
       refresh,
     }),
-    [cats, activeCats, activeCat, primaryCat, isLoading, isError, isFetching, refetch, setActiveCat, setPrimaryCat, refresh]
+    [cats, activeCats, activeCat, primaryCat, isLoading, rosterFetchFailed, isFetching, refetch, setActiveCat, setPrimaryCat, refresh]
   );
 
   return <CatContext.Provider value={value}>{children}</CatContext.Provider>;

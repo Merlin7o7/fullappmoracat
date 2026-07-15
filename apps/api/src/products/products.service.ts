@@ -14,6 +14,10 @@ export class ProductsService {
     const where: Prisma.ProductWhereInput = {
       isActive: true,
       deletedAt: null,
+      // The individual storefront is not public yet (Decision 2, 2026-07). Only
+      // explicitly-published products are ever returned to customers; the imported
+      // supplier catalog stays hidden until the store launches.
+      isStorePublished: true,
       ...(q.type ? { type: q.type } : {}),
       ...(q.brand ? { brand: { slug: q.brand } } : {}),
       ...(q.search
@@ -74,7 +78,7 @@ export class ProductsService {
 
   async findBySlug(slug: string) {
     const p = await this.prisma.product.findFirst({
-      where: { slug, isActive: true, deletedAt: null },
+      where: { slug, isActive: true, deletedAt: null, isStorePublished: true },
       include: {
         brand: true,
         images: { orderBy: { sortOrder: "asc" } },

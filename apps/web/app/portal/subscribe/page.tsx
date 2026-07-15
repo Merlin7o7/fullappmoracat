@@ -41,7 +41,7 @@ import { recommendPlan, type ApiPlan, type PlanTier } from "@/lib/plan-recommend
 import { QueryError } from "@/components/query-error";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
 
-type Interest = "ESSENTIAL" | "PREMIUM" | "COMPLETE_CARE" | "MULTI_CAT" | "unsure";
+type Interest = "STARTER" | "STANDARD" | "PREMIUM" | "unsure";
 
 export default function SubscribePage() {
   return (
@@ -524,11 +524,10 @@ function ComingSoonInner() {
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  ["ESSENTIAL", isAr ? "الأساسية" : "Essential"],
-                  ["PREMIUM", isAr ? "المميزة" : "Premium"],
-                  ["COMPLETE_CARE", isAr ? "العناية الكاملة" : "Complete Care"],
-                  ["MULTI_CAT", isAr ? "متعددة القطط" : "Multi-cat"],
-                  ["unsure", isAr ? "لست متأكداً" : "Not sure yet"],
+                  ["STARTER", isAr ? "المبتدئة" : "Starter"],
+                  ["STANDARD", isAr ? "القياسية" : "Standard"],
+                  ["PREMIUM", isAr ? "المميّزة" : "Premium"],
+                  ["unsure", isAr ? "لست متأكد" : "Not sure yet"],
                 ] as [Interest, string][]
               ).map(([v, l]) => (
                 <button

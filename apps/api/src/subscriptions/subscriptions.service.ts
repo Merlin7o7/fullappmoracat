@@ -22,6 +22,7 @@ import {
   type PaymentProviderKey,
 } from "../payments/payment-provider.interface";
 import { commerceEnabled } from "../common/config/features";
+import { splitVat, MIN_TERM_MONTHS, TERM_OPTIONS } from "../common/config/pricing";
 import type { ActivateSubscriptionDto, CreateSubscriptionDto } from "./dto/subscription.dto";
 
 const INTERVAL_DAYS: Record<string, number> = {
@@ -29,9 +30,6 @@ const INTERVAL_DAYS: Record<string, number> = {
   BIMONTHLY: 60,
   QUARTERLY: 90,
 };
-
-/** KSA standard VAT — prices are VAT-inclusive; the invoice breaks it out. */
-const VAT_RATE = 0.15;
 
 @Injectable()
 export class SubscriptionsService {
@@ -215,11 +213,22 @@ export class SubscriptionsService {
       select: { email: true, firstName: true, lastName: true, phone: true, locale: true },
     });
 
-    // The exact number the member saw on the commitment line (R021):
-    // VAT-inclusive plan price; the invoice breaks the 15% out.
-    const grandTotal = round(Number(plan.basePrice));
-    const netSubtotal = round(grandTotal / (1 + VAT_RATE));
-    const taxTotal = round(grandTotal - netSubtotal);
+    // Term commitment: the member commits to a minimum of `minTerm` months and
+    // pays the FULL term upfront (Tamara collects; delivered monthly across the
+    // term). This is how recurring works without card tokenization.
+    const monthlyPrice = round(Number(plan.basePrice));
+    const minTerm = Math.max(MIN_TERM_MONTHS, plan.minTermMonths ?? MIN_TERM_MONTHS);
+    const termMonths = dto.termMonths ?? minTerm;
+    if (!(TERM_OPTIONS as readonly number[]).includes(termMonths) || termMonths < minTerm) {
+      throw new BadRequestException({
+        code: "INVALID_TERM",
+        message: `Choose a term of ${TERM_OPTIONS.filter((t) => t >= minTerm).join(", ")} months (minimum ${minTerm}).`,
+      });
+    }
+    // The exact number the member pays now = monthly price × committed months.
+    // splitVat honours the VAT toggle (currently 0% → tax 0, net == gross).
+    const grandTotal = round(monthlyPrice * termMonths);
+    const { net: netSubtotal, tax: taxTotal } = splitVat(grandTotal);
     const orderNumber = makeNumber("MRQ");
 
     // 1) Charge (or open a PSP session) first — never persist a membership we
@@ -236,7 +245,9 @@ export class SubscriptionsService {
         name: [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined,
         phone: user.phone ?? undefined,
       },
-      returnUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/portal/subscriptions`,
+      // The PSP sends the member back to the activation ceremony, which polls
+      // the order until the webhook settles and then reveals the active Cat ID.
+      returnUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/portal/checkout/return?ref=${orderNumber}`,
     });
 
     if (!charge.success) {
@@ -248,9 +259,10 @@ export class SubscriptionsService {
 
     const isPending = charge.status === "PENDING" || charge.status === "AUTHORIZED";
     const now = new Date();
-    // First renewal exactly one month from today — the date the member was
-    // shown before paying is the date we bill (R021/R025).
-    const next = addMonths(now, 1);
+    // The committed term is paid upfront, so the NEXT charge (renewal) is due
+    // when the term ends, not next month. Deliveries stay monthly.
+    const termEnd = addMonths(now, termMonths);
+    const firstDelivery = addMonths(now, 1);
 
     // 2) Persist subscription + first order + payment + invoice atomically.
     const sub = await this.prisma.$transaction(async (tx) => {
@@ -261,15 +273,18 @@ export class SubscriptionsService {
           addressId: dto.addressId,
           status: isPending ? "DRAFT" : "ACTIVE",
           interval: "MONTHLY",
-          price: new Prisma.Decimal(grandTotal),
+          price: new Prisma.Decimal(monthlyPrice), // monthly rate snapshot
+          termMonths,
+          endsAt: isPending ? null : termEnd,
           startedAt: isPending ? null : now,
-          nextBillingAt: isPending ? null : next,
-          nextDeliveryAt: isPending ? null : next,
+          // Renewal is due at term end (whole term prepaid); deliveries monthly.
+          nextBillingAt: isPending ? null : termEnd,
+          nextDeliveryAt: isPending ? null : firstDelivery,
           cats: { create: dto.catIds.map((catId) => ({ catId })) },
           events: {
             create: {
               type: isPending ? "activation_pending" : "activated",
-              metadata: { orderNumber, provider: dto.provider },
+              metadata: { orderNumber, provider: dto.provider, termMonths, grandTotal },
             },
           },
         },
@@ -330,7 +345,7 @@ export class SubscriptionsService {
       if (user.email) {
         const loc = user.locale === "en" ? "en" : "ar";
         const planName = loc === "ar" ? plan.nameAr : plan.nameEn;
-        const nextAt = next.toLocaleDateString(loc === "ar" ? "ar-SA" : "en-GB", {
+        const nextAt = termEnd.toLocaleDateString(loc === "ar" ? "ar-SA" : "en-GB", {
           day: "numeric",
           month: "long",
           year: "numeric",
@@ -355,13 +370,63 @@ export class SubscriptionsService {
       orderNumber,
       grandTotal,
       taxTotal,
+      monthlyPrice,
+      termMonths,
       currency: plan.currency,
-      nextBillingAt: isPending ? null : next.toISOString(),
+      nextBillingAt: isPending ? null : termEnd.toISOString(),
       // Redirect flows: the client sends the member here to complete payment.
       redirectUrl: charge.redirectUrl ?? null,
       payment: { provider: dto.provider, status: isPending ? "PENDING" : "CAPTURED" },
       plan: { tier: plan.tier, nameEn: plan.nameEn, nameAr: plan.nameAr },
       cats: cats.map((c) => ({ id: c.id, name: c.name })),
+    };
+  }
+
+  /**
+   * The PSP-return ceremony polls this until settlement resolves. A redirect
+   * flow lands here PENDING; the webhook then flips it to `active` (membership
+   * live) or `failed` (payment declined / capture failed). Scoped to the member
+   * so one member can never read another's order.
+   */
+  async getActivationStatus(userId: string, orderNumber: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { orderNumber, userId },
+      select: {
+        orderNumber: true,
+        status: true,
+        grandTotal: true,
+        taxTotal: true,
+        currency: true,
+        subscription: {
+          select: {
+            id: true,
+            status: true,
+            nextBillingAt: true,
+            plan: { select: { tier: true, nameEn: true, nameAr: true } },
+            cats: { select: { cat: { select: { id: true, name: true } } } },
+          },
+        },
+      },
+    });
+    if (!order) throw new NotFoundException("Order not found");
+
+    const sub = order.subscription;
+    const state: "active" | "failed" | "pending" =
+      sub?.status === "ACTIVE"
+        ? "active"
+        : order.status === "FAILED" || sub?.status === "CANCELLED"
+          ? "failed"
+          : "pending";
+
+    return {
+      orderNumber: order.orderNumber,
+      state,
+      grandTotal: Number(order.grandTotal),
+      taxTotal: Number(order.taxTotal),
+      currency: order.currency,
+      nextBillingAt: sub?.nextBillingAt?.toISOString() ?? null,
+      plan: sub?.plan ?? null,
+      cats: sub?.cats.map((c) => ({ id: c.cat.id, name: c.cat.name })) ?? [],
     };
   }
 
@@ -489,7 +554,10 @@ export class SubscriptionsService {
       status: sub.status,
       interval: sub.interval,
       intervalDays: sub.intervalDays,
-      price: Number(sub.price),
+      price: Number(sub.price), // monthly rate
+      termMonths: sub.termMonths,
+      endsAt: sub.endsAt,
+      termTotal: Number(sub.price) * sub.termMonths,
       currency: sub.currency,
       isGift: sub.isGift,
       startedAt: sub.startedAt,

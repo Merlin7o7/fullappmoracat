@@ -1,0 +1,961 @@
+<meta charset="utf-8">
+<title>Moracat Partner Portal — Design Dossier MRC-VET-001</title>
+<style>
+  :root{
+    --paper:#F7F5F0; --paper-2:#EFEBE2; --card:#FFFFFF; --ink:#1E2521; --ink-2:#4C564F;
+    --line:#DDD6C8; --line-2:#CDC5B4;
+    --green:#1E4D3B; --moss:#3E7057; --green-tint:#E3EDE6;
+    --seal:#D96A33; --seal-tint:#F8E8DC;
+    --ok:#2E7D4F; --ok-bg:#E2F0E6; --warn:#9A6A14; --warn-bg:#F6ECD6;
+    --danger:#B3402E; --danger-bg:#F7E3DE; --mute:#5B6660; --mute-bg:#ECEAE3;
+    --code:#F0EDE4;
+    --serif:"Fraunces","Iowan Old Style",Georgia,"Times New Roman",serif;
+    --sans:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+    --sh:0 1px 2px rgba(30,37,33,.05),0 4px 14px rgba(30,37,33,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#151D18; --paper-2:#1B241E; --card:#1F2A23; --ink:#EAE6DA; --ink-2:#A9B3AA;
+      --line:#2E3A32; --line-2:#3A4840;
+      --green:#9CC7AD; --moss:#7FAE93; --green-tint:#24352B;
+      --seal:#E8895A; --seal-tint:#3A2A20;
+      --ok:#7DC493; --ok-bg:#20372A; --warn:#D9A94E; --warn-bg:#3A3220;
+      --danger:#E08A78; --danger-bg:#3D2622; --mute:#8B958D; --mute-bg:#26302A;
+      --code:#1A231D;
+      --sh:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#151D18; --paper-2:#1B241E; --card:#1F2A23; --ink:#EAE6DA; --ink-2:#A9B3AA;
+    --line:#2E3A32; --line-2:#3A4840;
+    --green:#9CC7AD; --moss:#7FAE93; --green-tint:#24352B;
+    --seal:#E8895A; --seal-tint:#3A2A20;
+    --ok:#7DC493; --ok-bg:#20372A; --warn:#D9A94E; --warn-bg:#3A3220;
+    --danger:#E08A78; --danger-bg:#3D2622; --mute:#8B958D; --mute-bg:#26302A;
+    --code:#1A231D;
+    --sh:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  }
+  :root[data-theme="light"]{
+    --paper:#F7F5F0; --paper-2:#EFEBE2; --card:#FFFFFF; --ink:#1E2521; --ink-2:#4C564F;
+    --line:#DDD6C8; --line-2:#CDC5B4;
+    --green:#1E4D3B; --moss:#3E7057; --green-tint:#E3EDE6;
+    --seal:#D96A33; --seal-tint:#F8E8DC;
+    --ok:#2E7D4F; --ok-bg:#E2F0E6; --warn:#9A6A14; --warn-bg:#F6ECD6;
+    --danger:#B3402E; --danger-bg:#F7E3DE; --mute:#5B6660; --mute-bg:#ECEAE3;
+    --code:#F0EDE4;
+    --sh:0 1px 2px rgba(30,37,33,.05),0 4px 14px rgba(30,37,33,.06);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{animation:none!important;transition:none!important} }
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.62;font-size:15.5px;margin:0}
+  a{color:var(--moss)}
+  ::selection{background:var(--green);color:var(--paper)}
+
+  .wrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:0;max-width:1240px;margin:0 auto}
+  nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:28px 18px 40px 22px;border-right:1px solid var(--line);font-size:12.5px;scrollbar-width:thin}
+  nav.toc .brand{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--green);margin-bottom:2px}
+  nav.toc .doc-id{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);letter-spacing:.06em;margin-bottom:18px}
+  nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:3px 8px;border-radius:6px;line-height:1.4}
+  nav.toc a:hover{background:var(--paper-2);color:var(--ink)}
+  nav.toc a:focus-visible{outline:2px solid var(--moss);outline-offset:1px}
+  nav.toc .n{font-family:var(--mono);font-size:10px;color:var(--line-2);margin-right:6px}
+  nav.toc .grp{margin:14px 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--mute)}
+  main{padding:0 48px 120px;max-width:990px}
+  @media (max-width:900px){ .wrap{grid-template-columns:1fr} nav.toc{display:none} main{padding:0 20px 80px} }
+
+  header.hero{padding:64px 0 40px;border-bottom:2px solid var(--green)}
+  .hero .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--seal);margin-bottom:14px}
+  .hero h1{font-family:var(--serif);font-weight:600;font-size:clamp(30px,4.6vw,46px);line-height:1.08;margin:0 0 18px;text-wrap:balance;color:var(--ink)}
+  .hero h1 em{font-style:italic;color:var(--green)}
+  .hero .thesis{font-size:17.5px;max-width:62ch;color:var(--ink-2)}
+  .hero .thesis strong{color:var(--ink)}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .meta-chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;border:1px solid var(--line);border-radius:99px;padding:4px 11px;color:var(--ink-2);background:var(--card)}
+
+  section{padding-top:54px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:22px}
+  .sec-head .num{font-family:var(--mono);font-size:12px;color:var(--seal);letter-spacing:.08em}
+  .sec-head h2{font-family:var(--serif);font-weight:600;font-size:27px;margin:0;text-wrap:balance}
+  .sec-head .brief{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--mute);white-space:nowrap}
+  h3{font-family:var(--serif);font-weight:600;font-size:19px;margin:34px 0 10px}
+  h4{font-size:13px;text-transform:uppercase;letter-spacing:.11em;color:var(--moss);margin:26px 0 8px;font-weight:650}
+  p{max-width:70ch;margin:10px 0}
+  ul,ol{max-width:72ch;padding-left:22px}
+  li{margin:5px 0}
+  li::marker{color:var(--moss)}
+  .lede{font-size:16.5px;color:var(--ink-2);max-width:64ch}
+  .lede strong{color:var(--ink)}
+  code{font-family:var(--mono);font-size:.86em;background:var(--code);border-radius:4px;padding:1px 5px}
+  .rule{font-family:var(--mono);font-size:10.5px;color:var(--seal);background:var(--seal-tint);border-radius:4px;padding:1px 6px;white-space:nowrap}
+
+  .callout{border:1px solid var(--line);border-left:3px solid var(--green);background:var(--card);border-radius:10px;padding:14px 18px;margin:18px 0;box-shadow:var(--sh)}
+  .callout.seal{border-left-color:var(--seal)}
+  .callout.warn{border-left-color:var(--warn)}
+  .callout .cl-t{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:var(--moss);margin-bottom:4px}
+  .callout.seal .cl-t{color:var(--seal)}
+  .callout.warn .cl-t{color:var(--warn)}
+  .callout p{margin:4px 0}
+
+  table{border-collapse:collapse;width:100%;font-size:13px;margin:14px 0;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:var(--sh)}
+  .tbl-wrap{overflow-x:auto;margin:14px 0;border-radius:10px}
+  .tbl-wrap table{margin:0;min-width:640px}
+  th{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;text-align:left;color:var(--moss);background:var(--paper-2);padding:9px 12px;border-bottom:1px solid var(--line)}
+  td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td:first-child{font-weight:600}
+  .num-cell{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12px}
+
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;border-radius:99px;padding:2px 9px;white-space:nowrap}
+  .pill.ok{background:var(--ok-bg);color:var(--ok)}
+  .pill.warn{background:var(--warn-bg);color:var(--warn)}
+  .pill.danger{background:var(--danger-bg);color:var(--danger)}
+  .pill.mute{background:var(--mute-bg);color:var(--mute)}
+  .pill.green{background:var(--green-tint);color:var(--green)}
+  .yes{color:var(--ok);font-weight:700}.no{color:var(--line-2);font-weight:600}.cond{color:var(--warn);font-weight:700;font-size:11px}
+
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:16px 0}
+  .flow .step{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 13px;min-width:120px;flex:1 1 130px;box-shadow:var(--sh)}
+  .flow .step .st{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--seal);margin-bottom:3px}
+  .flow .step .sn{font-weight:650;font-size:13px;line-height:1.3}
+  .flow .step .sd{font-size:11.5px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+  .flow .arr{align-self:center;color:var(--line-2);font-size:15px;flex:0}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media (max-width:760px){ .grid2,.grid3{grid-template-columns:1fr} }
+  .cardlet{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--sh)}
+  .cardlet .ct{font-weight:700;font-size:13.5px;margin-bottom:4px}
+  .cardlet .ct .k{font-family:var(--mono);font-size:10px;color:var(--seal);margin-right:6px}
+  .cardlet p,.cardlet ul{font-size:12.8px;color:var(--ink-2);margin:4px 0}
+  .cardlet ul{padding-left:16px}
+
+  /* ---------- wireframe device frames ---------- */
+  .frame{border:1px solid var(--line-2);border-radius:14px;background:var(--card);box-shadow:var(--sh);overflow:hidden;margin:20px 0;font-size:11.5px}
+  .frame .bar{display:flex;align-items:center;gap:6px;background:var(--paper-2);border-bottom:1px solid var(--line);padding:7px 12px}
+  .frame .bar .dot{width:8px;height:8px;border-radius:50%;background:var(--line-2)}
+  .frame .bar .url{font-family:var(--mono);font-size:10px;color:var(--mute);margin-left:8px}
+  .frame .cap{font-size:11px;color:var(--mute);padding:8px 14px;border-top:1px solid var(--line);background:var(--paper-2)}
+  .wf{display:grid;min-height:60px}
+  .wf-topbar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
+  .wf-logo{font-family:var(--serif);font-weight:700;color:var(--green);font-size:13px}
+  .wf-search{flex:1;max-width:430px;border:1.5px solid var(--moss);border-radius:9px;padding:6px 11px;color:var(--mute);display:flex;gap:8px;align-items:center;background:var(--paper)}
+  .wf-search .kbd{margin-left:auto}
+  .kbd{font-family:var(--mono);font-size:9px;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--ink-2);background:var(--card)}
+  .wf-chip{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:10px;color:var(--ink-2);white-space:nowrap}
+  .wf-body{display:grid;gap:12px;padding:14px}
+  .wf-row{display:flex;gap:12px;flex-wrap:wrap}
+  .wf-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--paper);flex:1;min-width:130px}
+  .wf-card .t{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);margin-bottom:3px}
+  .wf-card .v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+  .wf-card .s{font-size:10px;color:var(--ink-2)}
+  .wf-line{height:7px;border-radius:4px;background:var(--paper-2);margin:5px 0}
+  .wf-line.w40{width:40%}.wf-line.w60{width:60%}.wf-line.w80{width:80%}
+  .wf-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-tint);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+  .wf-avatar.lg{width:56px;height:56px;font-size:26px}
+  .wf-btn{display:inline-block;border-radius:8px;padding:6px 13px;font-size:11px;font-weight:650;text-align:center}
+  .wf-btn.pri{background:var(--green);color:var(--paper)}
+  :root[data-theme="dark"] .wf-btn.pri, :root:not([data-theme="light"]) .wf-btn.pri{color:var(--paper)}
+  .wf-btn.sec{border:1px solid var(--line-2);color:var(--ink)}
+  .wf-list-item{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .wf-list-item:last-child{border-bottom:none}
+  .wf-side{display:grid;grid-template-columns:150px 1fr;min-height:200px}
+  .wf-rail{border-right:1px solid var(--line);background:var(--paper-2);padding:10px;display:flex;flex-direction:column;gap:2px}
+  .wf-rail .it{padding:5px 9px;border-radius:7px;color:var(--ink-2);font-size:11px}
+  .wf-rail .it.on{background:var(--green);color:#F7F5F0;font-weight:650}
+  .wf-statusband{padding:10px 14px;font-weight:700;font-size:12.5px;display:flex;gap:10px;align-items:center}
+  .wf-statusband.ok{background:var(--ok-bg);color:var(--ok)}
+  .wf-statusband.warn{background:var(--warn-bg);color:var(--warn)}
+  .wf-statusband.danger{background:var(--danger-bg);color:var(--danger)}
+  .mono{font-family:var(--mono)}
+  .tag-ar{direction:rtl;font-size:12px;color:var(--ink-2)}
+
+  /* state machine */
+  .states{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:16px 0}
+  .state{border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden;box-shadow:var(--sh)}
+  .state .sb{padding:8px 12px;font-weight:700;font-size:12.5px;display:flex;justify-content:space-between;align-items:center}
+  .state .sd{padding:9px 12px;font-size:12px;color:var(--ink-2);border-top:1px solid var(--line)}
+  .state .sd b{color:var(--ink)}
+  .state.s-ok .sb{background:var(--ok-bg);color:var(--ok)}
+  .state.s-warn .sb{background:var(--warn-bg);color:var(--warn)}
+  .state.s-danger .sb{background:var(--danger-bg);color:var(--danger)}
+  .state.s-mute .sb{background:var(--mute-bg);color:var(--mute)}
+  .state.s-green .sb{background:var(--green-tint);color:var(--green)}
+
+  .swatches{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+  .sw{width:118px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card)}
+  .sw .c{height:46px}
+  .sw .l{padding:6px 9px;font-size:10px}
+  .sw .l b{display:block;font-size:11px}
+  .sw .l code{font-size:9.5px;background:none;padding:0;color:var(--mute)}
+
+  .crit{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:14px 18px;margin:12px 0;box-shadow:var(--sh)}
+  .crit .ct{display:flex;gap:10px;align-items:baseline;font-weight:700;font-size:13.5px}
+  .crit .ct .n{font-family:var(--mono);color:var(--danger);font-size:11px}
+  .crit .fix{margin-top:6px;font-size:12.8px;color:var(--ink-2)}
+  .crit .fix b{color:var(--ok)}
+
+  footer{margin-top:70px;border-top:1px solid var(--line);padding-top:18px;font-size:12px;color:var(--mute);font-family:var(--mono)}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <div class="brand">Moracat Partner</div>
+  <div class="doc-id">MRC-VET-001 · dossier</div>
+  <a href="#thesis"><span class="n">00</span>Thesis &amp; principles</a>
+  <div class="grp">Foundation</div>
+  <a href="#journey"><span class="n">01</span>Partner journey</a>
+  <a href="#auth"><span class="n">02</span>Identity &amp; access</a>
+  <a href="#ia"><span class="n">03</span>IA &amp; sitemap</a>
+  <div class="grp">The counter</div>
+  <a href="#dashboard"><span class="n">04</span>Dashboard</a>
+  <a href="#lookup"><span class="n">05</span>Finding a cat</a>
+  <a href="#profile"><span class="n">06</span>Cat profile</a>
+  <a href="#verification"><span class="n">07</span>Verification states</a>
+  <a href="#benefits"><span class="n">08</span>Benefits engine</a>
+  <a href="#visit"><span class="n">09</span>Visit workflow</a>
+  <div class="grp">Clinical</div>
+  <a href="#records"><span class="n">10</span>Medical records</a>
+  <a href="#scanner"><span class="n">11</span>Scanner</a>
+  <a href="#notifications"><span class="n">12</span>Notifications</a>
+  <a href="#reports"><span class="n">13</span>Reports</a>
+  <div class="grp">Operations</div>
+  <a href="#roles"><span class="n">14</span>Roles &amp; permissions</a>
+  <a href="#branches"><span class="n">15</span>Multi-branch</a>
+  <a href="#settings"><span class="n">16</span>Settings</a>
+  <a href="#support"><span class="n">17</span>Support</a>
+  <div class="grp">Craft</div>
+  <a href="#edges"><span class="n">18</span>Empty states &amp; errors</a>
+  <a href="#responsive"><span class="n">19</span>Responsive &amp; devices</a>
+  <a href="#delight"><span class="n">20</span>Delight &amp; a11y</a>
+  <a href="#system"><span class="n">21</span>Design system</a>
+  <a href="#data"><span class="n">22</span>Data model</a>
+  <div class="grp">Forward</div>
+  <a href="#recs"><span class="n">23</span>Recommendations</a>
+  <a href="#critique"><span class="n">24</span>Critique &amp; iteration</a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">Moracat · Vendor Portal for Veterinary Clinics · MRC-VET-001</div>
+  <h1>The portal that makes every member feel <em>recognised at the counter</em> — in five seconds.</h1>
+  <p class="thesis">Moracat's member-side truth moment is <strong>Stage 6 — redemption in the wild</strong>. This portal is the other side of that counter. Its one job: when a cat arrives at a partner clinic, the clinic knows <strong>who this cat is, whether the membership stands, and what rate to honour</strong> — before the carrier is on the floor. Everything else in this document exists to protect that moment.</p>
+  <div class="meta-row">
+    <span class="meta-chip">partners.moracat.sa</span>
+    <span class="meta-chip">Arabic-first · RTL-native (R101)</span>
+    <span class="meta-chip">offline-capable core (R114)</span>
+    <span class="meta-chip">PDPL · data in-region (R106)</span>
+    <span class="meta-chip">extends packages/db Prisma schema</span>
+  </div>
+</header>
+
+<section id="thesis">
+  <div class="sec-head"><span class="num">00</span><h2>Thesis &amp; operating principles</h2></div>
+  <p class="lede">The member app sells <strong>belonging</strong>; the partner portal sells <strong>certainty</strong>. A receptionist with a queue of six and a phone ringing does not want delight — she wants the answer, instantly, every time. So the portal's emotional register shifts: calm, fast, unambiguous. The cat is still the hero (<span class="rule">R009</span>) — but here the hero-treatment is operational: the cat's face and name fill the screen so staff can greet the <em>member</em> by their cat's name. Recognition flows <em>through</em> the clinic (<span class="rule">R001</span>).</p>
+
+  <h3>Six portal principles (derived from the Design Authority)</h3>
+  <div class="grid3">
+    <div class="cardlet"><div class="ct"><span class="k">P1</span>The counter is the product</div><p>Scan → answer in ≤5s. Every screen is judged by whether it slows down or speeds up the counter moment. The lookup box is never more than one keystroke away.</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">P2</span>Recognition flows through the clinic</div><p>Photo + name rendered large so staff greet "Ah, this is Mishmish!" — the member's Stage-6 pride is manufactured here (R001, R009).</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">P3</span>Trust is bilateral</div><p>Clinics see only what the owner consented to; owners see an audit trail of every clinic view. PDPL is a feature, stated plainly (R106).</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">P4</span>Zero-training default</div><p>A brand-new receptionist verifies her first member in under 60 seconds, unaided. If a flow needs a manual, the flow is wrong (R005 — one clear action).</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">P5</span>Offline is not an edge case</div><p>Clinic Wi-Fi fails at 8pm with a member standing at the counter. Verification must degrade gracefully to a signed offline pass (R114, R036).</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">P6</span>Never embarrass a member</div><p>An expired status is a renewal opportunity handled with dignity, not a rejection scene at a public counter (R068, R084). The UI scripts the staff's words.</p></div>
+  </div>
+
+  <div class="callout seal">
+    <div class="cl-t">Business-model decision (stated so the design is honest)</div>
+    <p>Partners fund the member rate themselves in exchange for directory presence, guaranteed foot traffic, and a co-marketing channel — <strong>no money flows from Moracat to clinics in v1</strong>. This removes settlement, payouts, and reconciliation from the portal's critical path (a huge simplification) while keeping an <code>IBAN</code> field dormant for future co-funded campaigns. The "revenue generated through Moracat" analytics are therefore framed honestly as <em>gross billings to Moracat members</em>, never as a payout claim (R006).</p>
+  </div>
+
+  <h3>North-star metrics</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Metric</th><th>Target</th><th>Why it matters</th></tr>
+    <tr><td>Counter time-to-verify</td><td class="num-cell">p90 ≤ 5s</td><td>The truth moment. Measured scan-to-status, instrumented per device class.</td></tr>
+    <tr><td>Verification success rate</td><td class="num-cell">≥ 99.5%</td><td>Includes offline verifications. A failed verify at the counter is a broken promise (R042).</td></tr>
+    <tr><td>First-verify unaided</td><td class="num-cell">≥ 95% of new staff</td><td>Zero-training principle P4, measured on first session.</td></tr>
+    <tr><td>Benefit-application rate</td><td class="num-cell">≥ 97% of verified visits</td><td>A verified member who wasn't honoured is the worst outcome — worse than no scan.</td></tr>
+    <tr><td>Monthly active clinic staff</td><td class="num-cell">≥ 80% of seats</td><td>Portal health; dormant seats predict partner churn.</td></tr>
+  </table></div>
+  <p>Guardrail inherited verbatim: <em>never optimise a metric by breaking a promise in the Design Authority.</em></p>
+</section>
+
+<section id="journey">
+  <div class="sec-head"><span class="num">01</span><h2>The partner journey</h2><span class="brief">brief step 1</span></div>
+  <p class="lede">Moracat's network is <strong>ruthlessly curated</strong> — the founding-partners registry ships empty rather than padded (per <code>partners.ts</code>). The journey is therefore designed like a membership, not a signup funnel: clinics <em>apply</em>, Moracat <em>vets</em>, and going live is earned. The curation is the member's guarantee of quality — say so in the application UI.</p>
+
+  <h3>Lifecycle state machine</h3>
+  <div class="flow">
+    <div class="step"><div class="st">applied</div><div class="sn">Application received</div><div class="sd">Public form, 8 fields, &lt;3 min</div></div>
+    <div class="arr">→</div>
+    <div class="step"><div class="st">in_review</div><div class="sn">Vetting</div><div class="sd">CR via Wathq, MEWA licence, optional site visit</div></div>
+    <div class="arr">→</div>
+    <div class="step"><div class="st">approved</div><div class="sn">Agreement out</div><div class="sd">Benefit terms drafted together</div></div>
+    <div class="arr">→</div>
+    <div class="step"><div class="st">signed</div><div class="sn">E-signed</div><div class="sd">Benefit locked; workspace provisioned</div></div>
+    <div class="arr">→</div>
+    <div class="step"><div class="st">onboarding</div><div class="sn">Setup</div><div class="sd">Branches, staff, devices, test scan</div></div>
+    <div class="arr">→</div>
+    <div class="step"><div class="st">live</div><div class="sn">In the directory</div><div class="sd">Visible to members; counter active</div></div>
+  </div>
+  <p style="font-size:12.5px;color:var(--ink-2)">Exceptional transitions: any state → <span class="pill danger">REJECTED</span> (with a written reason and reapply window), LIVE → <span class="pill warn">PAUSED</span> (clinic-requested, e.g. renovation — hidden from directory, counter still verifies), LIVE → <span class="pill danger">SUSPENDED</span> (Moracat-initiated: benefit not honoured, licence lapsed), any → <span class="pill mute">OFFBOARDED</span> (dignified exit; data exported, member-facing page says so honestly — R010's "leaving is easy" applies to partners too).</p>
+
+  <h3>Stage detail</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Stage</th><th>Who acts</th><th>What happens</th><th>Design notes</th></tr>
+    <tr><td>1 · Apply</td><td>Clinic manager</td><td>Public page <code>/partners/apply</code>: clinic name (ar+en), CR number, city, branch count, contact person, phone, email, "why Moracat" free text. No documents yet.</td><td>Under 3 minutes; mobile-friendly (managers apply from phones). Progress saved by email link — never lose entered data (R117). Auto-reply sets expectations: "we curate deliberately; review takes 5–7 working days."</td></tr>
+    <tr><td>2 · Vetting</td><td>Moracat partnerships (internal admin)</td><td>CR validated against Wathq; MEWA veterinary-practice licence requested per branch; VAT registration captured; Google-Maps presence + reviews sanity check; optional site visit for founding partners.</td><td>Internal queue lives in the existing Moracat admin, not this portal. Status emails at every transition — silence is the trust-killer.</td></tr>
+    <tr><td>3 · Agreement</td><td>Both</td><td>Benefit defined together (e.g. "15% off consultations &amp; vaccinations, excl. surgery"), stated in plain Arabic and English exactly as members will read it. Term: 12 months auto-renew, 30-day exit either side.</td><td>The benefit copy in the contract <em>is</em> the directory copy — one source of truth, no drift (R006, R087). E-sign in-flow (Nafith or DocuSign); no printing.</td></tr>
+    <tr><td>4 · Provisioning</td><td>System</td><td>PartnerOrg created; owner receives an invite to set credentials; benefit rules seeded read-only; branches scaffolded from application.</td><td>Owner's first login lands in a guided checklist, not an empty dashboard (R111).</td></tr>
+    <tr><td>5 · Onboarding checklist</td><td>Clinic owner/manager</td><td>① Confirm branch details &amp; hours ② Upload licence per branch ③ Invite staff with roles ④ Register counter device(s) ⑤ Run a test scan against "Mora" — the demo cat whose test Cat ID ships in the welcome kit ⑥ Read the counter script (1 page).</td><td>Checklist is skippable in any order except the test scan — going live is gated on one successful verification. Completion earns the single ceremonial moment (§20): the clinic's name stamped into the partner directory preview. Physical welcome kit: window sticker ("Moracat members welcomed here"), counter QR stand, Mora's test card.</td></tr>
+    <tr><td>6 · Live</td><td>—</td><td>Clinic appears in the member app's partner directory and map; counter verification active; monthly partner recap begins.</td><td>Directory entry mirrors <code>Partner</code> shape in <code>partners.ts</code> — this portal is what finally migrates that file to the DB.</td></tr>
+  </table></div>
+
+  <div class="callout"><div class="cl-t">Edge cases designed now, not later</div>
+    <ul style="font-size:13px;margin:2px 0">
+      <li><b>Licence expiry while live:</b> MEWA licences carry expiry dates; portal warns at 60/30/7 days, and an expired licence auto-pauses the branch from the directory (member trust outranks partner convenience) with a one-tap re-upload path.</li>
+      <li><b>Ownership transfer:</b> clinics get sold. An owner can initiate transfer to a new verified owner; agreement re-signs; staff and history persist.</li>
+      <li><b>Duplicate application:</b> CR-number dedupe at submit; second applicant is routed to "ask your owner to invite you" instead of a rejection.</li>
+      <li><b>Franchise groups:</b> one PartnerOrg, many branches, one agreement — the model is org-level from day one (§15), so no migration cliff.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="auth">
+  <div class="sec-head"><span class="num">02</span><h2>Identity &amp; access</h2><span class="brief">brief step 2</span></div>
+  <p class="lede"><strong>Every staff member has their own account. Non-negotiable.</strong> This portal displays medical data and applies financial benefits — both must be attributable to a person, not a shared "reception" login. The design makes individual accounts <em>cheaper than sharing</em>: inviting a colleague takes 20 seconds, and the counter has a PIN fast-switch so individual identity costs nothing at the front desk.</p>
+
+  <h3>Authentication methods</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Method</th><th>Availability</th><th>Notes</th></tr>
+    <tr><td>Email + password</td><td>All staff</td><td>zxcvbn strength meter; breached-password check; Argon2id at rest. Password is set by the invitee, never by the inviter.</td></tr>
+    <tr><td>Magic link</td><td>All staff</td><td>15-min single-use link; the default "forgot password" is simply "email me a sign-in link" — recovery reframed as convenience (R084: never blame).</td></tr>
+    <tr><td>Passkeys</td><td>All staff, promoted</td><td>Offered immediately after first login ("sign in with your fingerprint next time"). The long-term default; passwords become the fallback.</td></tr>
+    <tr><td>TOTP 2FA</td><td><b>Mandatory</b> for Owner, Manager, Finance · nudged for others</td><td>Enforced at first login for privileged roles; recovery codes shown once, download forced. SMS is deliberately not offered (SIM-swap risk in-region).</td></tr>
+    <tr><td>New-device verification</td><td>All staff</td><td>Unrecognised device → 6-digit email code; device then remembered 90 days (extends existing <code>DeviceSession</code> model). Every new device notifies the account by email.</td></tr>
+    <tr><td>Counter-mode PIN switch</td><td>Registered clinic terminals only</td><td>See below — the design's answer to the shared-iPad reality.</td></tr>
+  </table></div>
+
+  <h3>Counter Mode — the shared-device answer</h3>
+  <p>The front-desk reality is one iPad used by four people. Fighting it produces shared passwords; designing for it produces accountability:</p>
+  <ul>
+    <li>A Manager registers a device as a <b>clinic terminal</b> (named, e.g. "Reception iPad — Olaya"). Registration itself requires the manager's 2FA.</li>
+    <li>The terminal shows an <b>avatar rail</b> of on-shift staff. Tapping your face + your 4-digit PIN switches the active identity in under two seconds. Every action is logged against the active person.</li>
+    <li>Auto-lock to the avatar rail after <b>2 minutes idle</b>; a full credential re-auth of any privileged user is required every 12 hours to keep the terminal warm.</li>
+    <li>PIN attempts rate-limited (5 → 30s lockout → manager unlock); PINs are per-person, never printed, changed from any personal session.</li>
+    <li>Terminals hold <b>reduced scopes</b> by policy: no exports, no settings, no staff management — even for an Owner identity while on a terminal. Sensitive work belongs to personal sessions.</li>
+  </ul>
+
+  <h3>Invitations &amp; session management</h3>
+  <ul>
+    <li><b>Invite flow:</b> Manager enters email + role + branch scope → invitee gets a bilingual email → sets their own password/passkey → accepts the staff terms (PDPL confidentiality acknowledgment, one screen, plain language) → lands in a role-tailored first-run. Invites expire in 7 days, re-sendable, revocable.</li>
+    <li><b>Session list:</b> every user sees their devices ("Reception iPad · Olaya · active now") and can revoke any; Owners see all staff sessions per branch and can force sign-out (used when a phone is lost).</li>
+    <li><b>Offboarding a staff member:</b> one action — disables login, revokes sessions and PINs everywhere, keeps their name on historical records (audit integrity; records are never orphaned).</li>
+    <li><b>Login history</b> (extends existing <code>LoginHistory</code>): last 30 events with device, IP city, and method — visible to the user themselves and to Owners.</li>
+  </ul>
+</section>
+
+<section id="ia">
+  <div class="sec-head"><span class="num">03</span><h2>Information architecture &amp; sitemap</h2><span class="brief">deliverable 1–3</span></div>
+  <p class="lede">The IA has a spine and two wings. The <strong>spine</strong> is the omnibox — global, always focused, one keystroke away. The <strong>left wing</strong> is daily work (Today, Visits, Patients). The <strong>right wing</strong> is management (Reports, Staff, Settings) — visited weekly, never in the way. Depth is capped at three levels; nothing the counter needs is more than one action deep.</p>
+
+  <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">partners.moracat.sa — sitemap</span></div>
+  <div style="padding:16px;overflow-x:auto"><pre class="mono" style="font-size:11.5px;line-height:1.75;margin:0;color:var(--ink-2)">
+/                     → redirect: /today (authed) · /welcome (not)
+/welcome              marketing-lite sign-in page · apply link
+/apply                partner application (public, bilingual)
+
+/today                ① dashboard — the working home
+/scan                 ② full-screen scanner (also modal from anywhere · S key)
+/cats/[catId]         ③ cat profile (clinic view) — tabs: overview · health · visits · files · benefit
+/visits               ④ visit list (open + history)   /visits/[id] visit sheet
+/patients             ⑤ this clinic's patients (cats seen before) — the only browsable list
+
+/reports              ⑥ analytics: overview · visits · benefits · members · services   (+ export)
+/staff                ⑦ people &amp; roles · invitations · counter devices
+/branches             ⑧ branch list · [id]: details, hours, licence, directory preview
+/settings             ⑨ org profile · benefit terms (read-only) · notifications ·
+                        security · documents · API keys · audit log · language/theme
+/support              ⑩ help centre · chat · report an issue · emergency line
+/notifications        notification centre (also a top-bar tray)
+</pre></div>
+  <div class="cap">Ten top-level destinations. ①–⑤ are the daily spine (reception + vets); ⑥–⑩ are management, hidden from roles that can't use them — a receptionist's nav shows five items, not ten (permission-aware IA, not disabled greyed-out noise).</div></div>
+
+  <h4>Navigation model</h4>
+  <ul>
+    <li><b>Top bar</b> (persistent): logo → /today · omnibox (⌘K / <span class="kbd">/</span>) · Scan button (<span class="kbd">S</span>) · branch switcher (<span class="kbd">⌘B</span>) · notifications tray · avatar.</li>
+    <li><b>Left rail</b> (desktop) / <b>bottom tabs</b> (tablet counter mode): Today, Visits, Patients, Reports, More. Icons + labels always (no mystery-meat).</li>
+    <li><b>Breadcrumbs</b> only below level two (visit sheet ← visits). URLs are stable and shareable within the org — a vet can Slack a visit link to a colleague.</li>
+    <li><b>RTL:</b> the rail sits right in Arabic; the omnibox stays centred; chevrons and progress mirror (R104). Arabic is the default locale for every new org (R101).</li>
+  </ul>
+</section>
+
+<section id="dashboard">
+  <div class="sec-head"><span class="num">04</span><h2>Dashboard — <em style="font-family:var(--serif)">Today</em></h2><span class="brief">brief step 3</span></div>
+  <p class="lede">The home screen is named <strong>Today</strong>, not "Dashboard" — it answers the question a clinic actually has at 9am: <em>what's happening right now, and is anything waiting on me?</em> It is a working surface, not a vanity chart wall. The omnibox is the visual and functional centre; everything else supports it.</p>
+
+  <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">partners.moracat.sa/today · desktop</span></div>
+  <div class="wf">
+    <div class="wf-topbar">
+      <span class="wf-logo">moracat<span style="color:var(--seal)">·</span>partner</span>
+      <div class="wf-search">🔎 Cat ID, phone, microchip, or name… <span class="kbd">/</span><span class="kbd">⌘K</span></div>
+      <span class="wf-btn pri">⌁ Scan <span class="kbd" style="border-color:rgba(247,245,240,.4);color:inherit">S</span></span>
+      <span class="wf-chip">Olaya branch ▾</span>
+      <span class="wf-chip">🔔 3</span>
+      <span class="wf-avatar" aria-hidden="true">👩‍⚕️</span>
+    </div>
+    <div class="wf-side">
+      <div class="wf-rail">
+        <div class="it on">☀️ Today</div><div class="it">📋 Visits</div><div class="it">🐈 Patients</div><div class="it">📊 Reports</div><div class="it">⋯ More</div>
+      </div>
+      <div class="wf-body">
+        <div style="font-size:13px"><b>Good morning, Dr. Sara.</b> <span style="color:var(--ink-2)">Sunday 13 Jul · 3 open visits · quiet so far.</span></div>
+        <div class="wf-row">
+          <div class="wf-card"><div class="t">Moracat visits today</div><div class="v">7</div><div class="s">2 open · 5 completed</div></div>
+          <div class="wf-card"><div class="t">Member rates honoured — July</div><div class="v">SAR 1,240</div><div class="s">across 43 visits</div></div>
+          <div class="wf-card"><div class="t">New members nearby</div><div class="v">12</div><div class="s">joined within 5 km this month</div></div>
+          <div class="wf-card" style="border-color:var(--warn);"><div class="t" style="color:var(--warn)">Needs attention</div><div class="v" style="font-size:13px;font-weight:650">Branch licence expires in 21 days</div><div class="s">Renew &amp; re-upload →</div></div>
+        </div>
+        <div class="wf-row">
+          <div class="wf-card" style="flex:2">
+            <div class="t">Open visits</div>
+            <div class="wf-list-item"><span class="wf-avatar" aria-hidden="true">🐱</span><div style="flex:1"><b>Mishmish</b> · Umm Khalid <div style="font-size:10px;color:var(--ink-2)">Checked in 9:12 · vaccination · Dr. Sara</div></div><span class="pill ok">In progress</span></div>
+            <div class="wf-list-item"><span class="wf-avatar" aria-hidden="true">🐈</span><div style="flex:1"><b>Louza</b> · Abu Fahad <div style="font-size:10px;color:var(--ink-2)">Checked in 9:30 · waiting room</div></div><span class="pill warn">Waiting 12 min</span></div>
+            <div style="margin-top:8px"><span class="wf-btn sec">All visits →</span></div>
+          </div>
+          <div class="wf-card" style="flex:1.2">
+            <div class="t">From Moracat</div>
+            <div style="font-size:11px;margin:6px 0"><b>Vaccination-season recap kit</b><br><span style="color:var(--ink-2)">Counter cards for members are on the way to your branch.</span></div>
+            <div style="font-size:11px;margin:6px 0"><b>Directory photo refresh</b><br><span style="color:var(--ink-2)">Your page gets 210 views/mo — add interior photos?</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap">Today, desktop. The omnibox is focused on load — a receptionist can scan or type with zero clicks. "Member rates honoured" mirrors the member-side savings tally (R041): the clinic sees the value it creates, framed as recognition, not cost.</div></div>
+
+  <h4>What earns a place on Today (and what doesn't)</h4>
+  <ul>
+    <li><b>Open visits</b> — the live queue; the only list that matters at 9am. One tap resumes a visit sheet.</li>
+    <li><b>Four stat cards, fixed:</b> today's Moracat visits · member rates honoured this month (SAR) · new members nearby · needs-attention (contextual: licence expiry, unverified device, pending invite). Cards are answers, not charts; charts live in Reports.</li>
+    <li><b>From Moracat</b> — announcements, capped at two, dismissible, never marketing-shouty (R081).</li>
+    <li><b>Deliberately absent:</b> revenue graphs (weekly rhythm ≠ daily counter), unread-message badges duplicated from the tray, third-party promotions (never), and any card a receptionist can't act on. Role-aware: reception sees queue-first; Finance sees benefit totals first; a vet's Today leads with <em>their</em> assigned open visits.</li>
+  </ul>
+</section>
+
+<section id="lookup">
+  <div class="sec-head"><span class="num">05</span><h2>Finding a cat — the core experience</h2><span class="brief">brief step 4</span></div>
+  <p class="lede">One omnibox, every identifier, zero mode-switching. The receptionist should never have to decide <em>how</em> to search — the box detects what was entered. Scanning is the fast path; typing is the fallback; both land on the same result card.</p>
+
+  <h3>Input auto-detection</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Typed input</th><th>Detected as</th><th>Behaviour</th></tr>
+    <tr><td class="mono">MC-7H2K-94QF</td><td>Cat ID number</td><td>Exact match, instant. Hyphens/case/spaces forgiven; <code>MC</code> prefix optional. The human-readable ID (R032) is the primary key of the counter.</td></tr>
+    <tr><td class="mono">05XXXXXXXX / +9665…</td><td>Owner phone</td><td>Exact match → owner's cats listed (multi-cat households are one household, R109). Normalises 05/9665/+9665.</td></tr>
+    <tr><td class="mono">15-digit number</td><td>Microchip</td><td>Exact match; also matched when a chip reader wedges digits in. The safety job (Cat ID job #1) — works for <em>any</em> registered cat, member or not (§23, Found-Cat mode).</td></tr>
+    <tr><td class="mono">name@example.com</td><td>Owner email</td><td>Exact match only.</td></tr>
+    <tr><td>Mishmish / مشمش</td><td>Cat or owner name</td><td>Instant fuzzy search — <b>scoped to this clinic's own patients only</b> (see privacy boundary). Arabic-normalised (ء/أ/آ, ة/ه, ي/ى folded).</td></tr>
+    <tr><td>Rapid keystroke burst ending ↵</td><td>USB/Bluetooth scanner wedge</td><td>A global listener recognises scanner-speed input anywhere in the app — the cashier never has to click into a field first. This is the single highest-leverage detail in the portal.</td></tr>
+  </table></div>
+
+  <div class="callout warn"><div class="cl-t">The privacy boundary that shapes search</div>
+    <p><b>Free-text browsing of the member base is not a feature — it's a leak.</b> Name search and autocomplete operate only over cats this clinic has previously seen (a consented care relationship). For everyone else, lookup requires possession of an exact identifier: the physical/digital card (QR), the ID number, the owner's phone, or a microchip read. A clinic can verify anyone who <em>presents</em>; it can browse no one who hasn't. Every profile open is logged and owner-visible (P3).</p>
+  </div>
+
+  <h3>Speed furniture</h3>
+  <div class="grid2">
+    <div class="cardlet"><div class="ct">Recent lookups</div><p>Last 10, device-local, 24-hour TTL, cleared on sign-out. Regulars at the counter reappear instantly ("Louza was just here Thursday").</p></div>
+    <div class="cardlet"><div class="ct">Keyboard-first</div><p><span class="kbd">/</span> focuses the omnibox from anywhere · <span class="kbd">S</span> opens the scanner · <span class="kbd">↑↓ ↵</span> through results · <span class="kbd">⌘K</span> command palette includes lookup as its first section (§20).</p></div>
+    <div class="cardlet"><div class="ct">Result card, not a results page</div><p>An exact match skips the list entirely: the status band + cat card renders in place, with <span class="kbd">↵</span> opening the full profile and <span class="kbd">B</span> starting the benefit flow. p90 target: identifier-to-status ≤ 5s including scan.</p></div>
+    <div class="cardlet"><div class="ct">Saved patients</div><p>"Patients" (§03 ⑤) is the browsable memory of the clinic — filter by last visit, species alerts, vaccination due. Pinned cats (chronic patients) float to top for the vets that follow them.</p></div>
+  </div>
+
+  <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">omnibox → exact match (Cat ID typed or scanned)</span></div>
+    <div class="wf">
+      <div class="wf-topbar"><span class="wf-logo">moracat<span style="color:var(--seal)">·</span>partner</span><div class="wf-search" style="border-color:var(--green);color:var(--ink)"><span class="mono">MC-7H2K-94QF</span></div></div>
+      <div class="wf-statusband ok">✓ Active member — honour 15% member rate <span style="margin-left:auto;font-weight:500;font-size:11px">verified just now · online</span></div>
+      <div class="wf-body" style="grid-template-columns:auto 1fr auto;display:grid;align-items:center">
+        <span class="wf-avatar lg" aria-hidden="true">🐱</span>
+        <div>
+          <div style="font-size:16px;font-weight:700">Mishmish <span style="color:var(--ink-2);font-weight:400">· مشمش</span></div>
+          <div style="font-size:11px;color:var(--ink-2)">Scottish Fold · ♀ spayed · 3y 2m · 4.1 kg <b style="color:var(--danger)">· ⚠ allergy: penicillin</b></div>
+          <div class="mono" style="font-size:10px;color:var(--mute);margin-top:2px">MC-7H2K-94QF · member since Mar 2026 · Umm Khalid · 05• ••• ••12 (tap to reveal)</div>
+        </div>
+        <div style="display:grid;gap:6px"><span class="wf-btn pri">Start visit <span class="kbd" style="border-color:rgba(247,245,240,.4);color:inherit">↵</span></span><span class="wf-btn sec">Open profile</span></div>
+      </div>
+    </div>
+  <div class="cap">The five-second answer: status band (colour + words, never colour alone — R093), the cat as hero, the medical alert impossible to miss, phone masked until deliberately revealed. One primary action (R005).</div></div>
+</section>
+
+<section id="profile">
+  <div class="sec-head"><span class="num">06</span><h2>The cat profile — clinic view</h2><span class="brief">brief step 5</span></div>
+  <p class="lede">The profile a vet sees is <strong>not</strong> the owner's profile with extra buttons — it is a clinical chart with a membership header, filtered through the owner's consent. Layout priority: identity → alerts → the tab a vet needs (Health) → history.</p>
+
+  <h3>Consent tiers (what a clinic can see)</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Tier</th><th>Contents</th><th>Default</th><th>Owner control</th></tr>
+    <tr><td>T0 · Identity</td><td>Photo, name, breed, sex, DOB, weight, membership status, owner first name + masked phone, emergency contact, medical <b>alerts</b> (allergies, critical conditions)</td><td>Always visible on verify</td><td>None — this <em>is</em> the Cat ID's job (safety + value). Alerts are deliberately in T0: a hidden allergy can kill.</td></tr>
+    <tr><td>T1 · Care summary</td><td>Vaccination records, known conditions, current medications, weight history, sterilisation, insurance flag</td><td>On for verified partner vets</td><td>Owner may restrict per clinic; portal shows "summary restricted by owner" honestly, never silently empty.</td></tr>
+    <tr><td>T2 · Full history</td><td>Visit notes from <em>other</em> clinics, lab reports, imaging, documents, prescriptions</td><td>Off</td><td>Owner grants per clinic (standing) or per visit ("share for 24 hours" — approved from the member app when the clinic requests it; the request appears as a push notification with the clinic's name).</td></tr>
+  </table></div>
+  <p>Records <em>created by this clinic</em> are always visible to this clinic — a clinic never loses access to its own clinical work. T2 governs cross-clinic visibility only. Every T1/T2 view writes an access-log row the owner can read ("Alwan Vet viewed Mishmish's vaccination record — Sun 9:14"). Trust is bilateral (P3), and it is the portal's competitive moat: owners consent <em>because</em> they can see the ledger.</p>
+
+  <h3>Screen anatomy</h3>
+  <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">/cats/MC-7H2K-94QF · overview tab</span></div>
+    <div class="wf">
+      <div class="wf-statusband ok">✓ Active member · 15% member rate · renews 03 Mar 2027</div>
+      <div class="wf-body">
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <span class="wf-avatar lg" aria-hidden="true">🐱</span>
+          <div style="flex:1;min-width:180px">
+            <div style="font-size:17px;font-weight:700">Mishmish <span class="mono" style="font-size:10px;color:var(--mute)">MC-7H2K-94QF</span></div>
+            <div style="font-size:11px;color:var(--ink-2)">Scottish Fold · ♀ spayed · b. 11 May 2023 (3y 2m) · 4.1 kg ↘︎ was 4.4</div>
+            <div style="font-size:11px;color:var(--ink-2)">Owner: Umm Khalid · 05•••••12 <u>reveal</u> · Emergency: Khalid 05•••••80 · prefers Arabic</div>
+          </div>
+          <div style="display:grid;gap:6px"><span class="wf-btn pri">Start visit</span><span class="wf-btn sec">Apply benefit only</span></div>
+        </div>
+        <div style="background:var(--danger-bg);color:var(--danger);border-radius:8px;padding:7px 12px;font-weight:650;font-size:12px">⚠ Allergic to penicillin · Anxious with dogs in waiting area — room her early if possible <span style="font-weight:400">(owner note)</span></div>
+        <div style="display:flex;gap:16px;border-bottom:1px solid var(--line);font-size:12px;padding-bottom:6px">
+          <b style="color:var(--green);border-bottom:2px solid var(--green);padding-bottom:6px;margin-bottom:-7px">Overview</b><span style="color:var(--ink-2)">Health</span><span style="color:var(--ink-2)">Visits here (6)</span><span style="color:var(--ink-2)">Files</span><span style="color:var(--ink-2)">Benefit history</span>
+        </div>
+        <div class="wf-row">
+          <div class="wf-card"><div class="t">Vaccinations</div><div style="font-size:11px">Rabies <span class="pill ok">valid → 02/2027</span><br>FVRCP <span class="pill warn">due in 3 weeks</span></div></div>
+          <div class="wf-card"><div class="t">Last visit here</div><div style="font-size:11px">26 Jun · Dr. Sara · dental check<br><span style="color:var(--ink-2)">"mild tartar, recheck 6 mo"</span></div></div>
+          <div class="wf-card"><div class="t">Current meds</div><div style="font-size:11px;color:var(--ink-2)">None recorded</div></div>
+        </div>
+      </div>
+    </div>
+  <div class="cap">Alerts are a red band, never a tab. Weight shows trend, not just number. "Visits here (6)" — the clinic's own history is first-class; cross-clinic history appears in Health only with T2 consent, marked with the source clinic's name.</div></div>
+
+  <h4>Also on the profile</h4>
+  <ul>
+    <li><b>Benefit history tab:</b> every member rate honoured at this clinic, with amounts — the receptionist's answer to "did my discount go through last time?"</li>
+    <li><b>Timeline (Health tab spine):</b> reverse-chron clinical entries, typed and filterable (§10); each entry stamped with author + branch.</li>
+    <li><b>Digital ID panel:</b> a rendering of the actual Cat ID card (reusing the member-side ID-1 component) with its QR — used when the member forgot the card and verifies by phone number instead, letting staff visually match the photo.</li>
+    <li><b>Handling notes:</b> owner-authored ("hates carriers, wrap in towel") shown in T0 — care quality is a membership benefit; surfacing it makes the member feel <em>known</em> (R001).</li>
+  </ul>
+</section>
+
+<section id="verification">
+  <div class="sec-head"><span class="num">07</span><h2>Verification — every state designed</h2><span class="brief">brief step 6</span></div>
+  <p class="lede">The status band answers with <strong>colour + words + the exact next action</strong>. The register below is exhaustive: no verification can end in an unstyled surprise. For unhappy states, the UI includes the <em>counter script</em> — one dignified sentence the staff can say out loud (P6). The member never hears "declined."</p>
+
+  <div class="states">
+    <div class="state s-ok"><div class="sb">ACTIVE <span>✓</span></div><div class="sd"><b>Honour the member rate.</b> Band shows benefit + renewal date. One action: Start visit. Auto-logs the verification.</div></div>
+    <div class="state s-ok"><div class="sb">ACTIVE · EXPIRING ≤14d</div><div class="sd">Same as active — benefit fully honoured — plus a quiet footnote: "renews 26 Jul." Staff mention nothing; the member app handles renewal (R025 is Moracat's job, not the clinic's).</div></div>
+    <div class="state s-warn"><div class="sb">GRACE · payment retrying</div><div class="sd"><b>Honour the rate for 7 days</b> past a failed renewal. Trust precedes the ask (R004); a card-expiry hiccup must never cause a counter scene. Band: "Active — payment updating."</div></div>
+    <div class="state s-mute"><div class="sb">EXPIRED / CANCELLED</div><div class="sd">Identity + alerts still shown (safety never expires). No benefit. Script: <i>"Mishmish's membership has lapsed — care continues as usual today at standard rates."</i> A "renewal QR" chip lets the member re-join from their phone in the waiting room — the portal never takes payment on their behalf.</div></div>
+    <div class="state s-mute"><div class="sb">PAUSED</div><div class="sd">Owner paused (R062). Treated exactly like expired at the counter, worded as "paused" — pausing must never feel punished.</div></div>
+    <div class="state s-danger"><div class="sb">SUSPENDED</div><div class="sd">Moracat-side hold (fraud/chargeback). No benefit; no reason shown at the counter (never accuse — the flag may be wrong). Script: <i>"the membership needs attention on Moracat's side — care continues at standard rates."</i> One tap: "notify Moracat support," which also messages the owner.</div></div>
+    <div class="state s-danger"><div class="sb">NOT FOUND</div><div class="sd">ID pattern valid but no record. Causes: typo, counterfeit, deleted account. Show retry guidance first (typos dominate), then "report this card" after a second failure.</div></div>
+    <div class="state s-warn"><div class="sb">FLAGGED · velocity</div><div class="sd">Same ID verified at 3+ clinics within an hour → silently flagged to Moracat trust team; <b>the counter still honours it</b>. False positives (cattery day, multi-errand owners) must never punish members; fraud is fought back-office.</div></div>
+    <div class="state s-green"><div class="sb">VERIFIED OFFLINE</div><div class="sd">Signature-valid offline pass (below). Band: "Verified offline — pass issued 4 days ago." Benefit honoured; visit queues for sync.</div></div>
+  </div>
+
+  <h3>How verification happens (methods)</h3>
+  <ul>
+    <li><b>QR scan</b> — webcam, tablet/phone camera, or USB scanner (§11). The QR encodes a <b>signed, versioned payload</b>: <code>catId · membership status snapshot · issued-at · 30-day expiry · Ed25519 signature</code> — not a bare URL. Online, the portal ignores the snapshot and asks the API (source of truth); offline, it verifies the signature locally against Moracat's published public key and trusts the snapshot within its validity window.</li>
+    <li><b>NFC tap</b> — the physical card carries an NTAG chip mirroring the QR payload; any NFC-capable phone or reader delivers it as a wedge. Same pipeline as QR after decode. (Hardware variance is real — NFC is an accelerator, never the only path.)</li>
+    <li><b>Manual entry / phone / microchip / wallet pass</b> — all resolve through the omnibox (§05); the Apple/Google wallet pass barcode is the same signed QR (R034).</li>
+    <li><b>Offline mode</b> — when the API is unreachable the scan sheet switches to a slate "offline" theme automatically. Signature-valid passes verify; typed IDs cannot (no local member DB is ever stored on clinic devices — a stolen iPad must contain nothing). Benefit applications queue locally (IndexedDB) and sync with conflict-safe idempotency keys; the owner's savings tally updates on sync with honest timing ("honoured Sun 9:14, recorded 9:40").</li>
+  </ul>
+</section>
+
+<section id="benefits">
+  <div class="sec-head"><span class="num">08</span><h2>The benefits engine</h2><span class="brief">brief step 7</span></div>
+  <p class="lede">The rule is <strong>automatic, floor-guaranteed, ceiling-free</strong>: the signed member rate applies itself; a clinic can always be <em>more</em> generous, never less. The signed agreement is machine-readable, so the counter does arithmetic, not policy.</p>
+
+  <h3>Benefit rule model</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Field</th><th>Example</th><th>Notes</th></tr>
+    <tr><td>Scope</td><td class="mono">consultations, vaccinations, dental</td><td>Service categories from a shared taxonomy (§13 reports depend on it). "Everything except surgery &amp; boarding" is expressible.</td></tr>
+    <tr><td>Rate</td><td class="mono">15% | SAR 50 flat | member price list</td><td>Percentage is the default; flat and fixed-price-list supported for grooming-style menus.</td></tr>
+    <tr><td>Floor</td><td class="mono">locked at signing</td><td>Only a re-signed agreement (Moracat admin) changes it. Clinics cannot silently degrade the promise members read in the directory (R006).</td></tr>
+    <tr><td>Goodwill override</td><td class="mono">+5% "loyal patient"</td><td>Any vet/manager may increase; reason required (one tap from a preset list); logged. Reception may increase up to +5% without approval; beyond that a manager PIN co-signs.</td></tr>
+    <tr><td>Exclusions</td><td class="mono">medications at cost</td><td>Rendered verbatim at the counter so staff never improvise policy answers.</td></tr>
+  </table></div>
+
+  <h3>Applying a benefit — the 20-second path</h3>
+  <div class="flow">
+    <div class="step"><div class="st">1 · verify</div><div class="sn">Scan / lookup</div><div class="sd">Status band green</div></div><div class="arr">→</div>
+    <div class="step"><div class="st">2 · amount</div><div class="sn">Gross total + category</div><div class="sd">Numpad-first field; category chips (consultation · vaccine · dental · other)</div></div><div class="arr">→</div>
+    <div class="step"><div class="st">3 · auto-math</div><div class="sn">Benefit line computed</div><div class="sd">SAR 300 → −45 member rate → <b>SAR 255</b>, VAT shown per invoice rules</div></div><div class="arr">→</div>
+    <div class="step"><div class="st">4 · confirm</div><div class="sn">One tap</div><div class="sd">"Honour member rate — SAR 45"</div></div><div class="arr">→</div>
+    <div class="step"><div class="st">5 · echo</div><div class="sn">Member's phone buzzes</div><div class="sd">"SAR 45 honoured at Alwan Vet 🐾 — total saved: SAR 612"</div></div>
+  </div>
+  <p>Step 5 is the flywheel: <b>every counter application feeds the member's cumulative savings tally in real time</b> (R041, R042) — the clinic's tap is what makes the member's app say "worth it." The confirmation screen offers an optional member-facing flip view (tablet rotates to show the member their saving, in their language) — recognition performed in person.</p>
+
+  <h4>Audit &amp; receipts</h4>
+  <ul>
+    <li>Every application writes an immutable redemption row: who, when, branch, device, gross, benefit, category, override + reason. Owners see their own; Moracat sees all; clinics see their org's. This <em>is</em> the discount history — no separate ledger to reconcile.</li>
+    <li>Voiding a redemption (wrong amount, member changed mind) is allowed for 24h by a manager, reason required — a void, never an edit (append-only book).</li>
+    <li>The clinic's own POS still prints the fiscal receipt (ZATCA e-invoicing stays their system's job in v1); the portal generates a <b>benefit slip</b> — a small printable/QR record of the member rate applied — so the two paper trails cross-reference. Deep POS integration is roadmap (§23).</li>
+  </ul>
+</section>
+
+<section id="visit">
+  <div class="sec-head"><span class="num">09</span><h2>The visit workflow</h2><span class="brief">brief step 8</span></div>
+  <p class="lede">Three modes, because clinics have three tempos. Forcing every interaction through a full medical chart is how portals die of friction; the design lets the counter choose its depth.</p>
+
+  <div class="grid3">
+    <div class="cardlet"><div class="ct"><span class="k">A</span>Quick honour · ~20s</div><p>Verify → amount → done. No chart. For the retail moment: food purchase, nail trim. Records a visit stub so analytics stay honest.</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">B</span>Standard visit · the spine</div><p>Reception checks in → queue → vet opens chart → clinical entries → checkout applies benefit → closed. Detailed below.</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">C</span>Emergency</div><p>One red button on the scan sheet: skips all forms, opens T0 identity + alerts + emergency contact instantly, starts an open visit in the background. Paperwork after the cat is safe.</p></div>
+  </div>
+
+  <h3>Mode B, click by click</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Stage</th><th>Actor</th><th>Screen &amp; actions</th><th>Target</th></tr>
+    <tr><td>1 · Arrive</td><td>Reception</td><td>Scan card → status band → <b>Start visit</b> → reason chips (vaccination · illness · follow-up · grooming · other) → assign vet (optional) → cat enters the open-visits queue. Walk-ins without a card: phone-number lookup.</td><td class="num-cell">≤ 30s</td></tr>
+    <tr><td>2 · Wait</td><td>—</td><td>Queue on Today shows wait times; turning amber at 10 min is the only nudge (calm, not alarming).</td><td class="num-cell">—</td></tr>
+    <tr><td>3 · Consult</td><td>Vet</td><td>Vet taps the queue item → chart opens to Health tab with today's visit sheet pinned: SOAP-lite fields (subjective / findings / plan — all optional), weight quick-entry (pre-filled with last, one-tap confirm), vaccination administered (auto-fills product + due date + writes to the member-side <code>vaccinationStatus</code>), prescriptions, photo/file upload (drag, paste, or tablet camera). Every field autosaves (R117).</td><td class="num-cell">vet types &lt; 90s for a routine vax</td></tr>
+    <tr><td>4 · Checkout</td><td>Reception</td><td>Visit sheet shows services chips → gross amount → benefit auto-line (§08) → confirm. Member echo fires.</td><td class="num-cell">≤ 20s</td></tr>
+    <tr><td>5 · Close</td><td>System</td><td>Visit closes; summary syncs to the owner's app ("Mishmish visited Alwan Vet — vaccination ✓, next FVRCP due 03 Aug"); reminders schedule themselves.</td><td class="num-cell">auto</td></tr>
+  </table></div>
+
+  <div class="callout"><div class="cl-t">The detail that sells clinics</div>
+    <p>Stage 5's owner-side summary is <b>work the clinic no longer does</b>: no more "did you write the next vaccination date on a card nobody keeps?" The portal turns clinical entry into member communication automatically — the clinic looks organised, Moracat looks valuable, the cat gets its booster on time. This is the pitch line for partner acquisition.</p>
+  </div>
+</section>
+
+<section id="records">
+  <div class="sec-head"><span class="num">10</span><h2>Medical records</h2><span class="brief">brief step 9</span></div>
+  <p class="lede">One append-only timeline, typed entries, revisions instead of edits. Medical data is medico-legal data: nothing is ever destroyed, everything is attributed, and the owner's consent governs who reads what (§06 tiers).</p>
+
+  <h3>Entry types</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Type</th><th>Structured fields</th><th>Feeds member side?</th></tr>
+    <tr><td>Examination</td><td>SOAP-lite: subjective · findings · plan; weight; temperature</td><td>Visit summary + weight chart</td></tr>
+    <tr><td>Vaccination</td><td>Product, batch, route, next-due (auto-suggested per protocol)</td><td><b>Yes — writes <code>CatVaccination</code></b>, updates the Cat ID's vaccination status and schedules the owner reminder</td></tr>
+    <tr><td>Surgery / procedure</td><td>Procedure, anaesthesia notes, complications, discharge instructions</td><td>Summary + discharge sheet PDF</td></tr>
+    <tr><td>Prescription</td><td>Drug, dose, duration, refills; <b>allergy interaction check</b> against recorded allergies fires a blocking warning</td><td>Medication list + dose reminders (owner opt-in)</td></tr>
+    <tr><td>Lab / imaging</td><td>Test type, attachment(s), interpretation note</td><td>File appears in owner's documents if T2-shared by the clinic's choice or owner request</td></tr>
+    <tr><td>Note</td><td>Free text; "behaviour/handling" subtype surfaces into the T0 handling band</td><td>Handling notes only</td></tr>
+  </table></div>
+
+  <h4>Integrity model</h4>
+  <ul>
+    <li><b>Append-only with revisions:</b> editing an entry creates version n+1; prior versions remain readable via "history" (who changed what, when). Deleting is <em>retracting</em> — the entry greys out with a required reason, never vanishes.</li>
+    <li><b>Attribution:</b> every entry carries author, role, branch, device. Intern-authored entries hold in <b>draft until co-signed</b> by a veterinarian (§14).</li>
+    <li><b>Attachments</b> go to R2 (in-region per R106), virus-scanned, 25 MB/file, DICOM/PDF/JPG/PNG/HEIC; previews inline, originals downloadable with permission.</li>
+    <li><b>Export:</b> any visit or the full clinic-authored record exports as a letterheaded PDF (clinic branding from §16) — for referrals, insurance, or the owner. Cross-clinic content is never exportable by a clinic that didn't author it; the <em>owner</em> exports their cat's complete record from the member app instead. That asymmetry is the privacy model in one sentence.</li>
+  </ul>
+</section>
+
+<section id="scanner">
+  <div class="sec-head"><span class="num">11</span><h2>The scanner experience</h2><span class="brief">brief step 10</span></div>
+  <p class="lede">Full-screen scan sheet (<span class="kbd">S</span> anywhere, or the persistent top-bar button). It should feel like the airport e-gate: you barely aim, it has already answered.</p>
+  <div class="grid2">
+    <div class="cardlet"><div class="ct">Desktop webcam</div><p>Live viewfinder with a soft rounded reticle; continuous decode (no shutter button). Camera permission asked once with a plain sentence; denial falls back to typed entry with USB-scanner hint.</p></div>
+    <div class="cardlet"><div class="ct">Tablet / phone camera</div><p>Rear camera default, tap-to-torch for dim receptions, slight zoom default (cards are presented at arm's length). Haptic tick on decode.</p></div>
+    <div class="cardlet"><div class="ct">USB / Bluetooth scanner</div><p>No scanner "mode" at all — the global wedge listener (§05) means a hardware scanner works from any screen, even mid-visit. The scan sheet simply shows "hardware scanner ready ✓" when one has been seen this session.</p></div>
+    <div class="cardlet"><div class="ct">NFC</div><p>On NFC-capable devices, the sheet listens simultaneously ("or tap the card on the reader"). One pipeline post-decode.</p></div>
+  </div>
+  <h4>Choreography</h4>
+  <ul>
+    <li><b>Recognition ≤ 300ms after decode:</b> reticle snaps to the code, the sheet washes in the status colour (green/amber/slate), the cat card slides up 200ms ease-out. One optional soft chime (setting, default off — waiting rooms are loud enough). Reduced-motion: colour + card appear without translation (R075).</li>
+    <li><b>Failure ladder:</b> ① 3s without decode → gentle tips fade in ("fill the frame · try the torch") ② unreadable/damaged code → "type the number instead — it's printed under the QR" (the human-readable ID earning its keep, R032) ③ valid QR, wrong domain (random QR scanned) → "that's not a Moracat card" ④ valid card, not found → §07 NOT FOUND. Never a dead end (R112).</li>
+    <li><b>Offline:</b> the sheet's chrome turns slate with an explicit "offline — signed cards still verify" caption before anyone scans, so staff aren't surprised mid-gesture (R115: prevent, don't apologise).</li>
+    <li><b>Loading honesty:</b> network check happens in parallel with decode; if the API round-trip exceeds 800ms a two-word status appears ("checking membership…" — R119) rather than a frozen reticle.</li>
+  </ul>
+</section>
+
+<section id="notifications">
+  <div class="sec-head"><span class="num">12</span><h2>Notifications</h2><span class="brief">brief step 11</span></div>
+  <p class="lede">Role-routed, quiet by default, and <strong>never marketing in disguise</strong>. A notification a receptionist can't act on is spam with a bell icon.</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>Event</th><th>Routed to</th><th>Channel</th><th>Notes</th></tr>
+    <tr><td>Licence / document expiring</td><td>Owner, Manager</td><td>In-portal + email 60/30/7d</td><td>The only red-badge category — it can pause the branch.</td></tr>
+    <tr><td>Staff invite accepted · new device sign-in</td><td>Owner, Manager</td><td>In-portal + email</td><td>Security events always email.</td></tr>
+    <tr><td>Benefit terms updated (re-signed)</td><td>All staff</td><td>In-portal, pinned once</td><td>Counter staff must never learn terms from a member.</td></tr>
+    <tr><td>Vaccination due for a clinic patient</td><td>Assigned vet (digest)</td><td>Weekly digest</td><td>Opt-in per vet; powers proactive recall calls — clinics love this.</td></tr>
+    <tr><td>Support reply · Moracat announcement</td><td>Requester · Owner+Manager</td><td>In-portal (+ email if away)</td><td>Announcements capped ~2/month; prayer-aware send windows (R107).</td></tr>
+    <tr><td>System maintenance</td><td>All</td><td>Banner, scheduled ahead</td><td>Never a surprise during clinic hours; offline mode is the fallback anyway.</td></tr>
+    <tr><td>New member joined nearby</td><td>Owner (monthly recap only)</td><td>Email recap</td><td>Deliberately <em>not</em> a real-time ping — that would train staff to ignore the bell.</td></tr>
+  </table></div>
+  <p>Centre design: a top-bar tray (last 20, mark-all-read) backed by <code>/notifications</code> with filters. Per-user channel preferences in Settings; per-role defaults set sensibly so nobody must configure anything (R111 spirit: defaults are the design).</p>
+</section>
+
+<section id="reports">
+  <div class="sec-head"><span class="num">13</span><h2>Reports &amp; analytics</h2><span class="brief">brief step 12</span></div>
+  <p class="lede">Reports answer the partner's one strategic question — <strong>"is Moracat worth it?"</strong> — with honest numbers the clinic can verify against its own books (R006). Four report tabs, one filter bar (date range · branch · service category), every view exportable.</p>
+  <div class="grid2">
+    <div class="cardlet"><div class="ct">Overview</div><ul><li>Moracat visits (trend vs. previous period)</li><li>Gross billings to members · member rates honoured (SAR)</li><li>Unique members served · new vs. returning split</li><li>Estimated Moracat-attributed revenue = first-visit members' billings, labelled "estimated" honestly</li></ul></div>
+    <div class="cardlet"><div class="ct">Visits</div><ul><li>By day/hour heat strip → staffing insight</li><li>By reason chips · average duration (check-in→close)</li><li>Queue wait p50/p90 — the clinic's own quality mirror</li></ul></div>
+    <div class="cardlet"><div class="ct">Benefits</div><ul><li>Honoured amount by category · override log</li><li>Redemption count vs. verification count (the gap = members verified but not honoured — should be ~0, §00 metric)</li></ul></div>
+    <div class="cardlet"><div class="ct">Members &amp; services</div><ul><li>Top services for members · breed mix (fun, shareable)</li><li>Average spend per visit (members vs. estimate of non-member baseline if the clinic enters it — optional, never fabricated)</li><li>Retention: members returning within 6 months</li></ul></div>
+  </div>
+  <ul>
+    <li><b>Monthly partner statement:</b> an automatic letterheaded PDF on the 1st — the numbers above plus directory-page views and "members nearby" — designed to be forwarded to the clinic's owner group chat. This document renews the partnership emotionally every month.</li>
+    <li><b>Exports:</b> CSV per table, PDF per report, both respecting branch scope and the Finance role's permissions. No raw member PII in exports (names → Cat ID numbers) — exports leave the building.</li>
+    <li><b>Charts:</b> calm — single accent, area fills, no 3-D, tabular-nums everywhere; empty ranges render an honest "quiet fortnight" state, not a fake flatline (R111).</li>
+  </ul>
+</section>
+
+<section id="roles">
+  <div class="sec-head"><span class="num">14</span><h2>Roles &amp; the permission matrix</h2><span class="brief">brief step 13</span></div>
+  <p class="lede">Six roles, additive scopes, branch-boundable. Reuses the existing <code>Role / Permission / RolePermission</code> tables with a partner-scoped permission namespace (<code>partner.*</code>) — no parallel RBAC system to drift.</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>Capability</th><th>Owner</th><th>Manager</th><th>Veterinarian</th><th>Vet tech / nurse</th><th>Reception</th><th>Finance</th><th>Intern</th></tr>
+    <tr><td>Verify membership / lookup</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="yes">✓</td></tr>
+    <tr><td>View T0 identity + alerts</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="yes">✓</td></tr>
+    <tr><td>View T1 care summary</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="cond">during open visit</td><td class="no">—</td><td class="yes">✓</td></tr>
+    <tr><td>View T2 shared history</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="cond">with vet on visit</td><td class="no">—</td><td class="no">—</td><td class="cond">read-only</td></tr>
+    <tr><td>Create clinical entries</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="cond">vax &amp; vitals only</td><td class="no">—</td><td class="no">—</td><td class="cond">draft → co-sign</td></tr>
+    <tr><td>Revise / retract own entries</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="cond">own, 24h</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td>Start / close visits</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="cond">start only</td></tr>
+    <tr><td>Apply benefit (signed rate)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td>Goodwill override &gt; +5%</td><td class="yes">✓</td><td class="yes">✓</td><td class="cond">to +10%</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td>Void a redemption (24h)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td>Reports: operational</td><td class="yes">✓</td><td class="yes">✓</td><td class="cond">own patients</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
+    <tr><td>Reports: financial + exports</td><td class="yes">✓</td><td class="cond">own branch</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
+    <tr><td>Invite / remove staff · set roles</td><td class="yes">✓</td><td class="cond">≤ own role, own branch</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td>Register counter devices</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td>Branch settings · documents</td><td class="yes">✓</td><td class="cond">own branch</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td>Org settings · agreement · API keys · audit log</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="cond">audit: read</td><td class="no">—</td></tr>
+  </table></div>
+  <ul>
+    <li><b>Principles:</b> least privilege by default; escalation is a role change (audited), never a shared password. Nobody — including Owner — can delete clinical entries or redemption rows. Finance deliberately cannot look up cats: money people don't need medical data (PDPL data-minimisation, R106).</li>
+    <li><b>Intern is a first-class role,</b> not a weaker vet: everything drafts until a veterinarian co-signs, which is both a legal shield and a teaching workflow (the co-sign diff is the lesson).</li>
+    <li><b>Custom roles</b> are out of v1 on purpose — six well-chosen roles beat a permission-builder no clinic manager wants to operate. Revisit only on evidenced demand.</li>
+  </ul>
+</section>
+
+<section id="branches">
+  <div class="sec-head"><span class="num">15</span><h2>Multi-branch</h2><span class="brief">brief step 14</span></div>
+  <p class="lede">Org-level from day one: one <code>PartnerOrg</code> → many <code>Branch</code>es → one agreement. Care follows the cat across branches; money and staffing stay per-branch.</p>
+  <ul>
+    <li><b>Records are org-shared by default</b> — a member seen in Olaya is recognised in Khobar; the timeline labels the branch. This is care continuity, and it's also the honest reading of consent (the owner consented to the <em>clinic</em>, whose brand spans branches).</li>
+    <li><b>Staff scope:</b> each staff member is scoped to one, several, or all branches. Counter terminals are always single-branch. The branch switcher (<span class="kbd">⌘B</span>, top bar) appears only for multi-branch staff — single-branch users never see the concept.</li>
+    <li><b>Per-branch:</b> hours, licence documents, directory presence (a branch can be paused independently), analytics slices, device registry.</li>
+    <li><b>Per-org:</b> agreement &amp; benefit terms, brand assets, staff registry, API keys, audit log, the patients list (with branch filter).</li>
+    <li><b>Directory honesty:</b> each branch is its own pin on the member map with its own hours — never "12 locations" hand-waving over one flagship (R006).</li>
+  </ul>
+</section>
+
+<section id="settings">
+  <div class="sec-head"><span class="num">16</span><h2>Settings</h2><span class="brief">brief step 15</span></div>
+  <div class="tbl-wrap"><table>
+    <tr><th>Section</th><th>Contents</th><th>Notes</th></tr>
+    <tr><td>Clinic profile</td><td>Names (ar/en), logo, photos, bio, specialties, map pin</td><td>Live <b>directory preview</b> beside the form — you edit what members will see, WYSIWYG. Changes to public copy queue for a light Moracat review (curation continues after signing).</td></tr>
+    <tr><td>Benefit terms</td><td>The signed benefit, verbatim, bilingual</td><td><b>Read-only</b> with "request a change" → partnerships chat. The lock is a feature: it protects the promise.</td></tr>
+    <tr><td>Branches</td><td>Hours (incl. prayer-time closures &amp; Ramadan schedule), contact, licence docs</td><td>Hijri-aware special hours (R110). Licence expiry drives §12 warnings.</td></tr>
+    <tr><td>Staff &amp; devices</td><td>People, roles, invitations · counter terminals, PIN policy</td><td>§02, §14.</td></tr>
+    <tr><td>Notifications</td><td>Per-user channels; per-role routing (Owner only)</td><td>Sensible defaults; digest timing respects clinic hours.</td></tr>
+    <tr><td>Security</td><td>Password/passkeys, 2FA, sessions, login history</td><td>Org security posture card for Owner ("2FA coverage: 6/8 staff").</td></tr>
+    <tr><td>Documents</td><td>CR, VAT cert, licences, signed agreement (download)</td><td>Single source; expiry badges.</td></tr>
+    <tr><td>Billing</td><td>Dormant in v1 (no money flows) — holds IBAN for future programs</td><td>Present but honest: "nothing to pay, nothing owed."</td></tr>
+    <tr><td>Integrations &amp; API</td><td>API keys (scoped: verify-only / visits-read), webhooks (visit.closed, redemption.created)</td><td>For clinics with their own PMS; keys are org-level, Owner-managed, rotatable, last-used visible. Reuses <code>ApiKey/Webhook</code> models.</td></tr>
+    <tr><td>Audit log</td><td>Filterable stream of privileged actions</td><td>Owner + Finance(read). Powered by the shared <code>AuditLog</code> table.</td></tr>
+    <tr><td>Language &amp; theme</td><td>ar ⇄ en instant switch (R102), light / dark / system</td><td>Per-user; terminals follow device setting.</td></tr>
+  </table></div>
+</section>
+
+<section id="support">
+  <div class="sec-head"><span class="num">17</span><h2>Support</h2><span class="brief">brief step 16</span></div>
+  <div class="grid3">
+    <div class="cardlet"><div class="ct">Counter-blocking? Big red path</div><p>"A member is waiting and I can't verify" gets a dedicated button on error states → instant callback line + live chat, staffed clinic hours. SLA: first response &lt; 2 min. Everything else can queue; this cannot (R120).</p></div>
+    <div class="cardlet"><div class="ct">Help centre</div><p>Task-shaped articles ("apply a benefit", "invite a vet"), bilingual, each with a 30-second silent video. Searchable from ⌘K. The counter script one-pager lives here too.</p></div>
+    <div class="cardlet"><div class="ct">Report an issue / request a feature</div><p>Structured forms that pre-attach context (role, branch, device, last error id) so nobody types diagnostics. Feature requests get honest statuses: considering / planned / not planned + why.</p></div>
+  </div>
+  <p>Plus: a status page (status.moracat.sa) linked from every offline banner, and quarterly partner check-in calls scheduled from the portal for founding partners — support as relationship, not ticket queue.</p>
+</section>
+
+<section id="edges">
+  <div class="sec-head"><span class="num">18</span><h2>Empty states &amp; errors</h2><span class="brief">brief steps 17–18</span></div>
+  <p class="lede">Empty states are welcomes (R111); errors are recoveries (R112). Copy below is the actual shipping copy — words are interface. One Moracat illustration (from the existing sticker set, <code>tone</code>-matched) per empty state, never more; zero illustrations on errors — clinics need answers, not charm, when something breaks.</p>
+
+  <h3>Empty states</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Where</th><th>Copy (en — ar equivalent ships with it)</th><th>Action</th></tr>
+    <tr><td>First login (owner)</td><td>"Welcome to the partner network. Five steps and your counter is live."</td><td>The onboarding checklist, progress ring</td></tr>
+    <tr><td>Today, before first member</td><td>"Your counter is ready. The first time a member's card is scanned, it becomes history — this page fills itself."</td><td>Try a scan with Mora's test card</td></tr>
+    <tr><td>Patients, empty</td><td>"Every cat you care for will gather here — searchable, with their story."</td><td>Scan / look up a cat</td></tr>
+    <tr><td>Reports, &lt; 7 days data</td><td>"Numbers need a week to mean something. Early activity is already ticking below."</td><td>Show the raw visit list, no fake charts</td></tr>
+    <tr><td>Notifications, none</td><td>"Quiet. Exactly how a notification centre should look."</td><td>—</td></tr>
+    <tr><td>Search, no results</td><td>"No match for that here. If the member is with you, scan their card or try their phone number — new patients won't appear by name until their first visit."</td><td>Open scanner · explains the privacy boundary in passing</td></tr>
+    <tr><td>No staff yet</td><td>"It's just you so far. Colleagues get their own sign-in — takes twenty seconds."</td><td>Invite form inline</td></tr>
+  </table></div>
+
+  <h3>Error register</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Failure</th><th>What the user sees</th><th>Recovery path</th></tr>
+    <tr><td>Invalid Cat ID format</td><td>"That doesn't look like a Moracat number — they read like MC-7H2K-94QF."</td><td>Inline, as-you-type; field keeps input (R117)</td></tr>
+    <tr><td>Membership expired / suspended…</td><td>Status band states of §07 — designed, not errors</td><td>Counter scripts + renewal QR</td></tr>
+    <tr><td>No internet</td><td>Slate banner: "Offline — signed cards still verify; everything else will sync."</td><td>Offline pipeline §07; queued badge shows pending count</td></tr>
+    <tr><td>Server failure (5xx)</td><td>"Moracat's side is having trouble — your work is saved on this device."</td><td>Auto-retry with backoff; big-red support path if a member is waiting</td></tr>
+    <tr><td>Permission denied</td><td>"Your role doesn't include this. [Manager name] can do it or change your role."</td><td>Names the person, not just the rule</td></tr>
+    <tr><td>Duplicate open visit</td><td>"Mishmish already has an open visit (started 9:12 by Noura)."</td><td>Resume it — never fork a second chart</td></tr>
+    <tr><td>Stale session / signed out remotely</td><td>"You were signed out (new sign-in on another device). Nothing was lost."</td><td>Re-auth returns to the exact screen, form intact</td></tr>
+    <tr><td>Upload failed</td><td>"The file didn't make it. It's still queued on this device — retrying."</td><td>Per-file retry; visit can close with pending uploads</td></tr>
+    <tr><td>Deleted / offboarded account</td><td>"This clinic's access has ended. Records were exported to the owner on [date]."</td><td>Support contact; no data limbo</td></tr>
+  </table></div>
+</section>
+
+<section id="responsive">
+  <div class="sec-head"><span class="num">19</span><h2>Responsive &amp; device strategy</h2><span class="brief">brief step 19</span></div>
+  <p class="lede">Three physical realities: a <strong>desktop</strong> in the back office, a <strong>tablet at the counter</strong> (the primary device — design tablet-first), and a <strong>vet's phone</strong> in an exam room. One codebase, three postures.</p>
+  <div class="grid3">
+    <div class="cardlet"><div class="ct">Desktop ≥1024</div><ul><li>Left rail + multi-column Today</li><li>Dense tables, hover affordances allowed but never required (R098)</li><li>Full keyboard layer + ⌘K</li></ul></div>
+    <div class="cardlet"><div class="ct">Tablet · Counter Mode</div><ul><li>Bottom tab bar (thumb zone, R100), 56px targets</li><li>Scan is a persistent fat button; numpad-first amount entry</li><li>Avatar-rail PIN switching (§02); auto-lock</li><li>Member-facing flip view at confirm (§08)</li></ul></div>
+    <div class="cardlet"><div class="ct">Phone · companion</div><ul><li>PWA, installable; scan + verify + open visits only</li><li>An exam-room remote, not a shrunken portal — management screens redirect to "continue on a bigger screen" with a magic-link handoff</li><li>Camera + NFC native paths</li></ul></div>
+  </div>
+  <ul>
+    <li><b>Touch grammar:</b> swipe a queue item → complete/reassign; long-press a cat card → quick actions; pull-to-refresh on Today. All gestures have visible button equivalents (discoverability + a11y).</li>
+    <li><b>Breakpoints</b> inherit the web app's Tailwind scale; RTL mirrors layout wholesale (rail → right, chevrons flip, numerals stay Latin per KSA convention in financial contexts, Arabic-Indic optional per user).</li>
+  </ul>
+</section>
+
+<section id="delight">
+  <div class="sec-head"><span class="num">20</span><h2>Delight, keyboard, dark mode, accessibility</h2><span class="brief">brief step 20</span></div>
+  <p class="lede">Delight budget: <strong>three moments, rationed</strong> (R080). Everything else is speed — in a work tool, speed <em>is</em> the delight.</p>
+  <div class="grid3">
+    <div class="cardlet"><div class="ct"><span class="k">D1</span>The verify wash</div><p>Decode → status colour washes the sheet, cat card springs up 200ms, the cat's name renders in the display serif — the one place Fraunces appears at the counter. This is the portal's Cat-ID-reveal cousin (R073).</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">D2</span>Go-live stamp</div><p>Onboarding checklist completes → the clinic's directory card assembles on screen and an orange paw seal stamps it, once, with a soft thud. No confetti cannon (R080) — a seal, because partnership is a certification.</p></div>
+    <div class="cardlet"><div class="ct"><span class="k">D3</span>Monthly recap</div><p>The partner statement opens with one warm line: "You honoured 43 members in July. Mishmish's owner said thanks — twice." Real data only; if there's nothing warm to say, say the numbers plainly (R006).</p></div>
+  </div>
+
+  <h4>Keyboard layer &amp; command palette</h4>
+  <ul>
+    <li><span class="kbd">/</span> omnibox · <span class="kbd">S</span> scan · <span class="kbd">⌘K</span> palette · <span class="kbd">⌘B</span> branch · <span class="kbd">G</span>&nbsp;then&nbsp;<span class="kbd">T</span>/<span class="kbd">V</span>/<span class="kbd">P</span>/<span class="kbd">R</span> go-to (Linear grammar) · <span class="kbd">Esc</span> always closes, never loses (R117).</li>
+    <li>⌘K sections: lookup (first), actions ("start visit", "invite staff"), navigation, help articles. Fully operable via keyboard alone; shortcuts listed under <span class="kbd">?</span>.</li>
+  </ul>
+
+  <h4>Skeletons &amp; motion</h4>
+  <ul>
+    <li>Skeletons mirror the real layout (status band ghost + card ghost), shimmer 1.2s max before the honest text state ("checking membership…", R119). Taps acknowledge ≤100ms (R071); transitions 150–300ms (R072); <code>prefers-reduced-motion</code> collapses everything to opacity (R075).</li>
+  </ul>
+
+  <h4>Dark mode = night shift</h4>
+  <p>24-hour emergency clinics run this portal at 3am. Dark theme is a first-class clinical theme — deep green-black ground (this dossier demonstrates it), status colours re-tuned for dark contrast (≥4.5:1, R091), pure white nowhere (glare), and the scan viewfinder dims its chrome so the camera exposure isn't fighting the UI.</p>
+
+  <h4>Accessibility floor (blocking, not aspirational)</h4>
+  <ul>
+    <li>Contrast ≥4.5:1 both themes (R091) · targets ≥44px, 56px on terminals (R092) · status = colour + word + icon, never colour alone (R093) · layouts survive 200% font-size (R094) — tested on the visit sheet, the densest screen.</li>
+    <li>Full SR pass: status bands are <code>role="status"</code> live regions ("Active member, fifteen percent member rate"); scanner announces decode results; tables have real headers (R095); focus visible everywhere (R097).</li>
+    <li>Arabic parity is an a11y requirement here, not a locale: every counter script, error, and empty state ships ar+en simultaneously or doesn't ship (R101).</li>
+  </ul>
+</section>
+
+<section id="system">
+  <div class="sec-head"><span class="num">21</span><h2>Design system — the clinical dialect</h2><span class="brief">deliverable 6–7</span></div>
+  <p class="lede">Not a new design system — a <strong>dialect</strong> of Moracat's warm-paper language (<code>packages/ui</code>), tuned for a work tool: same ground, same green, tighter density, illustrations rationed to brand moments, and a semantic status family the member app doesn't need.</p>
+
+  <h3>Colour</h3>
+  <div class="swatches">
+    <div class="sw"><div class="c" style="background:#F7F5F0;border-bottom:1px solid #DDD6C8"></div><div class="l"><b>Paper</b><code>#F7F5F0</code> ground (shared)</div></div>
+    <div class="sw"><div class="c" style="background:#1E4D3B"></div><div class="l"><b>Clubhouse green</b><code>#1E4D3B</code> primary (shared)</div></div>
+    <div class="sw"><div class="c" style="background:#D96A33"></div><div class="l"><b>Paw seal</b><code>#D96A33</code> brand moments only</div></div>
+    <div class="sw"><div class="c" style="background:#2E7D4F"></div><div class="l"><b>Verified</b><code>#2E7D4F</code> semantic ok</div></div>
+    <div class="sw"><div class="c" style="background:#9A6A14"></div><div class="l"><b>Attention</b><code>#9A6A14</code> semantic warn</div></div>
+    <div class="sw"><div class="c" style="background:#B3402E"></div><div class="l"><b>Alert</b><code>#B3402E</code> semantic danger</div></div>
+    <div class="sw"><div class="c" style="background:#5B6660"></div><div class="l"><b>Slate</b><code>#5B6660</code> lapsed / offline</div></div>
+    <div class="sw"><div class="c" style="background:#14211B"></div><div class="l"><b>Night ground</b><code>#14211B</code> dark theme</div></div>
+  </div>
+  <p style="font-size:13px">Rule: <b>semantic colours carry status; the seal orange never does.</b> A screen may use the seal once (brand moment) or a semantic family (status) — mixing them is the tell of a screen doing too much.</p>
+
+  <h3>Type &amp; density</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Role</th><th>Face</th><th>Scale</th><th>Usage</th></tr>
+    <tr><td>Display</td><td>Fraunces / Lyon Arabic Display (RTL)</td><td class="num-cell">27 / 19</td><td>Section titles, the cat's name on verify (D1), recap headlines. Never in tables or controls.</td></tr>
+    <tr><td>UI</td><td>Inter / system Arabic stack</td><td class="num-cell">15.5 body · 13 tables · 11 meta</td><td>Everything operational. Portal density is one notch tighter than the member app — 4px-base spacing (4/8/12/16/24/32) vs. the marketing site's airier scale.</td></tr>
+    <tr><td>Mono</td><td>IBM Plex Mono</td><td class="num-cell">12–13</td><td>Cat ID numbers, microchips, amounts in tables (<code>tabular-nums</code>), API keys.</td></tr>
+  </table></div>
+
+  <h3>Component inventory (extends packages/ui)</h3>
+  <div class="grid2">
+    <div class="cardlet"><div class="ct">New, portal-owned</div><ul>
+      <li><b>StatusBand</b> — the §07 verdict strip; colour+icon+words+action, <code>role="status"</code></li>
+      <li><b>CatCard</b> — avatar-hero result row (three sizes)</li>
+      <li><b>OmniBox</b> — detection, wedge listener, results popover</li>
+      <li><b>ScanSheet</b> — full-screen scanner with the failure ladder</li>
+      <li><b>BenefitLine</b> — gross → member rate → net arithmetic row</li>
+      <li><b>TimelineEntry</b> — typed clinical entry with attribution + revision chip</li>
+      <li><b>AvatarRail</b> — terminal identity switcher</li>
+      <li><b>CounterScript</b> — the italic "say this" line on unhappy states</li>
+    </ul></div>
+    <div class="cardlet"><div class="ct">Inherited &amp; re-skinned</div><ul>
+      <li>Buttons (pri/sec/ghost/danger; real pressed/loading/done states, R078)</li>
+      <li>Perforated-ticket card (used for the benefit slip — brand continuity)</li>
+      <li>Cat ID card component (digital ID panel, §06)</li>
+      <li>Pills/badges, alerts, modals (focus-trapped, Esc-safe), toasts (bottom, RTL-aware)</li>
+      <li>Tables (sticky header, sortable, empty-state slot), forms (label-top, inline validation, autosave tick)</li>
+      <li>Illustration set — empty states + onboarding only, 1 per screen, <code>aria-hidden</code></li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="data">
+  <div class="sec-head"><span class="num">22</span><h2>Data model</h2><span class="brief">deliverable 8</span></div>
+  <p class="lede">Extends the existing Prisma schema; reuses <code>User</code>, <code>Role/Permission</code>, <code>DeviceSession</code>, <code>AuditLog</code>, <code>ApiKey</code>, <code>Webhook</code>, <code>Cat*</code> clinical tables rather than duplicating them. New models in <b>bold</b>; the existing <code>CatVetVisit</code> is superseded by the richer <code>Visit</code> (migration maps old rows in).</p>
+  <div class="frame"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">packages/db/prisma — partner domain (additions)</span></div>
+  <div style="padding:16px;overflow-x:auto"><pre class="mono" style="font-size:11px;line-height:1.7;margin:0;color:var(--ink-2)">
+<b style="color:var(--green)">PartnerApplication</b>  crNumber unique · status · contact · cityId → City
+<b style="color:var(--green)">PartnerOrg</b>          nameAr/En · crNumber · vatNumber · status(APPLIED…LIVE…) · slug
+  ├─ <b style="color:var(--green)">PartnerAgreement</b>   benefitRules JSON (scope/rate/floor/exclusions) · signedAt · docUrl · version
+  ├─ <b style="color:var(--green)">Branch</b>             nameAr/En · cityId · geo · hours JSON · directoryVisible · licenceExpiresAt
+  │    ├─ <b style="color:var(--green)">BranchDocument</b>  kind(MEWA_LICENCE|CR|VAT|…) · fileUrl · expiresAt
+  │    └─ <b style="color:var(--green)">CounterDevice</b>   name · registeredBy → User · lastSeenAt · revokedAt
+  ├─ <b style="color:var(--green)">PartnerStaff</b>       userId → User · role(OWNER|MANAGER|VET|VET_TECH|RECEPTION|FINANCE|INTERN)
+  │                     branchScope Branch[] · pinHash · status · invitedBy · offboardedAt
+  ├─ <b style="color:var(--green)">Visit</b>              catId → Cat · branchId · mode(QUICK|STANDARD|EMERGENCY) · reason
+  │    │                openedBy/closedBy → PartnerStaff · checkedInAt · closedAt · syncState
+  │    ├─ <b style="color:var(--green)">ClinicalEntry</b>   type(EXAM|VACCINATION|SURGERY|RX|LAB|NOTE) · payload JSON
+  │    │                authorId · coSignedBy? · revisionOf? · retractedAt? · retractReason?
+  │    │                └─ <b style="color:var(--green)">EntryAttachment</b>  r2Key · mime · bytes · scanStatus
+  │    └─ <b style="color:var(--green)">BenefitRedemption</b> grossSar · benefitSar · category · overridePct? · overrideReason?
+  │                       appliedBy · deviceId? · idempotencyKey unique · voidedAt? · voidReason?
+  ├─ <b style="color:var(--green)">ConsentGrant</b>       catId · orgId · tier(T1|T2) · grantedBy → User(owner) · expiresAt? · revokedAt?
+  ├─ <b style="color:var(--green)">RecordAccessLog</b>    catId · staffId · tier viewed · at   ← owner-visible ledger (P3)
+  └─ <b style="color:var(--green)">OfflinePassKey</b>     Ed25519 public keys, versioned, for local QR verification
+
+reused: User · Role/Permission (partner.* namespace) · DeviceSession · LoginHistory
+        AuditLog(orgId scope) · ApiKey · Webhook · Notification · SupportTicket
+        Cat · CatVaccination (written by ClinicalEntry VACCINATION) · CatDocument · CatAllergy
+</pre></div>
+  <div class="cap">Key integrity choices: redemptions carry idempotency keys (offline sync-safe); clinical entries are revisioned, never updated in place; ConsentGrant + RecordAccessLog make the §06 privacy model a schema fact, not a UI promise; PartnerOrg.status drives the §01 lifecycle.</div></div>
+</section>
+
+<section id="recs">
+  <div class="sec-head"><span class="num">23</span><h2>Recommendations — beyond the brief</h2><span class="brief">deliverable 12</span></div>
+  <div class="grid2">
+    <div class="cardlet"><div class="ct">Found-Cat mode (ship v1)</div><p>Any clinic can scan <em>any</em> Moracat card or microchip on a stray and hit one button: "I found this cat" → Moracat relays to the owner instantly (owner's number never exposed). This is Cat ID job #1 (safety) weaponised through the clinic network — the single strongest emotional proof of the whole membership, and it costs a screen.</p></div>
+    <div class="cardlet"><div class="ct">WhatsApp visit summaries</div><p>KSA lives on WhatsApp. Stage-5 visit summaries and vaccination reminders delivered there (opt-in, via the clinic's verified sender) will outperform email 10:1 and make partners look world-class.</p></div>
+    <div class="cardlet"><div class="ct">Recall engine</div><p>The vaccination-due digest (§12) grown into a one-tap recall list: "11 patients due this month → send reminders." Fills clinic calendars in low season; measurable partner revenue = retention of the partnership.</p></div>
+    <div class="cardlet"><div class="ct">PMS bridge, not PMS war</div><p>Clinics with existing practice-management systems won't double-enter. The scoped API + webhooks (§16) plus a CSV day-book export is v1's answer; a Zoho/ezyVet connector is the roadmap. Never require the portal to be the system of record for non-member patients.</p></div>
+    <div class="cardlet"><div class="ct">Earned partner status</div><p>"Founding partner" and later tenure marks (2 years honoured) shown in the member directory — recognition, not gamification, mirroring the member-side ethos (§04 authority). No leaderboards.</p></div>
+    <div class="cardlet"><div class="ct">Later, sequenced honestly</div><p>Tele-triage referrals → insurance claim pre-fill from clinical entries → co-funded campaigns (the dormant IBAN) → the identity layer for the Saudi cat economy. Trust before value, value before growth (authority sequencing).</p></div>
+  </div>
+</section>
+
+<section id="critique">
+  <div class="sec-head"><span class="num">24</span><h2>Self-critique &amp; iteration log</h2><span class="brief">deliverable 13</span></div>
+  <p class="lede">Weaknesses found in review, and what changed. Ordered by how much damage each would have done at a real counter.</p>
+
+  <div class="crit"><div class="ct"><span class="n">C1</span>The first draft buried lookup inside the dashboard.</div><div class="fix">A "Dashboard" mental model made search one click away — one click too many at a counter. <b>Fixed:</b> the omnibox became the persistent spine (focused on load, <span class="kbd">/</span> from anywhere, wedge listener global), and the home screen was renamed <i>Today</i> and demoted to supporting cast (§04–05).</div></div>
+  <div class="crit"><div class="ct"><span class="n">C2</span>Consent was binary; both settings were wrong.</div><div class="fix">"Share medical data: on/off" either starved vets (no allergy visibility = dangerous) or overshared (full cross-clinic history by default = PDPL exposure). <b>Fixed:</b> the three-tier model with alerts pinned into T0 for safety, T2 per-clinic/per-24h grants, and the owner-visible access ledger that turns privacy into a selling point (§06).</div></div>
+  <div class="crit"><div class="ct"><span class="n">C3</span>Offline QR verification invited replay of stale status.</div><div class="fix">A signed pass that never expires would verify a cancelled membership forever. <b>Fixed:</b> passes carry issued-at + 30-day validity, online checks always override the snapshot, no member DB is cached on clinic devices, and the band says <i>when</i> the pass was issued so staff exercise judgment (§07). Residual risk accepted: ≤30-day stale honour in true offline — bounded, and cheaper than a counter scene.</div></div>
+  <div class="crit"><div class="ct"><span class="n">C4</span>Counter-mode PIN switching weakened auth silently.</div><div class="fix">A 4-digit PIN is not a password. <b>Fixed:</b> PINs only exist on manager-registered terminals with reduced scopes (no exports/settings/staff), rate-limited attempts, 12h re-auth by a full credential, and per-action attribution — the terminal is a kiosk identity-multiplexer, never a general session (§02).</div></div>
+  <div class="crit"><div class="ct"><span class="n">C5</span>Fraud detection could humiliate innocent members.</div><div class="fix">Blocking at the counter on a velocity flag punishes the member for an algorithm's suspicion — the exact opposite of R068. <b>Fixed:</b> flags route silently to Moracat's trust team; the counter always honours a signature-valid active card; suspension (a human decision) is the only counter-visible sanction, worded neutrally with a script (§07).</div></div>
+  <div class="crit"><div class="ct"><span class="n">C6</span>Name search was quietly a member-directory leak.</div><div class="fix">Instant global autocomplete over all members would let any receptionist browse the customer base. <b>Fixed:</b> fuzzy search scoped to the clinic's own patients; strangers require possession of an exact identifier; the empty state explains the boundary in warm language so it reads as principle, not limitation (§05, §18).</div></div>
+  <div class="crit"><div class="ct"><span class="n">C7</span>Reports flirted with dishonest numbers.</div><div class="fix">"Revenue generated through Moracat" implied attribution the data can't prove. <b>Fixed:</b> billings labelled as billings, attribution labelled "estimated", the non-member baseline is optional clinic input and never fabricated — R006 applied to analytics (§13).</div></div>
+  <div class="crit"><div class="ct"><span class="n">C8</span>The intern role was an afterthought "weak vet."</div><div class="fix">Real clinics run on trainees; unattributed trainee entries are a legal hole. <b>Fixed:</b> draft-until-co-signed as a first-class workflow that doubles as teaching (§14).</div></div>
+
+  <h3>Honest residual gaps (v1 accepts these, eyes open)</h3>
+  <ul>
+    <li><b>ZATCA e-invoicing</b> stays in the clinic's POS; the benefit slip cross-references but doesn't replace it. Deep fiscal integration is a compliance project of its own.</li>
+    <li><b>NFC hardware variance</b> across cheap Android tablets means QR remains the guaranteed path; NFC is an accelerator only.</li>
+    <li><b>Velocity-fraud thresholds are guesses</b> until real scan data exists; the design keeps them advisory precisely because of that.</li>
+    <li><b>No custom roles</b> — a bet on six archetypes; revisit with evidence.</li>
+    <li><b>Vaccination protocol library</b> (auto next-due suggestions) ships minimal (rabies/FVRCP defaults) and grows with vet feedback rather than pretending to be a formulary.</li>
+  </ul>
+  <p><b>Verdict:</b> with C1–C8 folded in, the design holds a 10/10 bar on its own definition of quality — the five-second counter moment survives offline, unhappy states, shared devices, new staff, Arabic-first use, and privacy scrutiny — while every remaining gap is named rather than hidden. The next quality jump requires field data, not more speculation.</p>
+</section>
+
+<footer>
+  MRC-VET-001 · Moracat Partner Portal design dossier · 13 Jul 2026 · companion to design/DESIGN-AUTHORITY.md (R001–R120 cited inline) · supersedes nothing; extends MRC-UX-001
+</footer>
+
+</main>
+</div>

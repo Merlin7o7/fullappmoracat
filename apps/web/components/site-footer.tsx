@@ -22,6 +22,7 @@ export function SiteFooter() {
         { href: "/about", label: isAr ? "ما هو مرقط؟" : "What is Moracat?" },
         { href: "/#how", label: t.nav.how },
         { href: "/#plans", label: t.nav.plans },
+        { href: "/benefits", label: isAr ? "مزايا الأعضاء" : "Member benefits" },
         { href: "/register", label: t.hero.cta },
       ],
     },

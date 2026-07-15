@@ -111,4 +111,14 @@ export class ActivateSubscriptionDto {
   @ApiProperty({ enum: ACTIVATION_PROVIDERS, example: "MADA" })
   @IsIn(ACTIVATION_PROVIDERS)
   provider!: ActivationProvider;
+
+  @ApiPropertyOptional({
+    description: "Committed term in months (min 3). Member pays price x term upfront.",
+    enum: [3, 6, 12],
+    default: 3,
+  })
+  @IsOptional()
+  @IsInt()
+  @IsIn([3, 6, 12])
+  termMonths?: number;
 }

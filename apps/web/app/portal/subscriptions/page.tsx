@@ -150,6 +150,10 @@ function SubStatusBadge({ status, isAr }: { status: string; isAr: boolean }) {
   const map: Record<string, { variant: "success" | "secondary" | "destructive"; en: string; ar: string }> = {
     ACTIVE: { variant: "success", en: "Active", ar: "نشط" },
     PAUSED: { variant: "secondary", en: "Paused", ar: "موقوف" },
+    // A redirect-flow membership sits DRAFT until the PSP confirms. Never show the
+    // raw "DRAFT" DB term to a member — an in-flight or abandoned session reads as
+    // "awaiting payment", not a defect.
+    DRAFT: { variant: "secondary", en: "Awaiting payment", ar: "بانتظار إتمام الدفع" },
     CANCELLED: { variant: "destructive", en: "Cancelled", ar: "ملغى" },
   };
   const s = map[status] ?? { variant: "secondary" as const, en: status, ar: status };
