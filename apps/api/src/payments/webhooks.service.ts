@@ -21,6 +21,7 @@ import {
   type PaymentProviderKey,
   type WebhookEvent,
 } from "./payment-provider.interface";
+import { firstDeliveryOn } from "../common/config/launch";
 
 /**
  * Verifies and settles PSP webhooks. Each provider authenticates differently:
@@ -235,7 +236,9 @@ export class WebhooksService {
     // The whole committed term was paid upfront, so renewal is due at term end;
     // deliveries stay monthly.
     const termEnd = addMonthsClamped(now, sub.termMonths ?? 3);
-    const firstDelivery = addMonthsClamped(now, 1);
+    // Pre-launch: every founding member's first box ships on the launch date
+    // (central launch config). After launch it's the normal monthly cadence.
+    const firstDelivery = firstDeliveryOn(addMonthsClamped(now, 1));
     await this.prisma.$transaction([
       this.prisma.subscription.update({
         where: { id: sub.id },

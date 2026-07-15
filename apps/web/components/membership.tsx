@@ -23,6 +23,8 @@ import {
 import { Button, Badge } from "@moraqat/ui";
 import { localizeName } from "@/lib/translit";
 import { formatDate } from "@/lib/datetime";
+import { effectiveNextDelivery } from "@/lib/launch";
+import { LaunchDeliveryNote } from "./launch-note";
 
 export interface MembershipBenefit {
   icon: React.ComponentType<{ className?: string }>;
@@ -99,8 +101,17 @@ export function MembershipCard({
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <StatTile icon={CalendarClock} label={isAr ? "التجديد" : "Renews"} value={fmt(subscription.nextBillingAt)} />
-          <StatTile icon={Truck} label={isAr ? "الصندوق القادم" : "Next box"} value={fmt(subscription.nextDeliveryAt)} />
+          {/* Pre-launch, the next box is the founding first-delivery date; after
+              launch it's the member's real scheduled delivery. */}
+          <StatTile
+            icon={Truck}
+            label={isAr ? "الصندوق القادم" : "Next box"}
+            value={fmt(effectiveNextDelivery(subscription.nextDeliveryAt).date)}
+          />
         </div>
+
+        {/* Founding-member first-delivery reminder — retires after launch. */}
+        <LaunchDeliveryNote isAr={isAr} variant="inline" className="mt-3 justify-start !text-primary-foreground/90" />
 
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/portal/subscriptions">

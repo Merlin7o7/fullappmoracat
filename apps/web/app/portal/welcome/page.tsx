@@ -13,6 +13,7 @@ import { CatIdCard } from "@/components/cat-id-card";
 import { CatIdStory } from "@/components/cat-id-story";
 import { MoracatStory } from "@/components/moracat-story";
 import { MEMBERSHIP_BENEFITS } from "@/components/membership";
+import { LaunchDeliveryNote } from "@/components/launch-note";
 import { shareStoryPng, exportSafeSrc } from "@/lib/card-export";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 
@@ -234,6 +235,9 @@ function WelcomeInner() {
             ? "الحد الأدنى ٣ أشهر · تُدفع المدة مقدّماً عبر تمارا · بدون ضريبة"
             : "3-month minimum · pay the term upfront via Tamara · no VAT"}
         </p>
+
+        {/* Founding-member launch note — first delivery date. */}
+        <LaunchDeliveryNote isAr={isAr} className="mx-auto max-w-xl" />
 
         <div className="flex justify-center">
           {commerce ? (

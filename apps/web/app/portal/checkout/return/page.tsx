@@ -25,6 +25,7 @@ import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
 import { formatDate } from "@/lib/datetime";
 import { CatIdCard } from "@/components/cat-id-card";
+import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloPaw } from "@/components/illustrations";
 
 interface ActivationStatus {
@@ -181,6 +182,9 @@ function ReturnInner() {
               </p>
             )}
           </div>
+
+          {/* Reinforce the founding-member first-delivery date after checkout. */}
+          <LaunchDeliveryNote isAr={isAr} className="mx-auto mt-6 max-w-md text-start" />
 
           <div className="mt-7 flex flex-wrap justify-center gap-2">
             <Button size="lg" onClick={() => router.push("/portal")}>

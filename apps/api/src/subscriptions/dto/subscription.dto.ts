@@ -80,10 +80,12 @@ export class PauseDto {
   until?: string;
 }
 
-/** Payment providers accepted for a membership's first charge (KSA-first order). */
-const ACTIVATION_PROVIDERS = [
-  "MADA", "APPLE_PAY", "STC_PAY", "VISA", "MASTERCARD", "TABBY", "TAMARA",
-] as const;
+/**
+ * Payment providers accepted for a membership's first charge. Tamara is the ONLY
+ * method — the customer chooses pay-in-full vs. instalments on Tamara's page. The
+ * API rejects anything else (defence in depth behind the Tamara-only checkout UI).
+ */
+const ACTIVATION_PROVIDERS = ["TAMARA"] as const;
 
 export type ActivationProvider = (typeof ACTIVATION_PROVIDERS)[number];
 
@@ -108,7 +110,7 @@ export class ActivateSubscriptionDto {
   @IsString()
   addressId!: string;
 
-  @ApiProperty({ enum: ACTIVATION_PROVIDERS, example: "MADA" })
+  @ApiProperty({ enum: ACTIVATION_PROVIDERS, example: "TAMARA", default: "TAMARA" })
   @IsIn(ACTIVATION_PROVIDERS)
   provider!: ActivationProvider;
 

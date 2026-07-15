@@ -25,8 +25,6 @@ import {
   MapPin,
   Plus,
   CreditCard,
-  Smartphone,
-  Wallet,
   CalendarClock,
   Star,
   BellRing,
@@ -42,6 +40,7 @@ import { formatDate } from "@/lib/datetime";
 import { type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
 import { AddressForm, useCities, type SavedAddress } from "@/components/address-form";
 import { QueryError } from "@/components/query-error";
+import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloPaw } from "@/components/illustrations";
 
 const TIERS: PlanTier[] = ["STARTER", "STANDARD", "PREMIUM"];
@@ -49,18 +48,8 @@ const TIERS: PlanTier[] = ["STARTER", "STANDARD", "PREMIUM"];
 /** Committed term options (months). Minimum 3 — members pay price × term upfront. */
 const TERM_OPTIONS = [3, 6, 12] as const;
 
-/** KSA-first payment order — mada & Apple Pay lead, then STC Pay, then cards. */
-const PAYMENT_METHODS = [
-  { key: "MADA", labelAr: "مدى", labelEn: "mada", hintAr: "بطاقتك البنكية السعودية", hintEn: "Your Saudi bank card", icon: CreditCard },
-  { key: "APPLE_PAY", labelAr: "Apple Pay", labelEn: "Apple Pay", hintAr: "بلمسة من جهازك", hintEn: "One touch from your device", icon: Wallet },
-  { key: "STC_PAY", labelAr: "STC Pay", labelEn: "STC Pay", hintAr: "من محفظتك الرقمية", hintEn: "From your digital wallet", icon: Smartphone },
-  { key: "VISA", labelAr: "فيزا", labelEn: "Visa", hintAr: "", hintEn: "", icon: CreditCard },
-  { key: "MASTERCARD", labelAr: "ماستركارد", labelEn: "Mastercard", hintAr: "", hintEn: "", icon: CreditCard },
-  { key: "TABBY", labelAr: "تابي", labelEn: "Tabby", hintAr: "ادفع على دفعات", hintEn: "Pay in instalments", icon: CalendarClock },
-  { key: "TAMARA", labelAr: "تمارا", labelEn: "Tamara", hintAr: "ادفع على دفعات", hintEn: "Pay in instalments", icon: CalendarClock },
-] as const;
-
-type ProviderKey = (typeof PAYMENT_METHODS)[number]["key"];
+// Tamara is the only payment method (customers choose full vs. instalments on
+// Tamara's page). No in-app method selector.
 
 interface ActivateResponse {
   subscriptionId: string;
@@ -162,7 +151,9 @@ function CheckoutInner() {
   React.useEffect(() => {
     if (termMonths < minTerm) setTermMonths(minTerm);
   }, [minTerm, termMonths]);
-  const [provider, setProvider] = React.useState<ProviderKey>("MADA");
+  // Tamara is the only payment method. The customer chooses full vs. instalments
+  // on Tamara's own page, so there's no method selector here.
+  const provider = "TAMARA" as const;
   const [done, setDone] = React.useState<ActivateResponse | null>(null);
 
   const targetCats = React.useMemo(
@@ -443,45 +434,29 @@ function CheckoutInner() {
         </p>
       </Card>
 
-      {/* ── 4 · Payment ──────────────────────────────────────────────────── */}
+      {/* ── 4 · Payment — Tamara only, positioned as choice not just financing ── */}
       <Card className="space-y-5 p-6">
         <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
           <CreditCard className="size-4 text-primary" aria-hidden />
           {isAr ? "الدفع" : "Payment"}
         </h2>
 
-        <div role="radiogroup" aria-label={isAr ? "وسيلة الدفع" : "Payment method"} className="space-y-2">
-          {PAYMENT_METHODS.map((m) => {
-            const selected = m.key === provider;
-            const hint = isAr ? m.hintAr : m.hintEn;
-            return (
-              <button
-                key={m.key}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => setProvider(m.key)}
-                className={cn(
-                  "flex w-full min-h-11 items-center gap-3 rounded-xl border p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  selected ? "border-primary bg-primary/[0.06]" : "border-border hover:bg-muted/50"
-                )}
-              >
-                <span
-                  aria-hidden
-                  className={cn(
-                    "grid size-4 shrink-0 place-items-center rounded-full border",
-                    selected ? "border-primary" : "border-muted-foreground/40"
-                  )}
-                >
-                  {selected && <span className="size-2 rounded-full bg-primary" />}
-                </span>
-                <m.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="flex-1 text-sm font-medium">{isAr ? m.labelAr : m.labelEn}</span>
-                {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
-              </button>
-            );
-          })}
+        <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/[0.04] p-4">
+          <span className="grid h-10 shrink-0 place-items-center rounded-lg bg-primary px-2.5 text-sm font-bold lowercase tracking-tight text-primary-foreground">
+            tamara
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">{isAr ? "الدفع الآمن عبر تمارا" : "Pay securely through Tamara"}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              {isAr
+                ? "ادفع كامل المبلغ اليوم، أو قسّمه على دفعات ميسّرة — تختار الطريقة في صفحة تمارا (حسب الموافقة والأهلية)."
+                : "Pay in full today, or split into convenient instalments — you choose on Tamara's secure page (subject to approval & eligibility)."}
+            </p>
+          </div>
         </div>
+
+        {/* Founding-member launch note — first delivery date, shown before payment. */}
+        <LaunchDeliveryNote isAr={isAr} />
 
         {/* The commitment line (R021): the exact upfront total + the reminder (R025).
             0% VAT while not VAT-registered. */}
@@ -530,10 +505,10 @@ function CheckoutInner() {
           {activate.isPending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden />
-              {isAr ? "جارٍ التفعيل…" : "Activating…"}
+              {isAr ? "نحوّلك إلى تمارا…" : "Taking you to Tamara…"}
             </>
           ) : (
-            <>{isAr ? `فعّل عضوية ${catLine}` : `Activate ${catLine}'s membership`}</>
+            <>{isAr ? "المتابعة إلى الدفع عبر تمارا" : "Continue to payment with Tamara"}</>
           )}
         </Button>
         {!addressId && !addrLoading && (
