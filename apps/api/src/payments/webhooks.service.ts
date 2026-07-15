@@ -74,11 +74,11 @@ export class WebhooksService {
     return { providerRef, status, raw: body };
   }
 
-  parseTamara(headers: Record<string, string | undefined>, body: Record<string, unknown>): WebhookEvent {
+  parseTamara(token: string, body: Record<string, unknown>): WebhookEvent {
     const secret = process.env.TAMARA_NOTIFICATION_TOKEN;
     if (!secret) throw new UnauthorizedException("Tamara notification token not configured");
-    const token = headers["tamaratoken"] ?? "";
-    if (!verifyHs256Jwt(token, secret)) throw new UnauthorizedException("Invalid tamaraToken");
+    // `token` is the JWT Tamara sends as ?tamaraToken=… / Authorization: Bearer.
+    if (!token || !verifyHs256Jwt(token, secret)) throw new UnauthorizedException("Invalid tamaraToken");
 
     const providerRef = String(body.order_id ?? "");
     const eventType = String(body.event_type ?? "").toLowerCase();
@@ -134,7 +134,8 @@ export class WebhooksService {
         const cap = await adapter.capture(
           event.providerRef,
           Number(payment.amount),
-          payment.currency
+          payment.currency,
+          payment.order.orderNumber
         );
         if (!cap.success) {
           this.logger.warn(

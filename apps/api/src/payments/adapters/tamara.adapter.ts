@@ -125,7 +125,7 @@ export class TamaraAdapter implements IPaymentProvider {
    * authorise/capture endpoints and payloads are implemented per the public
    * docs but haven't been round-tripped against a live sandbox order yet.
    */
-  async capture(orderId: string, amount: number, currency: string): Promise<CaptureResult> {
+  async capture(orderId: string, amount: number, currency: string, reference?: string): Promise<CaptureResult> {
     // 1) Authorise. A 409/"already authorised" is benign; only a hard error stops us.
     const auth = await fetch(`${this.baseUrl}/orders/${orderId}/authorise`, {
       method: "POST",
@@ -136,13 +136,31 @@ export class TamaraAdapter implements IPaymentProvider {
       this.logger.warn(`authorise ${orderId} returned ${auth.status}: ${b?.message ?? "?"} (continuing to capture)`);
     }
 
-    // 2) Capture the full amount — this is the money movement.
+    // 2) Capture the full amount — this is the money movement (POST /payments/capture).
+    // Tamara wants the item breakdown to reconcile with the captured total; mirror
+    // the single line item created at checkout so it matches the order exactly.
+    const amt = amount.toFixed(2);
+    const money = (a: string) => ({ amount: a, currency });
+    const ref = reference ?? orderId;
     const res = await fetch(`${this.baseUrl}/payments/capture`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${this.token}` },
       body: JSON.stringify({
         order_id: orderId,
-        total_amount: { amount: amount.toFixed(2), currency },
+        total_amount: money(amt),
+        items: [
+          {
+            reference_id: ref,
+            type: "Digital",
+            name: "Moracat membership",
+            sku: ref,
+            quantity: 1,
+            unit_price: money(amt),
+            total_amount: money(amt),
+            tax_amount: money("0.00"),
+            discount_amount: money("0.00"),
+          },
+        ],
       }),
     });
     const body = (await res.json().catch(() => null)) as { capture_id?: string; message?: string } | null;

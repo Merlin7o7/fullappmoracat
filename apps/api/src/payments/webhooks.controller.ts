@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { Public } from "../common/decorators/public.decorator";
@@ -26,6 +27,7 @@ export class WebhooksController {
   async receive(
     @Param("provider") provider: string,
     @Headers() headers: Record<string, string | undefined>,
+    @Query() query: Record<string, string | undefined>,
     @Body() body: Record<string, unknown>
   ) {
     switch (provider) {
@@ -33,8 +35,16 @@ export class WebhooksController {
         return this.webhooks.settle(this.webhooks.parseMoyasar(body));
       case "tabby":
         return this.webhooks.settle(this.webhooks.parseTabby(headers, body));
-      case "tamara":
-        return this.webhooks.settle(this.webhooks.parseTamara(headers, body));
+      case "tamara": {
+        // Tamara delivers the signing JWT as ?tamaraToken=… AND as an
+        // `Authorization: Bearer <token>` header (docs: transaction-authorisation).
+        // It is NOT a header literally named "tamaratoken". Read all three,
+        // preferring the query param.
+        const auth = headers["authorization"] ?? "";
+        const bearer = /^bearer /i.test(auth) ? auth.slice(7).trim() : "";
+        const token = query.tamaraToken || bearer || headers["tamaratoken"] || "";
+        return this.webhooks.settle(this.webhooks.parseTamara(token, body));
+      }
       case "mock":
         return this.webhooks.settle(this.webhooks.parseMock(headers, body));
       default:

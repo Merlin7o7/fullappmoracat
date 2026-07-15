@@ -67,7 +67,12 @@ export interface IPaymentProvider {
    * present, settlement calls this before marking an order paid, so a
    * membership is never activated against money we haven't collected (R006).
    */
-  capture?(providerRef: string, amount: number, currency: string): Promise<CaptureResult>;
+  capture?(
+    providerRef: string,
+    amount: number,
+    currency: string,
+    reference?: string
+  ): Promise<CaptureResult>;
 }
 
 /** Normalized event parsed from a PSP webhook. */
