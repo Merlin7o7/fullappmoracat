@@ -21,10 +21,10 @@ export interface Plan {
   popular?: boolean;
 }
 
-/** Minimum committed subscription term, in months (KSA policy). */
-export const MIN_TERM_MONTHS = 3;
-/** Term options offered at checkout. */
-export const TERM_OPTIONS = [3, 6, 12] as const;
+/** Minimum committed subscription term, in months (1 = low-commitment entry). */
+export const MIN_TERM_MONTHS = 1;
+/** Term options offered at checkout (3 is the recommended default). */
+export const TERM_OPTIONS = [1, 3, 6, 12] as const;
 
 export const PLANS: Plan[] = [
   {

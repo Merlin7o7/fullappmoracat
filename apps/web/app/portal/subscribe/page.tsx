@@ -38,6 +38,7 @@ import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
+import { monthsLabel } from "@/lib/datetime";
 import { recommendPlan, type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
 import { QueryError } from "@/components/query-error";
 import { LaunchDeliveryNote } from "@/components/launch-note";
@@ -266,8 +267,8 @@ function PlanBuilderInner() {
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {isAr
-                  ? `تُدفع لكل مدة ${selectedPlan.minTermMonths ?? 3} أشهر — ${selectedPlan.price * (selectedPlan.minTermMonths ?? 3)} ر.س مقدّماً`
-                  : `Billed per ${selectedPlan.minTermMonths ?? 3}-month term — ${selectedPlan.price * (selectedPlan.minTermMonths ?? 3)} SAR upfront`}
+                  ? `ابدأ من ${monthsLabel(selectedPlan.minTermMonths ?? 1, "ar")} — ${selectedPlan.price * (selectedPlan.minTermMonths ?? 1)} ر.س مقدّماً، أو التزم أطول`
+                  : `From ${monthsLabel(selectedPlan.minTermMonths ?? 1, "en")} — ${selectedPlan.price * (selectedPlan.minTermMonths ?? 1)} SAR upfront, or commit longer`}
               </p>
             </div>
 

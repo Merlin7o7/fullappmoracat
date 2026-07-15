@@ -36,17 +36,19 @@ import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
-import { formatDate } from "@/lib/datetime";
+import { formatDate, monthsLabel, monthUnit } from "@/lib/datetime";
 import { type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
 import { AddressForm, useCities, type SavedAddress } from "@/components/address-form";
+import { BoxBuilder, type BoxSelections } from "@/components/box-builder";
 import { QueryError } from "@/components/query-error";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloPaw } from "@/components/illustrations";
 
 const TIERS: PlanTier[] = ["STARTER", "STANDARD", "PREMIUM"];
 
-/** Committed term options (months). Minimum 3 — members pay price × term upfront. */
-const TERM_OPTIONS = [3, 6, 12] as const;
+/** Committed term options (months). 1 is the low-commitment entry point; 3 is
+ *  the recommended default. Members pay price × term upfront. */
+const TERM_OPTIONS = [1, 3, 6, 12] as const;
 
 // Tamara is the only payment method (customers choose full vs. instalments on
 // Tamara's page). No in-app method selector.
@@ -155,6 +157,9 @@ function CheckoutInner() {
   // on Tamara's own page, so there's no method selector here.
   const provider = "TAMARA" as const;
   const [done, setDone] = React.useState<ActivateResponse | null>(null);
+  // Per-line brand/flavor picks from the box builder (contentId → productId).
+  // Pre-filled with our recommendations; the member may change any of them.
+  const [boxSelections, setBoxSelections] = React.useState<BoxSelections>({});
 
   const targetCats = React.useMemo(
     () => (catId ? activeCats.filter((c) => c.id === catId) : activeCats),
@@ -181,6 +186,10 @@ function CheckoutInner() {
           addressId,
           provider,
           termMonths,
+          selections: Object.entries(boxSelections).map(([contentId, productId]) => ({
+            contentId,
+            productId,
+          })),
         }),
       }),
     onSuccess: (res) => {
@@ -304,6 +313,9 @@ function CheckoutInner() {
         </ul>
       </Card>
 
+      {/* ── 1.5 · Build your box — pick brand & flavor per line (flat price) ─ */}
+      <BoxBuilder planId={plan.id} isAr={isAr} onChange={setBoxSelections} />
+
       {/* ── 2 · Delivery — kingdom-wide, no city gating ──────────────────── */}
       <Card className="space-y-4 p-6">
         <div className="flex items-center justify-between">
@@ -406,9 +418,10 @@ function CheckoutInner() {
           <CalendarClock className="size-4 text-primary" aria-hidden />
           {isAr ? "مدة الاشتراك" : "Subscription length"}
         </h2>
-        <div role="radiogroup" aria-label={isAr ? "مدة الاشتراك" : "Subscription length"} className="grid grid-cols-3 gap-2">
+        <div role="radiogroup" aria-label={isAr ? "مدة الاشتراك" : "Subscription length"} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TERM_OPTIONS.filter((t) => t >= minTerm).map((t) => {
             const selected = t === termMonths;
+            const recommended = t === 3;
             return (
               <button
                 key={t}
@@ -417,20 +430,25 @@ function CheckoutInner() {
                 aria-checked={selected}
                 onClick={() => setTermMonths(t)}
                 className={cn(
-                  "min-h-11 rounded-xl border p-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "relative min-h-11 rounded-xl border p-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   selected ? "border-primary bg-primary/[0.06]" : "border-border hover:bg-muted/50"
                 )}
               >
+                {recommended && (
+                  <span className="absolute -top-2 start-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground rtl:translate-x-1/2">
+                    {isAr ? "الأنسب" : "Best value"}
+                  </span>
+                )}
                 <span className="block font-display text-lg font-bold tabular" dir="ltr">{t}</span>
-                <span className="block text-xs text-muted-foreground">{isAr ? "أشهر" : "months"}</span>
+                <span className="block text-xs text-muted-foreground">{monthUnit(t, uiLocale)}</span>
               </button>
             );
           })}
         </div>
         <p className="text-xs text-muted-foreground">
           {isAr
-            ? `الحد الأدنى ${minTerm} أشهر — تدفع كامل المدة مقدّماً، والتوصيل شهري.`
-            : `Minimum ${minTerm} months — you pay the full term upfront, delivered monthly.`}
+            ? `ابدأ بـ ${monthsLabel(minTerm, "ar")} أو التزم أطول — تدفع كامل المدة مقدّماً، والتوصيل شهري.`
+            : `Start with ${monthsLabel(minTerm, "en")} or commit longer — you pay the full term upfront, delivered monthly.`}
         </p>
       </Card>
 
@@ -464,20 +482,20 @@ function CheckoutInner() {
           <p className="text-sm font-medium">
             {isAr ? (
               <>
-                <span className="tabular" dir="ltr">{plan.price}</span> ر.س × {termMonths} أشهر ={" "}
+                <span className="tabular" dir="ltr">{plan.price}</span> ر.س × {termMonths} {monthUnit(termMonths, "ar")} ={" "}
                 <span className="tabular font-bold" dir="ltr">{plan.price * termMonths}</span> ر.س تُدفع الآن
               </>
             ) : (
               <>
-                <span className="tabular" dir="ltr">{plan.price}</span> SAR × {termMonths} months ={" "}
+                <span className="tabular" dir="ltr">{plan.price}</span> SAR × {termMonths} {monthUnit(termMonths, "en")} ={" "}
                 <span className="tabular font-bold" dir="ltr">{plan.price * termMonths}</span> SAR paid now
               </>
             )}
           </p>
           <p className="text-xs text-muted-foreground">
             {isAr
-              ? `توصيل شهري طوال ${termMonths} أشهر — التجديد في ${renewalDate}`
-              : `Monthly delivery for ${termMonths} months — renews ${renewalDate}`}
+              ? `توصيل شهري طوال ${monthsLabel(termMonths, "ar")} — التجديد في ${renewalDate}`
+              : `Monthly delivery for ${monthsLabel(termMonths, "en")} — renews ${renewalDate}`}
           </p>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <BellRing className="size-3.5 shrink-0" aria-hidden />

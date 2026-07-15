@@ -133,6 +133,25 @@ ok(coveredCat.membershipStatus === "ACTIVE", "cat membership flips ACTIVE on cap
 // One cat, one membership — the double-charge is prevented, never refunded (R115).
 const dupe = await call("/subscriptions/activate", "POST", { planId: plans[1].id, catIds: [cat.id], addressId: addr.id, provider: "TAMARA" }, C);
 ok(dupe.status === 400, "second membership for a covered cat is rejected (400)");
+// Box builder: each choosable line offers brand/flavor options — in-stock first,
+// popular "to-source" flagged, one recommended default.
+const box = (await call(`/plans/${plans[0].id}/box`, "GET", undefined, C)).json;
+const selLine = box.lines.find((l) => l.selectable && (l.options?.length ?? 0) > 1);
+ok(
+  !!selLine && selLine.options.some((o) => o.recommended) && selLine.options.some((o) => !o.inStock),
+  "box options: recommended default + honest to-source flag"
+);
+const cat1 = (await call("/cats", "POST", { name: "Monthly", weightKg: 4, activityLevel: "LOW", isIndoor: true }, C)).json;
+// An invalid brand/flavor pick fails the box BEFORE any charge (R115) — cat stays uncovered.
+const badSel = await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat1.id], addressId: addr.id, provider: "TAMARA", selections: [{ contentId: selLine.contentId, productId: "does-not-exist" }] }, C);
+ok(badSel.status === 400, "invalid box selection rejected before charge (400)");
+// A single month is now a valid low-commitment entry (termMonths:1); the member's
+// chosen brand/flavor is saved on the box.
+const pickOpt = selLine.options.find((o) => !o.recommended) ?? selLine.options[0];
+const sub1 = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat1.id], addressId: addr.id, provider: "TAMARA", termMonths: 1, selections: [{ contentId: selLine.contentId, productId: pickOpt.productId }] }, C)).json;
+ok(sub1.status === "ACTIVE" && Math.abs(sub1.grandTotal - plans[0].price) < 0.01, "1-month membership activates (price × 1 upfront)");
+const sub1full = (await call(`/subscriptions/${sub1.subscriptionId}`, "GET", undefined, C)).json;
+ok((sub1full.items ?? []).some((i) => i.productId === pickOpt.productId), "chosen brand/flavor saved on the box (flat price)");
 
 console.log("━━ refunds + RBAC ━━");
 ok((await call("/admin/dashboard", "GET", undefined, C)).status === 403, "customer blocked from admin (403)");

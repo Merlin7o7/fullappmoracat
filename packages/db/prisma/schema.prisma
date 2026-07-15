@@ -138,6 +138,14 @@ enum ProductType {
   OTHER
 }
 
+/// Whether a catalog product can be fulfilled today (imported supplier stock)
+/// or is a popular option we advertise as choosable but must still procure.
+/// Box-builder options show IN_STOCK first; TO_SOURCE is labelled honestly.
+enum SourcingStatus {
+  IN_STOCK
+  TO_SOURCE
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -1009,6 +1017,13 @@ model Product {
   isPremiumOnly  Boolean     @default(false)
   /// Space-separated search keywords (name/brand/variant), ar+en, for lookup.
   searchKeywords String?     @db.Text
+  /// Flavor / variant label the member chooses in the box builder (e.g.
+  /// "Chicken", "Salmon & Tuna"). Null for non-food or single-variant items.
+  flavorEn       String?
+  flavorAr       String?
+  /// Fulfilment status for box-builder options: IN_STOCK (imported supplier
+  /// catalog) vs TO_SOURCE (popular option we advertise but must procure).
+  sourcing       SourcingStatus @default(IN_STOCK)
   /// Per-product low-stock alert threshold (0 = use warehouse reorderLevel).
   lowStockThreshold Int      @default(0)
   /// Original supplier image reference (screenshot filename) — NOT shown to
@@ -1259,9 +1274,14 @@ model PlanContent {
   label     String // "Dry food — premium (kg)"
   quantity  Float
   unit      String // kg, pouch, pack, each
+  /// When set, this box line is CHOOSABLE: the member picks any subscribable
+  /// product of this type (brand + flavor) in the box builder, and `productId`
+  /// is the recommended default. Null = fixed line (no choice offered).
+  selectableType ProductType?
 
-  plan    Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id])
+  plan       Plan               @relation(fields: [planId], references: [id], onDelete: Cascade)
+  product    Product?           @relation(fields: [productId], references: [id])
+  selections SubscriptionItem[]
 
   @@index([planId])
   @@map("plan_contents")
@@ -1314,9 +1334,14 @@ model SubscriptionItem {
   quantity       Int     @default(1)
   unitPrice      Decimal @db.Decimal(10, 2)
   isOneTime      Boolean @default(false)
+  /// The box line this choice fulfils (brand/flavor pick). Null for legacy /
+  /// à-la-carte items. Flat pricing: unitPrice is 0 for a plan-line selection —
+  /// the plan price already covers it; this row records the member's preference.
+  planContentId  String?
 
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   product      Product      @relation(fields: [productId], references: [id])
+  planContent  PlanContent? @relation(fields: [planContentId], references: [id])
 
   @@index([subscriptionId])
   @@map("subscription_items")

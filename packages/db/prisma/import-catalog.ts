@@ -75,6 +75,26 @@ function roundPrettyPrice(v: number, ending?: number): number {
   return whole + ending;
 }
 
+/** Common protein/flavor words → Arabic, so the box builder reads native (R103). */
+const FLAVOR_AR_WORDS: [RegExp, string][] = [
+  [/chicken/gi, "دجاج"], [/salmon/gi, "سلمون"], [/tuna/gi, "تونة"], [/beef/gi, "لحم بقري"],
+  [/lamb/gi, "لحم ضأن"], [/duck/gi, "بط"], [/turkey/gi, "ديك رومي"], [/shrimp/gi, "روبيان"],
+  [/sardine/gi, "سردين"], [/cheese/gi, "جبن"], [/liver/gi, "كبد"], [/seafood/gi, "مأكولات بحرية"],
+  [/ocean/gi, "بحري"], [/fish/gi, "سمك"], [/kitten/gi, "هريرة"], [/senior/gi, "كبار السن"],
+  [/sterilised|sterilized/gi, "معقّم"], [/adult/gi, "بالغ"], [/and|with/gi, "و"],
+];
+
+/** Turn a supplier VARIANT into a choosable flavor label, or null if generic. */
+function flavorLabels(variant?: string): { en: string | null; ar: string | null } {
+  const v = (variant ?? "").trim();
+  if (!v || /^unknown$|^standard$|^regular$|^classic$/i.test(v)) return { en: null, ar: null };
+  let ar = v;
+  for (const [re, word] of FLAVOR_AR_WORDS) ar = ar.replace(re, word);
+  // If no Arabic made it in, fall back to the English label rather than show junk.
+  const hasArabic = /[؀-ۿ]/.test(ar);
+  return { en: v, ar: hasArabic ? ar : v };
+}
+
 export async function importCatalog(
   prisma: PrismaClient,
   psv: string,
@@ -158,6 +178,7 @@ export async function importCatalog(
       .filter((s) => s && s !== "Unknown")
       .join(" ")
       .toLowerCase();
+    const flavor = flavorLabels(variant);
 
     const created = await prisma.product.upsert({
       where: { sku },
@@ -172,6 +193,9 @@ export async function importCatalog(
         isStoreOnly: map.storeOnly,
         searchKeywords: keywords,
         supplierImageRef: img,
+        flavorEn: flavor.en,
+        flavorAr: flavor.ar,
+        sourcing: "IN_STOCK", // imported supplier catalog = fulfilable today
       },
       create: {
         slug: `${slugify(`${brand}-${product}-${variant}`)}-${sku.slice(-4)}`.slice(0, 80),
@@ -190,6 +214,9 @@ export async function importCatalog(
         isStoreOnly: map.storeOnly,
         searchKeywords: keywords,
         supplierImageRef: img,
+        flavorEn: flavor.en,
+        flavorAr: flavor.ar,
+        sourcing: "IN_STOCK",
       },
     });
 

@@ -12,12 +12,21 @@
  *
  * Run:  pnpm --filter @moraqat/db seed:catalog
  */
-import { PrismaClient, PlanTier } from "@prisma/client";
+import { PrismaClient, PlanTier, ProductType } from "@prisma/client";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { importCatalog } from "./import-catalog";
+import { seedResearchedOptions } from "./seed-researched";
 
 const prisma = new PrismaClient();
+
+/** Box lines the member may customise by brand + flavor (consumables only). */
+const CHOOSABLE: ReadonlySet<ProductType> = new Set<ProductType>([
+  "WET_FOOD",
+  "DRY_FOOD",
+  "LITTER",
+  "TREATS",
+]);
 
 /** The 3 official boxes — recipes reference real supplier SKUs (financial model). */
 const PLAN_DEFS = [
@@ -100,18 +109,32 @@ async function main() {
   // ── Official plans (0% VAT; COGS from real supplier costs) ──────────────────
   for (const def of PLAN_DEFS) {
     let cogs = 0;
-    const contentRows: { label: string; quantity: number; unit: string; productId: string }[] = [];
+    const contentRows: {
+      label: string;
+      quantity: number;
+      unit: string;
+      productId: string;
+      selectableType: ProductType | null;
+    }[] = [];
     for (const c of def.contents) {
       const prod = await prisma.product.findUnique({
         where: { sku: c.sku },
-        select: { id: true, costPrice: true },
+        select: { id: true, costPrice: true, type: true },
       });
       if (!prod) {
         console.warn(`  ⚠ box SKU ${c.sku} not found for plan ${def.nameEn} — skipped`);
         continue;
       }
       cogs += Number(prod.costPrice ?? 0) * c.qty;
-      contentRows.push({ label: c.label, quantity: c.qty, unit: c.unit, productId: prod.id });
+      contentRows.push({
+        label: c.label,
+        quantity: c.qty,
+        unit: c.unit,
+        productId: prod.id,
+        // Food/litter/treats lines are choosable (brand + flavor); the imported
+        // product is the recommended default. Fixed lines (grooming) stay null.
+        selectableType: CHOOSABLE.has(prod.type) ? prod.type : null,
+      });
     }
 
     const plan = await prisma.plan.upsert({
@@ -124,7 +147,7 @@ async function main() {
         descriptionAr: def.descriptionAr,
         basePrice: def.price,
         cogs: Math.round(cogs * 100) / 100,
-        minTermMonths: 3,
+        minTermMonths: 1,
         isActive: true,
         sortOrder: def.sortOrder,
       },
@@ -137,7 +160,7 @@ async function main() {
         descriptionAr: def.descriptionAr,
         basePrice: def.price,
         cogs: Math.round(cogs * 100) / 100,
-        minTermMonths: 3,
+        minTermMonths: 1,
         isActive: true,
         sortOrder: def.sortOrder,
       },
@@ -164,6 +187,10 @@ async function main() {
     data: { isActive: false, isStorePublished: false },
   });
   console.log(`  ✓ deactivated ${placeholders.count} old placeholder products`);
+
+  // Popular KSA brands/flavors as choosable box options (TO_SOURCE), alongside
+  // the in-stock supplier catalog above.
+  await seedResearchedOptions(prisma);
 
   console.log("✅ Catalog + plans seed complete.");
 }

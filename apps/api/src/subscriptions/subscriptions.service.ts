@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
+import type { ProductType } from "@moraqat/db";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
@@ -89,8 +90,14 @@ export class SubscriptionsService {
 
     const plan = await this.prisma.plan.findFirst({
       where: { id: dto.planId, isActive: true },
+      include: { contents: true },
     });
     if (!plan) throw new BadRequestException("Plan not found");
+
+    // Resolve the member's brand/flavor picks (or fall back to each line's
+    // recommended default) BEFORE charging — an invalid choice must fail the
+    // box, never the payment (R115). Flat pricing: choices don't change the total.
+    const boxItems = await this.resolveBoxSelections(plan.contents, dto.selections);
 
     const address = await this.prisma.address.findFirst({
       where: { id: dto.addressId, userId },
@@ -171,6 +178,18 @@ export class SubscriptionsService {
           nextBillingAt: isPending ? null : termEnd,
           nextDeliveryAt: isPending ? null : firstDelivery,
           cats: { create: dto.catIds.map((catId) => ({ catId })) },
+          // The member's chosen brands/flavors, recorded on the subscription so
+          // the box ships what they picked (flat pricing → unitPrice 0).
+          items: boxItems.length
+            ? {
+                create: boxItems.map((b) => ({
+                  productId: b.productId,
+                  quantity: b.quantity,
+                  unitPrice: new Prisma.Decimal(0),
+                  planContentId: b.planContentId,
+                })),
+              }
+            : undefined,
           events: {
             create: {
               type: isPending ? "activation_pending" : "activated",
@@ -415,6 +434,64 @@ export class SubscriptionsService {
         data: { membershipStatus: activeCount > 0 ? "ACTIVE" : "INACTIVE" },
       });
     }
+  }
+
+  /**
+   * Turn the member's box-builder picks into concrete SubscriptionItems,
+   * validated against the plan's choosable lines. A line with no explicit pick
+   * falls back to its recommended default, so the box is always complete.
+   * Invalid picks (foreign line, wrong product type, unavailable product) are
+   * rejected up front — the box fails, never the payment (R115).
+   */
+  private async resolveBoxSelections(
+    contents: {
+      id: string;
+      productId: string | null;
+      selectableType: ProductType | null;
+      quantity: number;
+    }[],
+    selections?: { contentId: string; productId: string }[]
+  ): Promise<{ productId: string; quantity: number; planContentId: string }[]> {
+    const selectable = contents.filter((c) => c.selectableType);
+    if (!selectable.length) return [];
+    const byId = new Map(selectable.map((c) => [c.id, c]));
+    const chosen = new Map<string, string>(); // contentId -> productId
+
+    const sels = selections ?? [];
+    if (sels.length) {
+      const ids = [...new Set(sels.map((s) => s.productId))];
+      const prods = await this.prisma.product.findMany({
+        where: { id: { in: ids }, isActive: true, isSubscribable: true, deletedAt: null },
+        select: { id: true, type: true },
+      });
+      const prodById = new Map(prods.map((p) => [p.id, p]));
+      for (const s of sels) {
+        const content = byId.get(s.contentId);
+        if (!content) {
+          throw new BadRequestException({
+            code: "INVALID_SELECTION",
+            message: "A chosen item doesn't belong to this plan.",
+          });
+        }
+        const prod = prodById.get(s.productId);
+        if (!prod || prod.type !== content.selectableType) {
+          throw new BadRequestException({
+            code: "INVALID_SELECTION",
+            message: "A chosen brand or flavor isn't available for that item.",
+          });
+        }
+        chosen.set(content.id, s.productId);
+      }
+    }
+
+    const items: { productId: string; quantity: number; planContentId: string }[] = [];
+    for (const c of selectable) {
+      const productId = chosen.get(c.id) ?? c.productId ?? undefined;
+      if (productId) {
+        items.push({ productId, quantity: Math.max(1, Math.round(c.quantity)), planContentId: c.id });
+      }
+    }
+    return items;
   }
 
   private resolveIntervalDays(interval: string, custom?: number | null): number {

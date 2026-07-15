@@ -60,3 +60,23 @@ export function formatDateTime(
 ): string {
   return new Date(value).toLocaleString(dateLocale(locale), opts);
 }
+
+/**
+ * A count of months in grammatically-correct AR/EN — never "1 أشهر" or
+ * "1 months" (R110: real localisation, not templated English). Arabic uses the
+ * dual (شهرين) and the 3–10 plural (أشهر) vs. 11+ (شهراً); English is a simple
+ * singular/plural. Covers every term option (1, 3, 6, 12).
+ */
+export function monthsLabel(n: number, locale: UiLocale): string {
+  if (locale !== "ar") return `${n} ${n === 1 ? "month" : "months"}`;
+  if (n === 1) return "شهر واحد";
+  if (n === 2) return "شهرين";
+  if (n <= 10) return `${n} أشهر`;
+  return `${n} شهراً`;
+}
+
+/** Just the AR/EN unit word for a month count (for "12 | months" split labels). */
+export function monthUnit(n: number, locale: UiLocale): string {
+  if (locale !== "ar") return n === 1 ? "month" : "months";
+  return n === 1 ? "شهر" : "أشهر";
+}

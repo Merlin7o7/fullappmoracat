@@ -33,12 +33,15 @@ export function splitVat(gross: number): { net: number; tax: number } {
   return { net, tax };
 }
 
-/** Minimum committed subscription length, in months (KSA policy). */
+/** Minimum committed subscription length, in months. Members may try a single
+ * month before committing longer (lower barrier to first value); 3/6/12 remain
+ * the retention-friendly options. Override with env MIN_TERM_MONTHS. */
 export const MIN_TERM_MONTHS: number = (() => {
   const n = Number(process.env.MIN_TERM_MONTHS);
-  return Number.isInteger(n) && n >= 1 ? n : 3;
+  return Number.isInteger(n) && n >= 1 ? n : 1;
 })();
 
-/** Subscription term options offered to members (months). First is the default. */
-export const TERM_OPTIONS = [3, 6, 12] as const;
+/** Subscription term options offered to members (months). 3 is the recommended
+ * default (pre-selected at checkout); 1 is the low-commitment entry point. */
+export const TERM_OPTIONS = [1, 3, 6, 12] as const;
 export type TermMonths = (typeof TERM_OPTIONS)[number];

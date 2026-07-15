@@ -5,6 +5,7 @@
  */
 import { PrismaClient, PlanTier, ProductType, StaffScope } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { seedResearchedOptions } from "./seed-researched";
 
 const prisma = new PrismaClient();
 
@@ -97,30 +98,30 @@ async function main() {
       tier: PlanTier.STARTER, slug: "starter", nameEn: "Starter", nameAr: "المبتدئة",
       basePrice: 249, cogs: 104.75,
       contents: [
-        { label: "Wet food pouches", quantity: 15, unit: "pouch", product: "wet-pouch-mass-85g" },
-        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-mass-2kg" },
-        { label: "Creamy treats", quantity: 1, unit: "pack", product: "cat-treats-pack" },
+        { label: "Wet food pouches", quantity: 15, unit: "pouch", product: "wet-pouch-mass-85g", sel: ProductType.WET_FOOD },
+        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-mass-2kg", sel: ProductType.DRY_FOOD },
+        { label: "Creamy treats", quantity: 1, unit: "pack", product: "cat-treats-pack", sel: ProductType.TREATS },
       ],
     },
     {
       tier: PlanTier.STANDARD, slug: "standard", nameEn: "Standard", nameAr: "القياسية",
       basePrice: 349, cogs: 150.75,
       contents: [
-        { label: "Premium wet cans", quantity: 15, unit: "can", product: "wet-pouch-premium-85g" },
-        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-mass-2kg" },
-        { label: "Clumping litter 10L", quantity: 1, unit: "bag", product: "clumping-litter-10kg" },
-        { label: "Calming treats", quantity: 1, unit: "pack", product: "cat-treats-pack" },
+        { label: "Premium wet cans", quantity: 15, unit: "can", product: "wet-pouch-premium-85g", sel: ProductType.WET_FOOD },
+        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-mass-2kg", sel: ProductType.DRY_FOOD },
+        { label: "Clumping litter 10L", quantity: 1, unit: "bag", product: "clumping-litter-10kg", sel: ProductType.LITTER },
+        { label: "Calming treats", quantity: 1, unit: "pack", product: "cat-treats-pack", sel: ProductType.TREATS },
       ],
     },
     {
       tier: PlanTier.PREMIUM, slug: "premium", nameEn: "Premium", nameAr: "المميّزة",
       basePrice: 529, cogs: 245.25,
       contents: [
-        { label: "Premium wet pouches", quantity: 24, unit: "pouch", product: "wet-pouch-premium-85g" },
-        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-premium-2kg" },
-        { label: "Premium litter 10L", quantity: 1, unit: "bag", product: "clumping-litter-10kg" },
+        { label: "Premium wet pouches", quantity: 24, unit: "pouch", product: "wet-pouch-premium-85g", sel: ProductType.WET_FOOD },
+        { label: "Dry food 2kg", quantity: 1, unit: "bag", product: "dry-food-premium-2kg", sel: ProductType.DRY_FOOD },
+        { label: "Premium litter 10L", quantity: 1, unit: "bag", product: "clumping-litter-10kg", sel: ProductType.LITTER },
         { label: "Grooming wipes", quantity: 1, unit: "pack", product: "monthly-supplement" },
-        { label: "Creamy treats", quantity: 1, unit: "pack", product: "cat-treats-pack" },
+        { label: "Creamy treats", quantity: 1, unit: "pack", product: "cat-treats-pack", sel: ProductType.TREATS },
       ],
     },
   ];
@@ -128,10 +129,10 @@ async function main() {
   for (const [i, p] of plans.entries()) {
     const plan = await prisma.plan.upsert({
       where: { tier: p.tier },
-      update: { basePrice: p.basePrice, cogs: p.cogs, minTermMonths: 3, isActive: true, sortOrder: i },
+      update: { basePrice: p.basePrice, cogs: p.cogs, minTermMonths: 1, isActive: true, sortOrder: i },
       create: {
         tier: p.tier, slug: p.slug, nameEn: p.nameEn, nameAr: p.nameAr,
-        basePrice: p.basePrice, cogs: p.cogs, sortOrder: i, minTermMonths: 3,
+        basePrice: p.basePrice, cogs: p.cogs, sortOrder: i, minTermMonths: 1,
       },
     });
     await prisma.planContent.deleteMany({ where: { planId: plan.id } });
@@ -139,6 +140,7 @@ async function main() {
       data: p.contents.map((c) => ({
         planId: plan.id, label: c.label, quantity: c.quantity, unit: c.unit,
         productId: products[c.product],
+        selectableType: "sel" in c ? c.sel : null,
       })),
     });
   }
@@ -148,6 +150,10 @@ async function main() {
     data: { isActive: false },
   });
   console.log(`  ✓ plans: ${plans.length} official (Starter/Standard/Premium), legacy deactivated`);
+
+  // Popular KSA brands/flavors as choosable box options (TO_SOURCE) so the box
+  // builder is rich even on the minimal dev seed.
+  await seedResearchedOptions(prisma);
 
   // ── RBAC: system roles + core permissions ───────────────────────────────
   const resources = ["dashboard", "customers", "orders", "products", "subscriptions", "inventory", "payments", "cms", "support", "settings"];

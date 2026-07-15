@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
+import { TERM_OPTIONS } from "../../common/config/pricing";
 import {
   IsArray,
   IsBoolean,
@@ -25,6 +26,17 @@ export class SubItemDto {
   @Min(1)
   @Max(99)
   quantity!: number;
+}
+
+/** One box-builder choice: the brand/flavor product picked for a plan line. */
+export class BoxSelectionDto {
+  @ApiProperty({ description: "PlanContent id (the box line being customised)" })
+  @IsString()
+  contentId!: string;
+
+  @ApiProperty({ description: "Chosen product id (brand + flavor) for that line" })
+  @IsString()
+  productId!: string;
 }
 
 export class CreateSubscriptionDto {
@@ -115,12 +127,23 @@ export class ActivateSubscriptionDto {
   provider!: ActivationProvider;
 
   @ApiPropertyOptional({
-    description: "Committed term in months (min 3). Member pays price x term upfront.",
-    enum: [3, 6, 12],
+    description: "Committed term in months (min 1; 3 recommended). Member pays price x term upfront.",
+    enum: TERM_OPTIONS,
     default: 3,
   })
   @IsOptional()
   @IsInt()
-  @IsIn([3, 6, 12])
+  @IsIn([...TERM_OPTIONS])
   termMonths?: number;
+
+  @ApiPropertyOptional({
+    type: [BoxSelectionDto],
+    description:
+      "Per-line brand/flavor picks from the box builder. Any line left out uses its recommended default. Does not change the price (flat plan pricing).",
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BoxSelectionDto)
+  selections?: BoxSelectionDto[];
 }

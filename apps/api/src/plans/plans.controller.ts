@@ -1,5 +1,5 @@
-import { Controller, Get } from "@nestjs/common";
-import { ApiTags, ApiOkResponse } from "@nestjs/swagger";
+import { Controller, Get, Param } from "@nestjs/common";
+import { ApiTags, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
 import { PlansService } from "./plans.service";
 import { Public } from "../common/decorators/public.decorator";
 
@@ -13,5 +13,12 @@ export class PlansController {
   @ApiOkResponse({ description: "List all active subscription plans with box contents" })
   findAll() {
     return this.plans.findAll();
+  }
+
+  @Public()
+  @Get(":id/box")
+  @ApiOperation({ summary: "Box builder: each line + choosable brand/flavor options" })
+  box(@Param("id") id: string) {
+    return this.plans.box(id);
   }
 }
