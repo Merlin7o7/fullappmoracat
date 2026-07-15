@@ -12,6 +12,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { MailService } from "../mail/mail.service";
 import {
   orderConfirmationTemplate,
+  paymentFailedTemplate,
   paymentReceiptTemplate,
   subscriptionConfirmedTemplate,
 } from "../mail/mail.templates";
@@ -126,6 +127,24 @@ export class WebhooksService {
         return { orderNumber: payment.order.orderNumber, status: "already_captured" };
       }
 
+      // Atomically claim this settlement before touching money. Tamara emits
+      // BOTH `order_approved` AND `order_authorised` for a single order (plus
+      // retries), and Nest handles them concurrently — so without a claim, two
+      // deliveries can each pass the read above, both call capture(), and the
+      // member is charged twice and emailed twice. A double charge is the #1
+      // trust-killer in KSA (R025), so prevent it, never apologise for it (R115).
+      //
+      // Only a PENDING payment is claimable; the winner flips it to AUTHORIZED
+      // (an "in-progress" marker — never persisted at charge time, so it's
+      // unambiguous) and proceeds. Concurrent losers match nothing and no-op.
+      const claim = await this.prisma.payment.updateMany({
+        where: { id: payment.id, status: "PENDING" },
+        data: { status: "AUTHORIZED" },
+      });
+      if (claim.count === 0) {
+        return { orderNumber: payment.order.orderNumber, status: "already_settling" };
+      }
+
       // Some rails (Tamara) only authorise on approval and need an explicit
       // capture to actually collect. Do it BEFORE we mark the order paid and
       // flip the membership live — never activate against money we haven't
@@ -152,6 +171,9 @@ export class WebhooksService {
           ]);
           // The DRAFT membership never truly began — close it out honestly (R118).
           await this.cancelDraftSubscription(payment.order.subscriptionId, payment.order.orderNumber);
+          // Reach the member even if they closed the redirect tab — a silent
+          // dead-end is not a recovery (R112). Notification + retry email.
+          await this.notifyPaymentFailed(payment.order);
           return { orderNumber: payment.order.orderNumber, status: "capture_failed" };
         }
       }
@@ -207,6 +229,8 @@ export class WebhooksService {
       // A DRAFT membership whose first charge failed never began — close it
       // out honestly rather than leaving a phantom subscription (R118).
       await this.cancelDraftSubscription(payment.order.subscriptionId, payment.order.orderNumber);
+      // Tell the member, on-app and by email, with a one-tap way back (R112/R118).
+      await this.notifyPaymentFailed(payment.order);
       return { orderNumber: payment.order.orderNumber, status: "failed" };
     }
 
@@ -276,6 +300,31 @@ export class WebhooksService {
         events: { create: { type: "activation_failed", metadata: { orderNumber } } },
       },
     });
+  }
+
+  /**
+   * A failed first charge must never be a silent dead-end (R112). Reach the
+   * member wherever they are — an in-app notification for when they return, and
+   * a warm retry email for when they closed the redirect tab. Nothing was
+   * charged; the way forward is one tap (R118/R120).
+   */
+  private async notifyPaymentFailed(order: { orderNumber: string; userId: string }) {
+    await this.notifications.notify(order.userId, {
+      category: "ORDER",
+      type: "payment_failed",
+      params: { orderNumber: order.orderNumber },
+      data: { orderNumber: order.orderNumber },
+    });
+
+    const buyer = await this.prisma.user.findUnique({
+      where: { id: order.userId },
+      select: { email: true, firstName: true, locale: true },
+    });
+    if (!buyer?.email) return;
+    const loc = buyer.locale === "en" ? "en" : "ar";
+    const retryUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/portal/subscribe`;
+    const tpl = paymentFailedTemplate(loc, buyer.firstName, retryUrl);
+    void this.mail.send({ to: buyer.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
   }
 
   /** Receipts + confirmation the moment money moves, even on redirect flows (R024). */

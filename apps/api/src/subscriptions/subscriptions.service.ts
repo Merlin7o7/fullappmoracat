@@ -23,7 +23,7 @@ import {
 } from "../payments/payment-provider.interface";
 import { commerceEnabled } from "../common/config/features";
 import { splitVat, MIN_TERM_MONTHS, TERM_OPTIONS } from "../common/config/pricing";
-import type { ActivateSubscriptionDto, CreateSubscriptionDto } from "./dto/subscription.dto";
+import type { ActivateSubscriptionDto } from "./dto/subscription.dto";
 
 const INTERVAL_DAYS: Record<string, number> = {
   MONTHLY: 30,
@@ -39,116 +39,6 @@ export class SubscriptionsService {
     private readonly notifications: NotificationsService,
     @Inject(PAYMENT_PROVIDER_FACTORY) private readonly payments: IPaymentProviderFactory
   ) {}
-
-  async create(userId: string, dto: CreateSubscriptionDto) {
-    // Community Mode: paid activation is disabled. Membership must never flip to
-    // ACTIVE without a captured payment, so subscription creation is refused
-    // outright until commerce goes live. (Defense-in-depth behind @Commercial.)
-    if (!commerceEnabled()) {
-      throw new ForbiddenException({
-        code: "MEMBERSHIPS_COMING_SOON",
-        message: "Memberships are launching soon.",
-      });
-    }
-
-    // Validate cats belong to the user.
-    const cats = await this.prisma.cat.findMany({
-      where: { id: { in: dto.catIds }, userId, deletedAt: null },
-      select: { id: true },
-    });
-    if (cats.length !== dto.catIds.length) {
-      throw new BadRequestException("One or more cats were not found");
-    }
-
-    const intervalDays = this.resolveIntervalDays(dto.interval, dto.intervalDays);
-
-    // Price = plan base + à-la-carte items.
-    let price = 0;
-    let plan = null;
-    if (dto.planId) {
-      plan = await this.prisma.plan.findFirst({ where: { id: dto.planId, isActive: true } });
-      if (!plan) throw new BadRequestException("Plan not found");
-      price += Number(plan.basePrice);
-    }
-
-    const items = dto.items ?? [];
-    if (items.length) {
-      const products = await this.prisma.product.findMany({
-        where: { id: { in: items.map((i) => i.productId) }, isActive: true, deletedAt: null },
-      });
-      const priceById = new Map(products.map((p) => [p.id, Number(p.price)]));
-      for (const it of items) {
-        const unit = priceById.get(it.productId);
-        if (unit === undefined) throw new BadRequestException(`Product ${it.productId} unavailable`);
-        price += unit * it.quantity;
-      }
-    }
-
-    if (!dto.planId && items.length === 0) {
-      throw new BadRequestException("A subscription needs a plan or at least one item");
-    }
-
-    const now = new Date();
-    const next = addDays(now, intervalDays);
-
-    const sub = await this.prisma.subscription.create({
-      data: {
-        userId,
-        planId: dto.planId,
-        addressId: dto.addressId,
-        status: "ACTIVE",
-        interval: dto.interval,
-        intervalDays: dto.interval === "CUSTOM" ? intervalDays : null,
-        price: new Prisma.Decimal(round(price)),
-        isGift: dto.isGift ?? false,
-        giftRecipient: dto.giftRecipient,
-        startedAt: now,
-        nextBillingAt: next,
-        nextDeliveryAt: next,
-        cats: { create: dto.catIds.map((catId) => ({ catId })) },
-        items: items.length
-          ? {
-              create: items.map((i) => ({
-                productId: i.productId,
-                quantity: i.quantity,
-                unitPrice: new Prisma.Decimal(0), // snapshot set below
-              })),
-            }
-          : undefined,
-        events: { create: { type: "created", metadata: { intervalDays } } },
-      },
-      include: subInclude,
-    });
-
-    // Snapshot item prices (kept simple & explicit).
-    for (const it of items) {
-      const product = await this.prisma.product.findUnique({ where: { id: it.productId } });
-      if (product) {
-        await this.prisma.subscriptionItem.updateMany({
-          where: { subscriptionId: sub.id, productId: it.productId },
-          data: { unitPrice: product.price },
-        });
-      }
-    }
-
-    // Activate membership for the covered cats (#9).
-    await this.syncCatsMembership(dto.catIds);
-
-    // Welcome to the plan — membership is the moment value goes live (R041).
-    const buyer = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, firstName: true, locale: true },
-    });
-    if (buyer?.email && sub.plan) {
-      const loc = buyer.locale === "en" ? "en" : "ar";
-      const planName = loc === "ar" ? sub.plan.nameAr : sub.plan.nameEn;
-      const nextAt = next.toLocaleDateString(loc === "ar" ? "ar-SA" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
-      const tpl = subscriptionConfirmedTemplate(loc, buyer.firstName, planName, nextAt);
-      void this.mail.send({ to: buyer.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
-    }
-
-    return this.serialize(await this.reload(sub.id));
-  }
 
   /**
    * D3 — activate a membership: charge the first month FIRST, then persist

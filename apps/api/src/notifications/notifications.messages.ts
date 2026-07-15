@@ -18,7 +18,8 @@ export type NotificationType =
   | "support_resolved"
   | "order_confirmed"
   | "order_pending"
-  | "payment_received";
+  | "payment_received"
+  | "payment_failed";
 
 export type NotificationParams = Record<string, string | number>;
 
@@ -183,6 +184,19 @@ export function buildNotificationText(
         en: {
           title: "Payment received — order confirmed",
           body: `${p(params, "orderNumber")} is confirmed. We're preparing your box!`,
+        },
+      };
+    case "payment_failed":
+      // Never blame the member; say exactly what happened + the way forward
+      // (R113/R118). Nothing was charged, and the Cat ID is untouched.
+      return {
+        ar: {
+          title: "ما اكتملت عملية الدفع",
+          body: `${p(params, "orderNumber")} — ما انخصم منك شيء وهوية قطك بأمان. تقدر تجرّب مرة ثانية متى ما تحب.`,
+        },
+        en: {
+          title: "Your payment didn't complete",
+          body: `${p(params, "orderNumber")} — nothing was charged and your cat's ID is safe. You can try again whenever you're ready.`,
         },
       };
   }

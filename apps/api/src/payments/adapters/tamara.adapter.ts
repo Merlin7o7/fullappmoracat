@@ -68,7 +68,10 @@ export class TamaraAdapter implements IPaymentProvider {
         tax_amount: money("0.00"), // Not VAT-registered — 0% VAT (Decision 1).
         description: req.description ?? `Moracat ${req.reference}`,
         country_code: "SA",
-        payment_type: "PAY_BY_INSTALMENTS",
+        // No payment_type: locking it to PAY_BY_INSTALMENTS hides Pay in Full.
+        // Omitting it lets Tamara's hosted page offer every option enabled on
+        // the merchant account (instalments AND pay-in-full) — which is what
+        // the checkout copy and ActivationProvider docs promise the customer.
         locale: "ar_SA",
         consumer: {
           email: req.customer?.email ?? "",

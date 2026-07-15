@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { SubscriptionsService } from "./subscriptions.service";
-import { ActivateSubscriptionDto, CreateSubscriptionDto, PauseDto } from "./dto/subscription.dto";
+import { ActivateSubscriptionDto, PauseDto } from "./dto/subscription.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Commercial } from "../common/decorators/commercial.decorator";
 
@@ -11,12 +11,11 @@ import { Commercial } from "../common/decorators/commercial.decorator";
 export class SubscriptionsController {
   constructor(private readonly subs: SubscriptionsService) {}
 
-  @Post()
-  @Commercial() // Community Mode: paid activation is disabled — no new subscriptions.
-  @ApiOperation({ summary: "Build a subscription (plan + cats + custom items)" })
-  create(@CurrentUser("id") userId: string, @Body() dto: CreateSubscriptionDto) {
-    return this.subs.create(userId, dto);
-  }
+  // NOTE: there is deliberately no bare `POST /subscriptions`. A membership may
+  // only come into existence through `activate()`, which charges (or opens a PSP
+  // session) FIRST and never flips a cat's membership live without a captured
+  // payment. An unpaid "build" route would mint free ACTIVE memberships the day
+  // Community Mode lifts — money must be unmovable except through activation.
 
   @Post("activate")
   @Commercial() // Money moves here — hard-blocked in Community Mode.
