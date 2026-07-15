@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Cat as CatIcon, Wallet, PiggyBank, Truck, ArrowRight, CreditCard, Star, IdCard, HeartPulse, Plus, Users, Sparkles, Gift, Copy, Check } from "lucide-react";
-import { Card, Badge, Button, Skeleton, AnimatedCounter, Avatar, cn, useToast } from "@moraqat/ui";
+import { Package, Cat as CatIcon, Wallet, PiggyBank, ArrowRight, Star, IdCard, HeartPulse, Plus, Users, Sparkles, Gift, Copy, Check } from "lucide-react";
+import { Card, Button, Skeleton, AnimatedCounter, Avatar, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { commerceEnabled } from "@/lib/features";
 import { useLocale } from "@/app/providers";
@@ -13,6 +13,7 @@ import { buildGreeting, type Gender } from "@/lib/greeting";
 import { localizeName } from "@/lib/translit";
 import { formatDate } from "@/lib/datetime";
 import { CatIdCard } from "@/components/cat-id-card";
+import { MembershipCard } from "@/components/membership";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
 import { IlloCat, IlloFish, IlloPaw } from "@/components/illustrations";
@@ -141,6 +142,20 @@ export default function OverviewPage() {
           <Sparkles className="size-4" /> {isAr ? "تعرّف على مرقط" : "Learn about Moracat"}
         </Link>
       </div>
+
+      {/* Membership — the bridge from the Cat ID (acquisition) to the subscription
+          (the product). Prominent + persistent for non-subscribers; the status
+          card for subscribers; honest about commerce mode (R004/R005/R040). */}
+      {!isLoading && !catsLoading && !catsError && activeCats.length > 0 && featured && (
+        <MembershipCard
+          isAr={isAr}
+          commerce={commerce}
+          subscription={data?.activeSubscription ?? null}
+          catName={featured.name}
+          membershipStatus={featured.membershipStatus}
+          subscribeHref={`/portal/subscribe?cat=${featured.id}`}
+        />
+      )}
 
       {/* Featured Cat ID + household rail — the multi-cat hero (P09).
           A failed roster load must never masquerade as "no cats" (R112): show a
@@ -314,30 +329,8 @@ export default function OverviewPage() {
           in beta they'd be permanently empty, so we don't show hollow cards. */}
       {commerce ? (
         <>
-          <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold">{isAr ? "اشتراكك النشط" : "Active subscription"}</h2>
-              <Link href="/portal/subscriptions"><Button variant="ghost" size="sm">{isAr ? "إدارة" : "Manage"} <ArrowRight className="size-4" /></Button></Link>
-            </div>
-            {isLoading ? (
-              <Skeleton className="h-20 w-full" />
-            ) : data?.activeSubscription ? (
-              <div className="flex flex-wrap items-center gap-6 rounded-xl bg-muted/50 p-4">
-                <Badge>{data.activeSubscription.plan ? (isAr ? data.activeSubscription.plan.nameAr : data.activeSubscription.plan.nameEn) : (isAr ? "مخصص" : "Custom")}</Badge>
-                <InfoBit icon={CreditCard} label={isAr ? "السعر" : "Price"} value={`${data.activeSubscription.price} SAR`} />
-                <InfoBit icon={Truck} label={isAr ? "التوصيل القادم" : "Next delivery"} value={fmtDate(data.activeSubscription.nextDeliveryAt)} />
-                <InfoBit icon={CreditCard} label={isAr ? "الفوترة القادمة" : "Next billing"} value={fmtDate(data.activeSubscription.nextBillingAt)} />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-8 text-center">
-                <p className="text-sm text-muted-foreground">{isAr ? "لا يوجد اشتراك نشط بعد" : "No active subscription yet"}</p>
-                {/* Intent stays inside the portal — the plan is computed from the
-                    cat, never chosen from the marketing tier table (Amendment 2026-07-10). */}
-                <Link href="/portal/subscribe"><Button size="sm">{isAr ? "فعّل عضوية قطك" : "Activate your cat's membership"}</Button></Link>
-              </div>
-            )}
-          </Card>
-
+          {/* Active-subscription status now lives in the MembershipCard at the top
+              of the dashboard — this section keeps the order history. */}
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-lg font-semibold">{isAr ? "أحدث الطلبات" : "Recent orders"}</h2>
@@ -526,14 +519,3 @@ function ReferralCard({ isAr }: { isAr: boolean }) {
   );
 }
 
-function InfoBit({ icon: Icon, label, value }: { icon: typeof Truck; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon className="size-4 text-muted-foreground" />
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium">{value}</p>
-      </div>
-    </div>
-  );
-}

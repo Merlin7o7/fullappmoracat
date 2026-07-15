@@ -3,13 +3,16 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Share2, ArrowRight, Sparkles, IdCard, Clock } from "lucide-react";
-import { Button, Badge, useToast } from "@moraqat/ui";
+import { Loader2, Share2, ArrowRight, Sparkles, IdCard, Clock, Check } from "lucide-react";
+import { Button, Badge, useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
+import { commerceEnabled } from "@/lib/features";
+import { PLANS } from "@/lib/plans";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatIdStory } from "@/components/cat-id-story";
 import { MoracatStory } from "@/components/moracat-story";
+import { MEMBERSHIP_BENEFITS } from "@/components/membership";
 import { shareStoryPng, exportSafeSrc } from "@/lib/card-export";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 
@@ -49,6 +52,8 @@ function WelcomeInner() {
   const { locale } = useLocale();
   const { toast } = useToast();
   const isAr = locale === "ar";
+  const commerce = commerceEnabled();
+  const subscribeHref = catId ? `/portal/subscribe?cat=${catId}` : "/portal/subscribe";
 
   const { data: cat, isLoading } = useQuery({
     queryKey: ["welcome-cat", catId],
@@ -126,31 +131,40 @@ function WelcomeInner() {
               )}
               <Badge variant="secondary" dot><Clock className="size-3.5" /> {isAr ? "غير مفعّلة" : "Inactive"}</Badge>
             </div>
-            {/* Primary next step — bring the new member to life. Framed as a gift
-                to the cat (R017), it flows straight into the profile journey. */}
+            {/* Primary next step — activate the membership (the core product).
+                The Cat ID is the beginning of the journey, not the end. Honest
+                about commerce mode: no dead "subscribe" link before launch. */}
             <div className="mt-6 flex flex-wrap gap-3">
-              {catId ? (
-                <Button onClick={() => router.push(`/portal/cats/new?cat=${catId}`)} size="lg" className="w-full sm:w-auto">
-                  <Sparkles className="size-4" /> {isAr ? `عرّفنا على ${name} أكثر` : `Bring ${name} to life`} <ArrowRight className="size-4 rtl:rotate-180" />
+              {commerce ? (
+                <Button onClick={() => router.push(subscribeHref)} size="lg" className="w-full sm:w-auto">
+                  <Sparkles className="size-4" /> {isAr ? `فعّل عضوية ${name}` : `Activate ${name}'s membership`} <ArrowRight className="size-4 rtl:rotate-180" />
                 </Button>
-              ) : ContinueButton}
+              ) : (
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary">
+                  <Sparkles className="size-4" /> {isAr ? "أنت عضو مؤسّس — العضويات تُفتح قريباً" : "You're a founding member — memberships open soon"}
+                </span>
+              )}
               <Button onClick={share} loading={shareBusy} disabled={!cat?.catIdNumber} variant="secondary" size="lg">
                 <Share2 className="size-4" /> {isAr ? `شارك هوية ${name}` : `Share ${name}'s ID`}
               </Button>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              {isAr
-                ? "أضف شخصيته ومفضّلاته، وصمّم بطاقته بالثيمات والملصقات — دقيقتان تخلّي هويته تشبهه."
-                : "Add their personality & favourites, and style their card with themes and stickers — two minutes to make the ID truly theirs."}
-            </p>
-            {catId && (
+            {/* Secondary paths — never block the celebration (leaving is easy, R010). */}
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              {catId && (
+                <button
+                  onClick={() => router.push(`/portal/cats/new?cat=${catId}`)}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {isAr ? `خصّص ملف ${name}` : `Personalize ${name}'s profile`}
+                </button>
+              )}
               <button
                 onClick={() => router.push("/portal")}
-                className="mt-2 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                className="font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
               >
-                {isAr ? "لاحقاً — أكمل إلى لوحتي" : "Later — continue to my dashboard"}
+                {isAr ? "لاحقاً — إلى لوحتي" : "Later — go to my dashboard"}
               </button>
-            )}
+            </div>
           </div>
 
           {/* The real card — the hero of the moment. */}
@@ -164,6 +178,73 @@ function WelcomeInner() {
               <CatIdCard catName={name} catIdNumber="MRC-····-····" isAr={isAr} preview />
             )}
           </div>
+        </div>
+      </section>
+
+      {/* ── Membership — the Cat ID is the beginning; the membership is the product ── */}
+      <section className="space-y-8">
+        <div className="text-center">
+          <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+            {isAr ? `وش تفتح عضوية ${name}؟` : `What ${name}'s membership unlocks`}
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            {isAr
+              ? "الهوية بداية الرحلة — العضوية تفعّلها وتفتح العناية الشهرية والمزايا الكاملة."
+              : "The Cat ID is the beginning — a membership activates it and unlocks monthly care and the full benefits."}
+          </p>
+        </div>
+
+        {/* The six pillars — value made visible before the ask (R004). */}
+        <ul className="mx-auto grid max-w-2xl gap-x-6 gap-y-3 sm:grid-cols-2">
+          {MEMBERSHIP_BENEFITS.map((b) => (
+            <li key={b.en} className="flex items-center gap-3 text-sm">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><b.icon className="size-4" /></span>
+              <span className="text-foreground/90">{isAr ? b.ar : b.en}</span>
+            </li>
+          ))}
+        </ul>
+
+        {/* The three plans — the recommendation is computed later from the cat;
+            here we simply show what's on offer, priced, honestly. */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          {PLANS.map((p) => (
+            <div key={p.tier} className={cn("relative rounded-2xl border bg-card p-5 shadow-e1", p.popular ? "border-primary ring-1 ring-primary/30" : "border-border")}>
+              {p.popular && (
+                <span className="absolute -top-2.5 start-4 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold text-primary-foreground">
+                  {isAr ? "الأكثر شيوعاً" : "Most popular"}
+                </span>
+              )}
+              <p className="font-display text-lg font-bold">{isAr ? p.nameAr : p.nameEn}</p>
+              <p className="mt-1">
+                <span className="font-display text-2xl font-bold tabular" dir="ltr">{p.price}</span>{" "}
+                <span className="text-xs text-muted-foreground">{isAr ? "ر.س / شهرياً" : "SAR / month"}</span>
+              </p>
+              <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+                {(isAr ? p.featuresAr : p.featuresEn).map((f) => (
+                  <li key={f} className="flex items-baseline gap-1.5">
+                    <Check className="size-3 shrink-0 translate-y-0.5 text-primary" aria-hidden /> <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <p className="text-center text-xs text-muted-foreground">
+          {isAr
+            ? "الحد الأدنى ٣ أشهر · تُدفع المدة مقدّماً عبر تمارا · بدون ضريبة"
+            : "3-month minimum · pay the term upfront via Tamara · no VAT"}
+        </p>
+
+        <div className="flex justify-center">
+          {commerce ? (
+            <Button onClick={() => router.push(subscribeHref)} size="lg">
+              <Sparkles className="size-4" /> {isAr ? `فعّل عضوية ${name}` : `Activate ${name}'s membership`} <ArrowRight className="size-4 rtl:rotate-180" />
+            </Button>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-5 py-2.5 text-sm font-medium text-primary">
+              <Sparkles className="size-4" /> {isAr ? "العضويات تُفتح قريباً — ستكون أول من يعرف" : "Memberships open soon — you'll be first to know"}
+            </span>
+          )}
         </div>
       </section>
 
