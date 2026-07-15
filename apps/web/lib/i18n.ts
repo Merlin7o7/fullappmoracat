@@ -37,7 +37,7 @@ export const dict = {
     },
     plans: {
       title: "عضوية وحدة، تنبني من قطك",
-      subtitle: "ما تختار من جدول — احنا نحسب خطة قطك من وزنه وعمره. سعر واحد واضح شامل الضريبة، أوقّف أو ألغِ متى ما تبي، ونذكّرك قبل أي تجديد.",
+      subtitle: "ما تختار من جدول — احنا نحسب خطة قطك من وزنه وعمره. سعر واحد واضح، أوقّف أو ألغِ متى ما تبي، ونذكّرك قبل أي تجديد.",
       from: "تبدأ من",
       month: "/ شهرياً",
       cta: "ابنِ خطة قطك",
@@ -90,7 +90,7 @@ export const dict = {
     },
     plans: {
       title: "One membership, built from your cat",
-      subtitle: "You don't pick from a table — we compute your cat's plan from their weight and age. One clear price, VAT included; pause or cancel anytime, and we remind you before every renewal.",
+      subtitle: "You don't pick from a table — we compute your cat's plan from their weight and age. One clear price; pause or cancel anytime, and we remind you before every renewal.",
       from: "From",
       month: "/ month",
       cta: "Build your cat's plan",

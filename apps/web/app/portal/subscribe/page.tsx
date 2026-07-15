@@ -39,6 +39,7 @@ import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
 import { recommendPlan, type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
 import { QueryError } from "@/components/query-error";
+import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
 
 type Interest = "STARTER" | "STANDARD" | "PREMIUM" | "unsure";
@@ -141,8 +142,6 @@ function PlanBuilderInner() {
     );
   }
 
-  const confidencePct = rec ? Math.round(rec.confidence * 100) : null;
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* ── Hero: the cat is the hero, the math serves them (R009) ─────────── */}
@@ -171,31 +170,33 @@ function PlanBuilderInner() {
       {selectedPlan && rec && (
         <Card className="overflow-hidden">
           <div className="space-y-5 p-6 sm:p-7">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-display text-xl font-bold">
-                    {isAr ? selectedPlan.nameAr : selectedPlan.nameEn}
-                  </p>
-                  {isRecommendedSelected && (
-                    <Badge variant="success" className="gap-1">
-                      <BadgeCheck className="size-3" />
-                      {isAr ? "المحسوبة لهم" : "Computed for them"}
-                    </Badge>
-                  )}
-                </div>
-                <p className="mt-1 font-display text-2xl font-bold">
-                  <span className="tabular" dir="ltr">{selectedPlan.price} SAR</span>
-                  <span className="ms-1.5 text-sm font-normal text-muted-foreground">
-                    {isAr ? "/ شهرياً، شامل الضريبة" : "/ month, VAT included"}
-                  </span>
-                </p>
+            {/* Recommendation headline — "we'd recommend X for [cat], and why" (R005). */}
+            {isRecommendedSelected && (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Badge variant="success" className="gap-1">
+                  <BadgeCheck className="size-3" />
+                  {isAr ? `نرشّحها لـ ${catLine}` : `We'd recommend for ${catLine}`}
+                </Badge>
+                <span className="text-sm font-semibold text-accent-foreground">
+                  {isAr ? rec.headline.ar : rec.headline.en}
+                </span>
               </div>
-              {confidencePct !== null && (
-                <p className="text-xs text-muted-foreground">
-                  {isAr ? `دقة الحساب ${confidencePct}٪` : `${confidencePct}% computation confidence`}
-                </p>
-              )}
+            )}
+            <div>
+              <p className="font-display text-2xl font-bold">
+                {isAr ? selectedPlan.nameAr : selectedPlan.nameEn}
+              </p>
+              <p className="mt-1.5 font-display text-2xl font-bold">
+                <span className="tabular" dir="ltr">{selectedPlan.price} SAR</span>
+                <span className="ms-1.5 text-sm font-normal text-muted-foreground">
+                  {isAr ? "/ شهرياً" : "/ month"}
+                </span>
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {isAr
+                  ? `تُدفع لكل مدة ${selectedPlan.minTermMonths ?? 3} أشهر — ${selectedPlan.price * (selectedPlan.minTermMonths ?? 3)} ر.س مقدّماً`
+                  : `Billed per ${selectedPlan.minTermMonths ?? 3}-month term — ${selectedPlan.price * (selectedPlan.minTermMonths ?? 3)} SAR upfront`}
+              </p>
             </div>
 
             {/* Transparent reasons, straight from the engine rationale (R006). */}
@@ -240,7 +241,7 @@ function PlanBuilderInner() {
                 className="flex min-h-11 items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ChevronDown className={cn("size-4 transition-transform motion-reduce:transition-none", adjustOpen && "rotate-180")} aria-hidden />
-                {isAr ? "عدّل الخطة" : "Adjust the plan"}
+                {isAr ? "قارن كل الباقات" : "Compare all plans"}
               </button>
               {adjustOpen && plans && (
                 <div role="radiogroup" aria-label={isAr ? "الباقات" : "Plans"} className="mt-2 space-y-2">
@@ -295,6 +296,8 @@ function PlanBuilderInner() {
 
           {/* One clear action (R005) + freedom before any card details (R023). */}
           <div className="space-y-3 border-t border-border bg-muted/30 p-6 sm:p-7">
+            {/* Founding-member first-delivery date, before payment (no surprises). */}
+            <LaunchDeliveryNote isAr={isAr} />
             <Button
               size="lg"
               className="w-full"

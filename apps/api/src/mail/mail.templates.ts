@@ -5,6 +5,7 @@
 //  wordmark. Every email carries a logo, a single clear action, a plain-text
 //  fallback, and the brand promise. The cat is the hero.
 // ════════════════════════════════════════════════════════════════════════
+import { VAT_ENABLED } from "../common/config/pricing";
 
 export type Locale = "ar" | "en";
 
@@ -371,7 +372,10 @@ export function orderConfirmationTemplate(
   ];
   const rows: [string, string][] = [
     ...items.map((it) => [`${it.name} ×${it.qty}`, ""] as [string, string]),
-    [ar ? "الإجمالي (شامل الضريبة)" : "Total (VAT incl.)", sar(total, ar)],
+    [
+      ar ? (VAT_ENABLED ? "الإجمالي (شامل الضريبة)" : "الإجمالي") : VAT_ENABLED ? "Total (VAT incl.)" : "Total",
+      sar(total, ar),
+    ],
   ];
   const cta = { label: ar ? "تتبّع طلبك" : "Track your order", url: `${siteUrl()}/portal/orders` };
   return {

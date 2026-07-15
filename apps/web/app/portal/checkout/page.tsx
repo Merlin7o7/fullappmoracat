@@ -288,7 +288,7 @@ function CheckoutInner() {
           <p className="font-display text-xl font-bold">
             <span className="tabular" dir="ltr">{plan.price} SAR</span>
             <span className="ms-1 text-xs font-normal text-muted-foreground">
-              {isAr ? "/ شهرياً، شامل الضريبة" : "/ month, VAT included"}
+              {isAr ? "/ شهرياً" : "/ month"}
             </span>
           </p>
         </div>

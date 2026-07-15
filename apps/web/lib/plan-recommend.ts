@@ -54,6 +54,9 @@ export interface BilingualReason {
 
 export interface PlanRecommendation {
   tier: PlanTier;
+  /** A short "why this one" category, shown as the recommendation headline
+   *  (best value / best nutrition / multi-cat / premium / senior care). */
+  headline: BilingualReason;
   /** Transparent, engine-derived explanations — shown verbatim to the member. */
   reasons: BilingualReason[];
   /** 0..1 — the least-confident cat sets the household confidence (honest floor). */
@@ -244,5 +247,21 @@ export function recommendPlan(
     );
   }
 
-  return { tier, reasons, confidence, totals };
+  // ── The headline: a personal "why this one" category (conversion + clarity) ──
+  let headline: BilingualReason;
+  if (cats.length >= 2) {
+    headline = { ar: "الأنسب لبيت متعدد القطط", en: "Best for a multi-cat home" };
+  } else if (anyHealth) {
+    headline = { ar: "الأفضل للعناية الصحية", en: "Best for health & care" };
+  } else if (anySenior) {
+    headline = { ar: "عناية ألطف لقط كبير", en: "Gentle care for a senior cat" };
+  } else if (tier === "PREMIUM") {
+    headline = { ar: "عناية فاخرة متكاملة", en: "Premium, complete care" };
+  } else if (tier === "STANDARD") {
+    headline = { ar: "تغذية متوازنة كل يوم", en: "Balanced everyday nutrition" };
+  } else {
+    headline = { ar: "أفضل قيمة — على مقاسه تماماً", en: "Best value — sized exactly to them" };
+  }
+
+  return { tier, headline, reasons, confidence, totals };
 }
