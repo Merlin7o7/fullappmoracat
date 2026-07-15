@@ -119,7 +119,9 @@ const cities = (await call("/cities")).json;
 const addr = (await call("/addresses", "POST", { recipient: "Smoke Tester", phone: "+966500000001", cityId: cities[0].id, street: "Smoke St 1" }, C)).json;
 ok(!!addr.id, "delivery address saved");
 const term = 3; // minimum committed term; member pays monthly × term upfront
-const sub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat.id], addressId: addr.id, provider: "MADA", termMonths: term }, C)).json;
+// Tamara is the only accepted provider; PAYMENTS_MODE=mock resolves it to the
+// mock adapter (direct capture) so the activation path is still exercised here.
+const sub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat.id], addressId: addr.id, provider: "TAMARA", termMonths: term }, C)).json;
 ok(sub.status === "ACTIVE" && !!sub.nextBillingAt, `membership activated (${sub.orderNumber})`);
 ok(Math.abs(sub.grandTotal - plans[0].price * term) < 0.01, `upfront total = monthly × ${term} months`);
 ok(Math.abs(sub.taxTotal) < 0.01, "membership 0% VAT (not VAT-registered)");
@@ -129,7 +131,7 @@ ok(Math.abs(billAt - expectBill) < 36e5 * 25, `renewal at term end (${term} mont
 const coveredCat = (await call(`/cats/${cat.id}`, "GET", undefined, C)).json;
 ok(coveredCat.membershipStatus === "ACTIVE", "cat membership flips ACTIVE on capture");
 // One cat, one membership — the double-charge is prevented, never refunded (R115).
-const dupe = await call("/subscriptions/activate", "POST", { planId: plans[1].id, catIds: [cat.id], addressId: addr.id, provider: "MADA" }, C);
+const dupe = await call("/subscriptions/activate", "POST", { planId: plans[1].id, catIds: [cat.id], addressId: addr.id, provider: "TAMARA" }, C);
 ok(dupe.status === 400, "second membership for a covered cat is rejected (400)");
 
 console.log("━━ refunds + RBAC ━━");
