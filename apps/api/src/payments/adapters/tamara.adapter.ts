@@ -30,37 +30,65 @@ export class TamaraAdapter implements IPaymentProvider {
   }
 
   async charge(req: ChargeRequest): Promise<ChargeResult> {
+    const cur = req.currency;
+    const amt = req.amount.toFixed(2);
+    const money = (a: string) => ({ amount: a, currency: cur });
+    const [first, ...rest] = (req.customer?.name ?? "Customer").trim().split(/\s+/);
+
+    // Tamara validates that every merchant_url is an absolute, public HTTPS URL —
+    // a localhost or relative value (missing NEXT_PUBLIC_SITE_URL / API_BASE_URL
+    // on the server) is rejected. Surface that as a clear config error rather than
+    // letting Tamara return a cryptic 400.
+    const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+    const apiBase = process.env.API_BASE_URL ?? "";
+    const returnUrl = req.returnUrl ?? `${site}/portal/checkout/return`;
+    const notification = `${apiBase}/api/payments/webhooks/tamara`;
+    if (!/^https:\/\//.test(returnUrl) || !/^https:\/\//.test(notification)) {
+      this.logger.error(
+        `Tamara needs public HTTPS URLs — returnUrl="${returnUrl}" notification="${notification}". ` +
+          `Set NEXT_PUBLIC_SITE_URL and API_BASE_URL on the API to your public https:// URLs.`
+      );
+      return {
+        success: false,
+        status: "FAILED",
+        providerRef: `tamara_cfg_${Date.now()}`,
+        failureReason: "Payment is not configured correctly (merchant URLs). Please contact support.",
+      };
+    }
+
     const res = await fetch(`${this.baseUrl}/checkout`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${this.token}` },
       body: JSON.stringify({
         order_reference_id: req.reference,
-        total_amount: { amount: req.amount.toFixed(2), currency: req.currency },
-        description: req.description ?? `Moraqat ${req.reference}`,
+        order_number: req.reference,
+        // Amounts must reconcile: total = shipping + tax + Σ(item totals).
+        total_amount: money(amt),
+        shipping_amount: money("0.00"),
+        tax_amount: money("0.00"), // Not VAT-registered — 0% VAT (Decision 1).
+        description: req.description ?? `Moracat ${req.reference}`,
         country_code: "SA",
         payment_type: "PAY_BY_INSTALMENTS",
         locale: "ar_SA",
         consumer: {
-          email: req.customer?.email,
-          first_name: req.customer?.name?.split(" ")[0] ?? "Customer",
-          last_name: req.customer?.name?.split(" ").slice(1).join(" ") || "-",
-          phone_number: req.customer?.phone,
+          email: req.customer?.email ?? "",
+          first_name: first || "Customer",
+          last_name: rest.join(" ") || "-",
+          phone_number: req.customer?.phone ?? "",
         },
-        merchant_url: {
-          success: req.returnUrl,
-          failure: req.returnUrl,
-          cancel: req.returnUrl,
-          notification: `${process.env.API_BASE_URL ?? ""}/api/payments/webhooks/tamara`,
-        },
-        // Tamara requires at least one item; a subscription box is one line.
+        merchant_url: { success: returnUrl, failure: returnUrl, cancel: returnUrl, notification },
+        // Tamara requires ≥1 item with a full price breakdown that sums to the total.
         items: [
           {
             reference_id: req.reference,
-            type: "Physical",
-            name: req.description ?? "Moraqat box",
+            type: "Digital",
+            name: req.description ?? "Moracat membership",
             sku: req.reference,
             quantity: 1,
-            total_amount: { amount: req.amount.toFixed(2), currency: req.currency },
+            unit_price: money(amt),
+            discount_amount: money("0.00"),
+            tax_amount: money("0.00"),
+            total_amount: money(amt),
           },
         ],
       }),
@@ -74,7 +102,10 @@ export class TamaraAdapter implements IPaymentProvider {
     } | null;
 
     if (!res.ok || !body?.order_id) {
-      this.logger.warn(`checkout failed (${res.status}): ${body?.message ?? "unknown"}`);
+      // Log the FULL error (Tamara returns field-level detail in `errors`) so the
+      // exact cause is visible in Render logs, not a generic "internal issue".
+      const detail = body?.errors ? JSON.stringify(body.errors) : body?.message ?? "unknown";
+      this.logger.error(`Tamara checkout failed (${res.status}): ${detail}`);
       return {
         success: false,
         status: "FAILED",
