@@ -30,6 +30,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Plus,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Card, Button, Badge, Skeleton, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -92,10 +93,26 @@ function PlanBuilderInner() {
     .map((c) => localizeName(c.name, isAr ? "ar" : "en"))
     .join(isAr ? "، " : ", ");
 
+  // Live "what-if" refinements — adjust lifestyle/activity and watch the plan
+  // recompute in real time. Overrides are local to the calculator (never mutate
+  // the saved profile); null = use the cat's real profile value.
+  const [refineIndoor, setRefineIndoor] = React.useState<boolean | null>(null);
+  const [refineActivity, setRefineActivity] = React.useState<"LOW" | "MODERATE" | "HIGH" | null>(null);
+  const refined = refineIndoor !== null || refineActivity !== null;
+  const refinedCats = React.useMemo(
+    () =>
+      targetCats.map((c) => ({
+        ...c,
+        isIndoor: refineIndoor ?? c.isIndoor,
+        activityLevel: refineActivity ?? c.activityLevel,
+      })),
+    [targetCats, refineIndoor, refineActivity]
+  );
+
   // The computation — pure and transparent, from the same engine as /tools/feeding.
   const rec = React.useMemo(
-    () => (plans && targetCats.length ? recommendPlan(targetCats, plans) : null),
-    [plans, targetCats]
+    () => (plans && refinedCats.length ? recommendPlan(refinedCats, plans) : null),
+    [plans, refinedCats]
   );
 
   // Adjusting is allowed, never front-loaded (R005): the recommendation leads,
@@ -165,6 +182,61 @@ function PlanBuilderInner() {
             : "No tier table to decode — we compute the monthly need from their own profile, and show our working."}
         </p>
       </section>
+
+      {/* ── Personalize (interactive "what-if") — recomputes the plan live ──── */}
+      <Card className="space-y-4 p-6">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="size-4 text-primary" aria-hidden />
+          <h2 className="font-display text-sm font-semibold">
+            {isAr ? `خصّص خطة ${catLine}` : `Personalize ${catLine}'s plan`}
+          </h2>
+          {refined && (
+            <button
+              type="button"
+              onClick={() => {
+                setRefineIndoor(null);
+                setRefineActivity(null);
+                setChosenTier(null);
+              }}
+              className="ms-auto rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {isAr ? "إعادة للملف" : "Reset to profile"}
+            </button>
+          )}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Segmented
+            label={isAr ? "نمط الحياة" : "Lifestyle"}
+            value={refineIndoor === null ? "profile" : refineIndoor ? "indoor" : "outdoor"}
+            options={[
+              ["indoor", isAr ? "داخلي" : "Indoor"],
+              ["outdoor", isAr ? "خارجي" : "Outdoor"],
+            ]}
+            onChange={(v) => {
+              setRefineIndoor(v === "indoor");
+              setChosenTier(null);
+            }}
+          />
+          <Segmented
+            label={isAr ? "النشاط" : "Activity"}
+            value={refineActivity ?? "profile"}
+            options={[
+              ["LOW", isAr ? "هادئ" : "Calm"],
+              ["MODERATE", isAr ? "معتدل" : "Playful"],
+              ["HIGH", isAr ? "نشيط" : "Active"],
+            ]}
+            onChange={(v) => {
+              setRefineActivity(v as "LOW" | "MODERATE" | "HIGH");
+              setChosenTier(null);
+            }}
+          />
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {isAr
+            ? "غيّر وشوف الخطة تتحدّث فوراً — معاينة فقط، ما نغيّر ملف قطك المحفوظ."
+            : "Adjust and watch the plan update instantly — a preview only; it never changes your cat's saved profile."}
+        </p>
+      </Card>
 
       {/* ── The recommendation card ─────────────────────────────────────────── */}
       {selectedPlan && rec && (
@@ -317,6 +389,45 @@ function PlanBuilderInner() {
           </div>
         </Card>
       )}
+    </div>
+  );
+}
+
+/** A compact segmented control for the interactive "personalize" panel. */
+function Segmented({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: [string, string][];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+      <div role="radiogroup" aria-label={label} className="flex gap-1 rounded-xl bg-muted p-1">
+        {options.map(([v, l]) => {
+          const selected = value === v;
+          return (
+            <button
+              key={v}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(v)}
+              className={cn(
+                "min-h-9 flex-1 rounded-lg px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                selected ? "bg-card text-foreground shadow-e1" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {l}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
