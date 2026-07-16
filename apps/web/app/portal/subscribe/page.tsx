@@ -30,7 +30,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Plus,
-  SlidersHorizontal,
 } from "lucide-react";
 import { Card, Button, Badge, Skeleton, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -39,7 +38,15 @@ import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
 import { monthsLabel } from "@/lib/datetime";
-import { recommendPlan, type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
+import { type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
+import {
+  recommendFromConsumption,
+  type WetLevel,
+  type DryLevel,
+  type LitterLevel,
+  type TreatsLevel,
+} from "@/lib/consumption-recommend";
+import { ProductIntro } from "@/components/product-intro";
 import { QueryError } from "@/components/query-error";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
@@ -94,27 +101,16 @@ function PlanBuilderInner() {
     .map((c) => localizeName(c.name, isAr ? "ar" : "en"))
     .join(isAr ? "، " : ", ");
 
-  // Live "what-if" refinements — adjust lifestyle/activity and watch the plan
-  // recompute in real time. Overrides are local to the calculator (never mutate
-  // the saved profile); null = use the cat's real profile value.
-  const [refineIndoor, setRefineIndoor] = React.useState<boolean | null>(null);
-  const [refineActivity, setRefineActivity] = React.useState<"LOW" | "MODERATE" | "HIGH" | null>(null);
-  const refined = refineIndoor !== null || refineActivity !== null;
-  const refinedCats = React.useMemo(
-    () =>
-      targetCats.map((c) => ({
-        ...c,
-        isIndoor: refineIndoor ?? c.isIndoor,
-        activityLevel: refineActivity ?? c.activityLevel,
-      })),
-    [targetCats, refineIndoor, refineActivity]
-  );
-
-  // The computation — pure and transparent, from the same engine as /tools/feeding.
-  const rec = React.useMemo(
-    () => (plans && refinedCats.length ? recommendPlan(refinedCats, plans) : null),
-    [plans, refinedCats]
-  );
+  // The wizard: intro → questions → result. Nothing is preselected — the member
+  // is introduced to the product, answers a few consumption questions, THEN sees
+  // one honest recommendation they can still change (never an auto-picked tier).
+  const [step, setStep] = React.useState<"intro" | "questions" | "result">("intro");
+  const [wet, setWet] = React.useState<WetLevel | null>(null);
+  const [dry, setDry] = React.useState<DryLevel | null>(null);
+  const [litter, setLitter] = React.useState<LitterLevel | null>(null);
+  const [treats, setTreats] = React.useState<TreatsLevel | null>(null);
+  const answered = !!(wet && dry && litter && treats);
+  const [rec, setRec] = React.useState<ReturnType<typeof recommendFromConsumption> | null>(null);
 
   // Adjusting is allowed, never front-loaded (R005): the recommendation leads,
   // other tiers hide behind a quiet disclosure.
@@ -123,6 +119,17 @@ function PlanBuilderInner() {
   const selectedTier = chosenTier ?? rec?.tier ?? null;
   const selectedPlan = plans?.find((p) => p.tier === selectedTier) ?? null;
   const isRecommendedSelected = !!rec && selectedTier === rec.tier;
+
+  const goto = (s: "intro" | "questions" | "result") => {
+    setStep(s);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0 });
+  };
+  const submitAnswers = () => {
+    if (!answered) return;
+    setRec(recommendFromConsumption({ wet, dry, litter, treats }));
+    setChosenTier(null);
+    goto("result");
+  };
 
   if (catsLoading || plansLoading) {
     return (
@@ -149,8 +156,8 @@ function PlanBuilderInner() {
           <IlloPaw tone="butter" className="size-20" />
           <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
             {isAr
-              ? "خطتك تُحسب من ملف قطك — عرّفنا عليه أولاً وبعدها نحسبها له بالضبط"
-              : "Your plan is computed from your cat's profile — introduce them first and we'll size it exactly"}
+              ? "نفصّل الباقة على مقاس قطك — عرّفنا عليه أولاً ونلاقي له الأنسب"
+              : "We tailor the box to your cat — introduce them first and we'll find their best fit"}
           </p>
           <Button onClick={() => router.push("/portal/cats")}>
             <Plus className="size-4" /> {isAr ? "أضف قطك" : "Add your cat"}
@@ -160,84 +167,127 @@ function PlanBuilderInner() {
     );
   }
 
+  // ── Step 1 · Product introduction — subscription first, Cat ID a benefit ──
+  if (step === "intro") {
+    return (
+      <ProductIntro
+        isAr={isAr}
+        catName={catLine}
+        onStart={() => goto("questions")}
+        onSkip={() => router.push("/portal")}
+      />
+    );
+  }
+
+  // ── Step 2 · Consumption questionnaire — nothing preselected ──────────────
+  if (step === "questions") {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div>
+          <button
+            type="button"
+            onClick={() => goto("intro")}
+            className="mb-3 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Arrow className="size-4 rotate-180" aria-hidden /> {isAr ? "رجوع" : "Back"}
+          </button>
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+            {isAr ? `عن استهلاك ${catLine} الشهري` : `About ${catLine}'s monthly use`}
+          </h1>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            {isAr
+              ? "أربعة أسئلة سريعة — ونرشّح الباقة اللي تناسب استهلاككم فعلاً، بلا تخمين."
+              : "Four quick questions — then we recommend the box that fits what you actually use, no guessing."}
+          </p>
+        </div>
+
+        <Card className="space-y-5 p-6">
+          <Segmented
+            label={isAr ? "كم كيس/علبة طعام رطب تستخدمون شهرياً؟" : "How many wet food pouches/cans a month?"}
+            value={wet ?? ""}
+            options={[
+              ["none", isAr ? "لا شيء" : "None"],
+              ["few", isAr ? "قليل" : "A few"],
+              ["regular", isAr ? "~١٥" : "~15"],
+              ["lots", isAr ? "٢٠+" : "20+"],
+            ]}
+            onChange={(v) => { setWet(v as WetLevel); setChosenTier(null); }}
+          />
+          <Segmented
+            label={isAr ? "كم طعام جاف يأكل قطك شهرياً تقريباً؟" : "About how much dry food a month?"}
+            value={dry ?? ""}
+            options={[
+              ["none", isAr ? "لا شيء" : "None"],
+              ["one", isAr ? "~٢كجم" : "~2kg"],
+              ["two", isAr ? "٤كجم+" : "4kg+"],
+            ]}
+            onChange={(v) => { setDry(v as DryLevel); setChosenTier(null); }}
+          />
+          <Segmented
+            label={isAr ? "كم رمل تستخدمون شهرياً؟" : "How much cat litter a month?"}
+            value={litter ?? ""}
+            options={[
+              ["none", isAr ? "لا شيء" : "None"],
+              ["one", isAr ? "كيس" : "1 bag"],
+              ["two", isAr ? "كيسين+" : "2+ bags"],
+            ]}
+            onChange={(v) => { setLitter(v as LitterLevel); setChosenTier(null); }}
+          />
+          <Segmented
+            label={isAr ? "تشترون مكافآت بانتظام؟" : "Do you buy treats regularly?"}
+            value={treats ?? ""}
+            options={[
+              ["rarely", isAr ? "نادراً" : "Rarely"],
+              ["sometimes", isAr ? "أحياناً" : "Sometimes"],
+              ["often", isAr ? "كثيراً" : "Often"],
+            ]}
+            onChange={(v) => { setTreats(v as TreatsLevel); setChosenTier(null); }}
+          />
+        </Card>
+
+        <Button size="lg" className="w-full" disabled={!answered} onClick={submitAnswers}>
+          {isAr ? `اعرض توصية ${catLine}` : `See ${catLine}'s recommendation`}
+          <Arrow className="size-4" />
+        </Button>
+        {!answered && (
+          <p className="text-center text-xs text-muted-foreground">
+            {isAr ? "جاوب على الأسئلة الأربعة لنرشّح الأنسب" : "Answer all four to get your recommendation"}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ── Step 3 · The recommendation — computed from THEIR answers, not preset ──
+  if (!rec || !selectedPlan) return null;
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* ── Hero: the cat is the hero, the math serves them (R009) ─────────── */}
+      {/* Result hero — "from your answers, here's the fit" (never auto-picked). */}
       <section className="relative overflow-hidden rounded-3xl border border-accent/20 bg-gradient-to-br from-accent/[0.10] via-background to-primary/[0.06] p-7 shadow-e2 sm:p-9">
         <IlloHeart
           tone="pink"
           className="pointer-events-none absolute -top-3 end-4 size-12 rotate-[12deg] opacity-40"
         />
+        <button
+          type="button"
+          onClick={() => goto("questions")}
+          className="mb-3 inline-flex min-h-9 items-center gap-1 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Arrow className="size-4 rotate-180" aria-hidden /> {isAr ? "عدّل إجاباتك" : "Edit your answers"}
+        </button>
         <Badge variant="secondary" className="gap-1.5">
           <Sparkles className="size-3.5" />
-          {isAr ? "عضوية" : "Membership"}
+          {isAr ? "توصيتنا لك" : "Our recommendation"}
         </Badge>
         <h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          {isAr
-            ? `خطة ${catLine} — محسوبة ${targetCats.length > 1 ? "عليهم" : "عليه"} بالضبط`
-            : `${catLine}'s plan — computed exactly for them`}
+          {isAr ? `باقة ${catLine} — على مقاس استهلاككم` : `${catLine}'s plan — sized to how you shop`}
         </h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
           {isAr
-            ? "ما نعرض عليك جدول باقات — نحسب احتياجهم الشهري من ملفهم، ونوريك كيف حسبناه."
-            : "No tier table to decode — we compute the monthly need from their own profile, and show our working."}
+            ? "حسب إجاباتكم، هذي الباقة الأنسب — والقرار لكم، تقدرون تغيّرونها."
+            : "From your answers, this is the best fit — and it's your call; you can still change it."}
         </p>
       </section>
-
-      {/* ── Personalize (interactive "what-if") — recomputes the plan live ──── */}
-      <Card className="space-y-4 p-6">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="size-4 text-primary" aria-hidden />
-          <h2 className="font-display text-sm font-semibold">
-            {isAr ? `خصّص خطة ${catLine}` : `Personalize ${catLine}'s plan`}
-          </h2>
-          {refined && (
-            <button
-              type="button"
-              onClick={() => {
-                setRefineIndoor(null);
-                setRefineActivity(null);
-                setChosenTier(null);
-              }}
-              className="ms-auto rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {isAr ? "إعادة للملف" : "Reset to profile"}
-            </button>
-          )}
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Segmented
-            label={isAr ? "نمط الحياة" : "Lifestyle"}
-            value={refineIndoor === null ? "profile" : refineIndoor ? "indoor" : "outdoor"}
-            options={[
-              ["indoor", isAr ? "داخلي" : "Indoor"],
-              ["outdoor", isAr ? "خارجي" : "Outdoor"],
-            ]}
-            onChange={(v) => {
-              setRefineIndoor(v === "indoor");
-              setChosenTier(null);
-            }}
-          />
-          <Segmented
-            label={isAr ? "النشاط" : "Activity"}
-            value={refineActivity ?? "profile"}
-            options={[
-              ["LOW", isAr ? "هادئ" : "Calm"],
-              ["MODERATE", isAr ? "معتدل" : "Playful"],
-              ["HIGH", isAr ? "نشيط" : "Active"],
-            ]}
-            onChange={(v) => {
-              setRefineActivity(v as "LOW" | "MODERATE" | "HIGH");
-              setChosenTier(null);
-            }}
-          />
-        </div>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {isAr
-            ? "غيّر وشوف الخطة تتحدّث فوراً — معاينة فقط، ما نغيّر ملف قطك المحفوظ."
-            : "Adjust and watch the plan update instantly — a preview only; it never changes your cat's saved profile."}
-        </p>
-      </Card>
 
       {/* ── The recommendation card ─────────────────────────────────────────── */}
       {selectedPlan && rec && (
@@ -272,10 +322,10 @@ function PlanBuilderInner() {
               </p>
             </div>
 
-            {/* Transparent reasons, straight from the engine rationale (R006). */}
+            {/* Transparent reasons, straight from the member's own answers (R006). */}
             <div>
               <h2 className="mb-2 font-display text-sm font-semibold text-muted-foreground">
-                {isAr ? "كيف حسبناها" : "How we computed it"}
+                {isAr ? "ليش هي الأنسب" : "Why it's the right fit"}
               </h2>
               <ul className="space-y-1.5">
                 {rec.reasons.map((r) => (

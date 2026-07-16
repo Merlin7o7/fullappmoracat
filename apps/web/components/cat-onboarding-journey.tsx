@@ -18,7 +18,7 @@ import { PhotoUploader } from "@/components/photo-uploader";
 import { CatIdCard } from "@/components/cat-id-card";
 import { IlloPaw } from "@/components/illustrations";
 import {
-  ABOUT_Q, PERSONALITY_Q, FAVORITES_Q, FUN_Q, EMOJI_CHOICES,
+  ABOUT_Q, EMOJI_CHOICES,
   CARD_THEMES, ACCENTS, FRAMES, STICKERS,
   themeById, accentById, resolvePersonalization, profileCompleteness, earnedBadges,
   type Question, type AnswerMap, type CatProfile, type Personalization, type StickerPlacement,
@@ -342,17 +342,16 @@ function splitList(s: string): string[] {
 
 /* ══ Chapters ════════════════════════════════════════════════════════════════ */
 
-const STEP = { about: 0, personality: 1, favorites: 2, health: 3, fun: 4, personalize: 5, celebrate: 6 } as const;
+// Onboarding stays short and effortless (R002): only what serves the Cat ID and
+// its personalization. Health records, personality, favourites and fun are
+// invited LATER, framed as a benefit to the cat — never front-loaded at signup.
+const STEP = { about: 0, personalize: 1, celebrate: 2 } as const;
 
 interface Chapter { emoji: string; title: string; subtitle: string }
 
 function buildChapters(name: string, isAr: boolean): Chapter[] {
   return [
     { emoji: "🐱", title: isAr ? "التعريف" : "About", subtitle: isAr ? `أساسيات ${name}` : `${name}'s basics` },
-    { emoji: "✨", title: isAr ? "الشخصية" : "Personality", subtitle: isAr ? `مين ${name}؟` : `Who is ${name}?` },
-    { emoji: "💛", title: isAr ? "المفضّلات" : "Favourites", subtitle: isAr ? "التفاصيل الحلوة" : "The sweet details" },
-    { emoji: "🩺", title: isAr ? "الصحة" : "Health", subtitle: isAr ? "للأمان والطوارئ" : "For safety & vets" },
-    { emoji: "🎉", title: isAr ? "الممتع" : "Fun", subtitle: isAr ? "لحظات الابتسامة" : "The smile moments" },
     { emoji: "🎨", title: isAr ? "التخصيص" : "Personalise", subtitle: isAr ? "صمّم بطاقته" : "Design their card" },
     { emoji: "🏅", title: isAr ? "الاحتفال" : "Celebrate", subtitle: isAr ? "ملف مكتمل" : "Profile complete" },
   ];
@@ -426,49 +425,7 @@ function ChapterBody({
               options={[{ value: "", label: isAr ? "غير محدد" : "Not sure" }, { value: "true", label: isAr ? "داخلي" : "Indoor" }, { value: "false", label: isAr ? "خارجي" : "Outdoor" }]} />
             <SelectField label={isAr ? "معقّم/محيّد؟" : "Neutered / spayed?"} value={draft.isNeutered} onChange={(v) => set({ isNeutered: v as Draft["isNeutered"] })}
               options={[{ value: "true", label: isAr ? "نعم" : "Yes" }, { value: "false", label: isAr ? "لا" : "No" }, { value: "unknown", label: isAr ? "غير متأكد" : "Not sure" }]} />
-            <Field label={isAr ? "رقم الشريحة (اختياري)" : "Microchip no. (optional)"} value={draft.microchipNo} onChange={(v) => set({ microchipNo: v })} className="sm:col-span-2" />
           </div>
-        </ChapterCard>
-      );
-
-    case STEP.personality:
-      return (
-        <ChapterCard emoji="✨" title={isAr ? `شخصية ${dispName}` : `${dispName}'s personality`} intro={isAr ? "اختَر اللي يشبهه — ما فيه إجابة غلط." : "Pick what fits — there are no wrong answers."}>
-          <QuestionList questions={PERSONALITY_Q} answers={draft.personality} onChange={setAns("personality")} isAr={isAr} />
-        </ChapterCard>
-      );
-
-    case STEP.favorites:
-      return (
-        <ChapterCard emoji="💛" title={isAr ? `مفضّلات ${dispName}` : `${dispName}'s favourites`} intro={isAr ? "التفاصيل اللي تخلّيه هو." : "The little things that make them them."}>
-          <Field label={isAr ? "الطعام المفضّل" : "Favourite food"} value={draft.favoriteFood} onChange={(v) => set({ favoriteFood: v })} placeholder="Royal Canin" />
-          <QuestionList questions={FAVORITES_Q} answers={draft.favorites} onChange={setAns("favorites")} isAr={isAr} />
-        </ChapterCard>
-      );
-
-    case STEP.health:
-      return (
-        <ChapterCard emoji="🩺" title={isAr ? `صحة ${dispName}` : `${dispName}'s health`} intro={isAr ? "يظهر لأي عيادة شريكة عند مسح هويته — يساعدها تساعده أسرع." : "Shown to any partner clinic that scans their ID — it helps them help faster."}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField label={isAr ? "حالة التطعيم" : "Vaccination status"} value={draft.vaccinationStatus} onChange={(v) => set({ vaccinationStatus: v })}
-              options={[
-                { value: "UP_TO_DATE", label: isAr ? "محدّثة" : "Up to date" },
-                { value: "PARTIAL", label: isAr ? "جزئية" : "Partial" },
-                { value: "NONE", label: isAr ? "لا يوجد" : "None" },
-                { value: "UNKNOWN", label: isAr ? "غير معروف" : "Unknown" },
-              ]} />
-            <Field label={isAr ? "الحساسيات (بفواصل)" : "Allergies (comma-separated)"} value={draft.allergies} onChange={(v) => set({ allergies: v })} />
-            <Field label={isAr ? "حالات مرضية (بفواصل)" : "Conditions (comma-separated)"} value={draft.medicalConditions} onChange={(v) => set({ medicalConditions: v })} />
-            <Field label={isAr ? "أدوية حالية" : "Current medications"} value={draft.currentMedications} onChange={(v) => set({ currentMedications: v })} />
-          </div>
-          <Field label={isAr ? "ملاحظات طوارئ" : "Emergency notes"} value={draft.emergencyNotes} onChange={(v) => set({ emergencyNotes: v })} />
-        </ChapterCard>
-      );
-
-    case STEP.fun:
-      return (
-        <ChapterCard emoji="🎉" title={isAr ? `الجانب الممتع من ${dispName}` : `${dispName}'s fun side`} intro={isAr ? "الأسئلة اللي تخلّيك تبتسم 🐾" : "The questions that make you smile 🐾"}>
-          <QuestionList questions={FUN_Q} answers={draft.fun} onChange={setAns("fun")} isAr={isAr} />
         </ChapterCard>
       );
 
