@@ -294,15 +294,14 @@ function IssueIdFlow() {
               : undefined
           }
           onClose={() =>
-            router.push(
-              firstIssue
-                // First-ever ID → the subscription onboarding (welcome): celebrate
-                // the ID, then present the membership + plans (the core product).
-                ? `/portal/welcome?cat=${ceremonyCat.id}`
-                // Every subsequent cat flows directly into the profile journey —
-                // the natural next step after issuing, never a dead-end (R005).
-                : `/portal/cats/new?cat=${ceremonyCat.id}`
-            )
+            // After the reveal, every new Cat ID flows into the Product Intro →
+            // questionnaire wizard (/portal/subscribe): first we explain that
+            // Moracat is a monthly care subscription (the Cat ID is one included
+            // benefit), THEN we find their plan from a few questions. This is the
+            // core value moment — the subscription is the product (R004). (The
+            // legacy /portal/welcome celebration page still exists as a route but
+            // is no longer the forced post-issue stop.)
+            router.push(`/portal/subscribe?cat=${ceremonyCat.id}`)
           }
         />
       )}
