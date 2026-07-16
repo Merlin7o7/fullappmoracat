@@ -24,6 +24,9 @@ export interface BoxOption {
   flavorAr: string | null;
   inStock: boolean;
   recommended: boolean;
+  /** Guided-picker facets, derived server-side from the catalog. */
+  lifeStage: "KITTEN" | "ADULT" | "SENIOR";
+  sterilized: boolean;
 }
 export interface BoxLine {
   contentId: string;
@@ -178,52 +181,200 @@ export function BoxBuilder({
               </button>
 
               {open && line.options && (
-                <div
-                  role="radiogroup"
-                  aria-label={line.label}
-                  className="space-y-1 border-t border-border p-2"
-                >
-                  {line.options.map((o) => {
-                    const selected = selections[line.contentId] === o.productId;
-                    return (
-                      <button
-                        key={o.productId}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => pick(line.contentId, o.productId)}
-                        className={cn(
-                          "flex w-full min-h-11 items-center gap-2.5 rounded-lg border p-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          selected ? "border-primary bg-primary/[0.06]" : "border-transparent hover:bg-muted/50"
-                        )}
-                      >
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "grid size-4 shrink-0 place-items-center rounded-full border",
-                            selected ? "border-primary" : "border-muted-foreground/40"
-                          )}
-                        >
-                          {selected && <span className="size-2 rounded-full bg-primary" />}
-                        </span>
-                        <span className="min-w-0 flex-1 text-sm">{optlabel(o)}</span>
-                        {o.recommended && (
-                          <Badge variant="success" className="shrink-0 gap-1 text-[10px]">
-                            <Sparkles className="size-2.5" />
-                            {isAr ? "نرشّحه" : "Our pick"}
-                          </Badge>
-                        )}
-                        <SourcingChip inStock={o.inStock} isAr={isAr} compact />
-                      </button>
-                    );
-                  })}
-                </div>
+                <LinePicker
+                  line={line}
+                  chosenId={selections[line.contentId]}
+                  isAr={isAr}
+                  onPick={(productId) => pick(line.contentId, productId)}
+                />
               )}
             </div>
           );
         })}
       </div>
     </Card>
+  );
+}
+
+/**
+ * The guided picker — premium selection, one considered choice at a time:
+ * life stage → sterilised → brand → flavor. Prefilled from the current pick so
+ * keeping our recommendation stays zero-tap (R002); facets only appear where
+ * the catalog actually differentiates (no empty questions, R005).
+ */
+function LinePicker({
+  line,
+  chosenId,
+  isAr,
+  onPick,
+}: {
+  line: BoxLine;
+  chosenId?: string;
+  isAr: boolean;
+  onPick: (productId: string) => void;
+}) {
+  const opts = line.options ?? [];
+  const chosen = opts.find((o) => o.productId === chosenId);
+
+  const stages = React.useMemo(
+    () => (["KITTEN", "ADULT", "SENIOR"] as const).filter((s) => opts.some((o) => o.lifeStage === s)),
+    [opts]
+  );
+  const hasStageFacet = stages.length > 1;
+  const hasSterFacet = opts.some((o) => o.sterilized);
+
+  const [stage, setStage] = React.useState<"KITTEN" | "ADULT" | "SENIOR">(chosen?.lifeStage ?? "ADULT");
+  const [ster, setSter] = React.useState<boolean>(chosen?.sterilized ?? false);
+  const [brand, setBrand] = React.useState<string | null>(chosen?.brandEn ?? null);
+
+  // Facet filters. Sterilised = yes still shows regular food (it's suitable) with
+  // sterilised formulas first; = no hides sterilised-specific formulas.
+  const filtered = React.useMemo(() => {
+    let arr = opts;
+    if (hasStageFacet) arr = arr.filter((o) => o.lifeStage === stage);
+    arr = ster ? arr.slice().sort((a, b) => Number(b.sterilized) - Number(a.sterilized)) : arr.filter((o) => !o.sterilized);
+    return arr;
+  }, [opts, hasStageFacet, stage, ster]);
+
+  const brands = React.useMemo(() => {
+    const seen = new Map<string, { en: string; ar: string }>();
+    for (const o of filtered) if (!seen.has(o.brandEn)) seen.set(o.brandEn, { en: o.brandEn, ar: o.brandAr });
+    return [...seen.values()];
+  }, [filtered]);
+
+  // Keep the brand valid as facets change; auto-pick when only one remains.
+  React.useEffect(() => {
+    if (brand && !brands.some((b) => b.en === brand)) setBrand(null);
+    if (!brand && brands.length === 1 && brands[0]) setBrand(brands[0].en);
+  }, [brand, brands]);
+
+  const flavors = React.useMemo(() => filtered.filter((o) => o.brandEn === brand), [filtered, brand]);
+
+  const stageLabel: Record<string, [string, string]> = {
+    KITTEN: ["Kitten", "صغير (هريرة)"],
+    ADULT: ["Adult", "بالغ"],
+    SENIOR: ["Senior", "كبير السن"],
+  };
+
+  return (
+    <div className="space-y-4 border-t border-border p-4">
+      {hasStageFacet && (
+        <Facet label={isAr ? "لمن هذا الطعام؟" : "Who is it for?"}>
+          {stages.map((s) => (
+            <FacetChip key={s} selected={stage === s} onClick={() => setStage(s)}>
+              {isAr ? stageLabel[s]?.[1] : stageLabel[s]?.[0]}
+            </FacetChip>
+          ))}
+        </Facet>
+      )}
+
+      {hasSterFacet && (
+        <Facet label={isAr ? "معقّم / محيّد؟" : "Sterilised / neutered?"}>
+          <FacetChip selected={ster} onClick={() => setSter(true)}>
+            {isAr ? "نعم" : "Yes"}
+          </FacetChip>
+          <FacetChip selected={!ster} onClick={() => setSter(false)}>
+            {isAr ? "لا" : "No"}
+          </FacetChip>
+        </Facet>
+      )}
+
+      <Facet label={isAr ? "العلامة التجارية" : "Brand"}>
+        {brands.map((b) => (
+          <FacetChip key={b.en} selected={brand === b.en} onClick={() => setBrand(b.en)}>
+            {isAr ? b.ar : b.en}
+          </FacetChip>
+        ))}
+        {brands.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            {isAr ? "لا توجد خيارات لهذه التركيبة — جرّب تغيير الفلاتر" : "No options for this combination — try adjusting the filters"}
+          </p>
+        )}
+      </Facet>
+
+      {brand && flavors.length > 0 && (
+        <div role="radiogroup" aria-label={isAr ? "النكهة" : "Flavor"} className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">{isAr ? "النكهة" : "Flavor"}</p>
+          {flavors.map((o) => {
+            const selected = o.productId === chosenId;
+            const flavor = isAr ? o.flavorAr : o.flavorEn;
+            return (
+              <button
+                key={o.productId}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => onPick(o.productId)}
+                className={cn(
+                  "flex w-full min-h-11 items-center gap-2.5 rounded-lg border p-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  selected ? "border-primary bg-primary/[0.06]" : "border-transparent hover:bg-muted/50"
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "grid size-4 shrink-0 place-items-center rounded-full border",
+                    selected ? "border-primary" : "border-muted-foreground/40"
+                  )}
+                >
+                  {selected && <span className="size-2 rounded-full bg-primary" />}
+                </span>
+                <span className="min-w-0 flex-1 text-sm">
+                  {flavor ?? (isAr ? "التركيبة الأساسية" : "Original recipe")}
+                  {o.sterilized && (
+                    <span className="ms-1.5 text-[10px] text-muted-foreground">
+                      {isAr ? "· تركيبة للمعقّم" : "· sterilised formula"}
+                    </span>
+                  )}
+                </span>
+                {o.recommended && (
+                  <Badge variant="success" className="shrink-0 gap-1 text-[10px]">
+                    <Sparkles className="size-2.5" />
+                    {isAr ? "نرشّحه" : "Our pick"}
+                  </Badge>
+                )}
+                <SourcingChip inStock={o.inStock} isAr={isAr} compact />
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Facet({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function FacetChip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "min-h-9 rounded-full border px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        selected
+          ? "border-primary bg-primary/10 font-medium text-foreground"
+          : "border-border text-muted-foreground hover:bg-muted"
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

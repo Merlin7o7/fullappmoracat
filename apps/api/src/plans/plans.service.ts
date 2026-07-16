@@ -72,6 +72,20 @@ export class PlansService {
     }
     const rank = (s: string) => (s === "IN_STOCK" ? 0 : 1);
 
+    // The guided picker's facets, derived from the catalog's own naming (the
+    // supplier sheet and researched options both encode these in names/flavors)
+    // — no schema change needed. Unknown → ADULT / regular formula.
+    const textOf = (p: (typeof products)[number]) =>
+      `${p.nameEn} ${p.flavorEn ?? ""} ${p.searchKeywords ?? ""}`.toLowerCase();
+    const stageOf = (p: (typeof products)[number]): "KITTEN" | "ADULT" | "SENIOR" => {
+      const t = textOf(p);
+      if (/kitten|هريرة/.test(t)) return "KITTEN";
+      if (/senior|كبار/.test(t)) return "SENIOR";
+      return "ADULT";
+    };
+    const sterilizedOf = (p: (typeof products)[number]): boolean =>
+      /sterili[sz]ed|معق/.test(textOf(p));
+
     return {
       planId: plan.id,
       tier: plan.tier,
@@ -94,6 +108,9 @@ export class PlansService {
                 flavorAr: p.flavorAr,
                 inStock: p.sourcing === "IN_STOCK",
                 recommended: p.id === c.productId,
+                // Guided-picker facets (life stage → sterilised → brand → flavor).
+                lifeStage: stageOf(p),
+                sterilized: sterilizedOf(p),
               }))
           : undefined;
         return {
