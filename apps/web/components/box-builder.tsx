@@ -50,10 +50,16 @@ export function BoxBuilder({
   planId,
   isAr,
   onChange,
+  catLifeStage,
+  catSterilized,
 }: {
   planId: string;
   isAr: boolean;
   onChange: (selections: BoxSelections) => void;
+  /** Seed the guided picker's facets from the target cat's own profile —
+   *  recognition first (R001): the member never re-answers what we know. */
+  catLifeStage?: "KITTEN" | "ADULT" | "SENIOR" | null;
+  catSterilized?: boolean | null;
 }) {
   const { authedFetch, user } = useAuth();
   const { data, isLoading, isError } = useQuery({
@@ -186,6 +192,8 @@ export function BoxBuilder({
                   chosenId={selections[line.contentId]}
                   isAr={isAr}
                   onPick={(productId) => pick(line.contentId, productId)}
+                  catLifeStage={catLifeStage}
+                  catSterilized={catSterilized}
                 />
               )}
             </div>
@@ -207,14 +215,21 @@ function LinePicker({
   chosenId,
   isAr,
   onPick,
+  catLifeStage,
+  catSterilized,
 }: {
   line: BoxLine;
   chosenId?: string;
   isAr: boolean;
   onPick: (productId: string) => void;
+  catLifeStage?: "KITTEN" | "ADULT" | "SENIOR" | null;
+  catSterilized?: boolean | null;
 }) {
   const opts = line.options ?? [];
   const chosen = opts.find((o) => o.productId === chosenId);
+  // Our recommendation stays reachable no matter how the facets are set —
+  // "keep our pick" must never be filtered out of existence (R005).
+  const recommendedOpt = React.useMemo(() => opts.find((o) => o.recommended) ?? null, [opts]);
 
   const stages = React.useMemo(
     () => (["KITTEN", "ADULT", "SENIOR"] as const).filter((s) => opts.some((o) => o.lifeStage === s)),
@@ -223,18 +238,26 @@ function LinePicker({
   const hasStageFacet = stages.length > 1;
   const hasSterFacet = opts.some((o) => o.sterilized);
 
-  const [stage, setStage] = React.useState<"KITTEN" | "ADULT" | "SENIOR">(chosen?.lifeStage ?? "ADULT");
-  const [ster, setSter] = React.useState<boolean>(chosen?.sterilized ?? false);
+  // Facets open pre-answered from what we already know: the current pick first,
+  // then the cat's own profile (R001 — never re-ask what the profile holds).
+  const [stage, setStage] = React.useState<"KITTEN" | "ADULT" | "SENIOR">(
+    chosen?.lifeStage ?? catLifeStage ?? "ADULT"
+  );
+  const [ster, setSter] = React.useState<boolean>(chosen?.sterilized ?? catSterilized ?? false);
   const [brand, setBrand] = React.useState<string | null>(chosen?.brandEn ?? null);
 
   // Facet filters. Sterilised = yes still shows regular food (it's suitable) with
-  // sterilised formulas first; = no hides sterilised-specific formulas.
+  // sterilised formulas first; = no hides sterilised-specific formulas. The
+  // recommended pick is pinned back in (first) whenever filters would hide it.
   const filtered = React.useMemo(() => {
     let arr = opts;
     if (hasStageFacet) arr = arr.filter((o) => o.lifeStage === stage);
     arr = ster ? arr.slice().sort((a, b) => Number(b.sterilized) - Number(a.sterilized)) : arr.filter((o) => !o.sterilized);
+    if (recommendedOpt && !arr.some((o) => o.productId === recommendedOpt.productId)) {
+      arr = [recommendedOpt, ...arr];
+    }
     return arr;
-  }, [opts, hasStageFacet, stage, ster]);
+  }, [opts, hasStageFacet, stage, ster, recommendedOpt]);
 
   const brands = React.useMemo(() => {
     const seen = new Map<string, { en: string; ar: string }>();
@@ -367,7 +390,7 @@ function FacetChip({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "min-h-9 rounded-full border px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "min-h-11 rounded-full border px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         selected
           ? "border-primary bg-primary/10 font-medium text-foreground"
           : "border-border text-muted-foreground hover:bg-muted"

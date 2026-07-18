@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Loader2, ShieldCheck, WifiOff } from "lucide-react";
+import { LogOut, Loader2, MailCheck, ShieldCheck, WifiOff, X } from "lucide-react";
 import { cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -28,15 +28,21 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const nav = visiblePortalNav();
   const handleLogout = React.useCallback(() => { void logout(); router.push("/login"); }, [logout, router]);
 
-  // Redirect unauthenticated visitors to login once hydration settles.
+  // Redirect unauthenticated visitors to login once hydration settles — and
+  // carry where they were headed, so login lands them right back (R117: a
+  // "notify me" tap, a deep link, nothing gets lost on the way).
+  // Email verification does NOT gate the portal: the Cat ID comes first, and
+  // verifying is a parallel task invited by the quiet banner below. Only the
+  // community-publish action requires it (enforced server-side).
   React.useEffect(() => {
     if (!ready) return;
-    if (!user) router.replace("/login");
-    // The dashboard is gated on a verified email (OTP). Unverified → verify page.
-    else if (user.emailVerified === false) router.replace("/verify-email");
-  }, [ready, user, router]);
+    if (!user) {
+      const search = typeof window !== "undefined" ? window.location.search : "";
+      router.replace(`/login?next=${encodeURIComponent(pathname + search)}`);
+    }
+  }, [ready, user, router, pathname]);
 
-  if (!ready || !user || user.emailVerified === false) {
+  if (!ready || !user) {
     return (
       <div className="grid min-h-screen place-items-center">
         <div className="flex flex-col items-center gap-3">
@@ -114,6 +120,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             </div>
           </header>
           <OfflineBanner isAr={isAr} />
+          {user.emailVerified === false && <VerifyEmailBanner isAr={isAr} pathname={pathname} />}
           {/* pb-nav reserves room for the floating mobile nav + home indicator. */}
           <main id="main" tabIndex={-1} className="pb-nav flex-1 p-4 outline-none sm:p-6 md:pb-6">{children}</main>
         </div>
@@ -122,6 +129,56 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       {/* ── Mobile: thumb-zone bottom nav (R100), ≥44px targets (R092), 320px-safe ── */}
       <PortalMobileNav items={nav} isAr={isAr} isStaff={!!user.isStaff} onLogout={handleLogout} />
     </CatProvider>
+  );
+}
+
+/**
+ * Verification is a task, not a wall (R004 trust precedes ask, R002): a quiet,
+ * dismissible line that says why confirming matters — securing the account and
+ * sharing the cat with the community — and links to the standalone verify page
+ * with a `next` back to right here. Dismissal lasts the session; the invitation
+ * returns next visit without ever blocking anything.
+ */
+function VerifyEmailBanner({ isAr, pathname }: { isAr: boolean; pathname: string }) {
+  const { primaryCat } = useCats();
+  const DISMISS_KEY = "moraqat.verifyBannerDismissed";
+  const [dismissed, setDismissed] = React.useState(true); // SSR-safe: start hidden
+  React.useEffect(() => {
+    try { setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1"); } catch { setDismissed(false); }
+  }, []);
+  if (dismissed) return null;
+
+  const catName = primaryCat ? localizeName(primaryCat.name, isAr ? "ar" : "en") : null;
+  const message = catName
+    ? isAr
+      ? `أكّد بريدك لتأمين حسابك ولمشاركة ${catName} مع المجتمع`
+      : `Confirm your email to secure your account and share ${catName} to the community`
+    : isAr
+      ? "أكّد بريدك لتأمين حسابك ولمشاركة قطك مع المجتمع"
+      : "Confirm your email to secure your account and share your cat to the community";
+
+  return (
+    <div role="status" className="flex items-center justify-between gap-2 border-b border-border bg-accent/[0.08] px-4 py-1.5 text-xs">
+      <Link
+        href={`/verify-email?next=${encodeURIComponent(pathname)}`}
+        className="inline-flex min-h-[44px] min-w-0 items-center gap-2 font-medium text-foreground/90 transition-colors hover:text-foreground"
+      >
+        <MailCheck className="size-3.5 shrink-0 text-accent" aria-hidden />
+        <span className="truncate">{message}</span>
+        <span className="shrink-0 text-accent underline-offset-2 hover:underline">{isAr ? "أكّده الآن" : "Confirm now"}</span>
+      </Link>
+      <button
+        type="button"
+        aria-label={isAr ? "إخفاء التنبيه" : "Dismiss"}
+        onClick={() => {
+          setDismissed(true);
+          try { sessionStorage.setItem(DISMISS_KEY, "1"); } catch { /* ignore */ }
+        }}
+        className="grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <X className="size-3.5" aria-hidden />
+      </button>
+    </div>
   );
 }
 

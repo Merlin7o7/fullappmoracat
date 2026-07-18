@@ -20,14 +20,51 @@ const BRAND = {
   paper: "#faf7f1", // warm paper ground
   card: "#ffffff",
   ink: "#14261f", // deep green-black
-  muted: "#6f7a73",
+  // 4.58:1 on white even at footnote sizes (R091) — the old #6f7a73 fell short.
+  muted: "#5c665f",
   green: "#045b46", // primary chrome
   greenInk: "#f6f4ec", // cream text on green
   accent: "#f86c2f", // orange CTA
-  accentInk: "#ffffff",
+  // Orange takes ink, never white (web token rule): white-on-orange is 2.93:1,
+  // ink-on-orange clears 4.5:1 (R091).
+  accentInk: "#14261f",
   hairline: "#ece5d8",
   chipBg: "#f2ede2",
 };
+
+// Dark-scheme palette for clients that honour prefers-color-scheme / Gmail's
+// [data-ogsc]. Same warm-green family, inverted ground.
+const DARK = {
+  paper: "#101613",
+  card: "#182019",
+  panel: "#1f2921",
+  ink: "#f2efe7",
+  muted: "#a8b0a9",
+  code: "#7fd6b8", // green family readable on dark chips
+  hairline: "#2a332c",
+};
+
+/**
+ * Dark-mode overrides. Two selector families cover the real world:
+ *  - `@media (prefers-color-scheme: dark)` — Apple Mail, Outlook (macOS/iOS).
+ *  - `[data-ogsc]` — Gmail apps, which rewrite the DOM instead of honouring
+ *    the media query. Both need !important to beat the inline styles.
+ */
+function darkStyles(): string {
+  const rules = (prefix: string) => `
+      ${prefix} body, ${prefix} .em-bg { background:${DARK.paper} !important; }
+      ${prefix} .em-card { background:${DARK.card} !important; border-color:${DARK.hairline} !important; }
+      ${prefix} .em-panel { background:${DARK.panel} !important; border-color:${DARK.hairline} !important; }
+      ${prefix} .em-ink { color:${DARK.ink} !important; }
+      ${prefix} .em-muted, ${prefix} .em-muted a { color:${DARK.muted} !important; }
+      ${prefix} .em-code { color:${DARK.code} !important; }
+      ${prefix} .em-line { border-color:${DARK.hairline} !important; }`;
+  return `<style>
+    @media (prefers-color-scheme: dark) {${rules("")}
+    }
+    ${rules("[data-ogsc]")}
+  </style>`;
+}
 
 // The registered establishment operating the Moracat brand, plus real contact
 // channels — named in every email footer for trust and legal clarity.
@@ -75,7 +112,7 @@ function layout(i: LayoutInput): string {
   const paragraphs = i.body
     .map(
       (p) =>
-        `<p style="margin:0 0 16px;font-size:15px;line-height:1.75;color:${BRAND.ink};text-align:${align};">${p}</p>`
+        `<p class="em-ink" style="margin:0 0 16px;font-size:15px;line-height:1.75;color:${BRAND.ink};text-align:${align};">${p}</p>`
     )
     .join("");
 
@@ -87,7 +124,7 @@ function layout(i: LayoutInput): string {
     : "";
 
   const foot = i.footnote
-    ? `<p style="margin:18px 0 0;padding-top:16px;border-top:1px solid ${BRAND.hairline};font-size:12px;line-height:1.6;color:${BRAND.muted};text-align:${align};">${i.footnote}</p>`
+    ? `<p class="em-muted em-line" style="margin:18px 0 0;padding-top:16px;border-top:1px solid ${BRAND.hairline};font-size:12px;line-height:1.6;color:${BRAND.muted};text-align:${align};">${i.footnote}</p>`
     : "";
 
   const promise = rtl ? "مُرقّط — هوية قطك تبدأ من هنا." : "Moracat — where your cat's identity begins.";
@@ -97,10 +134,10 @@ function layout(i: LayoutInput): string {
   const legalFoot = `<p style="margin:10px 0 0;font-size:11px;line-height:1.6;color:${BRAND.muted};">${entity}</p>
           <p style="margin:4px 0 0;font-size:11px;line-height:1.6;color:${BRAND.muted};" dir="ltr"><a href="tel:${CONTACT.phone}" style="color:${BRAND.muted};text-decoration:none;">${CONTACT.phoneDisplay}</a> · <a href="${CONTACT.instagramUrl}" style="color:${BRAND.muted};text-decoration:none;">${CONTACT.instagram}</a></p>`;
 
-  return `<!doctype html><html dir="${dir}" lang="${i.locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"></head>
-<body style="margin:0;padding:0;background:${BRAND.paper};font-family:${font};-webkit-font-smoothing:antialiased;">
+  return `<!doctype html><html dir="${dir}" lang="${i.locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${darkStyles()}</head>
+<body class="em-bg" style="margin:0;padding:0;background:${BRAND.paper};font-family:${font};-webkit-font-smoothing:antialiased;">
   <span style="display:none;max-height:0;overflow:hidden;opacity:0;">${i.preheader}</span>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.paper};padding:32px 12px;">
+  <table role="presentation" class="em-bg" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.paper};padding:32px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:524px;">
         <!-- Logo -->
@@ -109,8 +146,8 @@ function layout(i: LayoutInput): string {
         </td></tr>
         <!-- Card with a green brand accent bar on top -->
         <tr><td style="height:4px;background:${BRAND.green};border-radius:20px 20px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
-        <tr><td style="background:${BRAND.card};border:1px solid ${BRAND.hairline};border-top:0;border-radius:0 0 20px 20px;padding:34px 30px;">
-          <h1 style="margin:0 0 18px;font-size:23px;line-height:1.3;font-weight:800;letter-spacing:-0.01em;color:${BRAND.ink};text-align:${align};">${i.heading}</h1>
+        <tr><td class="em-card" style="background:${BRAND.card};border:1px solid ${BRAND.hairline};border-top:0;border-radius:0 0 20px 20px;padding:34px 30px;">
+          <h1 class="em-ink" style="margin:0 0 18px;font-size:23px;line-height:1.3;font-weight:800;letter-spacing:-0.01em;color:${BRAND.ink};text-align:${align};">${i.heading}</h1>
           ${paragraphs}
           ${i.extra ?? ""}
           ${button}
@@ -443,19 +480,118 @@ export function subscriptionConfirmedTemplate(locale: Locale, name: string | nul
   };
 }
 
-export function subscriptionRenewalTemplate(locale: Locale, name: string | null, planName: string, amount: number, chargeAt: string): BuiltEmail {
+/**
+ * Term-end invitation (R025). The whole term is prepaid, so nothing auto-renews —
+ * this is an INVITATION, never a charge warning. "We never charge silently" is
+ * the brand's loudest promise; this email is where it is kept, out loud.
+ */
+export function termEndInvitationTemplate(
+  locale: Locale,
+  name: string | null,
+  catName: string,
+  planName: string,
+  endsAt: string,
+  amount: number,
+  renewUrl: string
+): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? "تذكير بتجديد عضويتك" : "Your membership renews soon";
+  const heading = ar ? `عضوية ${catName} تقترب من نهايتها` : `${catName}'s membership is nearly up`;
   const body = [
     hiName(ar, name),
     ar
-      ? `نذكّرك أن باقة «${planName}» ستتجدّد بتاريخ ${chargeAt} بمبلغ ${sar(amount, ar)}. لا حاجة لأي إجراء إذا رغبت بالاستمرار.`
-      : `A friendly heads-up: your ${planName} plan renews on ${chargeAt} for ${sar(amount, ar)}. No action needed if you'd like to continue.`,
+      ? `تنتهي مدة باقة «${planName}» بتاريخ ${endsAt}. لا نجدّد تلقائياً أبداً ولا نخصم منك بصمت — متى ما رغبت، جدّد بضغطة واحدة وتستمر مزايا ${catName} دون انقطاع.`
+      : `Your ${planName} term ends on ${endsAt}. We never renew automatically and never charge you silently — whenever you're ready, renew in one tap and ${catName}'s benefits continue without a gap.`,
+    ar
+      ? `التجديد لمدة مماثلة يبدأ من ${sar(amount, ar)}. وإذا احتجت وقتاً، سجلّ ${catName} وكل ذكرياته محفوظة معك دائماً.`
+      : `Renewing for another term starts at ${sar(amount, ar)}. And if you need time, ${catName}'s record and everything in it stays safe with you, always.`,
   ];
-  const cta = { label: ar ? "إدارة أو إيقاف مؤقت" : "Manage or pause", url: `${siteUrl()}/portal/subscriptions` };
+  const cta = { label: ar ? `جدّد عضوية ${catName}` : `Renew ${catName}'s membership`, url: renewUrl };
   return {
-    subject: ar ? "تذكير بتجديد عضويتك — مُرقّط" : "Your membership renews soon — Moracat",
-    html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "يمكنك الإيقاف المؤقت أو الإلغاء في أي وقت قبل التجديد." : "You can pause or cancel anytime before it renews." }),
+    subject: ar ? `عضوية ${catName} تقترب من نهايتها — مُرقّط` : `${catName}'s membership is nearly up — Moracat`,
+    html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "لا يوجد أي خصم تلقائي. القرار لك بالكامل." : "There is no automatic charge. The choice is entirely yours." }),
+    text: toText(heading, body, cta),
+  };
+}
+
+/**
+ * Graceful lapse (R064/R068) — the term ended and wasn't renewed. Never guilt,
+ * never a hard door: records are kept, returning is one tap, and the cat is
+ * still the hero of the goodbye.
+ */
+export function membershipLapsedTemplate(
+  locale: Locale,
+  name: string | null,
+  catName: string,
+  renewUrl: string
+): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = ar ? `عضوية ${catName} انتهت — وكل شيء محفوظ` : `${catName}'s membership has ended — everything's saved`;
+  const body = [
+    hiName(ar, name),
+    ar
+      ? `انتهت مدة عضوية ${catName}، وشكراً لأنك كنت معنا. هوية ${catName} وسجلّه الصحي وصوره وكل ذكرياته محفوظة كما هي — لن نحذف شيئاً.`
+      : `${catName}'s membership term has ended, and thank you for being with us. ${catName}'s Cat ID, health record, photos and every memory stay exactly as they are — we won't delete a thing.`,
+    ar
+      ? `متى ما حبيت ترجع، مكان ${catName} محجوز وكأنك ما غبت.`
+      : `Whenever you'd like to come back, ${catName}'s place is waiting — like you never left.`,
+  ];
+  const cta = { label: ar ? `رجّع عضوية ${catName}` : `Welcome ${catName} back`, url: renewUrl };
+  return {
+    subject: ar ? `عضوية ${catName} انتهت — مُرقّط` : `${catName}'s membership has ended — Moracat`,
+    html: layout({ locale, preheader: heading, heading, body, cta }),
+    text: toText(heading, body, cta),
+  };
+}
+
+/**
+ * Vaccination reminder — the portal's first PROACTIVE act of care (R049/P8).
+ * A reminder honoured, in the cat's name.
+ */
+export function vaccinationReminderTemplate(
+  locale: Locale,
+  name: string | null,
+  catName: string,
+  vaccineName: string,
+  dueAt: string,
+  url: string
+): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = ar ? `تطعيم ${catName} يقترب` : `${catName}'s vaccination is coming up`;
+  const body = [
+    hiName(ar, name),
+    ar
+      ? `تذكير لطيف: موعد تطعيم «${vaccineName}» لـ${catName} بتاريخ ${dueAt}. حبّينا نذكّرك قبل الموعد — هذا جزء من عنايتنا بـ${catName}.`
+      : `A gentle reminder: ${catName}'s ${vaccineName} vaccination is due on ${dueAt}. We wanted to let you know ahead of time — looking after ${catName} is what we're here for.`,
+  ];
+  const cta = { label: ar ? `افتح سجل ${catName} الصحي` : `Open ${catName}'s health record`, url };
+  return {
+    subject: ar ? `تطعيم ${catName} يقترب — مُرقّط` : `${catName}'s vaccination is coming up — Moracat`,
+    html: layout({ locale, preheader: heading, heading, body, cta }),
+    text: toText(heading, body, cta),
+  };
+}
+
+/**
+ * Refund-request acknowledgement (R030) — raising a refund must feel safe and
+ * heard. This confirms we received the request; a human follows up.
+ */
+export function refundRequestedTemplate(
+  locale: Locale,
+  name: string | null,
+  planName: string
+): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = ar ? "استلمنا طلب استرداد المبلغ" : "We've received your refund request";
+  const body = [
+    hiName(ar, name),
+    ar
+      ? `استلمنا طلبك بخصوص استرداد المتبقّي من باقة «${planName}». سيتواصل معك فريق العناية خلال ٢٤ ساعة عمل، ولن تُخصم منك أي رسوم إضافية.`
+      : `We've received your request to refund the remainder of your ${planName} plan. Our care team will reach out within one business day, and you won't be charged anything further.`,
+  ];
+  const cta = { label: ar ? "تواصل مع العناية" : "Contact Care", url: supportUrl() };
+  return {
+    subject: ar ? "استلمنا طلب الاسترداد — مُرقّط" : "We've received your refund request — Moracat",
+    html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "طلبك مسجّل ومحفوظ. نحن هنا لمساعدتك." : "Your request is logged and safe. We're here to help." }),
     text: toText(heading, body, cta),
   };
 }

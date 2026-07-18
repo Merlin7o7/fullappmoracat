@@ -7,6 +7,18 @@ import type { CommunityQueryDto } from "./dto/community-query.dto";
 const PAGE_SIZE = 24;
 
 /**
+ * Cats shared before this date carry a "founding member" chip — a tenure fact
+ * (like "member since"), never points or gamification. Keep in sync with the
+ * web's copy if it ever moves.
+ */
+export const FOUNDING_CUTOFF = new Date("2026-09-01T00:00:00Z");
+
+/** One counted visit per (ip, slug) per hour — naive but honest. */
+const VIEW_DEDUPE_TTL_MS = 60 * 60 * 1000;
+/** Hard cap on the dedupe map so a scan can't grow memory unbounded. */
+const VIEW_DEDUPE_MAX = 50_000;
+
+/**
  * Public community read model. PRIVACY IS LOAD-BEARING HERE: only cats the owner
  * explicitly made public (isPublic) and that aren't hidden by moderation are
  * ever returned, and each optional field (owner name, city, breed, age, gallery)
@@ -16,6 +28,9 @@ const PAGE_SIZE = 24;
 @Injectable()
 export class CommunityService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** ip+slug → timestamp of the last counted view (in-memory, best-effort). */
+  private readonly viewSeen = new Map<string, number>();
 
   private baseWhere(): Prisma.CatWhereInput {
     return {
@@ -60,16 +75,20 @@ export class CommunityService {
       };
     }
 
+    // "Featured" is an honest collection, not a sort trick: it returns ONLY cats
+    // an admin actually featured (the web hides the door when it's empty). No
+    // "viewed" sort exists — see the query DTO for why (R006).
+    if (query.sort === "featured") where.isFeatured = true;
+
     // Every sort ends with a unique `id` tiebreaker so pages don't duplicate or
     // skip rows when items share the primary sort value (offset pagination).
     const orderBy: Prisma.CatOrderByWithRelationInput[] =
-      query.sort === "viewed"
-        ? [{ viewCount: "desc" }, { sharedAt: "desc" }, { id: "desc" }]
-        : query.sort === "liked"
-          ? [{ likeCount: "desc" }, { sharedAt: "desc" }, { id: "desc" }]
-          : query.sort === "featured"
-            ? [{ isFeatured: "desc" }, { viewCount: "desc" }, { id: "desc" }]
-            : [{ sharedAt: "desc" }, { id: "desc" }];
+      query.sort === "liked"
+        ? [{ likeCount: "desc" }, { sharedAt: "desc" }, { id: "desc" }]
+        : query.sort === "featured"
+          ? [{ featuredAt: "desc" }, { id: "desc" }]
+          : // "new" / "recent" (alias) / default — most recently shared first.
+            [{ sharedAt: "desc" }, { id: "desc" }];
 
     const [rows, total] = await Promise.all([
       this.prisma.cat.findMany({
@@ -120,10 +139,9 @@ export class CommunityService {
     });
     if (!cat) throw new NotFoundException("This cat isn't public");
 
-    // Count the visit (best-effort; never blocks the response).
-    void this.prisma.cat
-      .update({ where: { publicSlug: slug }, data: { viewCount: { increment: 1 } } })
-      .catch(() => undefined);
+    // NOTE: views are counted by POST /community/cats/:slug/view (deduped,
+    // beacon-driven) — a GET must never mutate, and bots/prefetchers hammering
+    // this endpoint were inflating the number (R006: honest by default).
 
     const card = this.toCard(cat);
     return {
@@ -134,8 +152,39 @@ export class CommunityService {
       bio: cat.bio,
       ownerNickname: cat.showOwnerName ? (cat.user?.ownerNickname ?? null) : null,
       gallery: cat.showGallery ? (cat.photos ?? []) : [],
-      birthDate: cat.showAge ? cat.birthDate : null,
+      // Consent correctness: "show age" means the AGE, not the birth date. The
+      // raw date never leaves the API — visitors get a coarse month tally the
+      // web renders as "2y 3m" (or the life stage when no date is on file).
+      ageMonths: cat.showAge && cat.birthDate ? monthsSince(cat.birthDate) : null,
     };
+  }
+
+  /**
+   * Truthful view counting: one increment per (ip, slug) per hour, fired by the
+   * profile page's client-side beacon. In-memory dedupe is deliberate — approx.
+   * is fine (the owner-facing label says so), lying upward is not.
+   */
+  async recordView(slug: string, ip: string | undefined) {
+    const key = `${ip ?? "?"}:${slug}`;
+    const now = Date.now();
+    const seen = this.viewSeen.get(key);
+    if (seen && now - seen < VIEW_DEDUPE_TTL_MS) return { counted: false };
+
+    // Opportunistic sweep + hard cap so the map can't grow without bound.
+    if (this.viewSeen.size >= VIEW_DEDUPE_MAX) {
+      for (const [k, t] of this.viewSeen) {
+        if (now - t >= VIEW_DEDUPE_TTL_MS) this.viewSeen.delete(k);
+      }
+      if (this.viewSeen.size >= VIEW_DEDUPE_MAX) this.viewSeen.clear();
+    }
+    this.viewSeen.set(key, now);
+
+    // Only public cats count — and a miss is a silent no-op (beacons never error).
+    const { count } = await this.prisma.cat.updateMany({
+      where: { publicSlug: slug, ...this.baseWhere() },
+      data: { viewCount: { increment: 1 } },
+    });
+    return { counted: count > 0 };
   }
 
   // ── Filter facets (breeds + cities that actually have public cats) ──────────
@@ -147,19 +196,43 @@ export class CommunityService {
       where: { ...this.baseWhere(), breedId: { not: null } },
     });
     const breedIds = grouped.map((g) => g.breedId).filter((b): b is string => Boolean(b));
-    const [breeds, cities] = await Promise.all([
+    const [breeds, cities, featuredCount] = await Promise.all([
       this.prisma.breed.findMany({
         where: { id: { in: breedIds } },
         select: { id: true, nameEn: true, nameAr: true },
         orderBy: { nameEn: "asc" },
       }),
+      // Mirror the breeds facet: only cities where a public, city-revealing cat
+      // actually lives — a filter that can return zero results is a broken door.
       this.prisma.city.findMany({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          addresses: {
+            some: {
+              isDefault: true,
+              user: {
+                status: "ACTIVE",
+                deletedAt: null,
+                cats: {
+                  some: {
+                    isPublic: true,
+                    hiddenAt: null,
+                    deletedAt: null,
+                    status: "ACTIVE",
+                    showCity: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         select: { id: true, nameEn: true, nameAr: true },
         orderBy: { nameEn: "asc" },
       }),
+      // Lets the web hide the Featured door entirely while nothing is featured.
+      this.prisma.cat.count({ where: { ...this.baseWhere(), isFeatured: true } }),
     ]);
-    return { breeds, cities };
+    return { breeds, cities, featuredCount };
   }
 
   // ── Shared selection + privacy-aware mapping ────────────────────────────────
@@ -169,7 +242,6 @@ export class CommunityService {
       name: true,
       photoUrl: true,
       gender: true,
-      viewCount: true,
       likeCount: true,
       isFeatured: true,
       sharedAt: true,
@@ -196,9 +268,9 @@ export class CommunityService {
     name: string;
     photoUrl: string | null;
     gender: string;
-    viewCount: number;
     likeCount: number;
     isFeatured: boolean;
+    sharedAt: Date | null;
     lifeStage: string | null;
     showBreed: boolean;
     showCity: boolean;
@@ -212,12 +284,23 @@ export class CommunityService {
       name: c.name,
       photoUrl: c.photoUrl,
       gender: c.gender,
-      viewCount: c.viewCount,
+      // viewCount is deliberately NOT public: it stays an owner-only, clearly
+      // "approx." number. Love (likes) is the one public signal.
       likeCount: c.likeCount,
       isFeatured: c.isFeatured,
+      // Tenure fact, never points: shared before the founding cutoff.
+      isFounding: Boolean(c.sharedAt && c.sharedAt < FOUNDING_CUTOFF),
       breed: c.showBreed ? (c.breed ?? null) : null,
       city: c.showCity ? city : null,
       lifeStage: c.showAge ? c.lifeStage : null,
     };
   }
+}
+
+/** Whole months elapsed since `date` (floored at zero). */
+function monthsSince(date: Date): number {
+  const now = new Date();
+  let months = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
+  if (now.getDate() < date.getDate()) months -= 1;
+  return Math.max(0, months);
 }

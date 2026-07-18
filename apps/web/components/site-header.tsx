@@ -60,6 +60,7 @@ export function SiteHeader() {
   const navItems = [
     { href: "/#how", label: t.nav.how },
     { href: "/#plans", label: t.nav.plans },
+    { href: "/benefits", label: t.nav.benefits },
     { href: "/community", label: t.nav.community },
     { href: "/products", label: t.nav.products },
     { href: "/blog", label: t.nav.blog },
@@ -88,7 +89,9 @@ export function SiteHeader() {
             <Logo className="h-9" priority />
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex">
+          {/* Seven items need lg — at md they overflow the pill, so the
+              disclosure menu carries them until lg. */}
+          <nav className="hidden items-center gap-1 lg:flex">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -115,7 +118,7 @@ export function SiteHeader() {
               aria-expanded={menuOpen}
               aria-controls="mobile-nav"
               aria-label={menuOpen ? (isAr ? "إغلاق القائمة" : "Close menu") : (isAr ? "فتح القائمة" : "Open menu")}
-              className="ms-1 grid size-11 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+              className="ms-1 grid size-11 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
             >
               {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>
@@ -127,7 +130,7 @@ export function SiteHeader() {
           <div
             id="mobile-nav"
             ref={panelRef}
-            className="glass container mt-2 rounded-3xl p-2 shadow-soft-lg md:hidden"
+            className="glass container mt-2 rounded-3xl p-2 shadow-soft-lg lg:hidden"
           >
             <nav className="flex flex-col">
               {navItems.map((item) => (

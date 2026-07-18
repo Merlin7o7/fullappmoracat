@@ -155,6 +155,19 @@ export class AccountService {
         this.prisma.catPhoto.count({ where: { cat: { userId, deletedAt: null } } }),
       ]);
 
+    // "Coming up" — the care dashboard's forward glance (R049/P8): the next
+    // vaccination due in the coming 45 days. The lifecycle engine sends the
+    // reminder; this row lets the home screen show care *before* it's asked for.
+    const upcomingVaccinations = await this.prisma.catVaccination.findMany({
+      where: {
+        dueAt: { gte: new Date(), lte: new Date(Date.now() + 45 * 86_400_000) },
+        cat: { userId, deletedAt: null, status: "ACTIVE" },
+      },
+      orderBy: { dueAt: "asc" },
+      take: 2,
+      select: { id: true, name: true, dueAt: true, cat: { select: { id: true, name: true } } },
+    });
+
     // Resolve the featured (primary) cat, self-healing to the first active one.
     let primaryId = user?.primaryCatId ?? null;
     const activeCats = cats.filter((c) => c.status === "ACTIVE");
@@ -211,6 +224,22 @@ export class AccountService {
         photos: photoCount,
         communityLikes: cats.reduce((sum, c) => sum + c.likeCount, 0),
       },
+      // Forward-looking care (max 2 rows): next vaccinations due, then the next
+      // box delivery — rendered as the dashboard's "Coming up for {cat}" strip.
+      comingUp: [
+        ...upcomingVaccinations.map((v) => ({
+          type: "vaccination" as const,
+          at: v.dueAt,
+          catId: v.cat.id,
+          catName: v.cat.name,
+          label: v.name,
+        })),
+        ...(activeSub?.nextDeliveryAt && activeSub.nextDeliveryAt.getTime() > Date.now()
+          ? [{ type: "delivery" as const, at: activeSub.nextDeliveryAt, catId: null, catName: null, label: null }]
+          : []),
+      ]
+        .sort((a, b) => (a.at && b.at ? a.at.getTime() - b.at.getTime() : 0))
+        .slice(0, 2),
       // Back-compat alias for the previous overview shape.
       firstCat: primaryCat ? { name: primaryCat.name, catIdNumber: primaryCat.catIdNumber } : null,
       recentOrders: recentOrders.map((o) => ({

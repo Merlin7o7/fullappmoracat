@@ -64,6 +64,15 @@
     --destructive: 0 74% 45%;
     --destructive-foreground: 0 0% 100%;
 
+    /* ── On-dark-scrim family — accents tuned for near-black overlays (the
+     * ceremony's dark stage, photo scrims), NOT for the theme surfaces. These
+     * are theme-invariant: a dark scrim is dark in both light and dark mode,
+     * so they live once in :root. Brightened past the theme accents to clear
+     * 4.5:1 on black (R091). Previously hand-rolled as hsl(18 93% 62%) at 7+
+     * call sites; use text-accent-on-dark / text-warning-on-dark instead. ── */
+    --accent-on-dark: 18 93% 62%;
+    --warning-on-dark: 38 92% 56%;
+
     /* Lines + focus. --border is a decorative hairline (dividers, card edges —
      * not state-carrying, exempt from 1.4.11). --input is a *control boundary*
      * and is the sole indicator of the field, so it must clear 3:1 (WCAG 1.4.11):
@@ -132,7 +141,10 @@
     --info: 200 84% 62%;
     --info-foreground: 168 45% 6%;
     --destructive: 0 78% 63%;        /* lightened from 57% → clears 4.5:1 on dark */
-    --destructive-foreground: 0 0% 100%;
+    /* Ink, not white: this fill vs white computes only 3.50:1 (fails 4.5:1).
+     * Matches the dark-mode pattern success/warning/info already use — bright
+     * fill + ink foreground (≈5.2:1 computed). */
+    --destructive-foreground: 168 45% 6%;
 
     /* --border stays a soft divider; --input lifted to a perceptible field edge (3:1). */
     --border: 168 14% 20%;

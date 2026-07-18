@@ -41,6 +41,22 @@ export default function CatsPage() {
   const [idCardCat, setIdCardCat] = React.useState<PortalCat | null>(null);
   const [manageCat, setManageCat] = React.useState<PortalCat | null>(null);
 
+  // Deep links carry context (R005): /portal/cats?cat={id} opens that cat's
+  // drawer directly (…&panel=health for the health record — the drawer hosts
+  // the panel). The dashboard's quick actions land HERE, on the right cat.
+  // (location.search read in-effect: client-only, no Suspense requirement.)
+  const deepLinkedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (deepLinkedRef.current || !cats.length) return;
+    const target = new URLSearchParams(window.location.search).get("cat");
+    if (!target) return;
+    const cat = cats.find((c) => c.id === target);
+    if (cat) {
+      deepLinkedRef.current = true;
+      setManageCat(cat);
+    }
+  }, [cats]);
+
   const feed = useMutation({
     mutationFn: (catId: string) => authedFetch<Recommendation>(`/feeding/cats/${catId}`, { method: "POST", body: "{}" }),
     onSuccess: (data, catId) => setRec({ catId, data }),

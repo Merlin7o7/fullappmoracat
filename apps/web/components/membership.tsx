@@ -36,7 +36,8 @@ export interface MembershipBenefit {
 export const MEMBERSHIP_BENEFITS: MembershipBenefit[] = [
   { icon: BadgeCheck, en: "Official Cat ID activation", ar: "تفعيل هوية القط الرسمية" },
   { icon: Package, en: "Monthly essentials delivered", ar: "أساسيات شهرية توصل لبابك" },
-  { icon: Percent, en: "Exclusive partner discounts", ar: "خصومات حصرية عند الشركاء" },
+  // Member-rate lexicon (R085/R087): recognition, never coupon talk.
+  { icon: Percent, en: "Member rates honoured at partners", ar: "سعر الأعضاء محفوظ عند الشركاء" },
   { icon: Stethoscope, en: "Veterinary benefits", ar: "مزايا بيطرية" },
   { icon: Users, en: "Community perks", ar: "امتيازات في المجتمع" },
   { icon: Gift, en: "Future member rewards", ar: "مكافآت الأعضاء القادمة" },

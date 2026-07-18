@@ -10,6 +10,7 @@ import {
   IsString,
   Min,
   Max,
+  MaxLength,
   ValidateNested,
   ArrayMinSize,
 } from "class-validator";
@@ -90,6 +91,14 @@ export class PauseDto {
   @IsOptional()
   @IsString()
   until?: string;
+}
+
+export class RefundRequestDto {
+  @ApiPropertyOptional({ description: "Optional reason for the refund request" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  reason?: string;
 }
 
 /**

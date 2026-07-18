@@ -16,6 +16,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import {
   paymentReceiptTemplate,
   subscriptionConfirmedTemplate,
+  refundRequestedTemplate,
 } from "../mail/mail.templates";
 import {
   PAYMENT_PROVIDER_FACTORY,
@@ -79,9 +80,38 @@ export class SubscriptionsService {
         catId: { in: dto.catIds },
         subscription: { userId, status: { in: ["ACTIVE", "PAUSED", "DRAFT"] } },
       },
-      include: { cat: { select: { name: true } } },
+      include: {
+        cat: { select: { name: true } },
+        subscription: {
+          select: {
+            id: true,
+            status: true,
+            orders: {
+              orderBy: { placedAt: "desc" },
+              take: 1,
+              select: { payments: { orderBy: { createdAt: "desc" }, take: 1, select: { metadata: true } } },
+            },
+          },
+        },
+      },
     });
     if (alreadyCovered) {
+      // Idempotency + resume (fire #4): a DRAFT is an in-flight redirect the
+      // member abandoned, not a wall. Instead of dead-ending them, hand back the
+      // existing checkout URL so a second tap resumes payment — never a new
+      // session, never a duplicate charge.
+      if (alreadyCovered.subscription.status === "DRAFT") {
+        const meta = alreadyCovered.subscription.orders[0]?.payments[0]?.metadata as
+          | { redirectUrl?: string }
+          | null
+          | undefined;
+        return {
+          subscriptionId: alreadyCovered.subscription.id,
+          status: "DRAFT" as const,
+          resumed: true,
+          redirectUrl: meta?.redirectUrl ?? null,
+        };
+      }
       throw new BadRequestException({
         code: "CAT_ALREADY_COVERED",
         message: `${alreadyCovered.cat.name} already has a membership — manage it from your subscriptions page.`,
@@ -219,6 +249,9 @@ export class SubscriptionsService {
               currency: plan.currency,
               providerRef: charge.providerRef,
               capturedAt: isPending ? null : new Date(),
+              // Persist the hosted checkout URL so an abandoned redirect can be
+              // resumed (fire #4) — an in-flight payment is never a dead end.
+              metadata: charge.redirectUrl ? { redirectUrl: charge.redirectUrl } : undefined,
             },
           },
           invoice: {
@@ -353,49 +386,73 @@ export class SubscriptionsService {
     return this.serialize(sub);
   }
 
+  /**
+   * Pause (R062) — the member paid for this term, so pausing NEVER strips the
+   * benefit they already own: the Cat ID stays ACTIVE. We only record when the
+   * pause began; resume() gives back every paused day by extending the term.
+   */
   async pause(userId: string, id: string, until?: string) {
     const sub = await this.owned(userId, id);
-    if (sub.status !== "ACTIVE") throw new BadRequestException("Only active subscriptions can be paused");
+    if (sub.status === "PAUSED") throw new BadRequestException({ code: "ALREADY_PAUSED", message: "This membership is already paused." });
+    if (sub.status !== "ACTIVE") throw new BadRequestException({ code: "NOT_ACTIVE", message: "Only active memberships can be paused." });
     await this.prisma.subscription.update({
       where: { id },
       data: {
         status: "PAUSED",
+        pausedAt: new Date(),
         pausedUntil: until ? new Date(until) : null,
         events: { create: { type: "paused", metadata: { until: until ?? null } } },
       },
     });
-    await this.syncCatsMembership(sub.cats.map((c) => c.cat.id));
+    // Deliberately DO NOT deactivate the cats — paid benefit is theirs while
+    // paused (R062). The Cat ID stays active; only deliveries pause.
     return this.serialize(await this.reload(id));
   }
 
+  /**
+   * Resume — give the paused days back. endsAt and the next delivery both slide
+   * forward by exactly the paused duration, so no prepaid month is ever lost.
+   */
   async resume(userId: string, id: string) {
     const sub = await this.owned(userId, id);
-    if (sub.status !== "PAUSED") throw new BadRequestException("Only paused subscriptions can be resumed");
-    const next = addDays(new Date(), this.resolveIntervalDays(sub.interval, sub.intervalDays));
+    if (sub.status !== "PAUSED") throw new BadRequestException({ code: "NOT_PAUSED", message: "Only paused memberships can be resumed." });
+    const now = new Date();
+    const pausedMs = sub.pausedAt ? now.getTime() - sub.pausedAt.getTime() : 0;
+    const pausedDays = Math.max(0, Math.round(pausedMs / 86_400_000));
+    // Slide the term end and the next delivery forward by the paused duration.
+    const newEndsAt = sub.endsAt ? addDays(sub.endsAt, pausedDays) : null;
+    const nextDelivery = addDays(now, this.resolveIntervalDays(sub.interval, sub.intervalDays));
     await this.prisma.subscription.update({
       where: { id },
       data: {
         status: "ACTIVE",
+        pausedAt: null,
         pausedUntil: null,
-        nextBillingAt: next,
-        nextDeliveryAt: next,
-        events: { create: { type: "resumed" } },
+        endsAt: newEndsAt,
+        // Renewal is still due at (the now-extended) term end — never "+30 days".
+        nextBillingAt: newEndsAt,
+        nextDeliveryAt: nextDelivery,
+        events: { create: { type: "resumed", metadata: { pausedDays } } },
       },
     });
     await this.syncCatsMembership(sub.cats.map((c) => c.cat.id));
     return this.serialize(await this.reload(id));
   }
 
+  /**
+   * Skip the next delivery only. On a prepaid term this moves the DELIVERY date
+   * forward — never the renewal/billing date (which is fixed at term end).
+   */
   async skip(userId: string, id: string) {
     const sub = await this.owned(userId, id);
-    if (sub.status !== "ACTIVE") throw new BadRequestException("Only active subscriptions can skip");
+    if (sub.status !== "ACTIVE") throw new BadRequestException({ code: "NOT_ACTIVE", message: "Only active memberships can skip a delivery." });
     const days = this.resolveIntervalDays(sub.interval, sub.intervalDays);
-    const base = sub.nextBillingAt ?? new Date();
+    const base = sub.nextDeliveryAt ?? new Date();
     const next = addDays(base, days);
     await this.prisma.subscription.update({
       where: { id },
       data: {
-        nextBillingAt: next,
+        // Only the delivery moves; nextBillingAt (term end) is untouched.
         nextDeliveryAt: next,
         events: { create: { type: "skipped", metadata: { skippedTo: next.toISOString() } } },
       },
@@ -403,19 +460,133 @@ export class SubscriptionsService {
     return this.serialize(await this.reload(id));
   }
 
+  /**
+   * Honest cancel (R063/R064) — never confiscates a prepaid term. If the member
+   * still has time on the clock, cancelling simply means "don't renew": the
+   * subscription keeps servicing (Cat ID active, boxes arriving) until endsAt,
+   * where the lifecycle job lapses it gracefully. Only a term with nothing left
+   * to serve cancels immediately.
+   */
   async cancel(userId: string, id: string) {
     const sub = await this.owned(userId, id);
-    if (sub.status === "CANCELLED") throw new BadRequestException("Already cancelled");
+    if (sub.status === "CANCELLED" || sub.status === "EXPIRED") {
+      throw new BadRequestException({ code: "ALREADY_CANCELLED", message: "This membership is already cancelled." });
+    }
+    const now = new Date();
+    const hasRemainingTerm = sub.endsAt != null && sub.endsAt.getTime() > now.getTime();
+
+    if (hasRemainingTerm) {
+      // "Won't renew" — keep everything the member paid for until the term ends.
+      await this.prisma.subscription.update({
+        where: { id },
+        data: {
+          cancelAtTermEnd: true,
+          events: { create: { type: "cancel_scheduled", metadata: { endsAt: sub.endsAt?.toISOString() } } },
+        },
+      });
+      return this.serialize(await this.reload(id));
+    }
+
+    // No paid term remaining → cancel now and lapse the benefit.
     await this.prisma.subscription.update({
       where: { id },
       data: {
         status: "CANCELLED",
-        cancelledAt: new Date(),
+        cancelledAt: now,
         events: { create: { type: "cancelled" } },
       },
     });
     await this.syncCatsMembership(sub.cats.map((c) => c.cat.id));
     return this.serialize(await this.reload(id));
+  }
+
+  /**
+   * Resume an abandoned redirect payment (fire #4). Returns the stored hosted
+   * checkout URL so the member can complete a DRAFT membership instead of being
+   * locked out of their own cat.
+   */
+  async resumePayment(userId: string, id: string) {
+    const sub = await this.prisma.subscription.findFirst({
+      where: { id, userId },
+      select: {
+        status: true,
+        orders: {
+          orderBy: { placedAt: "desc" },
+          take: 1,
+          select: { orderNumber: true, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { metadata: true } } },
+        },
+      },
+    });
+    if (!sub) throw new NotFoundException({ code: "SUBSCRIPTION_NOT_FOUND", message: "Subscription not found." });
+    if (sub.status !== "DRAFT") {
+      throw new BadRequestException({ code: "NOT_RESUMABLE", message: "This membership isn't awaiting payment." });
+    }
+    const meta = sub.orders[0]?.payments[0]?.metadata as { redirectUrl?: string } | null | undefined;
+    if (!meta?.redirectUrl) {
+      // The stored session is gone/stale — tell the UI to start a fresh checkout.
+      throw new BadRequestException({ code: "DRAFT_EXPIRED", message: "This payment session expired — start a fresh checkout." });
+    }
+    return { redirectUrl: meta.redirectUrl, orderNumber: sub.orders[0]?.orderNumber ?? null };
+  }
+
+  /**
+   * Member-initiated remainder refund request (R030) — raising a refund must
+   * feel safe. Records the request, acknowledges the member instantly, and
+   * flags it for the care team. Idempotent: a second request is a no-op ack.
+   */
+  async requestRefund(userId: string, id: string, reason?: string) {
+    const sub = await this.owned(userId, id);
+    const already = sub.events.some((e) => e.type === "refund_requested");
+    if (already) {
+      throw new BadRequestException({ code: "REFUND_ALREADY_REQUESTED", message: "We've already received a refund request for this membership." });
+    }
+    await this.prisma.subscription.update({
+      where: { id },
+      data: { events: { create: { type: "refund_requested", metadata: { reason: reason ?? null, at: new Date().toISOString() } } } },
+    });
+
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { email: true, firstName: true, locale: true },
+    });
+    const loc = user.locale === "en" ? "en" : "ar";
+    const planName = loc === "ar" ? sub.plan?.nameAr : sub.plan?.nameEn;
+
+    this.notifications.emit(userId, {
+      category: "BILLING",
+      type: "refund_requested",
+      data: { subscriptionId: id },
+    });
+    if (user.email) {
+      const mail = refundRequestedTemplate(loc, user.firstName, planName ?? "Moracat");
+      void this.mail.send({ to: user.email, subject: mail.subject, html: mail.html, text: mail.text });
+    }
+    // Surface to staff so the care team can action it (they resolve via the
+    // admin refund tooling). Best-effort — never blocks the member's ack.
+    void this.notifyStaffOfRefund(id, user.firstName ?? user.email, reason);
+
+    return { ok: true, status: "requested" as const };
+  }
+
+  /** Notify staff of a refund request so the care team can action it. */
+  private async notifyStaffOfRefund(subscriptionId: string, who: string, reason?: string) {
+    try {
+      const staff = await this.prisma.user.findMany({
+        where: { isStaff: true },
+        select: { id: true },
+        take: 25,
+      });
+      for (const s of staff) {
+        this.notifications.emit(s.id, {
+          category: "SYSTEM",
+          type: "refund_requested",
+          params: { who, reason: reason ?? "" },
+          data: { subscriptionId, adminLink: `/admin/customers` },
+        });
+      }
+    } catch {
+      /* best-effort staff ping — the member ack is what matters */
+    }
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
@@ -516,21 +687,40 @@ export class SubscriptionsService {
   }
 
   private serialize(sub: SubWithIncludes) {
+    const termMonths = sub.termMonths ?? 0;
+    // Term progress from the clock (honest, dateless-safe). Boxes remaining =
+    // committed months minus whole months elapsed since it started.
+    const monthsElapsed = sub.startedAt ? monthsBetween(sub.startedAt, new Date()) : 0;
+    const boxesRemaining = Math.max(0, termMonths - Math.min(monthsElapsed, termMonths));
+    const resumeUrl =
+      sub.status === "DRAFT"
+        ? ((sub.orders[0]?.payments[0]?.metadata as { redirectUrl?: string } | null | undefined)?.redirectUrl ?? null)
+        : null;
+
     return {
       id: sub.id,
       status: sub.status,
       interval: sub.interval,
       intervalDays: sub.intervalDays,
       price: Number(sub.price), // monthly rate
-      termMonths: sub.termMonths,
+      termMonths,
       endsAt: sub.endsAt,
-      termTotal: Number(sub.price) * sub.termMonths,
+      termTotal: Number(sub.price) * termMonths,
+      // Term economics the manage page must show truthfully (fire, R021 post-purchase).
+      boxesRemaining,
+      monthsElapsed: Math.min(monthsElapsed, termMonths),
       currency: sub.currency,
       isGift: sub.isGift,
       startedAt: sub.startedAt,
       nextBillingAt: sub.nextBillingAt,
       nextDeliveryAt: sub.nextDeliveryAt,
       pausedUntil: sub.pausedUntil,
+      pausedAt: sub.pausedAt,
+      // "Won't renew" state (honest cancel): still servicing until endsAt.
+      cancelAtTermEnd: sub.cancelAtTermEnd,
+      refundRequested: sub.events.some((e) => e.type === "refund_requested"),
+      // For a DRAFT (abandoned redirect), the URL that resumes payment.
+      resumeUrl,
       plan: sub.plan ? { tier: sub.plan.tier, nameEn: sub.plan.nameEn, nameAr: sub.plan.nameAr } : null,
       cats: sub.cats.map((c) => ({ id: c.cat.id, name: c.cat.name })),
       items: sub.items.map((i) => ({
@@ -548,7 +738,13 @@ const subInclude = {
   plan: true,
   cats: { include: { cat: { select: { id: true, name: true } } } },
   items: { include: { product: { select: { nameEn: true } } } },
-  events: { orderBy: { createdAt: "desc" as const }, take: 5 },
+  events: { orderBy: { createdAt: "desc" as const }, take: 10 },
+  // Latest order's latest payment carries the resume URL for DRAFT memberships.
+  orders: {
+    orderBy: { placedAt: "desc" as const },
+    take: 1,
+    select: { payments: { orderBy: { createdAt: "desc" as const }, take: 1, select: { metadata: true } } },
+  },
 } satisfies Prisma.SubscriptionInclude;
 
 type SubWithIncludes = Prisma.SubscriptionGetPayload<{ include: typeof subInclude }>;
@@ -567,6 +763,13 @@ function addMonths(date: Date, months: number): Date {
   // Jan 31 + 1mo must be Feb 28/29 — never a silent roll into March (R021).
   if (d.getDate() < day) d.setDate(0);
   return d;
+}
+
+/** Whole calendar months between two dates (a ≤ b). */
+function monthsBetween(a: Date, b: Date): number {
+  let months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  if (b.getDate() < a.getDate()) months -= 1; // not a full month yet
+  return Math.max(0, months);
 }
 
 function makeNumber(prefix: string): string {

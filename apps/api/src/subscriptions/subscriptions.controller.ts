@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { SubscriptionsService } from "./subscriptions.service";
-import { ActivateSubscriptionDto, PauseDto } from "./dto/subscription.dto";
+import { ActivateSubscriptionDto, PauseDto, RefundRequestDto } from "./dto/subscription.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Commercial } from "../common/decorators/commercial.decorator";
 
@@ -71,8 +71,30 @@ export class SubscriptionsController {
 
   @Post(":id/cancel")
   @Commercial()
-  @ApiOperation({ summary: "Cancel a subscription" })
+  @ApiOperation({ summary: "Cancel a subscription (won't-renew during a paid term; never confiscates it)" })
   cancel(@CurrentUser("id") userId: string, @Param("id") id: string) {
     return this.subs.cancel(userId, id);
+  }
+
+  // Resume an abandoned redirect payment — returns the stored checkout URL so a
+  // DRAFT membership can be completed instead of dead-ending the cat (fire #4).
+  @Post(":id/resume-payment")
+  @Commercial()
+  @ApiOperation({ summary: "Get the checkout URL to complete an awaiting-payment membership" })
+  resumePayment(@CurrentUser("id") userId: string, @Param("id") id: string) {
+    return this.subs.resumePayment(userId, id);
+  }
+
+  // Member-initiated remainder refund (R030) — opens a request the care team
+  // actions via admin refund tooling. Acknowledged instantly to the member.
+  @Post(":id/refund-request")
+  @Commercial()
+  @ApiOperation({ summary: "Request a refund of the remaining prepaid term" })
+  requestRefund(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @Body() dto: RefundRequestDto
+  ) {
+    return this.subs.requestRefund(userId, id, dto.reason);
   }
 }

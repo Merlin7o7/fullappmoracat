@@ -1308,6 +1308,13 @@ model Subscription {
   nextBillingAt  DateTime?
   nextDeliveryAt DateTime?
   pausedUntil    DateTime?
+  /// When the current pause began. resume() extends endsAt / delivery dates by
+  /// the paused duration so paid months are never lost (R062).
+  pausedAt       DateTime?
+  /// Honest cancel (R063): the member chose not to renew. The prepaid term keeps
+  /// servicing until endsAt; the lifecycle job lapses it then — cancel never
+  /// confiscates a paid term.
+  cancelAtTermEnd Boolean           @default(false)
   cancelledAt    DateTime?
   vacationMode   Boolean            @default(false)
   createdAt      DateTime           @default(now())
@@ -1466,6 +1473,9 @@ model Payment {
   currency        String          @default("SAR")
   providerRef     String? // PSP transaction id
   failureReason   String?
+  /// Provider session context — e.g. the hosted checkout URL for a redirect
+  /// flow, persisted so a DRAFT membership can resume payment (never a dead end).
+  metadata        Json?
   capturedAt      DateTime?
   createdAt       DateTime        @default(now())
 
@@ -1796,6 +1806,25 @@ model Notification {
 
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+/// Idempotency ledger for the lifecycle engine (term-end invitations, graceful
+/// lapse, vaccination reminders, birthdays/anniversaries, draft expiry). One
+/// row per (event, subject, occurrence) — the unique `key` guarantees a restart
+/// or concurrent worker can never double-send. Doubles as the "reminders
+/// honoured" ledger the dashboard counts (R049): every row is a promise kept.
+model LifecycleEvent {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  type      String // term_end_t7 | term_end_t1 | membership_lapsed | vacc_t7 | vacc_t1 | draft_expired | cat_birthday | member_anniversary
+  userId    String?
+  catId     String?
+  subjectId String? // subscriptionId / vaccinationId — the concrete subject
+  createdAt DateTime @default(now())
+
+  @@index([userId, type])
+  @@index([catId, type])
+  @@map("lifecycle_events")
 }
 
 // ─────────────────────────────────────────────────────────────────────────

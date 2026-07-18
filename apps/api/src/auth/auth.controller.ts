@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
   Req,
   HttpCode,
@@ -31,6 +32,7 @@ import {
   Verify2faDto,
   Disable2faDto,
   VerifyOtpDto,
+  ChangePendingEmailDto,
 } from "./dto/auth.dto";
 import { Public } from "../common/decorators/public.decorator";
 import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
@@ -122,6 +124,18 @@ export class AuthController {
   @ApiOperation({ summary: "Verify the 6-digit email code for the current user" })
   verifyEmailOtp(@CurrentUser("id") userId: string, @Body() dto: VerifyOtpDto) {
     return this.auth.verifyEmailOtp(userId, dto.code);
+  }
+
+  // "Wrong email? Fix it here" used to re-register — orphaning the first
+  // account and burning its member number. This is the real door: while the
+  // email is still unverified, correct it in place and re-send the code.
+  @ApiBearerAuth()
+  @Throttle(OTP_SEND)
+  @Patch("email")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Correct the pending (unverified) email address and re-send the code" })
+  changePendingEmail(@CurrentUser("id") userId: string, @Body() dto: ChangePendingEmailDto) {
+    return this.auth.changePendingEmail(userId, dto.email);
   }
 
   @Public()

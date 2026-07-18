@@ -37,7 +37,6 @@ import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
-import { monthsLabel } from "@/lib/datetime";
 import { type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
 import {
   recommendFromConsumption,
@@ -111,6 +110,46 @@ function PlanBuilderInner() {
   const [treats, setTreats] = React.useState<TreatsLevel | null>(null);
   const answered = !!(wet && dry && litter && treats);
   const [rec, setRec] = React.useState<ReturnType<typeof recommendFromConsumption> | null>(null);
+
+  // Never lose entered data (R117): the quiz survives a refresh. Answers + step
+  // persist per cat in sessionStorage; the recommendation is recomputed, never
+  // stored, so it always reflects the latest engine.
+  const quizKey = `moraqat.planquiz.${catId ?? "household"}`;
+  const restored = React.useRef(false);
+  React.useEffect(() => {
+    if (restored.current || typeof window === "undefined") return;
+    restored.current = true;
+    try {
+      const raw = window.sessionStorage.getItem(quizKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        step?: "intro" | "questions" | "result";
+        wet?: WetLevel; dry?: DryLevel; litter?: LitterLevel; treats?: TreatsLevel;
+      };
+      if (saved.wet) setWet(saved.wet);
+      if (saved.dry) setDry(saved.dry);
+      if (saved.litter) setLitter(saved.litter);
+      if (saved.treats) setTreats(saved.treats);
+      const complete = !!(saved.wet && saved.dry && saved.litter && saved.treats);
+      if (saved.step === "result" && complete) {
+        setRec(recommendFromConsumption({ wet: saved.wet!, dry: saved.dry!, litter: saved.litter!, treats: saved.treats! }));
+        setStep("result");
+      } else if (saved.step === "questions") {
+        setStep("questions");
+      }
+    } catch {
+      /* a broken saved quiz never blocks a fresh one */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizKey]);
+  React.useEffect(() => {
+    if (!restored.current || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(quizKey, JSON.stringify({ step, wet, dry, litter, treats }));
+    } catch {
+      /* storage full/blocked — the quiz still works, it just won't survive refresh */
+    }
+  }, [quizKey, step, wet, dry, litter, treats]);
 
   // Adjusting is allowed, never front-loaded (R005): the recommendation leads,
   // other tiers hide behind a quiet disclosure.
@@ -315,10 +354,12 @@ function PlanBuilderInner() {
                   {isAr ? "/ شهرياً" : "/ month"}
                 </span>
               </p>
+              {/* The quiet money truth, BEFORE checkout ever shows a total (R021/R025):
+                  terms are prepaid, start at one month, and never auto-renew. */}
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {isAr
-                  ? `ابدأ من ${monthsLabel(selectedPlan.minTermMonths ?? 1, "ar")} — ${selectedPlan.price * (selectedPlan.minTermMonths ?? 1)} ر.س مقدّماً، أو التزم أطول`
-                  : `From ${monthsLabel(selectedPlan.minTermMonths ?? 1, "en")} — ${selectedPlan.price * (selectedPlan.minTermMonths ?? 1)} SAR upfront, or commit longer`}
+                  ? "تُدفع المدة مقدّماً — من شهر واحد، وبدون أي تجديد تلقائي"
+                  : "Paid upfront per term — from 1 month, never auto-renewed"}
               </p>
             </div>
 
@@ -470,7 +511,7 @@ function Segmented({
               aria-checked={selected}
               onClick={() => onChange(v)}
               className={cn(
-                "min-h-9 flex-1 rounded-lg px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "min-h-11 flex-1 rounded-lg px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 selected ? "bg-card text-foreground shadow-e1" : "text-muted-foreground hover:text-foreground"
               )}
             >

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD, APP_FILTER } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
@@ -37,6 +38,7 @@ import { StorageModule } from "./storage/storage.module";
 import { CommunityModule } from "./community/community.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { WalletModule } from "./wallet/wallet.module";
+import { LifecycleModule } from "./lifecycle/lifecycle.module";
 
 @Module({
   imports: [
@@ -72,6 +74,9 @@ import { WalletModule } from "./wallet/wallet.module";
     WalletModule,
     // Rate limiting — 120 requests / minute per IP by default.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    // Cron host for the lifecycle engine (term-end invitations, graceful lapse,
+    // vaccination reminders, birthdays/anniversaries, DRAFT expiry).
+    ScheduleModule.forRoot(),
     PrismaModule,
     IdsModule,
     HealthModule,
@@ -94,6 +99,7 @@ import { WalletModule } from "./wallet/wallet.module";
     NotificationsModule,
     SupportModule,
     WaitlistModule,
+    LifecycleModule,
   ],
   providers: [
     // Order matters: rate-limit → Community-Mode kill-switch → authenticate →

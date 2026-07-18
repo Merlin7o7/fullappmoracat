@@ -1,5 +1,13 @@
 import { Injectable } from "@nestjs/common";
+import type { OrderStatus } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
+
+/**
+ * Orders that never produced (or gave back) money. Revenue, AOV, order counts
+ * and the 14-day chart must exclude these — a cancelled or failed order isn't
+ * income, and a returned one was refunded (honest numbers, R021).
+ */
+const NON_REVENUE_STATUSES: OrderStatus[] = ["CANCELLED", "FAILED", "RETURNED"];
 
 @Injectable()
 export class AdminAnalyticsService {
@@ -9,6 +17,7 @@ export class AdminAnalyticsService {
     const now = new Date();
     const d30 = new Date(now.getTime() - 30 * 86400_000);
     const d14 = new Date(now.getTime() - 14 * 86400_000);
+    const earned = { status: { notIn: NON_REVENUE_STATUSES } };
 
     const [
       revenueAll, revenue30, ordersAll, orders30,
@@ -16,10 +25,10 @@ export class AdminAnalyticsService {
       cancelledSubs, activeSubsCount, statusGroups,
       topItems, recentOrders, revenueRows,
     ] = await Promise.all([
-      this.prisma.order.aggregate({ _sum: { grandTotal: true } }),
-      this.prisma.order.aggregate({ _sum: { grandTotal: true }, where: { placedAt: { gte: d30 } } }),
-      this.prisma.order.count(),
-      this.prisma.order.count({ where: { placedAt: { gte: d30 } } }),
+      this.prisma.order.aggregate({ _sum: { grandTotal: true }, where: earned }),
+      this.prisma.order.aggregate({ _sum: { grandTotal: true }, where: { ...earned, placedAt: { gte: d30 } } }),
+      this.prisma.order.count({ where: earned }),
+      this.prisma.order.count({ where: { ...earned, placedAt: { gte: d30 } } }),
       this.prisma.subscription.aggregate({ _sum: { price: true }, where: { status: "ACTIVE" } }),
       this.prisma.user.count({ where: { isStaff: false } }),
       this.prisma.user.count({ where: { isStaff: false, createdAt: { gte: d30 } } }),
@@ -28,6 +37,7 @@ export class AdminAnalyticsService {
       this.prisma.order.groupBy({ by: ["status"], _count: { _all: true } }),
       this.prisma.orderItem.groupBy({
         by: ["productId", "nameEn"],
+        where: { order: earned },
         _sum: { quantity: true, lineTotal: true },
         orderBy: { _sum: { quantity: "desc" } },
         take: 5,
@@ -38,7 +48,7 @@ export class AdminAnalyticsService {
         include: { user: { select: { email: true, firstName: true } } },
       }),
       this.prisma.order.findMany({
-        where: { placedAt: { gte: d14 } },
+        where: { ...earned, placedAt: { gte: d14 } },
         select: { grandTotal: true, placedAt: true },
       }),
     ]);

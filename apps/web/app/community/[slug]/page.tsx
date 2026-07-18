@@ -31,14 +31,17 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     title,
     description,
     alternates: { canonical: url },
+    // No explicit og/twitter images here: the branded share card rendered by
+    // ./opengraph-image.tsx (photo in a sticker frame + Cat ID number + tenure)
+    // is the preview everywhere — a raw photo says "picture", the card says
+    // "membership". File-convention metadata supplies both og and twitter images.
     openGraph: {
       title,
       description,
       type: "profile",
       url,
-      images: cat.photoUrl ? [{ url: cat.photoUrl }] : undefined,
     },
-    twitter: { card: "summary_large_image", title, description, images: cat.photoUrl ? [cat.photoUrl] : undefined },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

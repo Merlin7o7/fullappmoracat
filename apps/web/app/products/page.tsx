@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Star, BellRing, SlidersHorizontal, Search } from "lucide-react";
+import { Star, ArrowRight, SlidersHorizontal, Search, Sparkles } from "lucide-react";
 import { Card, Badge, Skeleton, buttonVariants, cn } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -13,6 +13,7 @@ import { IlloCan, IlloFish, IlloMouse, IlloPaw, Sticker } from "@/components/ill
 import { useLocale } from "@/app/providers";
 import { api, PRODUCT_TYPES, type ProductListItem } from "@/lib/api";
 import { commerceEnabled } from "@/lib/features";
+import { formatSAR } from "@/lib/money";
 
 const SORTS = [
   { key: "newest", en: "Newest", ar: "الأحدث" },
@@ -56,19 +57,25 @@ export default function ProductsPage() {
           </h1>
         </div>
 
-        {/* Community Mode — say plainly why there's no checkout yet, and what
-            "Notify me" actually does (R004/R006: honest by default, no dead ends). */}
+        {/* Pre-commerce honesty (R006): these products aren't bought one by one —
+            they arrive inside the plan. The button names what it does (R086). */}
         {!commerceEnabled() && (
           <div
             role="status"
-            className="mx-auto mb-8 flex max-w-2xl items-center gap-3 rounded-2xl border border-border bg-cream/70 px-5 py-4 text-sm text-foreground/80 dark:bg-cream/40"
+            className="mx-auto mb-8 flex max-w-2xl flex-col items-center gap-4 rounded-2xl border border-border bg-cream/70 px-5 py-5 text-center text-sm text-foreground/80 dark:bg-cream/40 sm:flex-row sm:text-start"
           >
-            <BellRing className="size-5 shrink-0 text-primary" aria-hidden />
-            <p>
+            <p className="flex-1">
               {isAr
-                ? "المتجر يفتح مع إطلاق العضويات — اضغط «أعلمني» ونخبرك أول ما يجهز."
-                : "The shop opens with memberships — tap “Notify me” and we’ll tell you the moment it’s ready."}
+                ? "منتجاتنا ما تُشترى قطعة قطعة — توصلك ضمن خطة قطك الشهرية، على مقاسه."
+                : "These products aren't bought one by one — they arrive inside your cat's monthly plan, sized to them."}
             </p>
+            <Link
+              href="/portal/subscribe?from=shop"
+              className={cn(buttonVariants({ variant: "brand", size: "md" }), "shrink-0")}
+            >
+              <Sparkles className="size-4" />
+              {isAr ? "ابدأ عضوية قطك" : "Start your cat's membership"}
+            </Link>
           </div>
         )}
 
@@ -80,7 +87,8 @@ export default function ProductsPage() {
                 key={t.key}
                 onClick={() => setType(t.key)}
                 className={cn(
-                  "rounded-full px-4 py-1.5 text-sm font-medium transition-all",
+                  // min-h-11 keeps every filter chip a ≥44px target (R092).
+                  "min-h-11 rounded-full px-4 py-1.5 text-sm font-medium transition-all",
                   type === t.key
                     ? "bg-primary text-primary-foreground shadow-e1"
                     : "bg-cream/70 text-foreground/75 hover:bg-cream hover:text-foreground"
@@ -99,7 +107,7 @@ export default function ProductsPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={isAr ? "ابحث في المتجر…" : "Search the shop…"}
                 aria-label={isAr ? "ابحث في المنتجات" : "Search products"}
-                className="w-44 rounded-full border border-input bg-card ps-9 pe-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-52"
+                className="min-h-11 w-44 rounded-full border border-input bg-card ps-9 pe-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-52"
               />
             </div>
             <SlidersHorizontal className="size-4 text-muted-foreground" />
@@ -107,7 +115,7 @@ export default function ProductsPage() {
               value={sort}
               onChange={(e) => setSort(e.target.value)}
               aria-label={isAr ? "ترتيب المنتجات" : "Sort products"}
-              className="rounded-full border border-border bg-card px-3 py-1.5 text-sm"
+              className="min-h-11 rounded-full border border-border bg-card px-3 py-1.5 text-sm"
             >
               {SORTS.map((s) => (
                 <option key={s.key} value={s.key}>
@@ -180,10 +188,11 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
               <IlloPaw tone="butter" className="size-12 opacity-80 transition-transform duration-300 group-hover:-rotate-6" />
             }
           />
-          {product.compareAtPrice && (
-            <Badge variant="destructive" className="absolute start-2 top-2">
-              {/* "Offer", never "discount" — member recognition, not coupon talk (R085). */}
-              {isAr ? "عرض" : "Offer"}
+          {product.compareAtPrice && product.compareAtPrice > product.price && (
+            /* Quiet recognition, not a red shout (R085): the member price is the
+               honest price — no strike-through theatre, no "Offer" urgency. */
+            <Badge variant="secondary" className="absolute start-2 top-2">
+              {isAr ? "سعر الأعضاء" : "Member rate"}
             </Badge>
           )}
         </div>
@@ -193,21 +202,19 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
           <Star className="size-3.5 fill-accent text-accent" />
           {product.ratingAvg.toFixed(1)} ({product.ratingCount})
         </div>
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <span className="font-display text-lg font-bold">
-            {product.price} <span className="text-xs font-normal text-muted-foreground">SAR</span>
-            {product.compareAtPrice && product.compareAtPrice > product.price && (
-              <span className="ms-1.5 align-middle text-xs font-normal text-muted-foreground line-through">{product.compareAtPrice}</span>
-            )}
+            {formatSAR(product.price, isAr, { isolate: true })}
           </span>
-          {/* Community Mode: no checkout yet. Funnel interest to the launch waitlist. */}
+          {/* Honest pre-commerce path (R006): the product arrives inside the
+              plan — the card points at the plan, never a dead "buy". */}
           <Link
-            href="/portal/subscribe?from=shop"
-            aria-label={isAr ? `أعلمني عند توفّر ${name}` : `Notify me about ${name}`}
+            href="/#plans"
+            aria-label={isAr ? `${name} — يأتي ضمن الخطة` : `${name} — comes in the plan`}
             className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "gap-1.5")}
           >
-            <BellRing className="size-4" />
-            {isAr ? "أعلمني" : "Notify me"}
+            {isAr ? "يأتي ضمن الخطة" : "Comes in the plan"}
+            <ArrowRight className="size-4 rtl:rotate-180" />
           </Link>
         </div>
       </Card>

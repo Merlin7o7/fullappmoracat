@@ -11,6 +11,34 @@ import { PrismaService } from "../prisma/prisma.service";
 export class AdminStaffService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * The signed-in staff member's own permission keys — powers the
+   * permission-aware admin nav (a support agent only sees what they can open).
+   * Same query the PermissionsGuard runs per-request, exposed once for the UI.
+   */
+  async myPermissions(userId: string) {
+    const grants = await this.prisma.permission.findMany({
+      where: { roles: { some: { role: { users: { some: { userId } } } } } },
+      select: { key: true },
+      orderBy: { key: "asc" },
+    });
+    return { permissions: grants.map((g) => g.key) };
+  }
+
+  /**
+   * The signed-in staff member's own permission keys — powers the
+   * permission-aware admin nav (a support agent only sees what they can open).
+   * Same query the PermissionsGuard runs per-request, exposed once for the UI.
+   */
+  async myPermissions(userId: string) {
+    const grants = await this.prisma.permission.findMany({
+      where: { roles: { some: { role: { users: { some: { userId } } } } } },
+      select: { key: true },
+      orderBy: { key: "asc" },
+    });
+    return { permissions: grants.map((g) => g.key) };
+  }
+
   /** All assignable roles + the permission keys each grants (for the UI). */
   async listRoles() {
     const roles = await this.prisma.role.findMany({

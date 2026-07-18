@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { Share2, Eye, MapPin, Cat as CatIcon, Cake, ArrowLeft, Check, PawPrint } from "lucide-react";
+import { Share2, MapPin, Cat as CatIcon, Cake, ArrowLeft, Check, PawPrint } from "lucide-react";
 import { Badge, Button, useToast } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { CatIdCard } from "@/components/cat-id-card";
@@ -29,6 +29,19 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
 
   const shareUrl = typeof window !== "undefined" ? window.location.href : `/community/${slug}`;
 
+  // Count the visit truthfully: one beacon on mount, deduped server-side.
+  // Fire-and-forget — a lost beacon must never affect the visitor.
+  React.useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+    const url = `${base}/api/community/cats/${slug}/view`;
+    try {
+      const sent = typeof navigator.sendBeacon === "function" && navigator.sendBeacon(url);
+      if (!sent) void fetch(url, { method: "POST", keepalive: true }).catch(() => undefined);
+    } catch {
+      /* never surface — the view tally is best-effort by design */
+    }
+  }, [slug]);
+
   async function share() {
     try {
       if (navigator.share) {
@@ -44,7 +57,11 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
     }
   }
 
-  const age = cat.birthDate ? computeAge(cat.birthDate, isAr) : null;
+  const age = cat.ageMonths != null ? formatAge(cat.ageMonths, isAr) : null;
+  // "Member since {month year}" — the credential line (tenure, not points).
+  const memberSince = cat.issuedAt
+    ? new Intl.DateTimeFormat(isAr ? "ar" : "en", { month: "long", year: "numeric" }).format(new Date(cat.issuedAt))
+    : null;
   const stage = cat.lifeStage ? (isAr ? STAGE_LABEL[cat.lifeStage]?.[1] : STAGE_LABEL[cat.lifeStage]?.[0]) : null;
   const breed = cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : null;
   const city = cat.city ? (isAr ? cat.city.nameAr : cat.city.nameEn) : null;
@@ -70,21 +87,54 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
       )}
 
       <div className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-        {/* Identity */}
+        {/* Identity — the profile reads as a membership credential: name, then
+            tenure + ID number, then love. Never raw view counts in public. */}
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-3xl font-bold tracking-tight">{name}</h1>
             {cat.isFeatured && <Badge variant="secondary">{isAr ? "مميّز" : "Featured"}</Badge>}
-          </div>
-          <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Eye className="size-3.5" /> {cat.viewCount} {isAr ? "مشاهدة" : "views"}
-            {cat.ownerNickname && (
-              <>
-                <span className="mx-1">·</span>
-                {isAr ? "برفقة " : "with "} {localizeName(cat.ownerNickname, isAr ? "ar" : "en")}
-              </>
+            {cat.isFounding && (
+              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                {isAr ? "عضو مؤسس" : "Founding member"}
+              </Badge>
             )}
-          </p>
+          </div>
+
+          {/* The credential line (R032: the human-readable number is worn with pride). */}
+          {(memberSince || cat.catIdNumber) && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+              {memberSince && <span>{isAr ? `عضو منذ ${memberSince}` : `Member since ${memberSince}`}</span>}
+              {memberSince && cat.catIdNumber && <span aria-hidden>·</span>}
+              {cat.catIdNumber && (
+                <span dir="ltr" className="font-mono text-xs tracking-wide">
+                  {cat.catIdNumber}
+                </span>
+              )}
+            </p>
+          )}
+
+          {cat.ownerNickname && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isAr ? "برفقة " : "with "}
+              {localizeName(cat.ownerNickname, isAr ? "ar" : "en")}
+            </p>
+          )}
+
+          {/* Love + share sit right under the credential — pride, gently shareable. */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <LikeButton
+              slug={slug}
+              name={name}
+              initialCount={cat.likeCount}
+              likes={likes}
+              isAr={isAr}
+              className="border border-border px-3 hover:bg-muted"
+            />
+            <Button size="sm" onClick={share}>
+              {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
+              {isAr ? `شارك بطاقة ${name}` : `Share ${name}'s card`}
+            </Button>
+          </div>
 
           {cat.bio && <p className="mt-4 max-w-prose text-sm leading-relaxed text-foreground/90">{cat.bio}</p>}
 
@@ -102,18 +152,6 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
           )}
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={share}>
-              {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
-              {isAr ? "مشاركة" : "Share"}
-            </Button>
-            <LikeButton
-              slug={slug}
-              name={name}
-              initialCount={cat.likeCount}
-              likes={likes}
-              isAr={isAr}
-              className="border border-border px-3 hover:bg-muted"
-            />
             {/* Quiet trust affordance — reporting is always within reach, never loud. */}
             <ReportCatButton slug={slug} name={name} isAr={isAr} className="border border-border hover:bg-muted" />
             <div className="rounded-xl bg-white p-1.5 shadow-e1 ring-hairline" title={isAr ? "امسح للزيارة" : "Scan to visit"}>
@@ -131,7 +169,10 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
             photoUrl={cat.photoUrl}
             coverUrl={cat.coverUrl}
             isAr={isAr}
-            membershipActive={false}
+            // A public profile is about identity, never billing. Never disclose
+            // or misstate a member's standing to visitors — hide the status pill
+            // entirely so a shared card reads as pride, not "Inactive" (fire #8).
+            hideStatus
             animated
           />
         </div>
@@ -164,11 +205,8 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
   );
 }
 
-function computeAge(birthDate: string, isAr: boolean): string {
-  const b = new Date(birthDate);
-  const now = new Date();
-  let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
-  if (months < 0) months = 0;
+/** Render the server-computed month tally (the raw birth date never reaches the client). */
+function formatAge(months: number, isAr: boolean): string {
   const years = Math.floor(months / 12);
   const rem = months % 12;
   if (years === 0) return isAr ? `${months} ${months === 1 ? "شهر" : "أشهر"}` : `${months} mo`;

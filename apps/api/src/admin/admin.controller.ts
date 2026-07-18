@@ -1,14 +1,16 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AdminAnalyticsService } from "./analytics.service";
 import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
 import { AdminProductsService } from "./admin-products.service";
+import { AdminSubscriptionsService } from "./admin-subscriptions.service";
+import { AdminStaffService } from "./staff.service";
 import { CreateProductDto, UpdateProductDto } from "./admin-products.dto";
 import { RefundsService } from "../payments/refunds.service";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
-import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
 import { Commercial } from "../common/decorators/commercial.decorator";
 
 @ApiTags("admin")
@@ -20,9 +22,22 @@ export class AdminController {
     private readonly customers: AdminCustomersService,
     private readonly orders: AdminOrdersService,
     private readonly products: AdminProductsService,
+    private readonly subscriptions: AdminSubscriptionsService,
+    private readonly staff: AdminStaffService,
     private readonly refunds: RefundsService,
     private readonly audit: AdminAuditService
   ) {}
+
+  // ── Me ────────────────────────────────────────────────────────────────
+  // No @RequirePermissions: every staff member may ask what THEY can do (the
+  // nav filters on this). Staff-only is enforced here since the guard only
+  // fires on decorated routes.
+  @Get("me/permissions")
+  @ApiOperation({ summary: "The signed-in staff member's permission keys" })
+  myPermissions(@CurrentUser() user: AuthUser) {
+    if (!user?.isStaff) throw new ForbiddenException("Staff access required");
+    return this.staff.myPermissions(user.id);
+  }
 
   // ── Analytics ─────────────────────────────────────────────────────────
   @Get("dashboard")
@@ -81,15 +96,22 @@ export class AdminController {
     return this.orders.list(page ? Number(page) : 1, 20, status);
   }
 
+  @Get("orders/:orderNumber")
+  @RequirePermissions("orders.read")
+  @ApiOperation({ summary: "Full order detail: items, box picks, payments, refunds, delivery" })
+  orderDetail(@Param("orderNumber") orderNumber: string) {
+    return this.orders.detail(orderNumber);
+  }
+
   @Patch("orders/:orderNumber/status")
   @RequirePermissions("orders.write")
-  @ApiOperation({ summary: "Update an order's status" })
+  @ApiOperation({ summary: "Update an order's status (validated transitions, audited with reason)" })
   updateOrderStatus(
     @CurrentUser("id") actorId: string,
     @Param("orderNumber") orderNumber: string,
-    @Body("status") status: string
+    @Body() body: { status: string; reason?: string }
   ) {
-    return this.orders.updateStatus(actorId, orderNumber, status);
+    return this.orders.updateStatus(actorId, orderNumber, body.status, body.reason);
   }
 
   @Post("orders/:orderNumber/refund")
@@ -102,6 +124,49 @@ export class AdminController {
     @Body() body: { amount?: number; reason?: string }
   ) {
     return this.refunds.refundOrder(actorId, orderNumber, body?.amount, body?.reason);
+  }
+
+  // ── Subscriptions ─────────────────────────────────────────────────────
+  // Staff actions mirror the member-facing honest semantics: pause keeps the
+  // cat's paid benefit, cancel during a prepaid term = "won't renew" (R062-64).
+  @Get("subscriptions/:id")
+  @RequirePermissions("subscriptions.read")
+  @ApiOperation({ summary: "Subscription detail (plan, term, cats, recent events)" })
+  subscription(@Param("id") id: string) {
+    return this.subscriptions.detail(id);
+  }
+
+  @Post("subscriptions/:id/pause")
+  @RequirePermissions("subscriptions.write")
+  @ApiOperation({ summary: "Pause a membership (deliveries stop; paid benefit stays)" })
+  pauseSubscription(
+    @CurrentUser("id") actorId: string,
+    @Param("id") id: string,
+    @Body() body: { reason?: string }
+  ) {
+    return this.subscriptions.pause(actorId, id, body?.reason);
+  }
+
+  @Post("subscriptions/:id/resume")
+  @RequirePermissions("subscriptions.write")
+  @ApiOperation({ summary: "Resume a paused membership (paused days are given back)" })
+  resumeSubscription(
+    @CurrentUser("id") actorId: string,
+    @Param("id") id: string,
+    @Body() body: { reason?: string }
+  ) {
+    return this.subscriptions.resume(actorId, id, body?.reason);
+  }
+
+  @Post("subscriptions/:id/cancel")
+  @RequirePermissions("subscriptions.write")
+  @ApiOperation({ summary: "Cancel a membership (prepaid term keeps servicing until endsAt)" })
+  cancelSubscription(
+    @CurrentUser("id") actorId: string,
+    @Param("id") id: string,
+    @Body() body: { reason?: string }
+  ) {
+    return this.subscriptions.cancel(actorId, id, body?.reason);
   }
 
   // ── Products ──────────────────────────────────────────────────────────

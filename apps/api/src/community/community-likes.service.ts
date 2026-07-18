@@ -103,10 +103,25 @@ export class CommunityLikesService {
    */
   async report(userId: string, slug: string, reason: string, detail?: string) {
     const cat = await this.publicCatBySlug(slug);
+
+    // ANIMAL_WELFARE is accepted at the API but the DB enum doesn't carry it yet
+    // (adding an enum value needs a migration — out of this change's scope). It
+    // is stored as OTHER with a machine-greppable bilingual prefix so moderators
+    // still see exactly what the reporter meant, and nothing is silently lost.
+    // Promote to a real enum value in the next schema migration, then drop this.
+    let stored = reason;
+    let storedDetail = detail;
+    if (reason === "ANIMAL_WELFARE") {
+      stored = "OTHER";
+      storedDetail = `[ANIMAL_WELFARE] قلق على سلامة الحيوان / Concern for the animal's welfare${
+        detail ? ` — ${detail}` : ""
+      }`;
+    }
+
     await this.prisma.catReport.upsert({
       where: { catId_reporterId: { catId: cat.id, reporterId: userId } },
-      update: { reason: reason as never, detail, status: "PENDING", resolvedAt: null, resolvedById: null },
-      create: { catId: cat.id, reporterId: userId, reason: reason as never, detail },
+      update: { reason: stored as never, detail: storedDetail, status: "PENDING", resolvedAt: null, resolvedById: null },
+      create: { catId: cat.id, reporterId: userId, reason: stored as never, detail: storedDetail },
     });
     return { reported: true };
   }

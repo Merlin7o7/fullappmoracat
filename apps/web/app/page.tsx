@@ -18,6 +18,7 @@ import { useLocale } from "./providers";
 import { PLANS } from "@/lib/plans";
 import { api } from "@/lib/api";
 import { commerceEnabled } from "@/lib/features";
+import { localizeName } from "@/lib/translit";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -36,6 +37,16 @@ export default function HomePage() {
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
   const [catName, setCatName] = React.useState("");
+  // A name remembered from an earlier visit (hero form / feeding tool) lets the
+  // closing invitation greet the cat personally (R001/R082).
+  const [storedName, setStoredName] = React.useState("");
+  React.useEffect(() => {
+    try { setStoredName(sessionStorage.getItem("moraqat.pendingCatName") ?? ""); } catch { /* ignore */ }
+  }, []);
+  const greetName = catName.trim() || storedName;
+  const closingTitle = greetName
+    ? t.closing.titleNamed.replace("{name}", localizeName(greetName, locale))
+    : t.closing.title;
 
   const rememberName = () => {
     if (catName.trim()) {
@@ -72,7 +83,9 @@ export default function HomePage() {
               className="mx-auto max-w-2xl font-display text-5xl font-semibold leading-[1.04] tracking-tight sm:text-6xl lg:mx-0 lg:text-7xl"
             >
               {t.hero.title}{" "}
-              <span className="underline-marker whitespace-nowrap">{t.hero.titleAccent}</span>
+              {/* Wrap is allowed below sm — nowrap on a long Arabic accent
+                  overflowed narrow phones (R094-adjacent: survive small widths). */}
+              <span className="underline-marker sm:whitespace-nowrap">{t.hero.titleAccent}</span>
             </motion.h1>
 
             <motion.p
@@ -191,6 +204,26 @@ export default function HomePage() {
       {/* ── Member voices · social proof (Dossier Stage 1 trust) ─────────── */}
       <MemberVoices isAr={isAr} title={t.voices.title} />
 
+      {/* ── Quiet FAQ — the four questions that precede trust (R004/R021) ── */}
+      <section aria-labelledby="faq-title" className="container pb-4 pt-20 sm:pt-24">
+        <div className="mx-auto max-w-3xl">
+          <h2 id="faq-title" className="mb-8 text-center font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            {t.faq.title}
+          </h2>
+          <div className="divide-y divide-border overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-e1">
+            {t.faq.items.map((item) => (
+              <details key={item.q} className="group">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 px-6 py-4 text-start font-medium transition-colors [&::-webkit-details-marker]:hidden hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+                  {item.q}
+                  <span aria-hidden className="text-lg text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
+                </summary>
+                <p className="px-6 pb-5 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Closing invitation ────────────────────────────────────────────── */}
       <section className="container py-20 sm:py-24">
         <div className="relative overflow-hidden rounded-[2.5rem] border border-border bg-card px-6 py-16 text-center shadow-e2 sm:py-20">
@@ -208,7 +241,7 @@ export default function HomePage() {
           </Sticker>
 
           <h2 className="mx-auto max-w-xl font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-            {t.closing.title}
+            {closingTitle}
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-muted-foreground">{t.closing.sub}</p>
           <Link href="/register" className="mt-9 inline-block">
@@ -411,6 +444,9 @@ function MembershipPanel({ t }: { t: ReturnType<typeof useLocale>["t"] }) {
               {t.plans.cta} <ArrowRight className="size-4 rtl:rotate-180" />
             </Button>
           </Link>
+          {/* The billing shape, said plainly before any ask (R021/R006):
+              upfront term, pause/cancel free, never an automatic renewal. */}
+          <p className="max-w-64 text-xs leading-relaxed text-muted-foreground">{t.plans.billingNote}</p>
           {!commerce && (
             <p className="max-w-64 text-xs leading-relaxed text-muted-foreground">{t.plans.soonNote}</p>
           )}

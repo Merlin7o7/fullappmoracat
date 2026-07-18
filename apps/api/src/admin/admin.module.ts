@@ -9,6 +9,8 @@ import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
 import { AdminProductsService } from "./admin-products.service";
+import { AdminSubscriptionsService } from "./admin-subscriptions.service";
+import { AdminSubscriptionsService } from "./admin-subscriptions.service";
 import { AdminCommunityService } from "./admin-community.service";
 import { AdminStaffService } from "./staff.service";
 import { CmsService } from "./cms.service";
@@ -21,6 +23,8 @@ import { CmsService } from "./cms.service";
     AdminCustomersService,
     AdminOrdersService,
     AdminProductsService,
+    AdminSubscriptionsService,
+    AdminSubscriptionsService,
     AdminCommunityService,
     AdminStaffService,
     CmsService,

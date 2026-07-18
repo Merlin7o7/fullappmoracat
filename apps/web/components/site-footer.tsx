@@ -45,7 +45,7 @@ export function SiteFooter() {
   ];
 
   return (
-    <footer id="about" className="relative mt-24 overflow-hidden bg-primary text-primary-foreground">
+    <footer className="relative mt-24 overflow-hidden bg-primary text-primary-foreground">
       {/* The chase — runs the width of the footer, forever, slowly. */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-1 h-14 select-none overflow-hidden" dir="ltr">
         <div className="animate-marquee flex w-max items-end gap-[46vw] pt-3 [animation-duration:52s]">
@@ -134,7 +134,7 @@ export function SiteFooter() {
           </p>
           <div className="text-center sm:text-end">
             <p className="text-xs text-primary-foreground/85">{copyright(locale)}</p>
-            <p className="mt-0.5 text-[11px] text-primary-foreground/60" dir={isAr ? "rtl" : "ltr"}>
+            <p className="mt-0.5 text-[11px] text-primary-foreground/85" dir={isAr ? "rtl" : "ltr"}>
               {isAr ? LEGAL_ENTITY.ar : LEGAL_ENTITY.en}
             </p>
           </div>

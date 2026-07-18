@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Syringe, Stethoscope, FileText, Plus, Loader2 } from "lucide-react";
+import { Syringe, Stethoscope, FileText, Plus, Loader2, Camera } from "lucide-react";
 import { Badge, Button, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { formatDate } from "@/lib/datetime";
+import { formatSAR } from "@/lib/money";
 import { Field, SelectField } from "@/components/field";
 
 /**
@@ -80,7 +81,9 @@ export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }
             key={t.key}
             type="button"
             onClick={() => { setTab(t.key); setAdding(false); }}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${tab === t.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+            aria-pressed={tab === t.key}
+            aria-label={isAr ? t.ar : t.en}
+            className={`flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${tab === t.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
           >
             <t.icon className="size-3.5" />
             <span className="hidden sm:inline">{isAr ? t.ar : t.en}</span>
@@ -98,13 +101,13 @@ export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }
               ? data.vaccinations.map((v) => (
                   <Row key={v.id} title={v.name} meta={[fmt(v.administeredAt), v.dueAt ? `${isAr ? "التالي" : "next"} ${fmt(v.dueAt)}` : "", v.clinic ?? v.vetName ?? ""].filter(Boolean).join(" · ")} />
                 ))
-              : <Empty isAr={isAr} label={isAr ? "لا توجد تطعيمات مسجلة" : "No vaccinations recorded"} />)}
+              : <Empty isAr={isAr} label={isAr ? "لا توجد تطعيمات بعد — سجّل الأول وسنذكّرك قبل موعد التالي" : "No vaccinations yet — record the first and we'll remind you before the next one"} />)}
 
             {tab === "visits" && (data?.vetVisits.length
               ? data.vetVisits.map((v) => (
-                  <Row key={v.id} title={v.reason} meta={[fmt(v.visitedAt), v.clinic ?? v.vetName ?? "", v.cost ? `${v.cost} SAR` : ""].filter(Boolean).join(" · ")} sub={v.diagnosis} />
+                  <Row key={v.id} title={v.reason} meta={[fmt(v.visitedAt), v.clinic ?? v.vetName ?? "", v.cost ? formatSAR(v.cost, isAr) : ""].filter(Boolean).join(" · ")} sub={v.diagnosis} />
                 ))
-              : <Empty isAr={isAr} label={isAr ? "لا توجد زيارات مسجلة" : "No vet visits recorded"} />)}
+              : <Empty isAr={isAr} label={isAr ? "لا زيارات بعد — سجّل أول زيارة ويبقى التاريخ الصحي كاملاً هنا" : "No visits yet — record the first and the full health story lives here"} />)}
 
             {tab === "documents" && (data?.documents.length
               ? data.documents.map((d) => (
@@ -113,7 +116,7 @@ export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }
                     <p className="text-xs text-muted-foreground">{docKindLabel(d.kind, isAr)}</p>
                   </a>
                 ))
-              : <Empty isAr={isAr} label={isAr ? "لا توجد مستندات" : "No documents"} />)}
+              : <Empty isAr={isAr} label={isAr ? "لا مستندات بعد — صوّر دفتر التطعيم وسنحفظه للأبد" : "No documents yet — photograph the vaccine book and we'll keep it forever"} />)}
           </div>
 
           {!adding ? (
@@ -177,9 +180,39 @@ function VisitForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
 }
 
 function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
+  const { authedUpload } = useAuth();
   const [f, setF] = React.useState({ title: "", kind: "other", url: "" });
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const [showLink, setShowLink] = React.useState(false);
+
+  // Real members hold a *photo* of the vaccine card, not a hosted URL — so the
+  // primary path is "photograph it" (camera on mobile), uploaded to storage and
+  // attached automatically (R002). A paste-a-link field stays as the fallback.
+  async function handleFile(file: File | undefined) {
+    if (!file) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      const res = await authedUpload<{ url: string }>("/uploads/image", form);
+      setF((prev) => ({ ...prev, url: res.url }));
+    } catch {
+      setUploadError(
+        isAr
+          ? "تعذّر رفع الصورة — جرّب مرة أخرى، مستندك ما زال معك."
+          : "The photo didn't upload — try again; your document is still with you."
+      );
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
   return (
-    <FormShell isAr={isAr} pending={pending} disabled={!f.title || !f.url} onCancel={onCancel}
+    <FormShell isAr={isAr} pending={pending} disabled={!f.title || !f.url || uploading} onCancel={onCancel}
       submitLabel={isAr ? "أضف المستند" : "Add document"}
       onSubmit={() => onSubmit({ title: f.title, kind: f.kind, url: f.url })}>
       <Field label={isAr ? "العنوان" : "Title"} required value={f.title} onChange={(v) => setF({ ...f, title: v })} />
@@ -191,7 +224,55 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
           { value: "insurance", label: isAr ? "تأمين" : "Insurance" },
           { value: "other", label: isAr ? "أخرى" : "Other" },
         ]} />
-      <Field label={isAr ? "الرابط" : "Link (URL)"} required value={f.url} onChange={(v) => setF({ ...f, url: v })} placeholder="https://…" />
+      <div className="flex flex-col gap-1.5 sm:col-span-2">
+        <span className="text-sm font-medium">{isAr ? "المستند" : "The document"}</span>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          aria-label={isAr ? "صوّر المستند أو ارفعه" : "Photograph or upload the document"}
+          onChange={(e) => void handleFile(e.target.files?.[0])}
+        />
+        {f.url ? (
+          <div className="flex items-center gap-2 rounded-xl border border-input bg-muted/40 p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={f.url} alt="" className="size-12 rounded-lg object-cover" />
+            <span className="flex-1 text-xs text-muted-foreground">
+              {isAr ? "تم الحفظ — أكمل وأضف المستند" : "Saved — finish and add the document"}
+            </span>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setF({ ...f, url: "" })}>
+              {isAr ? "تغيير" : "Change"}
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            loading={uploading}
+            onClick={() => fileRef.current?.click()}
+            className="w-fit"
+          >
+            <Camera className="size-4" /> {isAr ? "صوّر المستند أو ارفعه" : "Photograph or upload it"}
+          </Button>
+        )}
+        {uploadError && <p role="alert" className="text-xs text-destructive">{uploadError}</p>}
+        {!f.url && (
+          showLink ? (
+            <Field label={isAr ? "أو ألصق رابطاً" : "Or paste a link"} value={f.url} onChange={(v) => setF({ ...f, url: v })} placeholder="https://…" />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowLink(true)}
+              className="w-fit text-xs text-muted-foreground underline-offset-2 hover:underline"
+            >
+              {isAr ? "عندي رابط جاهز" : "I have a link instead"}
+            </button>
+          )
+        )}
+      </div>
     </FormShell>
   );
 }

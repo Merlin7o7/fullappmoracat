@@ -201,3 +201,9 @@ export class VerifyOtpDto {
   @Matches(/^\d{6}$/, { message: "Code must be 6 digits" })
   code!: string;
 }
+
+export class ChangePendingEmailDto {
+  @ApiProperty({ example: "correct@email.com", description: "The corrected email address" })
+  @IsEmail()
+  email!: string;
+}

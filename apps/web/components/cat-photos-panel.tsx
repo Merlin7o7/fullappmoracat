@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2, Images, PawPrint } from "lucide-react";
-import { useToast } from "@moraqat/ui";
+import { useToast, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { ImgWithFallback } from "@/components/img-with-fallback";
@@ -48,7 +48,22 @@ export function CatPhotosPanel({
     onChanged?.();
   }
 
+  // Two-tap delete (R116): first tap arms this photo, second tap confirms.
+  // Tapping elsewhere or waiting disarms — destructive, so never one accidental
+  // touch on a "photos kept safe" promise.
+  const [armedId, setArmedId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!armedId) return;
+    const t = setTimeout(() => setArmedId(null), 4000);
+    return () => clearTimeout(t);
+  }, [armedId]);
+
   async function removePhoto(id: string) {
+    if (armedId !== id) {
+      setArmedId(id);
+      return;
+    }
+    setArmedId(null);
     try {
       await authedFetch(`/cats/${catId}/gallery/${id}`, { method: "DELETE" });
       await qc.invalidateQueries({ queryKey: ["gallery", catId] });
@@ -101,12 +116,24 @@ export function CatPhotosPanel({
                   </span>
                 }
               />
+              {/* Visible at rest on touch (R098); armed state asks for the second,
+                  confirming tap (R116). */}
               <button
                 onClick={() => removePhoto(p.id)}
-                aria-label={isAr ? "حذف" : "Delete"}
-                className="absolute end-1 top-1 grid size-6 place-items-center rounded-full bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+                aria-label={
+                  armedId === p.id
+                    ? isAr ? "اضغط مرة أخرى لتأكيد الحذف" : "Tap again to confirm delete"
+                    : isAr ? "حذف" : "Delete"
+                }
+                className={cn(
+                  "absolute end-1 top-1 grid place-items-center rounded-full text-white transition-all focus:opacity-100",
+                  armedId === p.id
+                    ? "h-6 min-w-6 gap-1 bg-destructive px-2 text-[11px] font-semibold opacity-100"
+                    : "size-6 bg-black/55 opacity-60 group-hover:opacity-100 sm:opacity-0"
+                )}
               >
                 <Trash2 className="size-3.5" />
+                {armedId === p.id && <span>{isAr ? "تأكيد؟" : "Sure?"}</span>}
               </button>
             </div>
           ))}

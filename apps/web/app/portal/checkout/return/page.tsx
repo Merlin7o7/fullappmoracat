@@ -17,13 +17,13 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Loader2, CheckCircle2, BellRing, Mail, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle2, BellRing, Mail, RefreshCw, Inbox } from "lucide-react";
 import { Card, Button } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
-import { formatDate } from "@/lib/datetime";
+import { formatMoneyDate } from "@/lib/money";
 import { CatIdCard } from "@/components/cat-id-card";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloPaw } from "@/components/illustrations";
@@ -38,6 +38,11 @@ interface ActivationStatus {
   plan: { tier: string; nameEn: string; nameAr: string } | null;
   cats: { id: string; name: string }[];
 }
+
+/** Reassure at 1 minute; stop polling entirely at ~8 minutes — a page that
+ *  spins forever is a false promise, an email is a kept one (R112). */
+const SLOW_AFTER_MS = 60_000;
+const POLL_CAP_MS = 8 * 60_000;
 
 export default function CheckoutReturnPage() {
   return (
@@ -69,13 +74,26 @@ function ReturnInner() {
     if (!ref) router.replace("/portal");
   }, [ref, router]);
 
+  // Poll while the webhook settles — but never forever. Past the cap the page
+  // stops asking and hands the promise to email + the subscriptions page.
+  const [startedAt] = React.useState(() => Date.now());
+  const [timedOut, setTimedOut] = React.useState(false);
+
   const { data, isError } = useQuery({
     queryKey: ["activation", ref],
     queryFn: () => authedFetch<ActivationStatus>(`/subscriptions/order-status/${ref}`),
-    enabled: !!user && !!ref,
-    // Poll while the webhook settles; stop the moment it resolves.
-    refetchInterval: (q) => (q.state.data?.state === "pending" ? 2500 : false),
+    enabled: !!user && !!ref && !timedOut,
+    refetchInterval: (q) => {
+      if (q.state.data?.state !== "pending") return false;
+      if (Date.now() - startedAt >= POLL_CAP_MS) return false;
+      return 2500;
+    },
   });
+
+  React.useEffect(() => {
+    const t = window.setTimeout(() => setTimedOut(true), POLL_CAP_MS);
+    return () => window.clearTimeout(t);
+  }, []);
 
   // The moment it goes live, refresh the portal so the Cat ID reads Active
   // everywhere the member looks next.
@@ -87,16 +105,24 @@ function ReturnInner() {
     }
   }, [data?.state, qc]);
 
-  // After a while with no settlement, reassure rather than spin forever.
+  // After a while with no settlement, reassure rather than spin silently.
   const [slow, setSlow] = React.useState(false);
   React.useEffect(() => {
-    const t = window.setTimeout(() => setSlow(true), 60_000);
+    const t = window.setTimeout(() => setSlow(true), SLOW_AFTER_MS);
     return () => window.clearTimeout(t);
   }, []);
 
   const catLine = (data?.cats ?? [])
     .map((c) => localizeName(c.name, uiLocale))
     .join(isAr ? "، " : ", ");
+
+  // If the order carries enough to rebuild the checkout, retrying lands the
+  // member back mid-flow with their plan + cat intact (R117), not at zero.
+  const retryHref = React.useMemo(() => {
+    if (!data?.plan?.tier) return "/portal/subscribe";
+    const cat = data.cats[0]?.id;
+    return `/portal/checkout?plan=${data.plan.tier}${cat ? `&cat=${cat}` : ""}`;
+  }, [data]);
 
   // ── Couldn't find the order ────────────────────────────────────────────────
   if (isError) {
@@ -176,8 +202,8 @@ function ReturnInner() {
                 <BellRing className="mt-0.5 size-4 shrink-0" aria-hidden />
                 <span>
                   {isAr
-                    ? `التجديد الأول في ${formatDate(data.nextBillingAt, uiLocale, { day: "numeric", month: "long", year: "numeric" })} — ونذكّرك قبله.`
-                    : `First renewal on ${formatDate(data.nextBillingAt, uiLocale, { day: "numeric", month: "long", year: "numeric" })} — we'll remind you before it.`}
+                    ? `مدتكم مدفوعة حتى ${formatMoneyDate(data.nextBillingAt, true)} — بدون أي تجديد تلقائي؛ ندعوك قبل نهايتها.`
+                    : `Your term is paid through ${formatMoneyDate(data.nextBillingAt, false)} — no automatic renewal; we'll invite you before it ends.`}
                 </span>
               </p>
             )}
@@ -208,15 +234,42 @@ function ReturnInner() {
         </h1>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
           {isAr
-            ? "ما انخصم منك شيء. تقدر تجرّب مرة ثانية أو تختار وسيلة دفع أخرى — وهوية قطك بأمان."
-            : "Nothing was charged. You can try again or pick another payment method — your cat's ID is safe."}
+            ? "ما انخصم منك شيء. تقدر تجرّب مرة ثانية متى ما كنت جاهزاً — وهوية قطك بأمان."
+            : "Nothing was charged. You can try again whenever you're ready — your cat's ID is safe."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <Button size="lg" onClick={() => router.push("/portal/subscribe")}>
+          <Button size="lg" onClick={() => router.push(retryHref)}>
             {isAr ? "جرّب مرة ثانية" : "Try again"}
           </Button>
           <Button variant="outline" size="lg" onClick={() => router.push("/portal/support")}>
             {isAr ? "تواصل مع الدعم" : "Contact support"}
+          </Button>
+        </div>
+      </Shell>
+    );
+  }
+
+  // ── Poll cap reached — a calm terminal state, the promise moves to email ───
+  if (timedOut) {
+    return (
+      <Shell>
+        <span className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
+          <Inbox className="size-6" aria-hidden />
+        </span>
+        <h1 className="mt-5 font-display text-xl font-bold tracking-tight sm:text-2xl">
+          {isAr ? "ما زلنا نؤكّد عملية الدفع" : "We're still confirming your payment"}
+        </h1>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+          {isAr
+            ? "التأكيد أخذ وقتاً أطول من المعتاد — ما يحتاج تنتظر هنا. سنرسل لك بريداً لحظة اكتماله، وتقدر تتابع حالته من صفحة اشتراكاتك في أي وقت."
+            : "This is taking longer than usual — you don't need to wait here. We'll email you the moment it settles, and you can check its status on your subscriptions page anytime."}
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Button size="lg" onClick={() => router.push("/portal/subscriptions")}>
+            {isAr ? "اشتراكاتي" : "My subscriptions"}
+          </Button>
+          <Button variant="outline" size="lg" onClick={() => router.push("/portal/support")}>
+            {isAr ? "تواصل مع العناية" : "Contact Care"}
           </Button>
         </div>
       </Shell>

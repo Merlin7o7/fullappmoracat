@@ -156,6 +156,13 @@ export function ProductIntro({
         <p className="text-center text-xs text-muted-foreground">
           {isAr ? "٤ أسئلة سريعة عن استهلاككم الشهري — أقل من دقيقة" : "4 quick questions about your monthly use — under a minute"}
         </p>
+        {/* The money truth arrives before any number does (R004/R025): terms are
+            prepaid, start at one month, and nothing ever renews silently. */}
+        <p className="text-center text-xs text-muted-foreground">
+          {isAr
+            ? "تُدفع المدة مقدّماً — من شهر واحد، وبدون أي تجديد تلقائي"
+            : "Paid upfront per term — from 1 month, never auto-renewed"}
+        </p>
         {onSkip && (
           <button
             type="button"

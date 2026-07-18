@@ -77,7 +77,8 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
             icon={Stethoscope}
             emoji="🏥"
             title={isAr ? "مزايا الشركاء" : "Partner benefits"}
-            items={isAr ? ["خصومات بيطرية", "عروض الشركاء", "ترويجات حصرية"] : ["Veterinary discounts", "Partner offers", "Exclusive promotions"]}
+            // Member-rate lexicon (R085/R087): recognition, not coupon talk.
+            items={isAr ? ["سعر الأعضاء عند العيادات", "مزايا الشركاء", "امتيازات حصرية للأعضاء"] : ["Member rates at vets", "Partner benefits", "Member-only privileges"]}
           />
           <BenefitCard
             icon={Heart}
@@ -123,8 +124,8 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
             label={isAr ? "مفعّلة" : "Active"}
             body={
               isAr
-                ? "العضوية مفعّلة، وكل المزايا مفتوحة: التوصيل الشهري، خصومات الشركاء، والمكافآت الحصرية."
-                : "Membership is active and every benefit is unlocked: monthly deliveries, partner discounts, and member-only rewards."
+                ? "العضوية مفعّلة، وكل المزايا مفتوحة: التوصيل الشهري، وسعر الأعضاء المحفوظ عند الشركاء، والمكافآت الحصرية."
+                : "Membership is active and every benefit is unlocked: monthly deliveries, member rates honoured at partners, and member-only rewards."
             }
           />
         </div>

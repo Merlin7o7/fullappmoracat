@@ -37,11 +37,12 @@ export default function BlogPage() {
           <Sticker rotate={-14} className="-top-5 start-4 hidden sm:block">
             <IlloSprig tone="leaf" className="h-10 w-auto opacity-70" />
           </Sticker>
+          {/* One name for the section everywhere — nav, metadata, H1 (R087). */}
           <p className="mb-4 inline-flex items-center rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-primary shadow-e1">
-            {isAr ? "المدونة" : "Blog"}
+            {isAr ? "من فريق مرقط" : "From the Moracat team"}
           </p>
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-6xl">
-            {isAr ? "مركز المعرفة" : "The Knowledge Center"}
+            {isAr ? "المدونة" : "Journal"}
           </h1>
           <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
             {isAr ? "إرشادات بيطرية وعناية عملية لقطط أسعد" : "Vet-backed guidance and practical care for happier cats"}
@@ -49,8 +50,9 @@ export default function BlogPage() {
         </div>
 
         {isError ? (
+          /* Never blame the member or leak infrastructure (R084/R113). */
           <p className="py-16 text-center text-muted-foreground">
-            {isAr ? "تعذّر تحميل المقالات — تأكد أن الخادم يعمل." : "Couldn't load articles — make sure the API is running."}
+            {isAr ? "تعذّر تحميل المقالات — جرّب مرة أخرى بعد لحظات." : "We couldn't load the articles — try again in a moment."}
           </p>
         ) : isLoading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -75,12 +77,24 @@ export default function BlogPage() {
               >
                 <Link href={`/blog/${post.slug}`} className="block h-full">
                   <Card interactive className="group flex h-full flex-col overflow-hidden p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-e2">
-                    <div className={`mb-4 grid aspect-[16/9] place-items-center overflow-hidden rounded-xl ${cover.tint}`}>
-                      <IlloCat
-                        tone={cover.tone}
-                        className="h-16 w-auto transition-transform duration-300 group-hover:-translate-y-0.5"
+                    {/* The real cover when the editor set one; the tinted brand
+                        panel is only ever a fallback, never a replacement. */}
+                    {post.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={post.coverUrl}
+                        alt=""
+                        loading="lazy"
+                        className="mb-4 aspect-[16/9] w-full rounded-xl object-cover transition-transform duration-300 group-hover:-translate-y-0.5"
                       />
-                    </div>
+                    ) : (
+                      <div className={`mb-4 grid aspect-[16/9] place-items-center overflow-hidden rounded-xl ${cover.tint}`}>
+                        <IlloCat
+                          tone={cover.tone}
+                          className="h-16 w-auto transition-transform duration-300 group-hover:-translate-y-0.5"
+                        />
+                      </div>
+                    )}
                     {post.category && (
                       <span className="mb-2.5 w-fit rounded-full bg-butter/60 px-3 py-1 text-xs font-semibold text-foreground/80 dark:bg-butter/25 dark:text-foreground">
                         {isAr ? post.category.nameAr : post.category.nameEn}

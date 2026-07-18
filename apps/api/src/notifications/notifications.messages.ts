@@ -19,7 +19,15 @@ export type NotificationType =
   | "order_confirmed"
   | "order_pending"
   | "payment_received"
-  | "payment_failed";
+  | "payment_failed"
+  // lifecycle engine — the machinery that keeps the "we never charge silently"
+  // promise and turns stored dates into acts of care (R025/R049/R064).
+  | "term_ending"
+  | "membership_lapsed"
+  | "vaccination_due"
+  | "cat_birthday"
+  | "member_anniversary"
+  | "refund_requested";
 
 export type NotificationParams = Record<string, string | number>;
 
@@ -197,6 +205,73 @@ export function buildNotificationText(
         en: {
           title: "Your payment didn't complete",
           body: `${p(params, "orderNumber")} — nothing was charged and your cat's ID is safe. You can try again whenever you're ready.`,
+        },
+      };
+    case "term_ending":
+      // An INVITATION, never a charge warning — nothing renews automatically.
+      return {
+        ar: {
+          title: `عضوية ${p(params, "name")} تقترب من نهايتها`,
+          body: `تنتهي مدة الباقة بتاريخ ${p(params, "endsAt")}. ما نجدّد تلقائياً — جدّد بضغطة متى ما حبيت وتستمر المزايا.`,
+        },
+        en: {
+          title: `${p(params, "name")}'s membership is nearly up`,
+          body: `The term ends ${p(params, "endsAt")}. We never renew automatically — renew in a tap whenever you're ready.`,
+        },
+      };
+    case "membership_lapsed":
+      return {
+        ar: {
+          title: `عضوية ${p(params, "name")} انتهت — وكل شيء محفوظ`,
+          body: `سجلّ ${p(params, "name")} وهويته وصوره محفوظة كما هي. مكانه محجوز متى ما حبيت ترجع.`,
+        },
+        en: {
+          title: `${p(params, "name")}'s membership has ended — everything's saved`,
+          body: `${p(params, "name")}'s record, ID and photos are all kept. Their place is waiting whenever you'd like to return.`,
+        },
+      };
+    case "vaccination_due":
+      return {
+        ar: {
+          title: `تطعيم ${p(params, "name")} يقترب`,
+          body: `موعد «${p(params, "vaccine")}» بتاريخ ${p(params, "dueAt")}. تذكير منّا — عناية بـ${p(params, "name")}.`,
+        },
+        en: {
+          title: `${p(params, "name")}'s vaccination is coming up`,
+          body: `${p(params, "vaccine")} is due ${p(params, "dueAt")}. A reminder from us — looking after ${p(params, "name")}.`,
+        },
+      };
+    case "cat_birthday":
+      return {
+        ar: {
+          title: `${p(params, "name")} يكمل ${p(params, "age")} اليوم 🎂`,
+          body: `كل عام و${p(params, "name")} بخير. بطاقته اليوم تلبس حلّة عيد الميلاد — شاركها!`,
+        },
+        en: {
+          title: `${p(params, "name")} turns ${p(params, "age")} today 🎂`,
+          body: `Happy birthday, ${p(params, "name")}! Their card is wearing a birthday frame today — share it!`,
+        },
+      };
+    case "member_anniversary":
+      return {
+        ar: {
+          title: `سنة مع مُرقّط 🐾`,
+          body: `مرّت ${p(params, "years")} على انضمام ${p(params, "name")}. شكراً لأنك جزء من العائلة — إليك ملخّص سنتك.`,
+        },
+        en: {
+          title: `A year with Moracat 🐾`,
+          body: `It's been ${p(params, "years")} since ${p(params, "name")} joined. Thank you for being family — here's your year in review.`,
+        },
+      };
+    case "refund_requested":
+      return {
+        ar: {
+          title: "استلمنا طلب الاسترداد",
+          body: "سيتواصل معك فريق العناية خلال ٢٤ ساعة عمل. طلبك مسجّل ومحفوظ.",
+        },
+        en: {
+          title: "We've received your refund request",
+          body: "Our care team will reach out within one business day. Your request is logged and safe.",
         },
       };
   }

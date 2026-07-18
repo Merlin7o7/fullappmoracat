@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing, UserCog, Flag, ScrollText, SlidersHorizontal,
 } from "lucide-react";
@@ -12,27 +13,42 @@ import { useLocale } from "@/app/providers";
 import { ThemeToggle } from "@/components/toggles";
 import { Logo } from "@/components/logo";
 
+// Each item names the permission its page's API calls require, so the nav only
+// shows what THIS staff member can actually open (a support agent sees support
+// tools, not CMS/settings). Keys mirror the @RequirePermissions on the routes.
 const NAV = [
-  { href: "/admin", icon: LayoutDashboard, en: "Dashboard", ar: "لوحة التحكم", exact: true },
-  { href: "/admin/customers", icon: Users, en: "Customers", ar: "العملاء" },
-  { href: "/admin/orders", icon: ShoppingBag, en: "Orders", ar: "الطلبات" },
-  { href: "/admin/products", icon: Boxes, en: "Products", ar: "المنتجات" },
-  { href: "/admin/content", icon: FileText, en: "Content", ar: "المحتوى" },
-  { href: "/admin/community", icon: Cat, en: "Community", ar: "المجتمع" },
-  { href: "/admin/reports", icon: Flag, en: "Reports", ar: "البلاغات" },
-  { href: "/admin/waitlist", icon: BellRing, en: "Waitlist", ar: "قائمة الانتظار" },
-  { href: "/admin/support", icon: LifeBuoy, en: "Support", ar: "الدعم" },
-  { href: "/admin/staff", icon: UserCog, en: "Staff", ar: "الفريق" },
-  { href: "/admin/audit", icon: ScrollText, en: "Audit", ar: "التدقيق" },
-  { href: "/admin/settings", icon: SlidersHorizontal, en: "Settings", ar: "الإعدادات" },
+  { href: "/admin", icon: LayoutDashboard, en: "Dashboard", ar: "لوحة التحكم", exact: true, perm: "dashboard.read" },
+  { href: "/admin/customers", icon: Users, en: "Customers", ar: "العملاء", perm: "customers.read" },
+  { href: "/admin/orders", icon: ShoppingBag, en: "Orders", ar: "الطلبات", perm: "orders.read" },
+  { href: "/admin/products", icon: Boxes, en: "Products", ar: "المنتجات", perm: "products.read" },
+  { href: "/admin/content", icon: FileText, en: "Content", ar: "المحتوى", perm: "cms.read" },
+  { href: "/admin/community", icon: Cat, en: "Community", ar: "المجتمع", perm: "cms.read" },
+  { href: "/admin/reports", icon: Flag, en: "Reports", ar: "البلاغات", perm: "cms.read" },
+  { href: "/admin/waitlist", icon: BellRing, en: "Waitlist", ar: "قائمة الانتظار", perm: "customers.read" },
+  { href: "/admin/support", icon: LifeBuoy, en: "Support", ar: "الدعم", perm: "support.read" },
+  { href: "/admin/staff", icon: UserCog, en: "Staff", ar: "الفريق", perm: "settings.write" },
+  { href: "/admin/audit", icon: ScrollText, en: "Audit", ar: "التدقيق", perm: "settings.read" },
+  { href: "/admin/settings", icon: SlidersHorizontal, en: "Settings", ar: "الإعدادات", perm: "settings.read" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, ready, logout } = useAuth();
+  const { user, ready, logout, authedFetch } = useAuth();
   const { locale } = useLocale();
   const isAr = locale === "ar";
   const router = useRouter();
   const pathname = usePathname();
+
+  // What this staff member is allowed to do — filters the nav below. On error
+  // we fail open (show everything): the API still enforces per-route, so the
+  // worst case is a 403 page, never a hidden capability.
+  const permsQuery = useQuery({
+    queryKey: ["admin-my-permissions", user?.id],
+    queryFn: () => authedFetch<{ permissions: string[] }>("/admin/me/permissions"),
+    enabled: !!user?.isStaff,
+    staleTime: 5 * 60_000,
+  });
+  const perms = permsQuery.data ? new Set(permsQuery.data.permissions) : null;
+  const nav = perms ? NAV.filter((item) => perms.has(item.perm)) : permsQuery.isError ? NAV : [];
 
   React.useEffect(() => {
     if (ready && !user) router.replace("/login");
@@ -71,7 +87,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{isAr ? "الإدارة" : "Admin"}</span>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
             return (
               <Link key={item.href} href={item.href}
@@ -90,7 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur">
           <div className="flex gap-1 overflow-x-auto md:hidden">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
               return <Link key={item.href} href={item.href} aria-label={label(item)} className={cn("grid size-9 place-items-center rounded-lg", active ? "bg-foreground text-background" : "text-muted-foreground")}><item.icon className="size-4" /></Link>;
             })}

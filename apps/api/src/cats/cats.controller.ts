@@ -33,9 +33,12 @@ import { RequireEmailVerified } from "../common/decorators/email-verified.decora
 
 @ApiTags("cats")
 @ApiBearerAuth()
-// A cat file is member content (and can be published to the community), so the
-// whole surface requires a verified email — no throwaway-account UGC (R006).
-@RequireEmailVerified()
+// Creating and tending your OWN private cat must not wait on email deliverability
+// — the Cat ID ceremony is first value and the <2-minute north star depends on
+// reaching it without an inbox round-trip (fire #7). Email verification gates
+// only the one action that publishes outward — making a cat public to the
+// community (see `updateVisibility`) — where throwaway-account UGC is the real
+// risk (R006). Everything else here is private to the member.
 @Controller("cats")
 export class CatsController {
   constructor(private readonly cats: CatsService) {}
@@ -238,6 +241,10 @@ export class CatsController {
   }
 
   @Patch(":id/visibility")
+  // Publishing a cat outward to the community is the one action that needs a
+  // verified email — no throwaway-account public UGC (R006). Private cat
+  // management above is deliberately ungated so first value isn't held hostage.
+  @RequireEmailVerified()
   @ApiOperation({ summary: "Update sharing + per-field privacy (opt-in)" })
   updateVisibility(
     @CurrentUser("id") userId: string,

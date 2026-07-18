@@ -60,13 +60,14 @@ export const metadata: Metadata = {
     template: "%s · Moracat",
   },
   description:
-    "Moracat is a membership for people who take their cats seriously — an official Cat ID, a health record that follows them anywhere, and member rates across Jeddah & Riyadh.",
+    "Moracat is a membership for people who take their cats seriously — an official Cat ID, a health record that follows them anywhere, delivery across Saudi Arabia, and founding partners starting in Jeddah & Riyadh.",
   keywords: ["cat membership", "Cat ID", "cat care Saudi Arabia", "عضوية قطط", "هوية قط", "Jeddah", "Riyadh"],
   openGraph: {
     type: "website",
     siteName: "Moracat",
     title: "Moracat — The cat membership",
-    description: "Give your cat an identity of their own. Jeddah & Riyadh.",
+    description:
+      "Give your cat an identity of their own — delivery across Saudi Arabia, founding partners starting in Jeddah & Riyadh.",
     url: siteUrl,
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Moracat — the cat membership" }],
   },
@@ -121,7 +122,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     email: CONTACT.supportEmail,
     telephone: CONTACT.phone,
     sameAs: [CONTACT.instagramUrl],
-    address: { "@type": "PostalAddress", addressCountry: "SA", addressRegion: "Jeddah & Riyadh" },
+    // Honest geography (R006): delivery is kingdom-wide; founding partners start
+    // in Jeddah & Riyadh. No region claim narrower than the real service area.
+    areaServed: { "@type": "Country", name: "Saudi Arabia" },
+    address: { "@type": "PostalAddress", addressCountry: "SA" },
     contactPoint: {
       "@type": "ContactPoint",
       telephone: CONTACT.phone,

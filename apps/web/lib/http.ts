@@ -17,11 +17,25 @@ export type ApiErrorKind = "timeout" | "network" | "http" | "auth" | "parse";
 export class ApiError extends Error {
   readonly kind: ApiErrorKind;
   readonly status?: number;
-  constructor(message: string, kind: ApiErrorKind, status?: number) {
+  /** Machine-readable API error code (e.g. CAT_ALREADY_COVERED) — the ONLY thing
+   *  UIs should branch on; never match on message text (it localizes). */
+  readonly code?: string;
+  /** Extra structured fields the API sent alongside the code
+   *  (e.g. retryAfterMinutes on LOCKED_OUT). */
+  readonly extras?: Record<string, unknown>;
+  constructor(
+    message: string,
+    kind: ApiErrorKind,
+    status?: number,
+    code?: string,
+    extras?: Record<string, unknown>
+  ) {
     super(message);
     this.name = "ApiError";
     this.kind = kind;
     this.status = status;
+    this.code = code;
+    this.extras = extras;
   }
 }
 
@@ -86,8 +100,14 @@ function anySignal(signals: AbortSignal[]): AbortSignal {
  * carrying the API's message. Keeps error surfacing consistent across wrappers.
  */
 export function httpError(status: number, body: unknown, fallback = "Request failed"): ApiError {
-  const b = body as { message?: string | string[] } | null;
+  const b = body as { message?: string | string[]; code?: string } | null;
   const message = Array.isArray(b?.message) ? b?.message.join(", ") : b?.message;
   const kind: ApiErrorKind = status === 401 || status === 403 ? "auth" : "http";
-  return new ApiError(message || `${fallback} (${status})`, kind, status);
+  // Carry the structured code + extras through so `friendlyError` (lib/errors.ts)
+  // can render bilingual recovery copy — UIs branch on code, never prose.
+  const extras =
+    b && typeof b === "object"
+      ? Object.fromEntries(Object.entries(b).filter(([k]) => k !== "message" && k !== "code"))
+      : undefined;
+  return new ApiError(message || `${fallback} (${status})`, kind, status, b?.code, extras);
 }

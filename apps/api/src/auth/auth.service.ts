@@ -14,6 +14,8 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { IdsService } from "../ids/ids.service";
 import { MailService } from "../mail/mail.service";
 import { resolveJwtSecret } from "../common/config/secrets";
+import { authError } from "../common/errors";
+import { PASSWORD_RULES, passwordRuleFailures } from "./password-policy";
 import {
   otpEmailTemplate,
   welcomeTemplate,
@@ -77,29 +79,32 @@ export class AuthService {
   // ── Registration ────────────────────────────────────────────────────────
   async register(dto: RegisterDto, meta: RequestMeta) {
     if (!dto.acceptTerms) {
-      throw new BadRequestException("You must accept the Terms & Privacy Policy");
+      throw new BadRequestException(
+        authError("TERMS_NOT_ACCEPTED", "You must accept the Terms & Privacy Policy")
+      );
     }
 
     const email = dto.email.toLowerCase().trim();
     const phone = dto.phone ? normalizePhone(dto.phone, dto.dialCode) : null;
 
     const emailClash = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
-    if (emailClash) throw new ConflictException("Email is already registered");
+    if (emailClash) throw new ConflictException(authError("EMAIL_TAKEN", "Email is already registered"));
     if (phone) {
       const phoneClash = await this.prisma.user.findUnique({ where: { phone }, select: { id: true } });
-      if (phoneClash) throw new ConflictException("Mobile number is already registered");
+      if (phoneClash) throw new ConflictException(authError("PHONE_TAKEN", "Mobile number is already registered"));
     }
 
     // Email sign-ups need a password (Google sign-ups arrive through googleAuth).
     if (!dto.password) {
-      throw new BadRequestException("A password is required");
+      throw new BadRequestException(authError("PASSWORD_REQUIRED", "A password is required"));
     }
+    this.assertStrongPassword(dto.password);
 
     // If a phone + OTP were supplied, treat the phone as verified on the spot.
     let phoneVerified: Date | null = null;
     if (dto.otp && phone) {
-      const ok = await this.consumeOtp(phone, "REGISTER", dto.otp);
-      if (!ok) throw new UnauthorizedException("Invalid or expired verification code");
+      const result = await this.verifyPhoneOtp(phone, "REGISTER", dto.otp, { consume: true });
+      if (result !== "valid") throw this.otpException(result);
       phoneVerified = new Date();
     }
 
@@ -135,9 +140,12 @@ export class AuthService {
     });
 
     // Send a 6-digit OTP. The account is authenticated but stays UNVERIFIED
-    // until the code is confirmed — community/cat writes are gated on emailVerified
-    // (EmailVerifiedGuard). In prod the send is non-blocking; in dev/test we await
-    // so the flow (and the e2e harness) can retrieve the code without email.
+    // until the code is confirmed — verification is a *parallel* task, not a
+    // wall: only outward-publishing writes (community visibility, likes) are
+    // gated on emailVerified (EmailVerifiedGuard). The Cat ID itself is never
+    // held hostage to email deliverability (north star: ID in <2 min).
+    // In prod the send is non-blocking; in dev/test we await so the flow (and
+    // the e2e harness) can retrieve the code without email.
     let devEmailCode: string | undefined;
     if (IS_PROD) {
       void this.sendEmailOtp(user.id);
@@ -163,13 +171,26 @@ export class AuthService {
     });
 
     // Brute-force lockout: too many recent failures for this account → refuse,
-    // regardless of whether this attempt's password is correct.
+    // regardless of whether this attempt's password is correct. The error tells
+    // the member exactly when to retry (R112 — every error is a recovery): the
+    // lock releases when the THRESHOLD-th most recent failure ages out of the
+    // window.
     if (user) {
-      const recentFailures = await this.prisma.loginHistory.count({
+      const recentFailures = await this.prisma.loginHistory.findMany({
         where: { userId: user.id, success: false, createdAt: { gt: new Date(Date.now() - LOCKOUT_WINDOW_MS) } },
+        orderBy: { createdAt: "desc" },
+        take: LOCKOUT_THRESHOLD,
+        select: { createdAt: true },
       });
-      if (recentFailures >= LOCKOUT_THRESHOLD) {
-        throw new UnauthorizedException("Too many attempts. Please try again in a few minutes.");
+      const oldestFailure = recentFailures[recentFailures.length - 1];
+      if (recentFailures.length >= LOCKOUT_THRESHOLD && oldestFailure) {
+        const releaseAt = oldestFailure.createdAt.getTime() + LOCKOUT_WINDOW_MS;
+        const retryAfterMinutes = Math.max(1, Math.ceil((releaseAt - Date.now()) / 60_000));
+        throw new UnauthorizedException(
+          authError("LOCKED_OUT", `Too many attempts. Please try again in ${retryAfterMinutes} minutes.`, {
+            retryAfterMinutes,
+          })
+        );
       }
     }
 
@@ -183,14 +204,24 @@ export class AuthService {
           data: { userId: user.id, success: false, reason: "bad_credentials", ...meta },
         });
       }
-      throw new UnauthorizedException("Invalid email or password");
+      throw new UnauthorizedException(authError("BAD_CREDENTIALS", "Invalid email or password"));
     }
 
-    // Enforce 2FA when enabled.
+    // Enforce 2FA when enabled. TOTP_REQUIRED is a *structured* signal — the web
+    // reveals the code field off this code, never off message text (which will
+    // localize). A wrong TOTP counts toward the lockout window like a wrong
+    // password, so 2FA codes can't be brute-forced past a correct password.
     if (user.twoFactor?.enabled) {
-      if (!dto.totp) throw new UnauthorizedException("2FA code required");
+      if (!dto.totp) {
+        throw new UnauthorizedException(authError("TOTP_REQUIRED", "A 2FA code is required"));
+      }
       const valid = authenticator.verify({ token: dto.totp, secret: user.twoFactor.secret });
-      if (!valid) throw new UnauthorizedException("Invalid 2FA code");
+      if (!valid) {
+        await this.prisma.loginHistory.create({
+          data: { userId: user.id, success: false, reason: "bad_totp", ...meta },
+        });
+        throw new UnauthorizedException(authError("TOTP_INVALID", "Invalid 2FA code"));
+      }
     }
 
     // A suspended/deactivated account can never obtain a fresh session — even
@@ -204,21 +235,60 @@ export class AuthService {
   /** Refuse suspended/deactivated accounts at any login entry point. */
   private assertLoginAllowed(status: string) {
     if (status === "SUSPENDED") {
-      throw new UnauthorizedException("This account is suspended. Contact support.");
+      throw new UnauthorizedException(
+        authError("ACCOUNT_SUSPENDED", "This account is suspended. Contact support.")
+      );
     }
     if (status === "DEACTIVATED") {
-      throw new UnauthorizedException("This account is deactivated.");
+      throw new UnauthorizedException(authError("ACCOUNT_DEACTIVATED", "This account is deactivated."));
+    }
+  }
+
+  /** Structured strength check — mirrors GET /auth/password/rules (R112). */
+  private assertStrongPassword(password: string) {
+    const failed = passwordRuleFailures(password);
+    if (failed.length > 0) {
+      throw new BadRequestException(
+        authError("WEAK_PASSWORD", "Password must be at least 8 characters with a letter and a number", {
+          rules: PASSWORD_RULES,
+          failed,
+        })
+      );
+    }
+  }
+
+  /** Map a phone-OTP verification failure to its structured exception. */
+  private otpException(reason: "invalid" | "expired" | "rate_limited") {
+    switch (reason) {
+      case "expired":
+        return new UnauthorizedException(
+          authError("OTP_EXPIRED", "Your code has expired. Request a new one.")
+        );
+      case "rate_limited":
+        return new UnauthorizedException(
+          authError("OTP_RATE_LIMITED", "Too many attempts. Request a new code.")
+        );
+      default:
+        return new UnauthorizedException(authError("OTP_INVALID", "Incorrect code. Please try again."));
     }
   }
 
   // ── Login (mobile number + OTP) ───────────────────────────────────────────
   async phoneLogin(dto: PhoneLoginDto, meta: RequestMeta) {
     const phone = normalizePhone(dto.phone);
-    const ok = await this.consumeOtp(phone, "LOGIN", dto.otp);
-    if (!ok) throw new UnauthorizedException("Invalid or expired code");
 
+    // Look up the account BEFORE burning the code: an unregistered number must
+    // not consume a still-valid OTP (the member may need it to register, R112).
+    // Enumeration hygiene stays consistent with requestOtp's documented
+    // approach (never reveal registration status to a blind caller): the OTP is
+    // still validated first in every branch, so ACCOUNT_NOT_FOUND is only ever
+    // revealed to someone who has proven possession of the phone.
     const user = await this.prisma.user.findFirst({ where: { phone, deletedAt: null } });
-    if (!user) throw new UnauthorizedException("No account found for this number");
+    const result = await this.verifyPhoneOtp(phone, "LOGIN", dto.otp, { consume: !!user });
+    if (result !== "valid") throw this.otpException(result);
+    if (!user) {
+      throw new UnauthorizedException(authError("ACCOUNT_NOT_FOUND", "No account found for this number"));
+    }
     this.assertLoginAllowed(user.status);
 
     if (!user.phoneVerified) {
@@ -329,14 +399,27 @@ export class AuthService {
     return { sent: true, ...(IS_PROD ? {} : { devCode: code }) };
   }
 
-  /** Verify + burn an OTP. Returns false on any failure (never throws). */
-  private async consumeOtp(phone: string, purpose: OtpPurpose, code: string): Promise<boolean> {
+  /**
+   * Verify a phone OTP; never throws — returns a structured reason so callers
+   * can map to OTP_EXPIRED / OTP_INVALID / OTP_RATE_LIMITED. Wrong guesses
+   * always count toward the attempt cap; the code is burned only when
+   * `consume` is true (so a valid code isn't wasted on a doomed request, e.g.
+   * a login for a number with no account).
+   */
+  private async verifyPhoneOtp(
+    phone: string,
+    purpose: OtpPurpose,
+    code: string,
+    opts: { consume: boolean }
+  ): Promise<"valid" | "invalid" | "expired" | "rate_limited"> {
     const challenge = await this.prisma.otpChallenge.findFirst({
-      where: { phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+      where: { phone, purpose, consumedAt: null },
       orderBy: { createdAt: "desc" },
     });
-    if (!challenge) return false;
-    if (challenge.attempts >= OTP_MAX_ATTEMPTS) return false;
+    // No live challenge at all reads as "expired" — the recovery is identical
+    // (request a new code) and it leaks nothing about why.
+    if (!challenge || challenge.expiresAt <= new Date()) return "expired";
+    if (challenge.attempts >= OTP_MAX_ATTEMPTS) return "rate_limited";
 
     const matches =
       challenge.codeHash.length === this.hashToken(code).length &&
@@ -347,14 +430,16 @@ export class AuthService {
         where: { id: challenge.id },
         data: { attempts: { increment: 1 } },
       });
-      return false;
+      return "invalid";
     }
 
-    await this.prisma.otpChallenge.update({
-      where: { id: challenge.id },
-      data: { consumedAt: new Date() },
-    });
-    return true;
+    if (opts.consume) {
+      await this.prisma.otpChallenge.update({
+        where: { id: challenge.id },
+        data: { consumedAt: new Date() },
+      });
+    }
+    return "valid";
   }
 
   // ── Forgot / reset password ───────────────────────────────────────────────
@@ -440,6 +525,47 @@ export class AuthService {
     if (!IS_PROD) this.logger.log(`Email OTP for ${user.email}: ${code}`);
     // Dev/test convenience, mirroring the SMS path — never leaked in production.
     return { sent: true, ...(IS_PROD ? {} : { devCode: code }) };
+  }
+
+  /**
+   * Correct the pending email while still unverified, then re-send the code.
+   * The old flow pushed members back to /register — creating a duplicate
+   * account and orphaning the first (with its burned member number). This is
+   * the honest door: same account, corrected address, fresh code.
+   */
+  async changePendingEmail(userId: string, newEmail: string) {
+    const email = newEmail.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true, email: true, emailVerified: true },
+    });
+    if (!user) throw new UnauthorizedException(authError("ACCOUNT_NOT_FOUND", "Account not found"));
+    if (user.emailVerified) {
+      // A verified email is a credential — changing it needs the full
+      // re-auth-protected account flow, not this convenience door.
+      throw new BadRequestException(
+        authError("EMAIL_ALREADY_VERIFIED", "Your email is already verified.")
+      );
+    }
+    if (email === user.email) {
+      // Same address — just re-send.
+      return this.sendEmailOtp(userId);
+    }
+    const taken = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null, NOT: { id: userId } },
+      select: { id: true },
+    });
+    if (taken) {
+      throw new ConflictException(authError("EMAIL_TAKEN", "Email is already registered"));
+    }
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { email } }),
+      // Codes sent to the old address must never verify the new one.
+      this.prisma.emailVerification.deleteMany({
+        where: { userId, purpose: "VERIFY_EMAIL", usedAt: null },
+      }),
+    ]);
+    return this.sendEmailOtp(userId);
   }
 
   /** Verify a 6-digit code for the current user; attempt-limited + brute-safe. */

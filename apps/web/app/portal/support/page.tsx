@@ -11,6 +11,7 @@ import { Field, SelectField } from "@/components/field";
 import { TicketStatusBadge } from "@/components/ticket-status-badge";
 import { QueryError } from "@/components/query-error";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
+import { commerceEnabled } from "@/lib/features";
 
 interface TicketMessage { id: string; body: string; isStaff: boolean; createdAt: string }
 interface Ticket {
@@ -156,7 +157,7 @@ function TicketThread({ ticket, isAr, onBack, authedFetch, onChanged }: {
         {ticket.messages.map((m) => (
           <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-3 text-sm", m.isStaff ? "self-start bg-muted" : "self-end bg-primary/10")}>
             <p className="mb-1 text-[11px] font-medium text-muted-foreground">
-              {m.isStaff ? (isAr ? "فريق مرقط" : "Moraqat Support") : (isAr ? "أنت" : "You")} · {fmtTime(m.createdAt)}
+              {m.isStaff ? (isAr ? "فريق مُرقّط" : "Moracat Care") : (isAr ? "أنت" : "You")} · {fmtTime(m.createdAt)}
             </p>
             <p className="whitespace-pre-wrap">{m.body}</p>
           </div>
@@ -192,11 +193,12 @@ function TicketForm({ isAr, onSubmit, pending, onClose }: {
   // A long support message must survive a session hiccup or accidental close
   // (R117) — draft to sessionStorage, cleared on successful submit.
   const [f, setF] = React.useState(() => {
+    const defaultCategory = commerceEnabled() ? "order" : "cat_id";
     try {
       const raw = sessionStorage.getItem(TICKET_DRAFT_KEY);
-      if (raw) return { subject: "", message: "", category: "order", ...JSON.parse(raw) as object };
+      if (raw) return { subject: "", message: "", category: defaultCategory, ...JSON.parse(raw) as object };
     } catch { /* ignore */ }
-    return { subject: "", message: "", category: "order" };
+    return { subject: "", message: "", category: defaultCategory };
   });
   React.useEffect(() => {
     try {
@@ -207,19 +209,37 @@ function TicketForm({ isAr, onSubmit, pending, onClose }: {
     <Card className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-display font-semibold">{isAr ? "تذكرة جديدة" : "New ticket"}</h3>
-        <button onClick={onClose} aria-label="close"><X className="size-4 text-muted-foreground" /></button>
+        <button
+          onClick={onClose}
+          aria-label={isAr ? "إغلاق" : "Close"}
+          className="-m-3 rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X className="size-4 text-muted-foreground" />
+        </button>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(f); }} className="grid gap-4">
         <Field label={isAr ? "الموضوع" : "Subject"} required value={f.subject} onChange={(v) => setF({ ...f, subject: v })} />
         <SelectField label={isAr ? "التصنيف" : "Category"} value={f.category} onChange={(v) => setF({ ...f, category: v })}
-          options={[
-            { value: "order", label: isAr ? "طلب" : "Order" },
-            { value: "delivery", label: isAr ? "توصيل" : "Delivery" },
-            { value: "billing", label: isAr ? "فوترة" : "Billing" },
-            { value: "subscription", label: isAr ? "اشتراك" : "Subscription" },
-            { value: "product", label: isAr ? "منتج" : "Product" },
-            { value: "other", label: isAr ? "أخرى" : "Other" },
-          ]} />
+          options={
+            // The member's listable problems must match the product they're in:
+            // commerce categories only exist once commerce does — a community-mode
+            // member's real topics are the Cat ID, community and their account.
+            commerceEnabled()
+              ? [
+                  { value: "order", label: isAr ? "طلب" : "Order" },
+                  { value: "delivery", label: isAr ? "توصيل" : "Delivery" },
+                  { value: "billing", label: isAr ? "فوترة" : "Billing" },
+                  { value: "subscription", label: isAr ? "اشتراك" : "Subscription" },
+                  { value: "cat_id", label: isAr ? "هوية القط" : "Cat ID" },
+                  { value: "other", label: isAr ? "أخرى" : "Other" },
+                ]
+              : [
+                  { value: "cat_id", label: isAr ? "هوية القط" : "Cat ID" },
+                  { value: "community", label: isAr ? "المجتمع" : "Community" },
+                  { value: "account", label: isAr ? "حسابي" : "My account" },
+                  { value: "other", label: isAr ? "أخرى" : "Other" },
+                ]
+          } />
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium" htmlFor="ticket-msg">{isAr ? "الرسالة" : "Message"}</label>
           <textarea

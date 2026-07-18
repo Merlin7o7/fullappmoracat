@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Globe, Lock, Copy, ExternalLink, Check, Users } from "lucide-react";
+import { Globe, Lock, Copy, ExternalLink, Check, Users, Eye } from "lucide-react";
 import { Button, Dialog, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 
@@ -178,6 +178,15 @@ export function CatCommunityPanel({ catId, catName, isAr }: { catId: string; cat
               </a>
             </div>
           )}
+
+          {/* Owner-only view tally. Deduped per visitor per hour, so honestly
+              labelled approximate — visitors never see this number at all. */}
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Eye className="size-3.5" aria-hidden />
+            {isAr
+              ? `${v.viewCount} زيارة للملف (تقريبي)`
+              : `${v.viewCount} profile ${v.viewCount === 1 ? "visit" : "visits"} (approx.)`}
+          </p>
 
           {/* Bio */}
           <div>

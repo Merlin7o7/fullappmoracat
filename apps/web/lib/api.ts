@@ -75,9 +75,10 @@ export interface CommunityCard {
   name: string;
   photoUrl: string | null;
   gender: string;
-  viewCount: number;
   likeCount: number;
   isFeatured: boolean;
+  /** Tenure fact — shared before the founding cutoff (never points/gamification). */
+  isFounding: boolean;
   breed: LocalizedName | null;
   city: LocalizedName | null;
   lifeStage: string | null;
@@ -95,12 +96,15 @@ export interface CommunityProfile extends CommunityCard {
   bio: string | null;
   ownerNickname: string | null;
   gallery: { id: string; url: string }[];
-  birthDate: string | null;
+  /** Server-computed age in whole months when the owner shows age — never a raw birth date. */
+  ageMonths: number | null;
 }
 
 export interface CommunityFacets {
   breeds: (LocalizedName & { id: string })[];
   cities: (LocalizedName & { id: string })[];
+  /** How many cats are genuinely featured — 0 hides the Featured door. */
+  featuredCount: number;
 }
 
 /** Response shape of POST/DELETE /community/cats/:slug/like (via authedFetch). */

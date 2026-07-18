@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays, Download, Trash2, AlertTriangle, BellRing, Sparkles, ArrowRight } from "lucide-react";
 import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
+import { QRCodeSVG } from "qrcode.react";
+import { friendlyMessage } from "@/lib/errors";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
@@ -501,7 +503,7 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
           </p>
           <Field type="password" label={isAr ? "كلمة المرور" : "Password"} value={password} onChange={setPassword} placeholder="••••••••" />
           {disable.error && (
-            <p role="alert" className="text-sm text-destructive">{disable.error.message}</p>
+            <p role="alert" className="text-sm text-destructive">{friendlyMessage(disable.error, isAr)}</p>
           )}
           <div className="flex gap-2">
             <Button type="submit" variant="outline" size="sm" disabled={disable.isPending || !password}>
@@ -516,10 +518,16 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
 
       {setup && (
         <div className="mt-4 space-y-3 rounded-xl bg-muted/50 p-4">
-          <p className="text-sm text-muted-foreground">{isAr ? "أضف هذا السر إلى تطبيق المصادقة، ثم أدخل الرمز:" : "Add this secret to your authenticator app, then enter the code:"}</p>
-          <code className="block break-all rounded-lg bg-background p-2 text-xs">{setup.secret}</code>
+          <p className="text-sm text-muted-foreground">{isAr ? "امسح الرمز بتطبيق المصادقة، ثم أدخل الرمز المكوّن من ٦ أرقام:" : "Scan with your authenticator app, then enter the 6-digit code:"}</p>
+          {/* The QR is the human path (hand-typing base32 is an effort tax, R002);
+              the secret stays below as the copyable fallback. */}
+          <div className="flex justify-center rounded-lg bg-white p-4" dir="ltr">
+            <QRCodeSVG value={setup.otpauthUrl} size={168} aria-label={isAr ? "رمز QR لإعداد المصادقة الثنائية" : "Two-factor setup QR code"} />
+          </div>
+          <p className="text-xs text-muted-foreground">{isAr ? "أو أدخل السر يدوياً:" : "Or enter the secret manually:"}</p>
+          <code className="block break-all rounded-lg bg-background p-2 text-xs" dir="ltr">{setup.secret}</code>
           <Field label={isAr ? "الرمز" : "Code"} value={code} onChange={setCode} placeholder="123456" />
-          {enable.error && <p role="alert" className="text-sm text-destructive">{enable.error.message}</p>}
+          {enable.error && <p role="alert" className="text-sm text-destructive">{friendlyMessage(enable.error, isAr)}</p>}
           <Button size="sm" onClick={() => enable.mutate()} disabled={enable.isPending || code.length !== 6}>
             {enable.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تأكيد التفعيل" : "Confirm & enable"}
           </Button>

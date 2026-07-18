@@ -114,6 +114,8 @@ export class SupportService {
     return tickets.map((t) => ({
       ...this.serialize(t),
       customer: {
+        // id lets the admin surface deep-link a ticket to the member's 360 page.
+        id: t.userId,
         email: t.user.email,
         name: [t.user.firstName, t.user.lastName].filter(Boolean).join(" ") || t.user.email,
       },
@@ -132,6 +134,7 @@ export class SupportService {
     return {
       ...this.serialize(ticket),
       customer: {
+        id: ticket.userId,
         email: ticket.user.email,
         name: [ticket.user.firstName, ticket.user.lastName].filter(Boolean).join(" ") || ticket.user.email,
       },

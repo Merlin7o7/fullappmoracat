@@ -16,6 +16,7 @@
 // ════════════════════════════════════════════════════════════════════════
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -29,6 +30,8 @@ import {
   Star,
   BellRing,
   Mail,
+  PauseCircle,
+  HeartHandshake,
 } from "lucide-react";
 import { Card, Button, Badge, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -36,7 +39,10 @@ import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
-import { formatDate, monthsLabel, monthUnit } from "@/lib/datetime";
+import { monthsLabel, monthUnit } from "@/lib/datetime";
+import { formatSAR, formatMoneyDate } from "@/lib/money";
+import { friendlyError } from "@/lib/errors";
+import { ApiError } from "@/lib/http";
 import { type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
 import { AddressForm, useCities, type SavedAddress } from "@/components/address-form";
 import { BoxBuilder, type BoxSelections } from "@/components/box-builder";
@@ -56,15 +62,41 @@ const TERM_OPTIONS = [1, 3, 6, 12] as const;
 interface ActivateResponse {
   subscriptionId: string;
   status: string;
-  orderNumber: string;
-  grandTotal: number;
-  taxTotal: number;
-  currency: string;
-  nextBillingAt: string | null;
+  orderNumber?: string;
+  grandTotal?: number;
+  taxTotal?: number;
+  currency?: string;
+  nextBillingAt?: string | null;
   redirectUrl: string | null;
-  payment: { provider: string; status: string };
-  plan: { tier: PlanTier; nameEn: string; nameAr: string };
-  cats: { id: string; name: string }[];
+  /** True when an abandoned DRAFT was picked back up instead of re-charged. */
+  resumed?: boolean;
+  payment?: { provider: string; status: string };
+  plan?: { tier: PlanTier; nameEn: string; nameAr: string };
+  cats?: { id: string; name: string }[];
+}
+
+/** Month-end-clamped month arithmetic — mirrors the API's addMonths exactly
+ *  (Jan 31 + 1mo = Feb 28/29, never a silent roll into March — R021). */
+function addMonthsClamped(date: Date, months: number): Date {
+  const d = new Date(date);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, last));
+  return d;
+}
+
+/** KITTEN < 12 months, SENIOR ≥ 10 years — same thresholds as @moraqat/core. */
+function lifeStageFromBirth(birthDate: string | null | undefined): "KITTEN" | "ADULT" | "SENIOR" | null {
+  if (!birthDate) return null;
+  const b = new Date(birthDate);
+  if (Number.isNaN(b.getTime())) return null;
+  const now = new Date();
+  const months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
+  if (months < 12) return "KITTEN";
+  if (months >= 120) return "SENIOR";
+  return "ADULT";
 }
 
 export default function CheckoutPage() {
@@ -169,12 +201,12 @@ function CheckoutInner() {
     .map((c) => localizeName(c.name, uiLocale))
     .join(isAr ? "، " : ", ");
 
-  // Renewal falls at the end of the committed term (whole term prepaid).
-  const renewalDate = React.useMemo(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + termMonths);
-    return formatDate(d, uiLocale, { day: "numeric", month: "long", year: "numeric" });
-  }, [termMonths, uiLocale]);
+  // The term simply ENDS at this date — nothing renews on it. Clamped exactly
+  // like the API so the preview never disagrees with the invoice (R021).
+  const termEndDate = React.useMemo(
+    () => formatMoneyDate(addMonthsClamped(new Date(), termMonths), isAr),
+    [termMonths, isAr]
+  );
 
   const activate = useMutation({
     mutationFn: () =>
@@ -194,8 +226,15 @@ function CheckoutInner() {
       }),
     onSuccess: (res) => {
       // PSP redirect flows: the member finishes payment on the provider's page.
+      // A resumed DRAFT hands back the SAME session — never a duplicate charge.
       if (res.redirectUrl) {
         window.location.assign(res.redirectUrl);
+        return;
+      }
+      if (res.resumed) {
+        // An in-flight membership exists but its checkout URL is gone — the
+        // subscriptions page owns completing it (resume-payment / fresh link).
+        router.push("/portal/subscriptions");
         return;
       }
       void qc.invalidateQueries({ queryKey: ["cats"] });
@@ -222,9 +261,13 @@ function CheckoutInner() {
             {isAr ? `عضوية ${catLine} صارت مفعّلة 🎉` : `${catLine}'s membership is now active 🎉`}
           </h1>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-            {isAr
-              ? `باقة «${done.plan.nameAr}» — أول صندوق في طريقه إليكم.`
-              : `The ${done.plan.nameEn} plan — the first box is on its way.`}
+            {done.plan
+              ? isAr
+                ? `باقة «${done.plan.nameAr}» — أول صندوق في طريقه إليكم.`
+                : `The ${done.plan.nameEn} plan — the first box is on its way.`
+              : isAr
+                ? "أول صندوق في طريقه إليكم."
+                : "The first box is on its way."}
           </p>
           <div className="mx-auto mt-5 max-w-sm space-y-2 text-start text-sm">
             <p className="flex items-start gap-2 text-muted-foreground">
@@ -239,8 +282,8 @@ function CheckoutInner() {
                 <BellRing className="mt-0.5 size-4 shrink-0" aria-hidden />
                 <span>
                   {isAr
-                    ? `التجديد الأول في ${formatDate(done.nextBillingAt, uiLocale, { day: "numeric", month: "long", year: "numeric" })} — ونذكّرك قبله.`
-                    : `First renewal on ${formatDate(done.nextBillingAt, uiLocale, { day: "numeric", month: "long", year: "numeric" })} — we'll remind you before it.`}
+                    ? `مدتكم مدفوعة حتى ${formatMoneyDate(done.nextBillingAt, true)} — بدون أي تجديد تلقائي؛ ندعوك قبل نهايتها.`
+                    : `Your term is paid through ${formatMoneyDate(done.nextBillingAt, false)} — no automatic renewal; we'll invite you before it ends.`}
                 </span>
               </p>
             )}
@@ -274,7 +317,7 @@ function CheckoutInner() {
   const canPay = !!addressId && targetCats.length > 0 && !activate.isPending;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6 pb-24 sm:pb-0">
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           {isAr ? `تفعيل عضوية ${catLine}` : `Activate ${catLine}'s membership`}
@@ -313,8 +356,15 @@ function CheckoutInner() {
         </ul>
       </Card>
 
-      {/* ── 1.5 · Build your box — pick brand & flavor per line (flat price) ─ */}
-      <BoxBuilder planId={plan.id} isAr={isAr} onChange={setBoxSelections} />
+      {/* ── 1.5 · Build your box — pick brand & flavor per line (flat price).
+             Facets arrive pre-answered from the cat's own profile (R001). ─── */}
+      <BoxBuilder
+        planId={plan.id}
+        isAr={isAr}
+        onChange={setBoxSelections}
+        catLifeStage={lifeStageFromBirth(targetCats[0]?.birthDate)}
+        catSterilized={targetCats[0]?.isNeutered ?? null}
+      />
 
       {/* ── 2 · Delivery — kingdom-wide, no city gating ──────────────────── */}
       <Card className="space-y-4 p-6">
@@ -402,7 +452,7 @@ function CheckoutInner() {
                   isAr={isAr}
                   cities={citiesQ.data}
                   pending={createAddress.isPending}
-                  error={createAddress.error?.message}
+                  error={createAddress.error ? friendlyError(createAddress.error, isAr).message : undefined}
                   onClose={() => setShowAddForm(false)}
                   onSubmit={(b) => createAddress.mutate(b)}
                   className="border-dashed"
@@ -419,9 +469,11 @@ function CheckoutInner() {
           {isAr ? "مدة الاشتراك" : "Subscription length"}
         </h2>
         <div role="radiogroup" aria-label={isAr ? "مدة الاشتراك" : "Subscription length"} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {/* No fabricated "Best value" — every term costs exactly price × months.
+              The only honest label is flexibility on the shortest term (R006/R025). */}
           {TERM_OPTIONS.filter((t) => t >= minTerm).map((t) => {
             const selected = t === termMonths;
-            const recommended = t === 3;
+            const flexible = t === 1;
             return (
               <button
                 key={t}
@@ -434,9 +486,9 @@ function CheckoutInner() {
                   selected ? "border-primary bg-primary/[0.06]" : "border-border hover:bg-muted/50"
                 )}
               >
-                {recommended && (
-                  <span className="absolute -top-2 start-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground rtl:translate-x-1/2">
-                    {isAr ? "الأنسب" : "Best value"}
+                {flexible && (
+                  <span className="absolute -top-2 start-1/2 -translate-x-1/2 rounded-full bg-secondary px-1.5 py-0.5 text-[9px] font-semibold text-secondary-foreground rtl:translate-x-1/2">
+                    {isAr ? "الأكثر مرونة" : "Most flexible"}
                   </span>
                 )}
                 <span className="block font-display text-lg font-bold tabular" dir="ltr">{t}</span>
@@ -476,65 +528,137 @@ function CheckoutInner() {
         {/* Founding-member launch note — first delivery date, shown before payment. */}
         <LaunchDeliveryNote isAr={isAr} />
 
-        {/* The commitment line (R021): the exact upfront total + the reminder (R025).
-            0% VAT while not VAT-registered. */}
+        {/* The commitment block (R021): the exact upfront total, when it ends,
+            and the honest promise — no automatic renewal, ever (R025). */}
         <div className="space-y-1.5 rounded-xl bg-muted/50 p-4 text-center">
           <p className="text-sm font-medium">
             {isAr ? (
               <>
-                <span className="tabular" dir="ltr">{plan.price}</span> ر.س × {termMonths} {monthUnit(termMonths, "ar")} ={" "}
-                <span className="tabular font-bold" dir="ltr">{plan.price * termMonths}</span> ر.س تُدفع الآن
+                <span dir="ltr" className="tabular">{formatSAR(plan.price, true)}</span> × {monthsLabel(termMonths, "ar")} ={" "}
+                <span dir="ltr" className="tabular font-bold">{formatSAR(plan.price * termMonths, true)}</span> تُدفع اليوم
               </>
             ) : (
               <>
-                <span className="tabular" dir="ltr">{plan.price}</span> SAR × {termMonths} {monthUnit(termMonths, "en")} ={" "}
-                <span className="tabular font-bold" dir="ltr">{plan.price * termMonths}</span> SAR paid now
+                <span dir="ltr" className="tabular">{formatSAR(plan.price, false)}</span> × {monthsLabel(termMonths, "en")} ={" "}
+                <span dir="ltr" className="tabular font-bold">{formatSAR(plan.price * termMonths, false)}</span> paid today
               </>
             )}
           </p>
           <p className="text-xs text-muted-foreground">
             {isAr
-              ? `توصيل شهري طوال ${monthsLabel(termMonths, "ar")} — التجديد في ${renewalDate}`
-              : `Monthly delivery for ${monthsLabel(termMonths, "en")} — renews ${renewalDate}`}
+              ? `توصيل شهري حتى ${termEndDate}`
+              : `Delivered monthly until ${termEndDate}`}
           </p>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <BellRing className="size-3.5 shrink-0" aria-hidden />
-            {isAr ? "نذكّرك قبل التجديد" : "We remind you before renewal"}
+            <span>
+              {isAr ? (
+                <><strong className="font-semibold text-foreground">بدون أي تجديد تلقائي — أبداً</strong>؛ ندعوك قبل نهاية مدتك.</>
+              ) : (
+                <><strong className="font-semibold text-foreground">No automatic renewal — ever</strong>; we invite you before your term ends.</>
+              )}
+            </span>
           </p>
         </div>
 
-        {/* Dignified retry — say what happened + the way forward, never blame (R118/R113). */}
-        {activate.isError && (
-          <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/[0.06] p-4 text-sm">
-            <p className="font-medium">
-              {isAr ? "ما اكتملت عملية الدفع — وما انخصم منك شيء" : "The payment didn't go through — nothing was charged"}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {activate.error instanceof Error && activate.error.message
-                ? activate.error.message
-                : isAr
-                  ? "جرّب مرة ثانية، أو اختر وسيلة دفع أخرى."
-                  : "Try again, or pick another payment method."}
-            </p>
-          </div>
-        )}
+        {/* Failures branch on the structured code, never raw prose (R084/R113). */}
+        {activate.isError && (() => {
+          const fe = friendlyError(activate.error, isAr);
+          // A cat that's already covered is a fact, not a failure — a calm card
+          // pointing home, never the red payment frame.
+          if (fe.code === "CAT_ALREADY_COVERED") {
+            return (
+              <div role="status" className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+                <HeartHandshake className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                <div className="min-w-0">
+                  <p className="font-medium">{fe.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{fe.message}</p>
+                  <Link
+                    href="/portal/subscriptions"
+                    className="mt-2 inline-flex min-h-9 items-center text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    {isAr ? "إلى اشتراكاتك" : "Go to your subscriptions"}
+                  </Link>
+                </div>
+              </div>
+            );
+          }
+          // A true payment decline (402) — and ONLY that — earns the reassurance
+          // that nothing was charged (R118). Validation problems get their own
+          // calm, specific copy without inventing a charge that never started.
+          const isPaymentFailure =
+            activate.error instanceof ApiError && activate.error.status === 402;
+          return (
+            <div
+              role="alert"
+              className={cn(
+                "rounded-xl border p-4 text-sm",
+                isPaymentFailure ? "border-destructive/30 bg-destructive/[0.06]" : "border-border bg-muted/40"
+              )}
+            >
+              <p className="font-medium">
+                {isPaymentFailure
+                  ? isAr
+                    ? "ما اكتملت عملية الدفع — وما انخصم منك شيء"
+                    : "The payment didn't go through — nothing was charged"
+                  : fe.title}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {isPaymentFailure
+                  ? isAr
+                    ? "جرّب مرة ثانية متى ما كنت جاهزاً — هوية قطك بأمان."
+                    : "Try again whenever you're ready — your cat's ID is safe."
+                  : fe.message}
+              </p>
+            </div>
+          );
+        })()}
 
-        <Button size="lg" className="w-full" disabled={!canPay} onClick={() => activate.mutate()}>
-          {activate.isPending ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-              {isAr ? "نحوّلك إلى تمارا…" : "Taking you to Tamara…"}
-            </>
-          ) : (
-            <>{isAr ? "المتابعة إلى الدفع عبر تمارا" : "Continue to payment with Tamara"}</>
-          )}
+        <Button size="lg" className="w-full" disabled={!canPay} loading={activate.isPending} onClick={() => activate.mutate()}>
+          {activate.isPending
+            ? isAr ? "نحوّلك إلى تمارا…" : "Taking you to Tamara…"
+            : isAr ? "المتابعة إلى الدفع عبر تمارا" : "Continue to payment with Tamara"}
         </Button>
         {!addressId && !addrLoading && (
           <p className="text-center text-xs text-muted-foreground">
             {isAr ? "اختر عنوان التوصيل أولاً وبعدها فعّل" : "Pick a delivery address first, then activate"}
           </p>
         )}
+
+        {/* Freedom stays visible right where the money is asked for (R023). */}
+        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+          <PauseCircle className="size-3.5 shrink-0" aria-hidden />
+          {isAr
+            ? "توقّف مؤقتاً أو ألغِ متى ما تبي — من صفحة اشتراكك، بضغطة"
+            : "Pause or cancel anytime — one tap from your subscription page"}
+        </p>
       </Card>
+
+      {/* ── Sticky mobile bar — the exact total + the action survive scrolling
+             (R021/R100: the commitment stays visible in the thumb zone). ───── */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <div className="min-w-0">
+            <p className="font-display text-base font-bold leading-tight">
+              <span dir="ltr" className="tabular">{formatSAR(plan.price * termMonths, isAr)}</span>
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {isAr ? `${monthsLabel(termMonths, "ar")} — بدون تجديد تلقائي` : `${monthsLabel(termMonths, "en")} — no auto-renewal`}
+            </p>
+          </div>
+          <Button
+            size="lg"
+            className="ms-auto flex-1"
+            disabled={!canPay}
+            loading={activate.isPending}
+            onClick={() => activate.mutate()}
+          >
+            {activate.isPending
+              ? isAr ? "نحوّلك…" : "One moment…"
+              : isAr ? "ادفع عبر تمارا" : "Pay with Tamara"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

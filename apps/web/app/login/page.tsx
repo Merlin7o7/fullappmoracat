@@ -9,8 +9,10 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field } from "@/components/field";
 import { PhoneField, composePhone } from "@/components/phone-field";
-import { GoogleButton } from "@/components/google-button";
+import { GoogleButton, googleEnabled } from "@/components/google-button";
 import { AuthShell } from "@/components/auth-shell";
+import { ApiError } from "@/lib/http";
+import { friendlyError } from "@/lib/errors";
 
 type Method = "email" | "phone";
 
@@ -28,7 +30,21 @@ export default function LoginPage() {
   // silent default (trust precedes convenience).
   const [rememberMe, setRememberMe] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // The structured API code behind the current error — UIs branch on codes,
+  // never on message prose (e.g. LOCKED_OUT gets an inline reset path).
+  const [errorCode, setErrorCode] = React.useState<string | undefined>(undefined);
   const [loading, setLoading] = React.useState(false);
+
+  /** Every auth failure renders through friendlyError — never a raw message (R084/R113). */
+  function showError(err: unknown) {
+    const fe = friendlyError(err, isAr);
+    setError(fe.message);
+    setErrorCode(fe.code);
+  }
+  function clearError() {
+    setError(null);
+    setErrorCode(undefined);
+  }
 
   // Email + password
   const [email, setEmail] = React.useState("");
@@ -72,19 +88,19 @@ export default function LoginPage() {
 
   async function onEmailLogin(e: React.FormEvent) {
     e.preventDefault();
-    setError(null); setLoading(true);
+    clearError(); setLoading(true);
     try {
       await login(email, password, { totp: totp || undefined, rememberMe });
       goToPortal();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Login failed";
-      if (/2fa/i.test(msg)) setNeedsTotp(true);
-      setError(msg);
+      // Branch on the structured code, never on message prose (it localizes).
+      if (err instanceof ApiError && err.code === "TOTP_REQUIRED") setNeedsTotp(true);
+      showError(err);
     } finally { setLoading(false); }
   }
 
   async function sendOtp() {
-    setError(null);
+    clearError();
     if (phone.replace(/\D/g, "").length < 8) { setError(isAr ? "رقم الجوال غير صحيح" : "Enter a valid mobile number"); return; }
     setLoading(true);
     try {
@@ -92,31 +108,31 @@ export default function LoginPage() {
       setOtpSent(true);
       if (devCode) toast({ title: isAr ? "رمز الدخول (وضع التطوير)" : "Login code (dev)", description: devCode });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send code");
+      showError(err);
     } finally { setLoading(false); }
   }
 
   async function onPhoneLogin(e: React.FormEvent) {
     e.preventDefault();
     if (!otpSent) return sendOtp();
-    setError(null); setLoading(true);
+    clearError(); setLoading(true);
     try {
       await loginWithPhone(fullPhone, otp, rememberMe);
       goToPortal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      showError(err);
     } finally { setLoading(false); }
   }
 
   async function onGoogle(idToken: string) {
-    setError(null);
+    clearError();
     try { await loginWithGoogle(idToken, rememberMe); goToPortal(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Google sign-in failed"); }
+    catch (err) { showError(err); }
   }
 
   async function onForgot(e: React.FormEvent) {
     e.preventDefault();
-    setError(null); setLoading(true);
+    clearError(); setLoading(true);
     try {
       const { devToken } = await forgotPassword(forgotEmail);
       toast({
@@ -126,8 +142,15 @@ export default function LoginPage() {
       if (devToken) router.push(`/reset-password?token=${devToken}`);
       else setForgot(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      showError(err);
     } finally { setLoading(false); }
+  }
+
+  /** LOCKED_OUT's recovery path (R112): waiting is not the only option. */
+  function openForgotPrefilled() {
+    setForgot(true);
+    setForgotEmail((f) => f || email);
+    clearError();
   }
 
   if (forgot) {
@@ -137,7 +160,7 @@ export default function LoginPage() {
           <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={forgotEmail} onChange={setForgotEmail} placeholder="you@example.com" autoComplete="email" />
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" disabled={loading}>{loading && <Loader2 className="size-4 animate-spin" />}{isAr ? "أرسل الرابط" : "Send reset link"}</Button>
-          <button type="button" onClick={() => { setForgot(false); setError(null); }} className="text-sm text-muted-foreground hover:text-foreground">{isAr ? "الرجوع لتسجيل الدخول" : "Back to login"}</button>
+          <button type="button" onClick={() => { setForgot(false); clearError(); }} className="min-h-[44px] text-sm text-muted-foreground hover:text-foreground">{isAr ? "الرجوع لتسجيل الدخول" : "Back to login"}</button>
         </form>
       </AuthShell>
     );
@@ -150,18 +173,22 @@ export default function LoginPage() {
           {notice}
         </div>
       )}
-      <div className="mb-5"><GoogleButton isAr={isAr} onCredential={onGoogle} /></div>
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">{isAr ? "أو" : "or"}</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+      {googleEnabled && (
+        <>
+          <div className="mb-5"><GoogleButton isAr={isAr} onCredential={onGoogle} /></div>
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">{isAr ? "أو" : "or"}</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      )}
 
       {/* Method switch — only when SMS OTP is available */}
       {smsEnabled && (
         <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
-          <MethodTab active={method === "email"} onClick={() => { setMethod("email"); setError(null); }} icon={Mail} label={isAr ? "البريد" : "Email"} />
-          <MethodTab active={method === "phone"} onClick={() => { setMethod("phone"); setError(null); }} icon={Smartphone} label={isAr ? "الجوال" : "Mobile"} />
+          <MethodTab active={method === "email"} onClick={() => { setMethod("email"); clearError(); }} icon={Mail} label={isAr ? "البريد" : "Email"} />
+          <MethodTab active={method === "phone"} onClick={() => { setMethod("phone"); clearError(); }} icon={Smartphone} label={isAr ? "الجوال" : "Mobile"} />
         </div>
       )}
 
@@ -169,9 +196,19 @@ export default function LoginPage() {
         <form onSubmit={onEmailLogin} className="mt-5 flex flex-col gap-4">
           <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
           <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={password} onChange={setPassword} placeholder="••••••••" autoComplete="current-password" />
-          {needsTotp && <Field label={isAr ? "رمز التحقق (2FA)" : "2FA code"} value={totp} onChange={setTotp} inputMode="numeric" placeholder="123456" />}
-          <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={() => { setForgot(true); setError(null); }} />
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {needsTotp && <Field label={isAr ? "رمز التحقق (2FA)" : "2FA code"} value={totp} onChange={setTotp} inputMode="numeric" placeholder="123456" autoFocus />}
+          <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={openForgotPrefilled} />
+          {error && (
+            <div role="alert" className="text-sm text-destructive">
+              <p>{error}</p>
+              {/* A lockout is never a dead end (R112): the reset path is right here. */}
+              {errorCode === "LOCKED_OUT" && (
+                <button type="button" onClick={openForgotPrefilled} className="mt-1 min-h-[44px] font-medium text-primary underline-offset-4 hover:underline">
+                  {isAr ? "إعادة تعيين كلمة المرور بدلاً من الانتظار" : "Reset your password instead"}
+                </button>
+              )}
+            </div>
+          )}
           <Button type="submit" size="lg" disabled={loading}>{loading && <Loader2 className="size-4 animate-spin" />}{isAr ? "تسجيل الدخول" : "Log in"}</Button>
         </form>
       ) : (
@@ -180,7 +217,7 @@ export default function LoginPage() {
           {otpSent && (
             <Field label={isAr ? "رمز الدخول" : "Login code"} value={otp} onChange={(v) => setOtp(v.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" required placeholder="••••••" hint={isAr ? "أرسلناه برسالة نصية" : "Sent to you by SMS"} />
           )}
-          <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={() => { setForgot(true); setError(null); }} />
+          <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={openForgotPrefilled} />
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" disabled={loading}>
             {loading && <Loader2 className="size-4 animate-spin" />}

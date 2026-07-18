@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ArrowLeft, Loader2, ShieldCheck, Cat as CatIcon } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Pencil, ShieldCheck, Cat as CatIcon } from "lucide-react";
 import { Card, Button, Dialog, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -63,6 +63,13 @@ function IssueIdFlow() {
     ownerPhone: user?.phone ?? "",
   });
   const set = (patch: Partial<typeof f>) => setF((s) => ({ ...s, ...patch }));
+  // When the account already carries a name + number, the contact step
+  // collapses into step 1: one screen, one action (R002/R005). Captured once
+  // on mount so typing never flips the layout underfoot.
+  const [singleScreen] = React.useState(
+    () => Boolean((user?.firstName || user?.lastName) && user?.phone)
+  );
+  const [editContact, setEditContact] = React.useState(false);
 
   // The name they typed on the landing page follows them here (R016) —
   // they should never have to say it twice (R117).
@@ -76,11 +83,16 @@ function IssueIdFlow() {
     } catch { /* ignore */ }
   }, []);
 
-  const create = useMutation({
-    mutationFn: async () => {
-      // Save owner edits to the account first (never enter twice).
+  // The emergency contact is one of the Cat ID's four jobs (safety — "bring my
+  // cat home"). A failed save must never be swallowed: it retries quietly in
+  // the background and, if it still can't land, says so honestly with where to
+  // fix it (R112/R115 — prevent > apologise, never pretend it saved).
+  const retryTimer = React.useRef<number | null>(null);
+  React.useEffect(() => () => { if (retryTimer.current) window.clearTimeout(retryTimer.current); }, []);
+  const saveOwnerContact = React.useCallback(
+    async (attempt: number): Promise<void> => {
       const parts = f.ownerName.trim().split(/\s+/);
-      if (f.ownerName.trim() || f.ownerPhone.trim()) {
+      try {
         await authedFetch("/account/profile", {
           method: "PATCH",
           body: JSON.stringify({
@@ -88,7 +100,42 @@ function IssueIdFlow() {
             lastName: parts.slice(1).join(" ") || undefined,
             ...(f.ownerPhone.trim() ? { phone: f.ownerPhone.trim() } : {}),
           }),
-        }).catch(() => {});
+        });
+        if (attempt > 0) {
+          toast({ title: isAr ? "تم حفظ رقم التواصل" : "Contact number saved", variant: "success" });
+        }
+      } catch {
+        if (attempt === 0) {
+          toast({
+            title: isAr ? "ما قدرنا نحفظ رقم التواصل" : "Couldn't save your contact number",
+            description: isAr ? "هوية قطك سليمة — نعيد المحاولة الآن." : "Your cat's ID is safe — retrying now.",
+            variant: "error",
+          });
+        }
+        if (attempt < 2) {
+          retryTimer.current = window.setTimeout(() => void saveOwnerContact(attempt + 1), 4000);
+        } else {
+          toast({
+            title: isAr ? "رقم التواصل لم يُحفظ" : "Your contact number didn't save",
+            description: isAr
+              ? "أضفه من الإعدادات › حسابي متى ما ناسبك — هو اللي يرجّع قطك لو ضاع."
+              : "Add it from Settings › Account when you can — it's what brings your cat home.",
+            variant: "error",
+          });
+        }
+      }
+    },
+    [authedFetch, f.ownerName, f.ownerPhone, isAr, toast]
+  );
+
+  const create = useMutation({
+    mutationFn: async () => {
+      // Save owner edits to the account first (never enter twice) — but never
+      // let a profile hiccup block the Cat ID: the save is non-blocking and
+      // self-retries, surfacing honestly if it can't land.
+      const parts = f.ownerName.trim().split(/\s+/);
+      if (f.ownerName.trim() || f.ownerPhone.trim()) {
+        void saveOwnerContact(0);
         updateUser({ firstName: parts[0] || user?.firstName, lastName: parts.slice(1).join(" ") || user?.lastName, phone: f.ownerPhone.trim() || user?.phone });
       }
       return authedFetch<PortalCat & { firstCatIdIssued?: boolean }>("/cats", {
@@ -135,17 +182,108 @@ function IssueIdFlow() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_minmax(0,20rem)]">
         <Card className="p-6 sm:p-7">
-          {/* Two quiet dots — the whole journey is visible at a glance (R005). */}
-          <div className="mb-6 flex items-center gap-2" aria-hidden>
-            {[0, 1].map((i) => (
-              <span key={i} className={cn("h-1.5 rounded-full transition-all duration-300", i === step ? "w-8 bg-primary" : "w-1.5 bg-border", i < step && "bg-primary/40")} />
-            ))}
-            <span className="ms-2 text-xs text-muted-foreground">
-              {step === 0 ? (isAr ? "قطك" : "Your cat") : (isAr ? "التواصل" : "Contact")} · {step + 1}/2
-            </span>
-          </div>
+          {/* Two quiet dots — the whole journey is visible at a glance (R005).
+              When the account already knows the owner, there is only one screen
+              and the dots would be noise (R002). */}
+          {!singleScreen && (
+            <div className="mb-6 flex items-center gap-2" aria-hidden>
+              {[0, 1].map((i) => (
+                <span key={i} className={cn("h-1.5 rounded-full transition-all duration-300", i === step ? "w-8 bg-primary" : "w-1.5 bg-border", i < step && "bg-primary/40")} />
+              ))}
+              <span className="ms-2 text-xs text-muted-foreground">
+                {step === 0 ? (isAr ? "قطك" : "Your cat") : (isAr ? "التواصل" : "Contact")} · {step + 1}/2
+              </span>
+            </div>
+          )}
 
-          {step === 0 ? (
+          {singleScreen ? (
+            /* One screen, one action: the account already carries the owner's
+               name + number, so we recognise instead of re-ask (R001/R002). */
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!catName || create.isPending) return;
+                if (duplicateName) setDupConfirmOpen(true);
+                else create.mutate();
+              }}
+              className="flex flex-col gap-4"
+            >
+              <Field
+                label={isAr ? "وش اسم قطك؟" : "What's your cat's name?"}
+                required
+                value={f.name}
+                onChange={(v) => set({ name: v.slice(0, 60) })}
+                placeholder={isAr ? "مثلاً: سمسم" : "e.g. Simba"}
+                autoFocus
+                hint={f.name.length >= 50 ? `${f.name.length}/60` : undefined}
+              />
+              <SelectField
+                label={isAr ? "الجنس (اختياري)" : "Sex (optional)"}
+                value={f.gender}
+                onChange={(v) => set({ gender: v })}
+                options={[
+                  { value: "UNKNOWN", label: isAr ? "غير محدد" : "Not sure" },
+                  { value: "MALE", label: isAr ? "ذكر" : "Male" },
+                  { value: "FEMALE", label: isAr ? "أنثى" : "Female" },
+                ]}
+              />
+              <PhotoUploader
+                endpoint="/uploads/image"
+                aspect={1}
+                rounded
+                maxEdge={800}
+                currentUrl={f.photoUrl || null}
+                isAr={isAr}
+                label={isAr ? "صورته (اختياري — تطلع على الهوية)" : "Photo (optional — it goes on the ID)"}
+                onUploaded={(res) => set({ photoUrl: (res.url as string) ?? "" })}
+              />
+
+              {/* Recognition, not a form (R001): we already know who's behind
+                  this cat — one quiet line, editable in place. */}
+              {editContact ? (
+                <div className="flex flex-col gap-4 rounded-xl bg-muted/50 p-3">
+                  <Field label={isAr ? "اسمك الكامل" : "Your full name"} required value={f.ownerName} onChange={(v) => set({ ownerName: v })} />
+                  <Field label={isAr ? "رقم جوالك" : "Your mobile number"} value={f.ownerPhone} onChange={(v) => set({ ownerPhone: v })} inputMode="tel" />
+                </div>
+              ) : (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="min-w-0 truncate">
+                    {isAr ? "وجدناك: " : "We found you: "}
+                    <span className="font-medium text-foreground">{f.ownerName}</span>
+                    {f.ownerPhone && <> · <span className="font-medium text-foreground" dir="ltr">{f.ownerPhone}</span></>}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditContact(true)}
+                    aria-label={isAr ? "تعديل بيانات التواصل" : "Edit your contact details"}
+                    className="grid size-11 shrink-0 place-items-center rounded-full text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Pencil className="size-3.5" aria-hidden />
+                  </button>
+                </p>
+              )}
+              {/* Trust precedes the ask (R004): why the number matters. */}
+              <p className="flex items-start gap-2 rounded-xl bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+                {isAr
+                  ? `لو ضاع ${catName || "قطك"} يوم من الأيام، هذا الرقم اللي يوصله له اللي يلقاه.`
+                  : `If ${catName || "your cat"} is ever lost, this is the number that brings them home.`}
+              </p>
+
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")} disabled={create.isPending}>
+                  <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "إلغاء" : "Cancel"}
+                </Button>
+                <Button type="submit" size="lg" disabled={!catName || create.isPending}>
+                  {create.isPending ? (
+                    <><Loader2 className="size-4 animate-spin" /> {isAr ? "جارٍ إصدار الهوية…" : "Issuing the ID…"}</>
+                  ) : (
+                    <><CatIcon className="size-4" /> {isAr ? `أصدر هوية ${catName || "القط"}` : catName ? `Issue ${catName}'s Cat ID` : "Issue the Cat ID"}</>
+                  )}
+                </Button>
+              </div>
+            </form>
+          ) : step === 0 ? (
             <form onSubmit={(e) => { e.preventDefault(); if (catName) setStep(1); }} className="flex flex-col gap-4">
               <Field
                 label={isAr ? "وش اسم قطك؟" : "What's your cat's name?"}
@@ -265,7 +403,7 @@ function IssueIdFlow() {
           (set in create.onSuccess) — never on hope (R115/R117). */}
       {ceremonyCat?.catIdNumber && (
         <CatIdCeremony
-          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl }}
+          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl, qrToken: ceremonyCat.qrToken }}
           isAr={isAr}
           // The full rite is for the household's first ID; every next family
           // member gets the warm, familiar mini welcome (R031/R009).

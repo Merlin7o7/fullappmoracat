@@ -20,7 +20,9 @@ async function slugs(path: string, pick: (json: unknown) => string[]): Promise<s
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const staticRoutes = ["", "/about", "/community", "/products", "/blog", "/tools/feeding", "/contact", "/login", "/register"].map(
+  // Public, indexable pages only — auth screens (/login, /register) are app
+  // chrome, not landing pages, and don't belong in the sitemap.
+  const staticRoutes = ["", "/about", "/benefits", "/community", "/products", "/blog", "/tools/feeding", "/contact"].map(
     (path) => ({
       url: `${SITE}${path}`,
       lastModified: now,

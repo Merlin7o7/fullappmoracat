@@ -31,6 +31,9 @@ interface ReportsResp {
 }
 
 const REASON: Record<string, { en: string; ar: string }> = {
+  // Currently stored as OTHER with an "[ANIMAL_WELFARE]" detail prefix (the DB
+  // enum gains the value in a future migration); label kept ready here.
+  ANIMAL_WELFARE: { en: "Animal welfare", ar: "سلامة الحيوان" },
   INAPPROPRIATE: { en: "Inappropriate", ar: "غير لائق" },
   SPAM: { en: "Spam", ar: "إزعاج" },
   FAKE: { en: "Fake", ar: "مزيّف" },

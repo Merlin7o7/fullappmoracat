@@ -3,14 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery, useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
-import { Search, Eye, Star, Sparkles, PawPrint, Flame, Clock, Heart, Loader2 } from "lucide-react";
+import { Search, Star, Sparkles, PawPrint, Clock, Heart, Loader2 } from "lucide-react";
 import { Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { useAuth } from "@/lib/auth";
 import { api, type CommunityCard, type LikeToggleResponse } from "@/lib/api";
 import { localizeName } from "@/lib/translit";
 import { ImgWithFallback } from "@/components/img-with-fallback";
-import { ReportCatButton } from "@/components/community-report";
 
 /**
  * Community browse experience, shared by the public /community page (marketing
@@ -19,11 +18,13 @@ import { ReportCatButton } from "@/components/community-report";
  * scrollable so it stays visible while browsing on any screen.
  */
 
-// Sections map to real backend sorts.
+// Honest doors only (R006): every section is a real, truthful collection.
+// "New" = most recently shared. "Most loved" = all-time hearts (labelled so).
+// "Featured" = genuinely admin-featured cats, and the door only appears when at
+// least one exists. No "Trending" until view counting has earned the word.
 const SECTIONS = [
-  { key: "recent", icon: Clock, en: "Newest", ar: "الأحدث" },
-  { key: "viewed", icon: Flame, en: "Trending", ar: "الرائج" },
-  { key: "liked", icon: Heart, en: "Most Loved", ar: "الأكثر إعجابًا" },
+  { key: "new", icon: Clock, en: "New", ar: "الجُدد" },
+  { key: "liked", icon: Heart, en: "Most loved", ar: "الأكثر محبة" },
   { key: "featured", icon: Star, en: "Featured", ar: "مميّزة" },
 ] as const;
 
@@ -199,7 +200,7 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
   const isAr = locale === "ar";
   const likes = useCommunityLikes();
 
-  const [section, setSection] = React.useState<string>("recent");
+  const [section, setSection] = React.useState<string>("new");
   const [search, setSearch] = React.useState("");
   const [debounced, setDebounced] = React.useState("");
   const [gender, setGender] = React.useState("");
@@ -223,6 +224,14 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
   };
 
   const facets = useQuery({ queryKey: ["community-facets"], queryFn: () => api.communityFacets() });
+
+  // The Featured door only exists while something is genuinely featured — an
+  // empty curated shelf is worse than no shelf (R006, R111).
+  const hasFeatured = (facets.data?.featuredCount ?? 0) > 0;
+  const visibleSections = SECTIONS.filter((s) => s.key !== "featured" || hasFeatured);
+  React.useEffect(() => {
+    if (section === "featured" && facets.data && facets.data.featuredCount === 0) setSection("new");
+  }, [section, facets.data]);
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["community", { section, gender, stage, breedId, cityId, debounced }],
     queryFn: ({ pageParam = 1 }) =>
@@ -295,23 +304,25 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
         </div>
       )}
 
-      {/* ── Section dock — sticky + horizontally scrollable, always visible ── */}
+      {/* ── Section dock — sticky + horizontally scrollable, always visible.
+             Plain toggle buttons (aria-pressed), NOT a tablist: there are no
+             tabpanels to control, so tab semantics only misled screen readers. ── */}
       <div className="sticky top-0 z-20 -mx-4 border-b border-border/70 bg-background/85 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div
-          role="tablist"
+          role="group"
           aria-label={isAr ? "أقسام المجتمع" : "Community sections"}
           className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {SECTIONS.map((s) => {
+          {visibleSections.map((s) => {
             const active = section === s.key;
             return (
               <button
                 key={s.key}
-                role="tab"
-                aria-selected={active}
+                type="button"
+                aria-pressed={active}
                 onClick={() => setSection(s.key)}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                  "inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
                   active
                     ? "bg-primary text-primary-foreground shadow-e1"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -407,6 +418,14 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
             {cats.map((cat) => (
               <CommunityCatCard key={cat.slug} cat={cat} isAr={isAr} likes={likes} />
             ))}
+            {/* The last seat in the grid is always held open — belonging as an
+                invitation, never a wall (R111). Shown once the list is done. */}
+            {!hasNextPage && (
+              <ReservedSeatCard
+                isAr={isAr}
+                href={compact || likes.hasUser ? "/portal/cats" : "/register"}
+              />
+            )}
           </Grid>
 
           {/* Infinite-scroll sentinel + explicit fallback button (keyboard/SR). */}
@@ -426,7 +445,9 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
             </div>
           )}
 
-          {total > 0 && (
+          {/* The tally only appears once it's genuinely impressive — a small
+              number advertises smallness, not belonging (R006 applied kindly). */}
+          {total >= 50 && (
             <p className="mt-6 text-center text-xs text-muted-foreground">
               {isAr
                 ? `${cats.length} من ${total} قط في المجتمع`
@@ -443,6 +464,37 @@ function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">{children}</div>;
 }
 
+/**
+ * A ghosted, dashed "seat" at the end of the grid — the community always keeps
+ * a place for the visitor's cat (belonging as invitation, R111; one clear
+ * action, R: principle 5). Signed-in members go to their cats' share panel;
+ * guests go to register.
+ */
+function ReservedSeatCard({ isAr, href }: { isAr: boolean; href: string }) {
+  return (
+    <Link
+      href={href}
+      className="group/seat flex min-h-[44px] flex-col overflow-hidden rounded-2xl border-2 border-dashed border-border bg-transparent transition-colors hover:border-primary/50 hover:bg-primary/5"
+    >
+      <div className="grid aspect-square place-items-center">
+        <div className="grid place-items-center gap-2 text-center">
+          <span className="grid size-14 place-items-center rounded-full bg-muted/60 transition-colors group-hover/seat:bg-primary/10">
+            <PawPrint className="size-7 text-muted-foreground/50 transition-colors group-hover/seat:text-primary" />
+          </span>
+        </div>
+      </div>
+      <div className="p-3">
+        <p className="truncate font-display font-semibold text-muted-foreground transition-colors group-hover/seat:text-foreground">
+          {isAr ? "محجوز لقطك" : "Reserved for your cat"}
+        </p>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground/70">
+          {isAr ? "خذ مكانك بينهم" : "Take your place among them"}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
 function CommunityCatCard({ cat, isAr, likes }: { cat: CommunityCard; isAr: boolean; likes: CommunityLikes }) {
   const name = localizeName(cat.name, isAr ? "ar" : "en");
   const meta = [cat.breed && (isAr ? cat.breed.nameAr : cat.breed.nameEn), cat.city && (isAr ? cat.city.nameAr : cat.city.nameEn)]
@@ -450,7 +502,9 @@ function CommunityCatCard({ cat, isAr, likes }: { cat: CommunityCard; isAr: bool
     .join(isAr ? " · " : " · ");
   return (
     <div className="group relative">
-      {/* Like + report live outside the <Link> so their 44px targets never navigate. */}
+      {/* The like lives outside the <Link> so its 44px target never navigates.
+          Reporting stays on the profile page — a flag on every grid tile made
+          browsing read as suspicion, not belonging. */}
       <div className="absolute end-1 top-1 z-10 flex items-center gap-1">
         <LikeButton
           slug={cat.slug}
@@ -459,12 +513,6 @@ function CommunityCatCard({ cat, isAr, likes }: { cat: CommunityCard; isAr: bool
           likes={likes}
           isAr={isAr}
           className="rounded-full bg-background/85 px-2 shadow-e1 backdrop-blur"
-        />
-        <ReportCatButton
-          slug={cat.slug}
-          name={name}
-          isAr={isAr}
-          className="bg-background/85 shadow-e1 backdrop-blur"
         />
       </div>
       <Link href={`/community/${cat.slug}`} className="block">
@@ -488,13 +536,16 @@ function CommunityCatCard({ cat, isAr, likes }: { cat: CommunityCard; isAr: bool
             )}
           </div>
           <div className="p-3">
-            <p className="truncate font-display font-semibold">{name}</p>
-            <div className="mt-0.5 flex items-center justify-between gap-2">
-              <p className="truncate text-xs text-muted-foreground">{meta || (isAr ? "قط مرقط" : "A Moracat")}</p>
-              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
-                <Eye className="size-3" /> {cat.viewCount}
-              </span>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate font-display font-semibold">{name}</p>
+              {/* Tenure fact, quietly worn — never points (§04). */}
+              {cat.isFounding && (
+                <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                  {isAr ? "عضو مؤسس" : "Founding member"}
+                </span>
+              )}
             </div>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{meta || (isAr ? "قط مرقط" : "A Moracat")}</p>
           </div>
         </div>
       </Link>
@@ -518,8 +569,9 @@ function FilterChips({
           key={o.key}
           type="button"
           onClick={() => onChange(o.key)}
+          aria-pressed={value === o.key}
           className={cn(
-            "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+            "min-h-11 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
             value === o.key ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:bg-muted"
           )}
         >
@@ -547,7 +599,7 @@ function Dropdown({
       onChange={(e) => onChange(e.target.value)}
       aria-label={placeholder}
       className={cn(
-        "h-8 rounded-full border px-3 text-xs font-medium outline-none transition-colors",
+        "h-11 rounded-full border px-3 text-xs font-medium outline-none transition-colors",
         value ? "border-primary bg-primary/10 text-foreground" : "border-border bg-card text-muted-foreground"
       )}
     >

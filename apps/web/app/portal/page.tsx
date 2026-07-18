@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Cat as CatIcon, Wallet, PiggyBank, ArrowRight, Star, IdCard, HeartPulse, Plus, Users, Sparkles, Gift, Copy, Check } from "lucide-react";
+import { Package, Cat as CatIcon, Wallet, PiggyBank, ArrowRight, Star, IdCard, HeartPulse, Plus, Users, Sparkles, Gift, Copy, Check, CalendarClock } from "lucide-react";
 import { Card, Button, Skeleton, AnimatedCounter, Avatar, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { commerceEnabled } from "@/lib/features";
@@ -54,6 +54,13 @@ interface Overview {
     communityLikes: number;
   };
   recentOrders: { orderNumber: string; status: string; grandTotal: number; placedAt: string }[];
+  comingUp?: {
+    type: "vaccination" | "delivery";
+    at: string | null;
+    catId: string | null;
+    catName: string | null;
+    label: string | null;
+  }[];
 }
 
 export default function OverviewPage() {
@@ -109,6 +116,9 @@ export default function OverviewPage() {
   const memberDays = data?.owner.memberSince
     ? Math.floor((Date.now() - new Date(data.owner.memberSince).getTime()) / 86_400_000)
     : 0;
+  // "New" = first two weeks (or tenure unknown): the only window where an
+  // intro link belongs on the value dashboard (R048).
+  const isNewMember = !data?.owner.memberSince || memberDays < 14;
   const ledger = [
     { num: data?.stats.healthRecords ?? 0, label: isAr ? "سجل صحي محفوظ" : "health records kept" },
     { num: data?.stats.photos ?? 0, label: isAr ? "صورة بأمان" : "photos kept safe" },
@@ -135,12 +145,16 @@ export default function OverviewPage() {
               : `${localizeName(featured.name, "en")}'s membership, at a glance`
             : isAr ? "إليك ملخص حسابك" : "Here's your account at a glance"}
         </p>
-        <Link
-          href="/about"
-          className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
-        >
-          <Sparkles className="size-4" /> {isAr ? "تعرّف على مرقط" : "Learn about Moracat"}
-        </Link>
+        {/* An intro link is for members who are new — after two weeks the home
+            screen is a value dashboard, not a billboard (R048). */}
+        {isNewMember && (
+          <Link
+            href="/about"
+            className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            <Sparkles className="size-4" /> {isAr ? "تعرّف على مرقط" : "Learn about Moracat"}
+          </Link>
+        )}
       </div>
 
       {/* Membership — the bridge from the Cat ID (acquisition) to the subscription
@@ -183,8 +197,10 @@ export default function OverviewPage() {
               qrToken={featured.qrToken}
             />
             <div className="grid grid-cols-2 gap-2">
-              <Link href="/portal/cats"><Button variant="outline" size="sm" className="w-full"><IdCard className="size-4" /> {isAr ? "الهوية" : "Cat ID"}</Button></Link>
-              <Link href="/portal/cats"><Button variant="outline" size="sm" className="w-full"><HeartPulse className="size-4" /> {isAr ? "السجل الصحي" : "Health"}</Button></Link>
+              {/* Two actions, two destinations — each carries the featured cat so
+                  the next screen opens on THEIR card/record, not a generic list (R005). */}
+              <Link href={`/portal/cats?cat=${featured.id}`}><Button variant="outline" size="sm" className="w-full"><IdCard className="size-4" /> {isAr ? "الهوية" : "Cat ID"}</Button></Link>
+              <Link href={`/portal/cats?cat=${featured.id}&panel=health`}><Button variant="outline" size="sm" className="w-full"><HeartPulse className="size-4" /> {isAr ? "السجل الصحي" : "Health"}</Button></Link>
             </div>
           </div>
 
@@ -205,7 +221,45 @@ export default function OverviewPage() {
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "أضف قطك الأول واحصل على هويته الرسمية فوراً" : "Add your first cat and get their official Cat ID, instantly"}
           </p>
-          <Link href="/portal/cats"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>
+          {/* Straight to the add-cat flow — never a hop through another list page (R002). */}
+          <Link href="/portal/cats/new"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>
+        </Card>
+      )}
+
+      {/* "Coming up" — the forward glance of a care dashboard (R049/P8): the next
+          vaccination or delivery, computed server-side; the lifecycle engine
+          sends the matching reminder. Max two quiet rows, hidden when empty. */}
+      {!!data?.comingUp?.length && (
+        <Card className="p-4">
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+            <CalendarClock className="size-4 text-primary" />
+            {isAr ? "قادم قريباً" : "Coming up"}
+          </p>
+          <ul className="space-y-1.5">
+            {data.comingUp.map((e, i) => (
+              <li key={i}>
+                {e.type === "vaccination" ? (
+                  <Link
+                    href={`/portal/cats?cat=${e.catId}&panel=health`}
+                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted"
+                  >
+                    <span>
+                      {isAr
+                        ? `تطعيم «${e.label}» لـ${e.catName}`
+                        : `${e.catName}'s ${e.label} vaccination`}
+                      <span className="text-muted-foreground"> — {isAr ? "سنذكّرك قبله" : "we'll remind you"}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{fmtDate(e.at)}</span>
+                  </Link>
+                ) : (
+                  <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm">
+                    <span>{isAr ? "صندوقك القادم في الطريق" : "Your next box"}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{fmtDate(e.at)}</span>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 
@@ -334,7 +388,7 @@ export default function OverviewPage() {
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-lg font-semibold">{isAr ? "أحدث الطلبات" : "Recent orders"}</h2>
-              <Link href="/portal/orders"><Button variant="ghost" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4" /></Button></Link>
+              <Link href="/portal/orders"><Button variant="ghost" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4 rtl:rotate-180" /></Button></Link>
             </div>
             {isLoading ? (
               <Skeleton className="h-24 w-full" />
@@ -404,7 +458,7 @@ function CatRail({
           {isAr ? "قطط البيت" : "Your household"}
           <span className="ms-2 text-sm font-normal text-muted-foreground">{cats.length}</span>
         </h2>
-        <Link href="/portal/cats"><Button variant="ghost" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4" /></Button></Link>
+        <Link href="/portal/cats"><Button variant="ghost" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4 rtl:rotate-180" /></Button></Link>
       </div>
 
       <div className="grid flex-1 auto-rows-min grid-cols-2 gap-2 sm:grid-cols-3">
@@ -428,13 +482,15 @@ function CatRail({
                   <span className="block truncate font-mono text-[10px] text-muted-foreground" dir="ltr">{c.catIdNumber}</span>
                 </span>
               </button>
+              {/* Visible at rest on touch (no hover exists there, R098); the
+                  hover-reveal remains a desktop-only refinement. */}
               {!c.isPrimary && (
                 <button
                   type="button"
                   title={isAr ? "اجعله الأساسي" : "Make primary"}
                   aria-label={isAr ? "اجعله الأساسي" : "Make primary"}
                   onClick={() => onPrimary(c.id)}
-                  className="absolute end-1.5 top-1.5 grid size-6 place-items-center rounded-md text-muted-foreground opacity-0 transition hover:bg-accent/15 hover:text-accent-foreground focus:opacity-100 group-hover:opacity-100"
+                  className="absolute end-1.5 top-1.5 grid size-6 place-items-center rounded-md text-muted-foreground opacity-60 transition hover:bg-accent/15 hover:text-accent-foreground focus:opacity-100 group-hover:opacity-100 sm:opacity-0"
                 >
                   <Star className="size-3.5" />
                 </button>

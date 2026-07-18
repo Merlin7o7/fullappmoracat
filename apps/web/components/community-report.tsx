@@ -14,7 +14,10 @@ import { useAuth } from "@/lib/auth";
  * sign in with a return path, exactly like the like button (honest, no fakes).
  */
 
+// The animal's welfare comes first — the cat is the hero, and concern for a
+// real animal is the report this community most needs to hear about quickly.
 const REASONS = [
+  { key: "ANIMAL_WELFARE", ar: "قلق على سلامة الحيوان", en: "Concern for the animal's welfare" },
   { key: "INAPPROPRIATE", ar: "محتوى غير لائق", en: "Inappropriate content" },
   { key: "SPAM", ar: "إعلانات أو محتوى مزعج", en: "Spam or advertising" },
   { key: "FAKE", ar: "ملف غير حقيقي", en: "Fake profile" },
