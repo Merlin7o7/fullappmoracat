@@ -36,8 +36,11 @@ ok((await call("/auth/refresh", "POST", { refreshToken: reg.refreshToken })).sta
 
 console.log("━━ email OTP + community + uploads ━━");
 ok((await call("/auth/email/otp/verify", "POST", { code: "000000" }, C)).status === 400, "wrong email OTP rejected (400)");
-// UGC writes are gated on a verified email server-side (EmailVerifiedGuard).
-ok((await call("/cats", "POST", { name: "Nope", activityLevel: "LOW", isIndoor: true }, C)).status === 403, "cat write blocked before email verified (403)");
+// The gate moved (fire #7 / <2-min north star): creating your OWN private cat
+// no longer waits on email deliverability — only the action that publishes
+// outward (community visibility) requires a verified email. The guard runs
+// before the route handler, so it 403s even for a nonexistent cat id.
+ok((await call("/cats/not-a-real-cat/visibility", "PATCH", { isPublic: true }, C)).status === 403, "community publish blocked before email verified (403)");
 ok(!!reg.devEmailCode, "dev email code returned in non-prod");
 ok((await call("/auth/email/otp/verify", "POST", { code: reg.devEmailCode }, C)).json?.verified === true, "email verified with correct code");
 const community = await call("/community/cats");

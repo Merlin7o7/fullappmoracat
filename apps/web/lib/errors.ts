@@ -154,8 +154,9 @@ export function friendlyError(err: unknown, isAr: boolean): FriendlyError {
     if (err.kind === "timeout" || err.kind === "network") {
       return { title: isAr ? "مشكلة في الاتصال" : "Connection trouble", message: err.message };
     }
-    if (err.code && MAP[err.code]) {
-      const copy = MAP[err.code][loc];
+    const entry = err.code ? MAP[err.code] : undefined;
+    if (err.code && entry) {
+      const copy = entry[loc];
       // LOCKED_OUT carries minutes — make the copy specific when we have them.
       if (err.code === "LOCKED_OUT" && typeof err.extras?.retryAfterMinutes === "number") {
         const m = err.extras.retryAfterMinutes;
