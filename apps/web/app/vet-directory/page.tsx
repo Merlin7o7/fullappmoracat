@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { IlloCat, IlloPaw } from "@/components/illustrations";
 import { fetchWithTimeout, httpError } from "@/lib/http";
+import { normalizeDirectory, type DirectoryClinic } from "@/lib/vet-directory";
 
 /**
  * The public verified-clinic directory.
@@ -21,22 +22,6 @@ import { fetchWithTimeout, httpError } from "@/lib/http";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-interface DirectoryClinic {
-  orgId: string;
-  branchId: string;
-  nameEn: string;
-  nameAr: string;
-  city: string | null;
-  addressLine: string | null;
-  phone: string | null;
-  mapsUrl: string | null;
-  emergency24h: boolean;
-  specialties: string[];
-  services: string[];
-  photos: string[];
-  verified: boolean;
-  tier: string | null;
-}
 
 export function generateMetadata(): Metadata {
   const isAr = cookies().get("locale")?.value !== "en";
@@ -54,7 +39,7 @@ export function generateMetadata(): Metadata {
   };
 }
 
-async function loadDirectory(city: string, emergency: boolean): Promise<DirectoryClinic[]> {
+async function loadDirectory(city: string, emergency: boolean, isAr: boolean): Promise<DirectoryClinic[]> {
   const qs = new URLSearchParams();
   if (city) qs.set("city", city);
   if (emergency) qs.set("emergency", "true");
@@ -66,7 +51,7 @@ async function loadDirectory(city: string, emergency: boolean): Promise<Director
     next: { revalidate: 3600 },
   });
   if (!res.ok) throw httpError(res.status, await res.json().catch(() => null), "Directory unavailable");
-  return (await res.json()) as DirectoryClinic[];
+  return normalizeDirectory(await res.json(), isAr);
 }
 
 export default async function VetDirectoryPage({
@@ -80,7 +65,7 @@ export default async function VetDirectoryPage({
 
   let clinics: DirectoryClinic[] | null = null;
   try {
-    clinics = await loadDirectory(city, emergency);
+    clinics = await loadDirectory(city, emergency, isAr);
   } catch {
     // Never fabricate a roster: a clinic list that isn't real could send
     // someone to a closed door in an emergency.

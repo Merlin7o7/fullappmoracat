@@ -48,23 +48,8 @@ import {
   tierLabel,
   toConsentResponse,
 } from "@/components/vet-consent-card";
+import { dedupeByOrg, normalizeDirectory, type DirectoryClinic } from "@/lib/vet-directory";
 
-interface DirectoryClinic {
-  orgId: string;
-  branchId: string;
-  nameEn: string;
-  nameAr: string;
-  city: string | null;
-  addressLine: string | null;
-  phone: string | null;
-  mapsUrl: string | null;
-  emergency24h: boolean;
-  specialties: string[];
-  services: string[];
-  photos: string[];
-  verified: boolean;
-  tier: string | null;
-}
 
 export default function HealthAccessPage() {
   const { locale } = useLocale();
@@ -454,8 +439,13 @@ function GrantDialog({
   const [search, setSearch] = React.useState("");
 
   const { data: clinics, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ["vet-directory-picker"],
-    queryFn: () => authedFetch<DirectoryClinic[]>("/vet/directory"),
+    queryKey: ["vet-directory-picker", isAr],
+    // The endpoint returns one row per BRANCH inside an `{ items }` envelope;
+    // consent is granted per clinic, so normalise then collapse to one row per
+    // org — otherwise a two-branch clinic would ask the member the same
+    // question twice.
+    queryFn: async () =>
+      dedupeByOrg(normalizeDirectory(await authedFetch<unknown>("/vet/directory"), isAr)),
   });
 
   const grant = useMutation({
