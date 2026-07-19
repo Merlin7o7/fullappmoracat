@@ -94,7 +94,7 @@ export default function TimelinePanel({
 
   if (!canRead) return <RecordsWithheld isAr={isAr} className={className} />;
 
-  const all = query.data?.entries ?? [];
+  const all = query.data?.items ?? [];
   const filtered = all.filter((e) => {
     if (kinds.length && !kinds.includes(e.kind)) return false;
     if (sinceAt && new Date(e.at).getTime() < new Date(sinceAt).getTime()) return false;

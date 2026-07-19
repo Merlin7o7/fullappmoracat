@@ -20,7 +20,7 @@
  */
 import { Injectable } from "@nestjs/common";
 import { Prisma, type ClinicalEntryType, type PrescriptionStatus } from "@moraqat/db";
-import { requiresCoSign } from "@moraqat/core";
+import { requiresCoSign, deriveVaccinationStatus } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   VetPatientsService,
@@ -774,10 +774,21 @@ export class VetRecordsService {
       select: { id: true, name: true, administeredAt: true, dueAt: true },
     });
 
-    // The Cat ID's vaccination badge follows the clinical truth.
+    // The badge is DERIVED from the records (see deriveVaccinationStatus), not
+    // asserted here. Writing "UP_TO_DATE" unconditionally meant one dose of a
+    // three-dose kitten series flipped the owner-facing badge green, and nothing
+    // ever recomputed it when dueAt passed — so the status was only true at the
+    // instant it was written. Recompute from the full record set instead.
+    const allDoses = await tx.catVaccination.findMany({
+      where: { catId: entry.catId },
+      select: { administeredAt: true, dueAt: true },
+    });
+    const derived = deriveVaccinationStatus(allDoses);
     await tx.cat.update({
       where: { id: entry.catId },
-      data: { vaccinationStatus: "UP_TO_DATE" },
+      // Cached projection of the derivation, refreshed on every clinical write
+      // and by the lifecycle pass — never a standalone claim.
+      data: { vaccinationStatus: derived.standing },
     });
 
     return {

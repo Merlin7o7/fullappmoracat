@@ -19,6 +19,7 @@ import {
   SearchPatientsQueryDto,
   TimelineQueryDto,
   WeightSeriesQueryDto,
+  ListOwnPatientsQueryDto,
 } from "./dto/vet-patient.dto";
 
 @ApiTags("vet-patients")
@@ -27,6 +28,21 @@ import {
 @Controller("vet/patients")
 export class VetPatientsController {
   constructor(private readonly patients: VetPatientsService) {}
+
+  // Declared BEFORE :catId — Nest matches in declaration order, so a literal
+  // segment placed after a param route would be swallowed by it.
+  @Get()
+  @VetCapability("patient.view")
+  @ApiOperation({
+    summary: "The clinic's own patients",
+    description:
+      "Cats this clinic has actually treated, newest visit first. Scoped to cats with a visit at " +
+      "this org — a clinic's patient list is its treatment history, never the whole member base.",
+  })
+  @ApiOkResponse({ description: "Cursor-paginated patient cards." })
+  listOwn(@VetActorParam() actor: VetActor, @Query() query: ListOwnPatientsQueryDto) {
+    return this.patients.listOwnPatients(actor, query);
+  }
 
   @Get("search")
   @VetCapability("patient.search")

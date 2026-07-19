@@ -783,6 +783,12 @@ model Cat {
   @@index([isPublic, hiddenAt, likeCount])
   @@index([isPublic, isFeatured])
   @@index([nameNormalized])
+  /// Microchip is the ONLY identifier that works for a stray or a cat that
+  /// isn't a Moracat member — the single most important vet lookup — and it was
+  /// the one identifier with no index, so it seq-scanned the whole table.
+  @@index([microchipNo])
+  /// Serves the lifecycle passes and the clinic patient list.
+  @@index([status, deletedAt])
   @@map("cats")
 }
 

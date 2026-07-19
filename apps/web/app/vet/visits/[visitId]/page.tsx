@@ -171,7 +171,7 @@ export default function VisitWorkspacePage({ params }: { params: { visitId: stri
     enabled: actor.ready && !!actor.orgId,
   });
 
-  const catId = visit.data?.catId;
+  const catId = visit.data?.visit.catId;
   // Alerts live on the patient, not the visit — but a vet in a chart needs
   // them even more than a vet on a profile, so we fetch them here too.
   const patient = useQuery({
@@ -188,13 +188,15 @@ export default function VisitWorkspacePage({ params }: { params: { visitId: stri
       </div>
     );
 
-  const v = visit.data!;
-  const closed = v.state === "COMPLETED" || v.state === "CANCELLED";
+  const v = visit.data!.visit;
+  // OPEN | CLOSED — the old comparison against "COMPLETED"/"CANCELLED" was
+  // ALWAYS false, so a closed chart rendered as editable and every save 409d.
+  const closed = v.state === "CLOSED";
   const canWrite = actor.can("record.write") && !closed;
   const alerts: MedicalAlert[] = patient.data?.alerts ?? [];
   const missing = deriveMissingVaccinations(patient.data?.vaccinations, isAr);
-  const reason = (isAr ? v.reasonAr : v.reasonEn) ?? "";
-  const branch = (isAr ? v.branchNameAr : v.branchNameEn) ?? "";
+  const reason = v.reason ?? "";
+  const branch = (isAr ? v.branch?.ar : v.branch?.en) ?? "";
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-3 pb-24 sm:p-5">
@@ -205,21 +207,21 @@ export default function VisitWorkspacePage({ params }: { params: { visitId: stri
           className="inline-flex min-h-[44px] items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {isAr ? <ArrowRight className="size-4" aria-hidden /> : <ArrowLeft className="size-4" aria-hidden />}
-          {isAr ? `ملف ${v.catName}` : `${v.catName}'s profile`}
+          {isAr ? `ملف ${v.cat.name}` : `${v.cat.name}'s profile`}
         </Link>
 
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          {v.catPhotoUrl ? (
+          {v.cat.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={v.catPhotoUrl} alt="" className="size-14 rounded-2xl object-cover ring-1 ring-border" />
+            <img src={v.cat.photoUrl} alt="" className="size-14 rounded-2xl object-cover ring-1 ring-border" />
           ) : (
             <span className="grid size-14 place-items-center rounded-2xl bg-muted text-muted-foreground">
               <Cat className="size-6" aria-hidden />
             </span>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-2xl font-semibold tracking-tight">{v.catName}</h1>
-            <p className="font-mono text-xs text-muted-foreground">{v.catIdNumber}</p>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">{v.cat.name}</h1>
+            <p className="font-mono text-xs text-muted-foreground">{v.cat.catIdNumber}</p>
           </div>
           <Badge variant={closed ? "secondary" : "success"} dot>
             {vetVisitStateLabel(v.state, isAr)}
@@ -237,10 +239,10 @@ export default function VisitWorkspacePage({ params }: { params: { visitId: stri
               {formatDateTime(v.checkedInAt, locale)}
             </dd>
           </div>
-          {v.assignedStaffName && (
+          {v.openedBy?.name && (
             <div className="flex gap-2">
               <dt className="text-muted-foreground">{isAr ? "الطبيب" : "Clinician"}</dt>
-              <dd className="font-medium text-foreground">{v.assignedStaffName}</dd>
+              <dd className="font-medium text-foreground">{v.openedBy.name}</dd>
             </div>
           )}
           {branch && (
@@ -262,7 +264,7 @@ export default function VisitWorkspacePage({ params }: { params: { visitId: stri
 
       {/* The alerts travel with the vet into the chart. */}
       {patient.isSuccess && (
-        <AlertsBand alerts={alerts} missingVaccinations={missing} catName={v.catName} />
+        <AlertsBand alerts={alerts} missingVaccinations={missing} catName={v.cat.name} />
       )}
 
       {canWrite && <SoapEditor visitId={visitId} catId={v.catId} />}
@@ -282,9 +284,9 @@ export default function VisitWorkspacePage({ params }: { params: { visitId: stri
         <TimelinePanel catId={v.catId} sinceAt={v.checkedInAt} alerts={alerts} />
       </Card>
 
-      <OwnerSummary visitId={visitId} catId={v.catId} catName={v.catName} checkedInAt={v.checkedInAt} />
+      <OwnerSummary visitId={visitId} catId={v.catId} catName={v.cat.name} checkedInAt={v.checkedInAt} />
 
-      {!closed && actor.can("visit.close") && <CloseVisit visitId={visitId} catName={v.catName} />}
+      {!closed && actor.can("visit.close") && <CloseVisit visitId={visitId} catName={v.cat.name} />}
     </div>
   );
 }
@@ -669,7 +671,7 @@ function OwnerSummary({
   });
 
   function generate() {
-    const items = (timeline.data?.entries ?? []).filter(
+    const items = (timeline.data?.items ?? []).filter(
       (e) => new Date(e.at).getTime() >= new Date(checkedInAt).getTime()
     );
     setText(draftSummary(items, catName, isAr, locale));

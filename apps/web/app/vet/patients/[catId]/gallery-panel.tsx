@@ -84,7 +84,7 @@ export default function GalleryPanel({ catId, className }: { catId: string; clas
 
   const images = React.useMemo<GalleryImage[]>(() => {
     const out: GalleryImage[] = [];
-    for (const entry of query.data?.entries ?? []) {
+    for (const entry of query.data?.items ?? []) {
       // Retracted work is not clinical evidence.
       if (entry.status === "RETRACTED") continue;
       for (const a of entry.attachments ?? []) {

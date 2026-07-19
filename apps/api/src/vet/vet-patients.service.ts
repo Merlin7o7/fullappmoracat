@@ -1011,6 +1011,80 @@ export class VetPatientsService {
     };
   }
 
+  // ── 1b · The clinic's own patients ──────────────────────────────────────
+
+  /**
+   * Cats this clinic has actually treated, newest visit first.
+   *
+   * The portal has always linked to a patients list; the endpoint did not
+   * exist, so the nav item 404'd. Scoped to cats with a visit at THIS org —
+   * a clinic's patient list is its treatment history, never the whole network,
+   * which is also what keeps the privacy boundary intact.
+   */
+  async listOwnPatients(
+    actor: VetActor,
+    query: { q?: string; cursor?: string; limit?: number }
+  ) {
+    const limit = Math.min(Math.max(query.limit ?? 25, 1), 50);
+    const term = query.q?.trim();
+
+    const where: Prisma.CatWhereInput = {
+      deletedAt: null,
+      visits: { some: { orgId: actor.orgId } },
+      ...(term
+        ? {
+            OR: [
+              { nameNormalized: { contains: normalizeName(term) } },
+              { catIdNumber: { contains: term.toUpperCase() } },
+              { microchipNo: { contains: term } },
+            ],
+          }
+        : {}),
+    };
+
+    // take+1 is the hasMore probe; ordering is [id] so the cursor is stable
+    // while consults write new rows underneath.
+    const rows = await this.prisma.cat.findMany({
+      where,
+      take: limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      orderBy: { id: "desc" },
+      select: {
+        id: true,
+        name: true,
+        catIdNumber: true,
+        photoUrl: true,
+        membershipStatus: true,
+        user: { select: { ownerNickname: true, firstName: true, lastName: true } },
+        visits: {
+          where: { orgId: actor.orgId },
+          orderBy: { checkedInAt: "desc" },
+          take: 1,
+          select: { checkedInAt: true, state: true },
+        },
+      },
+    });
+
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+
+    return {
+      items: page.map((c) => ({
+        catId: c.id,
+        name: c.name,
+        catIdNumber: c.catIdNumber,
+        photoUrl: c.photoUrl,
+        membershipStatus: c.membershipStatus,
+        ownerName: ownerDisplayName(c.user),
+        lastVisitAt: c.visits[0]?.checkedInAt ?? null,
+        hasOpenVisit: c.visits[0]?.state === "OPEN",
+        isOwnPatient: true,
+      })),
+      nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null,
+      hasMore,
+    };
+  }
+
   // ── 2 · Medical timeline ────────────────────────────────────────────────
 
   async getTimeline(actor: VetActor, catId: string, query: TimelineQueryDto, ip?: string | null) {

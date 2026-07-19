@@ -76,10 +76,12 @@ export default function VetTodayPage() {
   React.useEffect(() => setRecents(readRecentLookups()), []);
 
   const summary = summaryQuery.data ?? null;
-  const visits = visitsQuery.data?.visits ?? [];
-  const openVisits = visits.filter((v) => v.state === "WAITING" || v.state === "IN_PROGRESS");
-  const completedCount =
-    visitsQuery.data?.counts?.completed ?? visits.filter((v) => v.state === "COMPLETED").length;
+  // A visit is OPEN or CLOSED. The old four-state union ("WAITING" /
+  // "IN_PROGRESS" / "COMPLETED") never existed server-side, so these filters
+  // matched nothing and the day-book always rendered empty.
+  const visits = visitsQuery.data?.items ?? [];
+  const openVisits = visits.filter((v) => v.state === "OPEN");
+  const completedCount = visits.filter((v) => v.state === "CLOSED").length;
 
   const greetingName = counterSession?.staffName ?? user?.firstName ?? null;
 
@@ -413,27 +415,25 @@ function VisitRow({ visit, isAr }: { visit: VetVisit; isAr: boolean }) {
   );
   return (
     <PatientRow
-      name={visit.catName}
-      catIdNumber={visit.catIdNumber}
-      photoUrl={visit.catPhotoUrl}
+      name={visit.cat.name}
+      catIdNumber={visit.cat.catIdNumber ?? ""}
+      photoUrl={visit.cat.photoUrl}
       href={`/vet/visits/${encodeURIComponent(visit.id)}`}
       meta={
         <>
           <span className="truncate">
             {formatDateTime(visit.checkedInAt, loc, { hour: "2-digit", minute: "2-digit" })}
           </span>
-          {(isAr ? visit.reasonAr : visit.reasonEn) && (
-            <span className="truncate">{isAr ? visit.reasonAr : visit.reasonEn}</span>
-          )}
-          {visit.assignedStaffName && <span className="truncate">{visit.assignedStaffName}</span>}
+          {visit.reason && <span className="truncate">{visit.reason}</span>}
+          {visit.openedBy?.name && <span className="truncate">{visit.openedBy.name}</span>}
         </>
       }
       trailing={
         <span className="flex flex-col items-end gap-0.5">
-          <Badge variant={visit.state === "IN_PROGRESS" ? "info" : "warning"} dot>
+          <Badge variant={visit.state === "OPEN" ? "info" : "secondary"} dot>
             {vetVisitStateLabel(visit.state, isAr)}
           </Badge>
-          {visit.state === "WAITING" && (
+          {visit.state === "OPEN" && (
             <span className="text-[0.625rem] text-muted-foreground tabular">
               {isAr ? `${waitingMinutes} د` : `${waitingMinutes} min`}
             </span>

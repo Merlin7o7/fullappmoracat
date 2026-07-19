@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Sun, ClipboardList, Cat, ScanLine, ShieldAlert, FileKey } from "lucide-react";
+import { Sun, ClipboardList, Cat, ScanLine, ShieldAlert } from "lucide-react";
 import type { VetCapability } from "@moraqat/core";
 
 /**
@@ -35,8 +35,24 @@ export const VET_NAV: VetNavItem[] = [
   { href: "/vet/scan", icon: ScanLine, en: "Scan", ar: "مسح", primary: true, capability: "patient.search", shortcut: "s" },
   { href: "/vet/visits", icon: ClipboardList, en: "Visits", ar: "الزيارات", primary: true, capability: "visit.open", shortcut: "v" },
   { href: "/vet/patients", icon: Cat, en: "Patients", ar: "المرضى", primary: true, capability: "patient.view", shortcut: "p" },
-  { href: "/vet/emergency", icon: ShieldAlert, en: "Emergency", ar: "الطوارئ", capability: "emergency.access", shortcut: "e" },
-  { href: "/vet/consent", icon: FileKey, en: "Consent & access", ar: "الأذونات والسجل", capability: "patient.view", shortcut: "c" },
+  // Emergency access is always ABOUT a specific cat — there is no meaningful
+  // "emergency index". It routes to the scanner carrying the intent, so the
+  // break-glass flow starts by identifying the animal in front of you rather
+  // than by browsing. (This entry previously pointed at a route that 404'd.)
+  {
+    href: "/vet/scan?intent=emergency",
+    icon: ShieldAlert,
+    en: "Emergency",
+    ar: "الطوارئ",
+    capability: "emergency.access",
+    shortcut: "e",
+  },
+  // Consent is per-patient for a clinic — "what may we see about THIS cat" —
+  // and it is already answered in context on the patient profile, where it is
+  // actually actionable. There is no clinic-wide consent index to link to (the
+  // /vet/consent/grants endpoint is the OWNER's view of who they've trusted),
+  // so this entry pointed at a route that could never exist. Removed rather
+  // than replaced with a screen that would have to invent its own data.
 ];
 
 /**
