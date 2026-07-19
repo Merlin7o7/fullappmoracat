@@ -179,12 +179,15 @@ function CheckoutInner() {
     },
   });
 
-  // ── Term commitment (min 3 months, paid upfront) + Payment ──────────────────
-  const minTerm = plan?.minTermMonths ?? 3;
-  const [termMonths, setTermMonths] = React.useState<number>(3);
+  // ── Term commitment (paid upfront) + Payment ────────────────────────────────
+  // Default to the SHORTEST allowed term — the funnel advertises "start with
+  // 1 month", so pre-selecting a longer commitment would be a quiet upsell
+  // nudge (R006). A longer term is a choice the member makes, never a default.
+  const minTerm = plan?.minTermMonths ?? 1;
+  const [termMonths, setTermMonths] = React.useState<number>(minTerm);
   React.useEffect(() => {
-    if (termMonths < minTerm) setTermMonths(minTerm);
-  }, [minTerm, termMonths]);
+    setTermMonths((t) => (t < minTerm ? minTerm : t));
+  }, [minTerm]);
   // Tamara is the only payment method. The customer chooses full vs. instalments
   // on Tamara's own page, so there's no method selector here.
   const provider = "TAMARA" as const;

@@ -6,6 +6,8 @@
  * English gets Latin digits + "SAR", and the digit run is always LTR-safe.
  */
 
+import { dateLocale } from "./datetime";
+
 export const SAR_AR = "ر.س";
 export const SAR_EN = "SAR";
 
@@ -34,10 +36,15 @@ export function formatSARMonthly(amount: number, isAr: boolean): string {
   return isAr ? `${formatSAR(amount, true)} / شهرياً` : `${formatSAR(amount, false)} / month`;
 }
 
-/** Localized long date for money surfaces (renewal/term dates), Riyadh-anchored. */
+/**
+ * Localized long date for money surfaces (renewal/term dates). Routes through
+ * the member's calendar preference (lib/datetime) so a Hijri-pref member sees
+ * one calendar EVERYWHERE — never a Hijri "paid through" beside a Gregorian
+ * delivery date on the same card (R110).
+ */
 export function formatMoneyDate(d: Date | string, isAr: boolean): string {
   const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleDateString(isAr ? "ar-SA" : "en-GB", {
+  return date.toLocaleDateString(dateLocale(isAr ? "ar" : "en"), {
     day: "numeric",
     month: "long",
     year: "numeric",

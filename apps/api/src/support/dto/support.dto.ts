@@ -2,7 +2,19 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export const TICKET_PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
-export const TICKET_CATEGORIES = ["order", "delivery", "billing", "subscription", "product", "other"] as const;
+// Commerce topics + the community-mode member's real topics (Cat ID, community,
+// account) — the web keys its picker on commerce mode; the API accepts the union.
+export const TICKET_CATEGORIES = [
+  "order",
+  "delivery",
+  "billing",
+  "subscription",
+  "product",
+  "cat_id",
+  "community",
+  "account",
+  "other",
+] as const;
 
 export class CreateTicketDto {
   @ApiProperty({ example: "My box arrived with a damaged litter bag" })

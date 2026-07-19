@@ -75,7 +75,7 @@ export class SubscriptionsService {
     // A cat can only be covered once — prevent the double-charge before it
     // exists, never apologise after (R115). DRAFT counts: a redirect flow in
     // flight must not be re-purchasable while the PSP decides.
-    const alreadyCovered = await this.prisma.subscriptionCat.findFirst({
+    const coveringRows = await this.prisma.subscriptionCat.findMany({
       where: {
         catId: { in: dto.catIds },
         subscription: { userId, status: { in: ["ACTIVE", "PAUSED", "DRAFT"] } },
@@ -86,6 +86,8 @@ export class SubscriptionsService {
           select: {
             id: true,
             status: true,
+            endsAt: true,
+            cancelAtTermEnd: true,
             orders: {
               orderBy: { placedAt: "desc" },
               take: 1,
@@ -95,27 +97,51 @@ export class SubscriptionsService {
         },
       },
     });
-    if (alreadyCovered) {
+
+    // The new term stacks from here. For a fresh membership it's "now"; for an
+    // invited renewal (see below) it's the current term's end — an early renewer
+    // must never lose a single prepaid day.
+    const now = new Date();
+    let termBase = now;
+
+    if (coveringRows.length) {
       // Idempotency + resume (fire #4): a DRAFT is an in-flight redirect the
       // member abandoned, not a wall. Instead of dead-ending them, hand back the
       // existing checkout URL so a second tap resumes payment — never a new
       // session, never a duplicate charge.
-      if (alreadyCovered.subscription.status === "DRAFT") {
-        const meta = alreadyCovered.subscription.orders[0]?.payments[0]?.metadata as
+      const draft = coveringRows.find((r) => r.subscription.status === "DRAFT");
+      if (draft) {
+        const meta = draft.subscription.orders[0]?.payments[0]?.metadata as
           | { redirectUrl?: string }
           | null
           | undefined;
         return {
-          subscriptionId: alreadyCovered.subscription.id,
+          subscriptionId: draft.subscription.id,
           status: "DRAFT" as const,
           resumed: true,
           redirectUrl: meta?.redirectUrl ?? null,
         };
       }
-      throw new BadRequestException({
-        code: "CAT_ALREADY_COVERED",
-        message: `${alreadyCovered.cat.name} already has a membership — manage it from your subscriptions page.`,
+
+      // Invited renewal (R025's last mile): the term-end invitations deep-link
+      // here at T-7/T-1 — an ACTIVE sub inside the renewal window (or one the
+      // member set to won't-renew) must be RENEWABLE, not a wall. The new term
+      // stacks from the latest current endsAt, so renewing early costs nothing.
+      const RENEWAL_WINDOW_MS = 30 * 86_400_000;
+      const renewable = coveringRows.every((r) => {
+        const s = r.subscription;
+        if (!s.endsAt) return false;
+        return s.cancelAtTermEnd || s.endsAt.getTime() - now.getTime() <= RENEWAL_WINDOW_MS;
       });
+      if (!renewable) {
+        const first = coveringRows[0]!;
+        throw new BadRequestException({
+          code: "CAT_ALREADY_COVERED",
+          message: `${first.cat.name} already has a membership — manage it from your subscriptions page.`,
+        });
+      }
+      const latestEnd = Math.max(...coveringRows.map((r) => r.subscription.endsAt!.getTime()));
+      termBase = new Date(Math.max(latestEnd, now.getTime()));
     }
 
     const plan = await this.prisma.plan.findFirst({
@@ -185,11 +211,13 @@ export class SubscriptionsService {
     }
 
     const isPending = charge.status === "PENDING" || charge.status === "AUTHORIZED";
-    const now = new Date();
+    const isRenewal = termBase.getTime() > now.getTime();
     // The committed term is paid upfront, so the NEXT charge (renewal) is due
-    // when the term ends, not next month. Deliveries stay monthly.
-    const termEnd = addMonths(now, termMonths);
-    const firstDelivery = addMonths(now, 1);
+    // when the term ends, not next month. Deliveries stay monthly. For an
+    // invited renewal, everything stacks from the CURRENT term's end (termBase)
+    // so an early renewer keeps every day already paid for.
+    const termEnd = addMonths(termBase, termMonths);
+    const firstDelivery = addMonths(termBase, 1);
 
     // 2) Persist subscription + first order + payment + invoice atomically.
     const sub = await this.prisma.$transaction(async (tx) => {
@@ -203,7 +231,9 @@ export class SubscriptionsService {
           price: new Prisma.Decimal(monthlyPrice), // monthly rate snapshot
           termMonths,
           endsAt: isPending ? null : termEnd,
-          startedAt: isPending ? null : now,
+          // A pending RENEWAL stores its future base here so the webhook can
+          // stack the term from the current term's end, not from settle-time.
+          startedAt: isPending ? (isRenewal ? termBase : null) : termBase,
           // Renewal is due at term end (whole term prepaid); deliveries monthly.
           nextBillingAt: isPending ? null : termEnd,
           nextDeliveryAt: isPending ? null : firstDelivery,
@@ -536,7 +566,12 @@ export class SubscriptionsService {
    */
   async requestRefund(userId: string, id: string, reason?: string) {
     const sub = await this.owned(userId, id);
-    const already = sub.events.some((e) => e.type === "refund_requested");
+    // Targeted lookup, not the serializer's capped recent-events window — a
+    // busy subscription must never "forget" a refund request and allow a dupe.
+    const already = await this.prisma.subscriptionEvent.findFirst({
+      where: { subscriptionId: id, type: "refund_requested" },
+      select: { id: true },
+    });
     if (already) {
       throw new BadRequestException({ code: "REFUND_ALREADY_REQUESTED", message: "We've already received a refund request for this membership." });
     }
@@ -579,7 +614,9 @@ export class SubscriptionsService {
       for (const s of staff) {
         this.notifications.emit(s.id, {
           category: "SYSTEM",
-          type: "refund_requested",
+          // Staff-voiced type — "Member X requested a refund", never the
+          // member's own acknowledgement copy in a staff inbox.
+          type: "refund_requested_staff",
           params: { who, reason: reason ?? "" },
           data: { subscriptionId, adminLink: `/admin/customers` },
         });
@@ -688,10 +725,17 @@ export class SubscriptionsService {
 
   private serialize(sub: SubWithIncludes) {
     const termMonths = sub.termMonths ?? 0;
-    // Term progress from the clock (honest, dateless-safe). Boxes remaining =
-    // committed months minus whole months elapsed since it started.
-    const monthsElapsed = sub.startedAt ? monthsBetween(sub.startedAt, new Date()) : 0;
-    const boxesRemaining = Math.max(0, termMonths - Math.min(monthsElapsed, termMonths));
+    // Boxes remaining count FORWARD from endsAt (months still to serve), not
+    // from startedAt — pause extends endsAt, and a paused member must never see
+    // their remaining boxes shrink under copy that says "your days are saved"
+    // (R062). Fallback to elapsed-from-start only when endsAt is unset (DRAFT).
+    const now = new Date();
+    const boxesRemaining = sub.endsAt
+      ? Math.min(termMonths, Math.max(0, monthsBetween(now, sub.endsAt) + (hasPartialMonth(now, sub.endsAt) ? 1 : 0)))
+      : sub.startedAt
+        ? Math.max(0, termMonths - Math.min(monthsBetween(sub.startedAt, now), termMonths))
+        : termMonths;
+    const monthsElapsed = Math.max(0, termMonths - boxesRemaining);
     const resumeUrl =
       sub.status === "DRAFT"
         ? ((sub.orders[0]?.payments[0]?.metadata as { redirectUrl?: string } | null | undefined)?.redirectUrl ?? null)
@@ -708,7 +752,7 @@ export class SubscriptionsService {
       termTotal: Number(sub.price) * termMonths,
       // Term economics the manage page must show truthfully (fire, R021 post-purchase).
       boxesRemaining,
-      monthsElapsed: Math.min(monthsElapsed, termMonths),
+      monthsElapsed,
       currency: sub.currency,
       isGift: sub.isGift,
       startedAt: sub.startedAt,
@@ -763,6 +807,16 @@ function addMonths(date: Date, months: number): Date {
   // Jan 31 + 1mo must be Feb 28/29 — never a silent roll into March (R021).
   if (d.getDate() < day) d.setDate(0);
   return d;
+}
+
+/** True when b sits past a whole-month boundary from a (a partial month remains). */
+function hasPartialMonth(a: Date, b: Date): boolean {
+  if (b.getTime() <= a.getTime()) return false;
+  const whole = monthsBetween(a, b);
+  const atWhole = new Date(a);
+  atWhole.setMonth(atWhole.getMonth() + whole);
+  if (atWhole.getDate() < a.getDate()) atWhole.setDate(0); // month-end clamp
+  return b.getTime() > atWhole.getTime();
 }
 
 /** Whole calendar months between two dates (a ≤ b). */

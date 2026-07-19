@@ -258,17 +258,19 @@ export class WebhooksService {
 
     const now = new Date();
     // The whole committed term was paid upfront, so renewal is due at term end;
-    // deliveries stay monthly.
-    const termEnd = addMonthsClamped(now, sub.termMonths ?? 3);
+    // deliveries stay monthly. An invited RENEWAL stored its future base in
+    // startedAt at draft time — stack from it so the member loses no paid days.
+    const base = sub.startedAt && sub.startedAt.getTime() > now.getTime() ? sub.startedAt : now;
+    const termEnd = addMonthsClamped(base, sub.termMonths ?? 3);
     // Pre-launch: every founding member's first box ships on the launch date
     // (central launch config). After launch it's the normal monthly cadence.
-    const firstDelivery = firstDeliveryOn(addMonthsClamped(now, 1));
+    const firstDelivery = firstDeliveryOn(addMonthsClamped(base, 1));
     await this.prisma.$transaction([
       this.prisma.subscription.update({
         where: { id: sub.id },
         data: {
           status: "ACTIVE",
-          startedAt: now,
+          startedAt: base,
           endsAt: termEnd,
           nextBillingAt: termEnd,
           nextDeliveryAt: firstDelivery,

@@ -66,7 +66,9 @@ export class LifecycleService {
     const now = new Date();
     const in7 = new Date(now.getTime() + 7 * DAY_MS);
     const subs = await this.prisma.subscription.findMany({
-      where: { status: "ACTIVE", endsAt: { gt: now, lte: in7 } },
+      // A member who chose "won't renew" (cancelAtTermEnd) must NOT be invited
+      // to renew — respecting a stated decision is the whole point (R068).
+      where: { status: "ACTIVE", endsAt: { gt: now, lte: in7 }, cancelAtTermEnd: false },
       select: {
         id: true,
         endsAt: true,
@@ -80,9 +82,20 @@ export class LifecycleService {
     });
     for (const s of subs) {
       if (!s.endsAt) continue;
+      const cat = s.cats[0]?.cat;
+      // Already renewed? A stacked renewal covers the same cat with a LATER
+      // endsAt — inviting them again would nag someone who already said yes.
+      if (cat) {
+        const renewedAhead = await this.prisma.subscriptionCat.count({
+          where: {
+            catId: cat.id,
+            subscription: { status: { in: ["ACTIVE", "DRAFT"] }, endsAt: { gt: s.endsAt }, NOT: { id: s.id } },
+          },
+        });
+        if (renewedAhead > 0) continue;
+      }
       const days = Math.ceil((s.endsAt.getTime() - now.getTime()) / DAY_MS);
       const milestone = days <= 1 ? "t1" : "t7";
-      const cat = s.cats[0]?.cat;
       const catName = cat?.name ?? "your cat";
       const loc = s.user.locale === "en" ? "en" : "ar";
       const endsStr = fmtDate(s.endsAt, loc);
@@ -125,25 +138,38 @@ export class LifecycleService {
       const renewUrl = `${SITE()}/portal/subscribe?cat=${cat?.id ?? ""}&renew=1`;
 
       await this.once(`membership_lapsed:${s.id}`, "membership_lapsed", { userId: s.userId, subjectId: s.id, catId: cat?.id }, async () => {
-        await this.prisma.$transaction([
-          this.prisma.subscription.update({ where: { id: s.id }, data: { status: "EXPIRED", events: { create: { type: "expired" } } } }),
-          // Recompute membership for every cat this subscription covered.
-          ...s.cats.map((c) =>
-            this.prisma.cat.updateMany({
-              where: { id: c.cat.id, status: "ACTIVE" },
-              data: { membershipStatus: "INACTIVE" },
-            })
-          ),
-        ]);
-        this.notifications.emit(s.userId, {
-          category: "BILLING",
-          type: "membership_lapsed",
-          params: { name: catName },
-          data: { renewUrl },
+        await this.prisma.subscription.update({
+          where: { id: s.id },
+          data: { status: "EXPIRED", events: { create: { type: "expired" } } },
         });
-        if (s.user.email) {
-          const mail = membershipLapsedTemplate(loc, s.user.firstName, catName, renewUrl);
-          await this.mail.send({ to: s.user.email, subject: mail.subject, html: mail.html, text: mail.text });
+        // Coverage-aware recompute — an invited renewal STACKS a second ACTIVE
+        // subscription before the old one lapses; a renewed cat must never be
+        // deactivated by its old term expiring.
+        let anyStillCovered = false;
+        for (const c of s.cats) {
+          const stillCovered = await this.prisma.subscriptionCat.count({
+            where: { catId: c.cat.id, subscription: { status: "ACTIVE" } },
+          });
+          if (stillCovered > 0) anyStillCovered = true;
+          await this.prisma.cat.updateMany({
+            where: { id: c.cat.id, status: "ACTIVE" },
+            data: { membershipStatus: stillCovered > 0 ? "ACTIVE" : "INACTIVE" },
+          });
+        }
+        // The farewell is only for members who actually lapsed. A renewed
+        // member's old term expiring is seamless continuity — saying "your
+        // membership ended" to them would be a false (and alarming) claim.
+        if (!anyStillCovered) {
+          this.notifications.emit(s.userId, {
+            category: "BILLING",
+            type: "membership_lapsed",
+            params: { name: catName },
+            data: { renewUrl },
+          });
+          if (s.user.email) {
+            const mail = membershipLapsedTemplate(loc, s.user.firstName, catName, renewUrl);
+            await this.mail.send({ to: s.user.email, subject: mail.subject, html: mail.html, text: mail.text });
+          }
         }
       });
     }
@@ -279,9 +305,11 @@ export class LifecycleService {
   }
 }
 
-/** Localized long date, e.g. "١٧ يوليو ٢٠٢٦" / "17 July 2026". */
+/** Localized long date, e.g. "١٧ يوليو ٢٠٢٦" / "17 July 2026". Gregorian is
+ *  forced explicitly — bare "ar-SA" defaults to Umm-al-Qura (Hijri) in ICU,
+ *  which would date money events in a calendar the invoice doesn't use. */
 function fmtDate(d: Date, loc: "ar" | "en"): string {
-  return d.toLocaleDateString(loc === "ar" ? "ar-SA" : "en-GB", {
+  return d.toLocaleDateString(loc === "ar" ? "ar-SA-u-ca-gregory" : "en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",

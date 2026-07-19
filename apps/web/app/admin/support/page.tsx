@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Send, ArrowLeft, CheckCheck, X } from "lucide-react";
 import { Card, Badge, Button, DataTable, useToast, cn, type Column } from "@moraqat/ui";
@@ -16,7 +17,7 @@ interface TicketMessage { id: string; body: string; isStaff: boolean; createdAt:
 interface TicketRow {
   ticketNumber: string; subject: string; status: string; priority: string;
   category: string | null; updatedAt: string; messages: TicketMessage[];
-  customer: { email: string; name: string };
+  customer: { id: string; email: string; name: string };
 }
 
 const STATUSES = ["", "OPEN", "PENDING", "RESOLVED", "CLOSED"];
@@ -43,7 +44,17 @@ export default function AdminSupport() {
       render: (t) => (
         <div className="min-w-0">
           <p className="truncate font-medium">{t.subject}</p>
-          <p className="text-xs text-muted-foreground">{t.ticketNumber} · {t.customer.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {t.ticketNumber} ·{" "}
+            {/* Deep-link to the member's 360 page without triggering the row's thread-open. */}
+            <Link
+              href={`/admin/customers/${t.customer.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="underline-offset-2 hover:text-foreground hover:underline"
+            >
+              {t.customer.name}
+            </Link>
+          </p>
         </div>
       ),
     },
@@ -123,7 +134,13 @@ function StaffThread({ ticket, authedFetch, onBack, onChanged, isAr }: {
           <Button variant="ghost" size="sm" onClick={onBack} aria-label="Back"><ArrowLeft className="size-4" /></Button>
           <div>
             <p className="font-display font-semibold">{ticket.subject}</p>
-            <p className="text-xs text-muted-foreground">{ticket.ticketNumber} · {ticket.customer.name} ({ticket.customer.email})</p>
+            <p className="text-xs text-muted-foreground">
+              {ticket.ticketNumber} ·{" "}
+              <Link href={`/admin/customers/${ticket.customer.id}`} className="underline-offset-2 hover:text-foreground hover:underline">
+                {ticket.customer.name}
+              </Link>{" "}
+              (<span dir="ltr">{ticket.customer.email}</span>)
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">

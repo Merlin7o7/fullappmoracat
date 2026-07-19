@@ -12,6 +12,7 @@ import { TicketStatusBadge } from "@/components/ticket-status-badge";
 import { QueryError } from "@/components/query-error";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
 import { commerceEnabled } from "@/lib/features";
+import { friendlyMessage } from "@/lib/errors";
 
 interface TicketMessage { id: string; body: string; isStaff: boolean; createdAt: string }
 interface Ticket {
@@ -44,7 +45,7 @@ export default function SupportPage() {
       setSelected(t.ticketNumber);
       toast({ title: isAr ? "تم فتح التذكرة" : "Ticket opened", description: t.ticketNumber, variant: "success" });
     },
-    onError: (e) => toast({ title: isAr ? "تعذّر فتح التذكرة" : "Couldn't open ticket", description: e.message, variant: "error" }),
+    onError: (e) => toast({ title: isAr ? "تعذّر فتح التذكرة" : "Couldn't open ticket", description: friendlyMessage(e, isAr), variant: "error" }),
   });
 
   const active = tickets?.find((t) => t.ticketNumber === selected) ?? null;
@@ -121,7 +122,7 @@ function TicketThread({ ticket, isAr, onBack, authedFetch, onChanged }: {
   const reply = useMutation({
     mutationFn: () => authedFetch(`/support/tickets/${ticket.ticketNumber}/reply`, { method: "POST", body: JSON.stringify({ body }) }),
     onSuccess: () => { setBody(""); onChanged(); },
-    onError: (e) => toast({ title: isAr ? "تعذّر الإرسال" : "Couldn't send", description: e.message, variant: "error" }),
+    onError: (e) => toast({ title: isAr ? "تعذّر الإرسال" : "Couldn't send", description: friendlyMessage(e, isAr), variant: "error" }),
   });
   const close = useMutation({
     mutationFn: () => authedFetch(`/support/tickets/${ticket.ticketNumber}/close`, { method: "POST", body: "{}" }),

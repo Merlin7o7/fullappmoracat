@@ -14,6 +14,7 @@ import { CatIdCard } from "@/components/cat-id-card";
 import { CatOnboardingJourney } from "@/components/cat-onboarding-journey";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 import { useCats, type PortalCat } from "@/lib/cat-context";
+import { friendlyMessage } from "@/lib/errors";
 
 /**
  * Issuing a Cat ID — the cat's name comes FIRST, and almost nothing else is
@@ -138,14 +139,30 @@ function IssueIdFlow() {
         void saveOwnerContact(0);
         updateUser({ firstName: parts[0] || user?.firstName, lastName: parts.slice(1).join(" ") || user?.lastName, phone: f.ownerPhone.trim() || user?.phone });
       }
-      return authedFetch<PortalCat & { firstCatIdIssued?: boolean }>("/cats", {
+      // The feeding calculator's bridge promise made true (R002/R117): if the
+      // visitor computed a plan there, their cat's weight and age travel here
+      // silently — the profile starts filled with what they already told us.
+      let carried: { weightKg?: number; ageMonths?: number } = {};
+      try {
+        const raw = sessionStorage.getItem("moraqat.pendingCatProfile");
+        if (raw) carried = JSON.parse(raw) as { weightKg?: number; ageMonths?: number };
+      } catch { /* ignore */ }
+      const birthDate =
+        typeof carried.ageMonths === "number" && carried.ageMonths > 0
+          ? new Date(Date.now() - carried.ageMonths * 30.44 * 86_400_000).toISOString()
+          : undefined;
+      const cat = await authedFetch<PortalCat & { firstCatIdIssued?: boolean }>("/cats", {
         method: "POST",
         body: JSON.stringify({
           name: f.name.trim(),
           gender: f.gender,
           photoUrl: f.photoUrl.trim() || undefined,
+          weightKg: typeof carried.weightKg === "number" ? carried.weightKg : undefined,
+          birthDate,
         }),
       });
+      try { sessionStorage.removeItem("moraqat.pendingCatProfile"); } catch { /* ignore */ }
+      return cat;
     },
     onSuccess: (cat) => {
       qc.invalidateQueries({ queryKey: ["cats"] });
@@ -153,7 +170,7 @@ function IssueIdFlow() {
       setFirstIssue(Boolean(cat.firstCatIdIssued));
       setCeremonyCat(cat); // the reveal — then the welcome (first time) or the cats page
     },
-    onError: (e: Error) => toast({ title: isAr ? "تعذّر إصدار الهوية" : "Couldn't issue the Cat ID", description: e.message, variant: "error" }),
+    onError: (e) => toast({ title: isAr ? "تعذّر إصدار الهوية" : "Couldn't issue the Cat ID", description: friendlyMessage(e, isAr), variant: "error" }),
   });
 
   const catName = f.name.trim();

@@ -110,27 +110,35 @@ function VerifyEmailInner() {
     [authedFetch, updateUser, router, next, isAr]
   );
 
-  // Escape hatch for a mistyped email (R112/R117): seed the register page's
-  // draft (same key it reads on mount) with what we already know, so they only
-  // fix the email — never retype everything. There is no change-pending-email
-  // endpoint in the API, so this path creates a fresh account — we say so
-  // plainly below (R006 honest by default).
-  const fixEmail = React.useCallback(() => {
+  // Mistyped email? Correct it IN PLACE (R112/R117): the API's
+  // PATCH /auth/email updates the still-unverified address on the SAME account
+  // (no duplicate account, no orphaned member number) and re-sends the code.
+  const [fixing, setFixing] = React.useState(false);
+  const [newEmail, setNewEmail] = React.useState("");
+  const [savingEmail, setSavingEmail] = React.useState(false);
+  const saveEmail = React.useCallback(async () => {
+    const email = newEmail.trim();
+    if (!email) return;
+    setSavingEmail(true);
+    setError(null);
     try {
-      const dialCode = user?.dialCode || "+966";
-      const phone = user?.phone?.startsWith(dialCode) ? user.phone.slice(dialCode.length) : user?.phone ?? "";
-      localStorage.setItem(
-        "moraqat.signupDraft",
-        JSON.stringify({
-          fullName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
-          dialCode,
-          phone,
-          email: user?.email ?? "",
-        })
-      );
-    } catch { /* ignore */ }
-    router.push("/register");
-  }, [user, router]);
+      await authedFetch("/auth/email", { method: "PATCH", body: JSON.stringify({ email }) });
+      updateUser({ email });
+      setFixing(false);
+      setNewEmail("");
+      setCode("");
+      setAttempt((a) => a + 1);
+      setCooldown(60);
+      toast({
+        title: isAr ? "عدّلنا بريدك وأرسلنا رمزاً جديداً" : "Email corrected — new code sent",
+        variant: "success",
+      });
+    } catch (e) {
+      setError(friendlyError(e, isAr).message);
+    } finally {
+      setSavingEmail(false);
+    }
+  }, [newEmail, authedFetch, updateUser, isAr, toast]);
 
   const inbox = inboxLink(user?.email);
 
@@ -214,22 +222,47 @@ function VerifyEmailInner() {
         </button>
 
         {/* Quiet helpers — no one gets trapped here (R112/R113). */}
-        <div className="flex flex-col items-center gap-1.5 text-center">
+        <div className="flex w-full flex-col items-center gap-1.5 text-center">
           <p className="text-xs text-muted-foreground">
             {isAr ? "ما وصلك شيء؟ شيّك على مجلد الرسائل غير المرغوبة." : "Nothing arriving? Check your spam folder."}
           </p>
-          <button
-            type="button"
-            onClick={fixEmail}
-            className="min-h-[44px] text-xs font-medium text-primary hover:underline"
-          >
-            {isAr ? "كتبت البريد غلط؟ عدّله من هنا" : "Wrong email? Fix it here"}
-          </button>
-          <p className="max-w-xs text-xs text-muted-foreground">
-            {isAr
-              ? "تنبيه: تعديل البريد من هنا ينشئ حساباً جديداً بالبريد الصحيح — بياناتك المكتوبة تنتقل معك."
-              : "Note: fixing it here creates a new account with the corrected email — your typed details carry over."}
-          </p>
+          {fixing ? (
+            <div className="flex w-full max-w-xs flex-col gap-2">
+              <label htmlFor="fix-email" className="sr-only">
+                {isAr ? "البريد الصحيح" : "Corrected email"}
+              </label>
+              <input
+                id="fix-email"
+                type="email"
+                dir="ltr"
+                autoFocus
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void saveEmail(); }}
+                placeholder={user?.email ?? "you@example.com"}
+                className="min-h-[44px] rounded-xl border border-input bg-background px-3 text-center text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <div className="flex justify-center gap-2">
+                <Button size="sm" onClick={() => void saveEmail()} loading={savingEmail} disabled={!newEmail.trim()}>
+                  {isAr ? "عدّل وأرسل الرمز" : "Correct & resend code"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { setFixing(false); setNewEmail(""); }}>
+                  {isAr ? "إلغاء" : "Cancel"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {isAr ? "نفس الحساب — فقط بريد صحيح ورمز جديد." : "Same account — just the corrected email and a fresh code."}
+              </p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setFixing(true)}
+              className="min-h-[44px] text-xs font-medium text-primary hover:underline"
+            >
+              {isAr ? "كتبت البريد غلط؟ عدّله من هنا" : "Wrong email? Fix it here"}
+            </button>
+          )}
         </div>
       </div>
     </AuthShell>

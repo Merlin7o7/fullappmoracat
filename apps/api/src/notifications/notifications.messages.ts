@@ -27,7 +27,8 @@ export type NotificationType =
   | "vaccination_due"
   | "cat_birthday"
   | "member_anniversary"
-  | "refund_requested";
+  | "refund_requested"
+  | "refund_requested_staff";
 
 export type NotificationParams = Record<string, string | number>;
 
@@ -242,25 +243,28 @@ export function buildNotificationText(
         },
       };
     case "cat_birthday":
+      // Only claim what exists: the birthday frame is a personalization option
+      // the member can apply in one tap — we point at it, never pretend it
+      // auto-applied (R006).
       return {
         ar: {
           title: `${p(params, "name")} يكمل ${p(params, "age")} اليوم 🎂`,
-          body: `كل عام و${p(params, "name")} بخير. بطاقته اليوم تلبس حلّة عيد الميلاد — شاركها!`,
+          body: `كل عام و${p(params, "name")} بخير. جرّب إطار عيد الميلاد على بطاقته وشاركها مع أهل البيت.`,
         },
         en: {
           title: `${p(params, "name")} turns ${p(params, "age")} today 🎂`,
-          body: `Happy birthday, ${p(params, "name")}! Their card is wearing a birthday frame today — share it!`,
+          body: `Happy birthday, ${p(params, "name")}! Try the birthday frame on their card and share it with the family.`,
         },
       };
     case "member_anniversary":
       return {
         ar: {
           title: `سنة مع مُرقّط 🐾`,
-          body: `مرّت ${p(params, "years")} على انضمام ${p(params, "name")}. شكراً لأنك جزء من العائلة — إليك ملخّص سنتك.`,
+          body: `اليوم تكتمل ${p(params, "years")} منذ انضمام ${p(params, "name")}. شكراً لأنك جزء من العائلة.`,
         },
         en: {
           title: `A year with Moracat 🐾`,
-          body: `It's been ${p(params, "years")} since ${p(params, "name")} joined. Thank you for being family — here's your year in review.`,
+          body: `Today marks ${p(params, "years")} since ${p(params, "name")} joined. Thank you for being family.`,
         },
       };
     case "refund_requested":
@@ -272,6 +276,22 @@ export function buildNotificationText(
         en: {
           title: "We've received your refund request",
           body: "Our care team will reach out within one business day. Your request is logged and safe.",
+        },
+      };
+    case "refund_requested_staff":
+      // Staff-voiced: who asked and why — actioned via the admin refund tooling.
+      return {
+        ar: {
+          title: "طلب استرداد جديد",
+          body: params.reason
+            ? `${p(params, "who")} طلب استرداد المتبقّي من اشتراكه. السبب: ${p(params, "reason")}`
+            : `${p(params, "who")} طلب استرداد المتبقّي من اشتراكه.`,
+        },
+        en: {
+          title: "New refund request",
+          body: params.reason
+            ? `${p(params, "who")} requested a refund of their remaining term. Reason: ${p(params, "reason")}`
+            : `${p(params, "who")} requested a refund of their remaining term.`,
         },
       };
   }
