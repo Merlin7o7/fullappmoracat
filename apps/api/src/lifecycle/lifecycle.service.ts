@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { Prisma } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
@@ -9,9 +9,33 @@ import {
   membershipLapsedTemplate,
   vaccinationReminderTemplate,
 } from "../mail/mail.templates";
+import { SubscriptionsService } from "../subscriptions/subscriptions.service";
+import {
+  PAYMENT_PROVIDER_FACTORY,
+  type IPaymentProviderFactory,
+  type PaymentProviderKey,
+} from "../payments/payment-provider.interface";
 
 const DAY_MS = 86_400_000;
 const SITE = () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+/**
+ * Per-task row cap for one pass.
+ *
+ * Every task here used to be an unbounded findMany. The birthday pass loaded
+ * EVERY active cat into Node memory each hour, which OOMs a 512MB instance
+ * around 50k cats and becomes a full-table scan long before 10M. Batching keeps
+ * a pass bounded; the hourly cadence plus the idempotency ledger means anything
+ * not reached this hour is picked up next hour, with no double-sends.
+ */
+const BATCH = 500;
+
+/**
+ * How long a payment may sit in AUTHORIZED before we re-query the provider.
+ * Long enough that a normal capture completes, short enough that a member is
+ * not left charged-without-membership for hours.
+ */
+const STUCK_PAYMENT_MS = 10 * 60_000;
 
 /**
  * The lifecycle engine — the machinery that makes Moracat's promises mechanically
@@ -37,7 +61,9 @@ export class LifecycleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
-    private readonly mail: MailService
+    private readonly mail: MailService,
+    private readonly subscriptions: SubscriptionsService,
+    @Inject(PAYMENT_PROVIDER_FACTORY) private readonly payments: IPaymentProviderFactory
   ) {}
 
   /**
@@ -50,10 +76,14 @@ export class LifecycleService {
     const started = Date.now();
     const results = await Promise.allSettled([
       this.termEndInvitations(),
+      // Runs BEFORE gracefulLapse so a renewable membership is charged rather
+      // than lapsed in the same pass.
+      this.autoRenewals(),
       this.gracefulLapse(),
       this.vaccinationReminders(),
       this.birthdaysAndAnniversaries(),
       this.expireStaleDrafts(),
+      this.reconcileStuckPayments(),
     ]);
     const failures = results.filter((r) => r.status === "rejected");
     for (const f of failures) if (f.status === "rejected") this.logger.error(`lifecycle task failed: ${String(f.reason)}`);
@@ -69,12 +99,14 @@ export class LifecycleService {
       // A member who chose "won't renew" (cancelAtTermEnd) must NOT be invited
       // to renew — respecting a stated decision is the whole point (R068).
       where: { status: "ACTIVE", endsAt: { gt: now, lte: in7 }, cancelAtTermEnd: false },
+      take: BATCH,
       select: {
         id: true,
         endsAt: true,
         price: true,
         termMonths: true,
         userId: true,
+        autoRenew: true,
         plan: { select: { nameEn: true, nameAr: true } },
         cats: { take: 1, select: { cat: { select: { id: true, name: true } } } },
         user: { select: { email: true, firstName: true, locale: true } },
@@ -103,11 +135,21 @@ export class LifecycleService {
       const renewUrl = `${SITE()}/portal/subscribe?cat=${cat?.id ?? ""}&renew=1`;
 
       await this.once(`term_end_${milestone}:${s.id}`, "term_ending", { userId: s.userId, subjectId: s.id, catId: cat?.id }, async () => {
+        // R025's actual requirement is that a charge is never a surprise, not
+        // that it never happens. Stamping autoRenewNoticeAt here is what LICENSES
+        // the renewal: autoRenewals() refuses to charge a membership that has no
+        // notice on record, so the notice and the charge cannot drift apart.
+        if (s.autoRenew) {
+          await this.prisma.subscription.update({
+            where: { id: s.id },
+            data: { autoRenewNoticeAt: new Date() },
+          });
+        }
         this.notifications.emit(s.userId, {
           category: "BILLING",
-          type: "term_ending",
-          params: { name: catName, endsAt: endsStr },
-          data: { subscriptionId: s.id, renewUrl },
+          type: s.autoRenew ? "renewal_upcoming" : "term_ending",
+          params: { name: catName, endsAt: endsStr, total: termTotal, currency: "SAR" },
+          data: { subscriptionId: s.id, renewUrl, manageUrl: `${SITE()}/portal/subscriptions` },
         });
         if (s.user.email) {
           const planName = loc === "ar" ? s.plan?.nameAr : s.plan?.nameEn;
@@ -118,12 +160,195 @@ export class LifecycleService {
     }
   }
 
+  // ── auto-renewal ───────────────────────────────────────────────────────────
+  /**
+   * Renew memberships that opted in, at term end.
+   *
+   * The honesty rules R025 demands are enforced as preconditions, not as copy:
+   *
+   *   * `autoRenewNoticeAt` must be set and in the past — a renewal cannot run
+   *     unless the member was told it was coming.
+   *   * `cancelAtTermEnd` short-circuits everything.
+   *   * A stored credential on a recurring-capable rail is required. BNPL
+   *     cannot be charged off-session, so those memberships fall through to an
+   *     invitation instead of failing, and the member is never left believing
+   *     something renewed when it could not.
+   *
+   * A failed charge does NOT lapse the membership immediately — it enters
+   * dunning, so a transient decline does not cost a member their cat's record.
+   */
+  private async autoRenewals() {
+    const now = new Date();
+    const due = await this.prisma.subscription.findMany({
+      where: {
+        status: "ACTIVE",
+        autoRenew: true,
+        cancelAtTermEnd: false,
+        endsAt: { lte: now },
+        autoRenewNoticeAt: { not: null, lte: now },
+      },
+      take: BATCH,
+      select: {
+        id: true,
+        userId: true,
+        price: true,
+        termMonths: true,
+        currency: true,
+        endsAt: true,
+        addressId: true,
+        planId: true,
+        plan: { select: { nameEn: true, nameAr: true } },
+        cats: { select: { catId: true, cat: { select: { name: true } } } },
+        renewalPaymentMethod: { select: { id: true, provider: true, token: true, last4: true } },
+        user: { select: { email: true, firstName: true, locale: true } },
+      },
+    });
+
+    for (const sub of due) {
+      const pm = sub.renewalPaymentMethod;
+      const adapter = pm ? this.payments.resolve(pm.provider as PaymentProviderKey) : null;
+
+      // No reusable credential (BNPL term, or the card was removed). Invite
+      // instead of pretending — and stop claiming this membership auto-renews.
+      if (!pm?.token || !adapter?.supportsRecurring || !adapter.chargeStored) {
+        await this.once(
+          `autorenew_uncharged:${sub.id}`,
+          "autorenew_uncharged",
+          { userId: sub.userId, subjectId: sub.id },
+          async () => {
+            await this.prisma.subscription.update({
+              where: { id: sub.id },
+              data: { autoRenew: false },
+            });
+            this.notifications.emit(sub.userId, {
+              category: "BILLING",
+              type: "term_ending",
+              params: {
+                name: sub.cats[0]?.cat?.name ?? "your cat",
+                endsAt: fmtDate(sub.endsAt ?? now, sub.user.locale === "en" ? "en" : "ar"),
+              },
+              data: { subscriptionId: sub.id, renewUrl: `${SITE()}/portal/subscribe?renew=1` },
+            });
+          },
+          { releaseOnFailure: true }
+        );
+        continue;
+      }
+
+      const termTotal = Number(sub.price) * (sub.termMonths ?? 1);
+      await this.once(
+        `autorenew:${sub.id}:${sub.endsAt?.toISOString() ?? ""}`,
+        "autorenew",
+        { userId: sub.userId, subjectId: sub.id },
+        async () => {
+          const result = await this.subscriptions.renewWithStoredMethod({
+            subscriptionId: sub.id,
+            amount: termTotal,
+            token: pm.token,
+            provider: pm.provider as PaymentProviderKey,
+          });
+
+          const loc = sub.user.locale === "en" ? "en" : "ar";
+          if (result.ok) {
+            this.notifications.emit(sub.userId, {
+              category: "BILLING",
+              type: "membership_renewed",
+              params: {
+                name: sub.cats[0]?.cat?.name ?? "your cat",
+                total: termTotal,
+                currency: sub.currency,
+                endsAt: fmtDate(result.endsAt, loc),
+              },
+              data: { subscriptionId: sub.id },
+            });
+          } else {
+            // Dunning, not death. The member keeps their records and their Cat
+            // ID while we retry; only a definitively failed ladder lapses.
+            this.notifications.emit(sub.userId, {
+              category: "BILLING",
+              type: "renewal_payment_failed",
+              params: {
+                name: sub.cats[0]?.cat?.name ?? "your cat",
+                total: termTotal,
+                currency: sub.currency,
+                last4: pm.last4 ?? "",
+              },
+              data: { subscriptionId: sub.id, updateUrl: `${SITE()}/portal/settings` },
+            });
+          }
+        },
+        // A renewal is a state transition: if it throws we must be able to try
+        // again rather than silently never charging.
+        { releaseOnFailure: true }
+      );
+    }
+  }
+
+  // ── payment recovery ───────────────────────────────────────────────────────
+  /**
+   * Re-query the PSP for payments stuck mid-settlement.
+   *
+   * The capture path claims PENDING → AUTHORIZED before calling the provider.
+   * If the process died after the provider collected but before we persisted,
+   * every retry then hit "already settling" and no-oped FOREVER, and 24h later
+   * expireStaleDrafts cancelled the subscription — member charged, no
+   * membership, invoice unpaid. Nothing revisited AUTHORIZED payments at all.
+   *
+   * This sweep is that missing revisit.
+   */
+  private async reconcileStuckPayments() {
+    const cutoff = new Date(Date.now() - STUCK_PAYMENT_MS);
+    const stuck = await this.prisma.payment.findMany({
+      where: { status: "AUTHORIZED", createdAt: { lte: cutoff } },
+      take: BATCH,
+      select: {
+        id: true,
+        provider: true,
+        providerRef: true,
+        amount: true,
+        currency: true,
+        order: { select: { id: true, orderNumber: true, subscriptionId: true } },
+      },
+    });
+    if (!stuck.length) return;
+    this.logger.warn(`reconciling ${stuck.length} payment(s) stuck in AUTHORIZED`);
+
+    for (const p of stuck) {
+      if (!p.providerRef) continue;
+      const adapter = this.payments.resolve(p.provider as PaymentProviderKey);
+      if (!adapter.capture) continue;
+      await this.once(
+        `payment_reconcile:${p.id}`,
+        "payment_reconcile",
+        { subjectId: p.order.id },
+        async () => {
+          const res = await adapter.capture!(
+            p.providerRef!,
+            Number(p.amount),
+            p.currency,
+            p.order.orderNumber
+          );
+          if (!res.success) {
+            this.logger.error(
+              `reconcile: capture still failing for ${p.order.orderNumber} — ${res.failureReason ?? "unknown"}`
+            );
+            return;
+          }
+          await this.subscriptions.completeCapturedOrder(p.id, res.providerRef ?? p.providerRef!);
+          this.logger.log(`reconciled stuck payment for ${p.order.orderNumber}`);
+        },
+        { releaseOnFailure: true }
+      );
+    }
+  }
+
   // ── graceful lapse (R064/R068) ─────────────────────────────────────────────
   /** A term that ended (renewed or not) lapses gently: records kept, no guilt. */
   private async gracefulLapse() {
     const now = new Date();
     const subs = await this.prisma.subscription.findMany({
       where: { status: "ACTIVE", endsAt: { lte: now } },
+      take: BATCH,
       select: {
         id: true,
         userId: true,
@@ -182,6 +407,7 @@ export class LifecycleService {
     const in7 = new Date(now.getTime() + 7 * DAY_MS);
     const vaccs = await this.prisma.catVaccination.findMany({
       where: { dueAt: { gt: now, lte: in7 }, cat: { status: "ACTIVE", deletedAt: null } },
+      take: BATCH,
       select: {
         id: true,
         name: true,
@@ -216,10 +442,35 @@ export class LifecycleService {
   private async birthdaysAndAnniversaries() {
     const today = riyadhParts(new Date());
     // Cats with a birthday or an ID-issue anniversary landing today (Riyadh).
-    const cats = await this.prisma.cat.findMany({
-      where: { status: "ACTIVE", deletedAt: null, OR: [{ birthDate: { not: null } }, { idIssuedAt: { not: null } }] },
-      select: { id: true, name: true, userId: true, birthDate: true, idIssuedAt: true },
-    });
+    // Match the day in SQL rather than pulling every cat into Node.
+    //
+    // This previously loaded EVERY active cat with a birth date on every hourly
+    // pass and compared dates in JS — an OOM on a 512MB instance around 50k
+    // cats, and a full table scan long before 10M. EXTRACT against the Riyadh
+    // wall clock keeps the semantics identical (a birthday is a local-calendar
+    // event, not a UTC instant) while returning only today's handful of rows.
+    const { month: todayMonth, day: todayDay } = today;
+    const cats = await this.prisma.$queryRaw<
+      { id: string; name: string; userId: string; birthDate: Date | null; idIssuedAt: Date | null }[]
+    >`
+      SELECT id, name, "userId", "birthDate", "idIssuedAt"
+      FROM cats
+      WHERE status = 'ACTIVE'
+        AND "deletedAt" IS NULL
+        AND (
+          (
+            "birthDate" IS NOT NULL
+            AND EXTRACT(MONTH FROM ("birthDate" AT TIME ZONE 'Asia/Riyadh')) = ${todayMonth}
+            AND EXTRACT(DAY   FROM ("birthDate" AT TIME ZONE 'Asia/Riyadh')) = ${todayDay}
+          )
+          OR (
+            "idIssuedAt" IS NOT NULL
+            AND EXTRACT(MONTH FROM ("idIssuedAt" AT TIME ZONE 'Asia/Riyadh')) = ${todayMonth}
+            AND EXTRACT(DAY   FROM ("idIssuedAt" AT TIME ZONE 'Asia/Riyadh')) = ${todayDay}
+          )
+        )
+      LIMIT ${BATCH}
+    `;
     for (const c of cats) {
       if (c.birthDate) {
         const b = riyadhParts(c.birthDate);
@@ -258,6 +509,7 @@ export class LifecycleService {
     const cutoff = new Date(Date.now() - DAY_MS);
     const drafts = await this.prisma.subscription.findMany({
       where: { status: "DRAFT", createdAt: { lt: cutoff } },
+      take: BATCH,
       select: { id: true, userId: true, orders: { where: { status: "PENDING" }, select: { id: true } } },
     });
     for (const d of drafts) {
@@ -285,7 +537,8 @@ export class LifecycleService {
     key: string,
     type: string,
     subject: { userId?: string | null; catId?: string | null; subjectId?: string | null },
-    fn: () => Promise<void>
+    fn: () => Promise<void>,
+    opts: { releaseOnFailure?: boolean } = {}
   ): Promise<boolean> {
     try {
       await this.prisma.lifecycleEvent.create({
@@ -298,8 +551,20 @@ export class LifecycleService {
     try {
       await fn();
     } catch (e) {
-      // The claim stands (we won't retry and spam), but surface the failure.
       this.logger.error(`lifecycle side-effect failed for ${key}: ${String(e)}`);
+      // Two different failure semantics, and conflating them was a real bug:
+      //
+      //   Notifications (default) — keep the claim. Re-running would re-send,
+      //   and spamming a member is worse than one missed reminder.
+      //
+      //   State transitions (releaseOnFailure) — MUST retry. A lapse or renewal
+      //   that failed on a connection blip previously kept its claim and was
+      //   never revisited, leaving the subscription ACTIVE past endsAt forever.
+      if (opts.releaseOnFailure) {
+        await this.prisma.lifecycleEvent
+          .delete({ where: { key } })
+          .catch((err) => this.logger.error(`failed releasing lifecycle claim ${key}: ${String(err)}`));
+      }
     }
     return true;
   }

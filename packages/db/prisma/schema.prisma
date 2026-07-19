@@ -627,8 +627,9 @@ model PaymentMethod {
   isDefault  Boolean         @default(false)
   createdAt  DateTime        @default(now())
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payments Payment[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+  subscriptions Subscription[]
 
   @@index([userId])
   @@map("payment_methods")
@@ -1342,21 +1343,43 @@ model Subscription {
   /// confiscates a paid term.
   cancelAtTermEnd Boolean           @default(false)
   cancelledAt    DateTime?
+
+  /// Whether the membership renews itself at term end.
+  ///
+  /// Opt-OUT by default, because manual re-purchase every term means re-selling
+  /// the entire base four times a year and roughly halves LTV. This is NOT a
+  /// silent charge: `autoRenewNoticeAt` records the T-7 notice that must go out
+  /// before any renewal is attempted, `renewalPaymentMethodId` pins the exact
+  /// stored credential used, and one tap sets cancelAtTermEnd. R025 is honoured
+  /// by making the charge loudly expected, not by refusing to charge at all.
+  autoRenew            Boolean   @default(false)
+  /// Stored credential the renewal will charge. Null means no reusable
+  /// credential exists (e.g. the term was bought on a BNPL rail, which cannot
+  /// do merchant-initiated transactions) — renewal then falls back to an
+  /// invitation instead of failing silently.
+  renewalPaymentMethodId String?
+  /// When the member was last told a renewal is coming. A renewal must never
+  /// run without this being set and in the past.
+  autoRenewNoticeAt    DateTime?
   vacationMode   Boolean            @default(false)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan    Plan?               @relation(fields: [planId], references: [id])
-  address Address?            @relation(fields: [addressId], references: [id])
-  items   SubscriptionItem[]
-  cats    SubscriptionCat[]
-  events  SubscriptionEvent[]
-  orders  Order[]
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                Plan?               @relation(fields: [planId], references: [id])
+  address             Address?            @relation(fields: [addressId], references: [id])
+  renewalPaymentMethod PaymentMethod?     @relation(fields: [renewalPaymentMethodId], references: [id], onDelete: SetNull)
+  items               SubscriptionItem[]
+  cats                SubscriptionCat[]
+  events              SubscriptionEvent[]
+  orders              Order[]
 
   @@index([userId])
   @@index([status])
   @@index([nextBillingAt])
+  /// Drives the lapse pass and the auto-renew pass; status alone is too
+  /// low-selectivity to serve either.
+  @@index([status, endsAt])
   @@map("subscriptions")
 }
 

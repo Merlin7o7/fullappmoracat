@@ -231,6 +231,20 @@ ok(Math.abs(sub.taxTotal) < 0.01, "membership 0% VAT (not VAT-registered)");
 const billAt = new Date(sub.nextBillingAt);
 const expectBill = new Date(); expectBill.setMonth(expectBill.getMonth() + term);
 ok(Math.abs(billAt - expectBill) < 36e5 * 25, `renewal at term end (${term} months, R021/R025)`);
+
+// ── auto-renew: opt-out by default, one tap off, never chargeable without a
+// credential that can actually be charged off-session.
+const subId = sub.subscriptionId;
+ok((await call(`/subscriptions/${subId}`, "GET", undefined, C)).json?.autoRenew !== true,
+  "auto-renew is OFF by default (no member is retroactively enrolled)");
+const noPm = await call(`/subscriptions/${subId}/auto-renew`, "POST", { enabled: true }, C);
+ok(noPm.status === 400, "enabling auto-renew without a payment method is rejected");
+const offAgain = await call(`/subscriptions/${subId}/auto-renew`, "POST", { enabled: false }, C);
+ok(offAgain.status === 201 && offAgain.json?.autoRenew === false && !!offAgain.json?.notice?.ar,
+  "auto-renew can be turned off in one call, with honest bilingual copy");
+// Ownership: another member must not be able to touch this subscription.
+ok((await call(`/subscriptions/${subId}/auto-renew`, "POST", { enabled: false }, victim.accessToken)).status === 404,
+  "auto-renew is scoped to the owner");
 const coveredCat = (await call(`/cats/${cat.id}`, "GET", undefined, C)).json;
 ok(coveredCat.membershipStatus === "ACTIVE", "cat membership flips ACTIVE on capture");
 // One cat, one membership — the double-charge is prevented, never refunded (R115).

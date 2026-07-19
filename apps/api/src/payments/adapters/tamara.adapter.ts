@@ -20,6 +20,8 @@ import type {
 @Injectable()
 export class TamaraAdapter implements IPaymentProvider {
   readonly name = "tamara";
+  /** BNPL underwrites each order individually — no off-session charging. */
+  readonly supportsRecurring = false;
   private readonly logger = new Logger("TamaraAdapter");
   private readonly baseUrl = process.env.TAMARA_BASE_URL ?? "https://api-sandbox.tamara.co";
 

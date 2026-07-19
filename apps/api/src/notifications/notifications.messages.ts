@@ -24,6 +24,9 @@ export type NotificationType =
   // lifecycle engine — the machinery that keeps the "we never charge silently"
   // promise and turns stored dates into acts of care (R025/R049/R064).
   | "term_ending"
+  | "renewal_upcoming"
+  | "membership_renewed"
+  | "renewal_payment_failed"
   | "membership_lapsed"
   | "vaccination_due"
   | "cat_birthday"
@@ -172,6 +175,39 @@ export function buildNotificationText(
         en: {
           title: "Order confirmed",
           body: `${p(params, "orderNumber")} — ${p(params, "total")} ${p(params, "currency")}. We're preparing your box!`,
+        },
+      };
+    case "renewal_upcoming":
+      return {
+        ar: {
+          title: `تجديد عضوية ${p(params, "name")} قريب`,
+          body: `عضوية ${p(params, "name")} تنتهي في ${p(params, "endsAt")}، ونجدّدها تلقائياً بمبلغ ${p(params, "total")} ${p(params, "currency")}. ما تبي التجديد؟ أوقفه بضغطة وحدة قبل التاريخ.`,
+        },
+        en: {
+          title: `${p(params, "name")}'s membership renews soon`,
+          body: `${p(params, "name")}'s membership ends ${p(params, "endsAt")}, and we'll renew it automatically for ${p(params, "total")} ${p(params, "currency")}. Don't want it? Stop it in one tap before then.`,
+        },
+      };
+    case "membership_renewed":
+      return {
+        ar: {
+          title: `تجدّدت عضوية ${p(params, "name")}`,
+          body: `جدّدنا عضوية ${p(params, "name")} — ${p(params, "total")} ${p(params, "currency")}. مدفوعة حتى ${p(params, "endsAt")}، وتقدر توقفها في أي وقت.`,
+        },
+        en: {
+          title: `${p(params, "name")}'s membership renewed`,
+          body: `We renewed ${p(params, "name")}'s membership — ${p(params, "total")} ${p(params, "currency")}. Paid through ${p(params, "endsAt")}, and you can stop it any time.`,
+        },
+      };
+    case "renewal_payment_failed":
+      return {
+        ar: {
+          title: "ما نجح تجديد العضوية",
+          body: `ما قدرنا نكمل تجديد عضوية ${p(params, "name")} على البطاقة المنتهية بـ ${p(params, "last4")}. عضوية ${p(params, "name")} وسجلاته ما زالت معك — حدّث طريقة الدفع ونكمل.`,
+        },
+        en: {
+          title: "We couldn't renew the membership",
+          body: `The renewal for ${p(params, "name")} didn't go through on the card ending ${p(params, "last4")}. ${p(params, "name")}'s records are still yours — update your payment method and we'll finish it.`,
         },
       };
     case "order_refunded":
