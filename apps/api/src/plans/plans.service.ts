@@ -28,11 +28,30 @@ export class PlansService {
       // cogs is an internal margin figure — never serialised to the public plans
       // endpoint. Exposing it lets anyone compute our per-box margin (R006).
       currency: p.currency,
+      // Honest, computed saving vs buying the same items à-la-carte from our own
+      // store. retailValue is derived at seed time from real shelf prices and
+      // gated by the box-economics invariants, so this can never become a
+      // marketing claim the catalogue does not support (R006/R041).
+      retailValue: p.retailValue == null ? null : Number(p.retailValue),
+      savings:
+        p.retailValue == null
+          ? null
+          : Math.round((Number(p.retailValue) - Number(p.basePrice)) * 100) / 100,
+      savingsPct:
+        p.retailValue == null || Number(p.retailValue) <= 0
+          ? null
+          : Math.round(
+              ((Number(p.retailValue) - Number(p.basePrice)) / Number(p.retailValue)) * 100
+            ),
       contents: p.contents.map((c) => ({
         id: c.id,
         label: c.label,
+        // Arabic label/unit so the Arabic checkout stops rendering its box
+        // contents in English on the screen where the member commits money.
+        labelAr: c.labelAr,
         quantity: c.quantity,
         unit: c.unit,
+        unitAr: c.unitAr,
         // Whether this line can be customised (brand + flavor) in the box builder.
         selectable: !!c.selectableType,
       })),

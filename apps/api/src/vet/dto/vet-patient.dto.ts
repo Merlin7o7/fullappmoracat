@@ -7,7 +7,7 @@
  * `VetPatientsService.search` for the enforcement.
  */
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { Transform } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import {
   ArrayMaxSize,
   IsArray,
@@ -125,4 +125,34 @@ export class PrescriptionListQueryDto extends VetPageQueryDto {
   @IsOptional()
   @IsIn(PRESCRIPTION_LIST_SCOPES)
   scope?: PrescriptionListScope;
+}
+
+/**
+ * Query for the clinic's own patient list.
+ *
+ * Explicitly validated rather than parsed with bare `Number()`: unvalidated
+ * pagination elsewhere in the codebase produced `skip: NaN` and an unhandled
+ * 500 on a public route, which is trivially weaponised into error-quota
+ * exhaustion.
+ */
+export class ListOwnPatientsQueryDto {
+  @ApiPropertyOptional({ description: "Filter by name, Cat ID or microchip." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  q?: string;
+
+  @ApiPropertyOptional({ description: "Opaque cursor from the previous page." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  cursor?: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 25 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
 }

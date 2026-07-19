@@ -633,15 +633,244 @@ export class SubscriptionsService {
    * The Cat ID itself never changes — only the membership status gates.
    */
   private async syncCatsMembership(catIds: string[]) {
-    for (const catId of catIds) {
-      const activeCount = await this.prisma.subscriptionCat.count({
-        where: { catId, subscription: { status: "ACTIVE" } },
+    if (!catIds.length) return;
+    // One grouped read + two bulk writes, rather than a count + update PER CAT.
+    // The old loop also queried SubscriptionCat by catId, which the composite
+    // primary key (subscriptionId, catId) cannot serve — so every iteration was
+    // a sequential scan of the join table.
+    const covered = await this.prisma.subscriptionCat.groupBy({
+      by: ["catId"],
+      where: { catId: { in: catIds }, subscription: { status: "ACTIVE" } },
+      _count: { catId: true },
+    });
+    const active = new Set(covered.filter((c) => c._count.catId > 0).map((c) => c.catId));
+    const inactive = catIds.filter((id) => !active.has(id));
+
+    await this.prisma.$transaction([
+      ...(active.size
+        ? [
+            this.prisma.cat.updateMany({
+              where: { id: { in: [...active] }, status: "ACTIVE" },
+              data: { membershipStatus: "ACTIVE" },
+            }),
+          ]
+        : []),
+      ...(inactive.length
+        ? [
+            this.prisma.cat.updateMany({
+              where: { id: { in: inactive }, status: "ACTIVE" },
+              data: { membershipStatus: "INACTIVE" },
+            }),
+          ]
+        : []),
+    ]);
+  }
+
+  /**
+   * Turn auto-renewal on or off for a membership the caller owns.
+   *
+   * Enabling is deliberately strict. "Auto-renew is on" with nothing chargeable
+   * behind it is a promise the engine cannot keep, and the member would only
+   * discover the gap when their membership silently lapsed — so we verify the
+   * credential exists, belongs to them, and sits on a rail that can actually be
+   * charged off-session (BNPL cannot) before accepting.
+   */
+  async setAutoRenew(userId: string, id: string, enabled: boolean, paymentMethodId?: string) {
+    const sub = await this.prisma.subscription.findFirst({
+      where: { id, userId },
+      select: { id: true, status: true },
+    });
+    if (!sub) throw new NotFoundException("Subscription not found");
+
+    if (!enabled) {
+      const updated = await this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: { autoRenew: false, renewalPaymentMethodId: null, autoRenewNoticeAt: null },
+        select: { id: true, autoRenew: true },
       });
-      await this.prisma.cat.updateMany({
-        where: { id: catId, status: "ACTIVE" },
-        data: { membershipStatus: activeCount > 0 ? "ACTIVE" : "INACTIVE" },
+      return {
+        ...updated,
+        notice: {
+          ar: "أوقفنا التجديد التلقائي. مدتك المدفوعة تكمل كما هي، وما راح نخصم منك شيء بعدها.",
+          en: "Auto-renewal is off. Your paid term still runs to the end, and we won't charge you again after it.",
+        },
+      };
+    }
+
+    if (!paymentMethodId) {
+      throw new BadRequestException({
+        code: "PAYMENT_METHOD_REQUIRED",
+        message: "Choose a saved payment method to renew with.",
       });
     }
+    const pm = await this.prisma.paymentMethod.findFirst({
+      where: { id: paymentMethodId, userId },
+      select: { id: true, provider: true, token: true },
+    });
+    if (!pm) throw new BadRequestException("That payment method does not belong to you");
+
+    const adapter = this.payments.resolve(pm.provider as PaymentProviderKey);
+    if (!adapter.supportsRecurring || !adapter.chargeStored || !pm.token) {
+      throw new BadRequestException({
+        code: "RAIL_NOT_RENEWABLE",
+        message:
+          "That payment method can't be charged automatically. Buy-now-pay-later approves each order individually — pick a card to renew with.",
+      });
+    }
+
+    const updated = await this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: { autoRenew: true, renewalPaymentMethodId: pm.id },
+      select: { id: true, autoRenew: true, endsAt: true },
+    });
+    return {
+      ...updated,
+      notice: {
+        ar: "فعّلنا التجديد التلقائي. نذكّرك قبل التجديد بسبعة أيام، وتقدر توقفه بضغطة وحدة.",
+        en: "Auto-renewal is on. We'll remind you seven days before it renews, and you can stop it in one tap.",
+      },
+    };
+  }
+
+  /**
+   * Charge a stored credential to extend a membership by another term.
+   *
+   * Mirrors the intent-first ordering used by checkout: the renewal order and
+   * its payment exist BEFORE the provider is called, so a crash mid-charge
+   * leaves something to reconcile rather than money with no record.
+   *
+   * Returns rather than throws on a declined card: a decline is an expected
+   * business outcome that feeds dunning, not an exception.
+   */
+  async renewWithStoredMethod(input: {
+    subscriptionId: string;
+    amount: number;
+    token: string;
+    provider: PaymentProviderKey;
+  }): Promise<{ ok: true; endsAt: Date } | { ok: false; reason: string }> {
+    const sub = await this.prisma.subscription.findUnique({
+      where: { id: input.subscriptionId },
+      select: {
+        id: true, userId: true, currency: true, termMonths: true, endsAt: true,
+        addressId: true, planId: true, cats: { select: { catId: true } },
+      },
+    });
+    if (!sub) return { ok: false, reason: "Subscription not found" };
+
+    const adapter = this.payments.resolve(input.provider);
+    if (!adapter.chargeStored) return { ok: false, reason: "Provider cannot charge off-session" };
+
+    const { net, tax } = splitVat(input.amount);
+    const orderNumber = makeNumber("MRQ");
+
+    const order = await this.prisma.order.create({
+      data: {
+        orderNumber,
+        userId: sub.userId,
+        subscriptionId: sub.id,
+        addressId: sub.addressId,
+        source: "SUBSCRIPTION",
+        status: "PENDING",
+        subtotal: new Prisma.Decimal(input.amount),
+        discountTotal: new Prisma.Decimal(0),
+        shippingTotal: new Prisma.Decimal(0),
+        taxTotal: new Prisma.Decimal(tax),
+        grandTotal: new Prisma.Decimal(input.amount),
+        currency: sub.currency,
+        payments: {
+          create: {
+            provider: input.provider,
+            status: "PENDING",
+            amount: new Prisma.Decimal(input.amount),
+            currency: sub.currency,
+          },
+        },
+        invoice: {
+          create: {
+            invoiceNumber: makeNumber("INV"),
+            userId: sub.userId,
+            status: "ISSUED",
+            subtotal: new Prisma.Decimal(net),
+            taxTotal: new Prisma.Decimal(tax),
+            grandTotal: new Prisma.Decimal(input.amount),
+          },
+        },
+      },
+      select: { id: true, orderNumber: true },
+    });
+
+    const charge = await adapter.chargeStored({
+      amount: input.amount,
+      currency: sub.currency,
+      provider: input.provider,
+      reference: order.orderNumber,
+      description: `Moracat membership renewal ${order.orderNumber}`,
+      token: input.token,
+    });
+
+    if (!charge.success || charge.status !== "CAPTURED") {
+      await this.prisma.$transaction([
+        this.prisma.payment.updateMany({
+          where: { orderId: order.id },
+          data: { status: "FAILED", providerRef: charge.providerRef, failureReason: charge.failureReason },
+        }),
+        this.prisma.order.update({ where: { id: order.id }, data: { status: "FAILED" } }),
+        this.prisma.invoice.updateMany({ where: { orderId: order.id }, data: { status: "VOID" } }),
+      ]);
+      return { ok: false, reason: charge.failureReason ?? "Card declined" };
+    }
+
+    // Extend from the CURRENT term end, not from now — a renewal processed a few
+    // hours late must not silently shorten the member's paid time.
+    const base = sub.endsAt && sub.endsAt > new Date() ? sub.endsAt : new Date();
+    const endsAt = addMonths(base, sub.termMonths ?? 1);
+
+    await this.prisma.$transaction([
+      this.prisma.payment.updateMany({
+        where: { orderId: order.id },
+        data: { status: "CAPTURED", providerRef: charge.providerRef, capturedAt: new Date() },
+      }),
+      this.prisma.order.update({ where: { id: order.id }, data: { status: "CONFIRMED" } }),
+      this.prisma.invoice.updateMany({
+        where: { orderId: order.id },
+        data: { status: "PAID", paidAt: new Date() },
+      }),
+      this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: { endsAt, nextBillingAt: endsAt, autoRenewNoticeAt: null },
+      }),
+      this.prisma.subscriptionEvent.create({
+        data: { subscriptionId: sub.id, type: "renewed", metadata: { orderNumber: order.orderNumber, amount: input.amount } },
+      }),
+    ]);
+
+    await this.syncCatsMembership(sub.cats.map((c) => c.catId));
+    return { ok: true, endsAt };
+  }
+
+  /**
+   * Finish an order whose money the provider took but whose settlement never
+   * persisted (process died between capture and commit). Called by the
+   * reconciliation sweep; safe to re-run.
+   */
+  async completeCapturedOrder(paymentId: string, providerRef: string): Promise<void> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: { id: true, status: true, orderId: true, order: { select: { subscriptionId: true } } },
+    });
+    if (!payment || payment.status === "CAPTURED") return;
+
+    await this.prisma.$transaction([
+      this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: "CAPTURED", providerRef, capturedAt: new Date() },
+      }),
+      this.prisma.order.update({ where: { id: payment.orderId }, data: { status: "CONFIRMED" } }),
+      this.prisma.invoice.updateMany({
+        where: { orderId: payment.orderId },
+        data: { status: "PAID", paidAt: new Date() },
+      }),
+    ]);
   }
 
   /**
@@ -829,7 +1058,10 @@ function monthsBetween(a: Date, b: Date): number {
 function makeNumber(prefix: string): string {
   const d = new Date();
   const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  return `${prefix}-${date}-${randomBytes(3).toString("hex").toUpperCase()}`;
+  // 6 bytes, not 3: the old 16.7M-per-day space made collisions likely
+  // at a few thousand orders/day, and the unique-constraint throw landed
+  // after the charge had already succeeded.
+  return `${prefix}-${date}-${randomBytes(6).toString("hex").toUpperCase()}`;
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;

@@ -156,3 +156,25 @@ export class ActivateSubscriptionDto {
   @Type(() => BoxSelectionDto)
   selections?: BoxSelectionDto[];
 }
+
+/**
+ * Turn auto-renewal on or off.
+ *
+ * `paymentMethodId` pins the exact stored credential a renewal may charge.
+ * Required when enabling, because "auto-renew is on" with nothing to charge is
+ * a promise the engine cannot keep — better to reject it than to discover the
+ * gap at term end.
+ */
+export class SetAutoRenewDto {
+  @ApiProperty({ description: "Whether the membership should renew itself at term end." })
+  @IsBoolean()
+  enabled!: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      "Stored payment method to charge at renewal. Required when enabling; must belong to the caller and sit on a rail that supports off-session charging (BNPL cannot).",
+  })
+  @IsOptional()
+  @IsString()
+  paymentMethodId?: string;
+}

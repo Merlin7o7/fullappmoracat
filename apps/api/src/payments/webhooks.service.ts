@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { Prisma } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { MailService } from "../mail/mail.service";
@@ -55,11 +56,25 @@ export class WebhooksService {
 
     const data = (body.data ?? body) as Record<string, unknown>;
     const type = String(body.type ?? "");
+    // Explicit mapping. Anything unrecognised is a no-op, never a failure.
     const status: WebhookEvent["status"] =
-      type === "payment_paid" ? "CAPTURED" : type === "payment_refunded" ? "REFUNDED" : "FAILED";
+      type === "payment_paid"
+        ? "CAPTURED"
+        : type === "payment_refunded"
+          ? "REFUNDED"
+          : type === "payment_failed" || type === "payment_voided"
+            ? "FAILED"
+            : "IGNORED";
     const providerRef = String(data.id ?? "");
     if (!providerRef) throw new BadRequestException("Missing payment id");
-    return { providerRef, status, raw: body };
+    return {
+      providerRef,
+      status,
+      provider: "moyasar",
+      eventType: type,
+      eventId: String(body.id ?? data.id ?? providerRef),
+      raw: body,
+    };
   }
 
   parseTabby(headers: Record<string, string | undefined>, body: Record<string, unknown>): WebhookEvent {
@@ -71,27 +86,61 @@ export class WebhooksService {
     const providerRef = String(body.id ?? "");
     const st = String(body.status ?? "").toLowerCase();
     const status: WebhookEvent["status"] =
-      st === "authorized" || st === "closed" ? "CAPTURED" : st === "rejected" || st === "expired" ? "FAILED" : "FAILED";
+      st === "authorized" || st === "closed"
+        ? "CAPTURED"
+        : st === "rejected" || st === "expired"
+          ? "FAILED"
+          : st === "refunded"
+            ? "REFUNDED"
+            : "IGNORED"; // e.g. "created", "new" — informational only
     if (!providerRef) throw new BadRequestException("Missing payment id");
-    return { providerRef, status, raw: body };
+    return {
+      providerRef,
+      status,
+      provider: "tabby",
+      eventType: st,
+      eventId: `${providerRef}:${st}`,
+      raw: body,
+    };
   }
 
   parseTamara(token: string, body: Record<string, unknown>): WebhookEvent {
     const secret = process.env.TAMARA_NOTIFICATION_TOKEN;
     if (!secret) throw new UnauthorizedException("Tamara notification token not configured");
     // `token` is the JWT Tamara sends as ?tamaraToken=… / Authorization: Bearer.
-    if (!token || !verifyHs256Jwt(token, secret)) throw new UnauthorizedException("Invalid tamaraToken");
+    if (!token) throw new UnauthorizedException("Invalid tamaraToken");
+    const claims = verifyHs256Jwt(token, secret);
+    if (!claims) throw new UnauthorizedException("Invalid tamaraToken");
 
     const providerRef = String(body.order_id ?? "");
+    if (!providerRef) throw new BadRequestException("Missing order id");
+
+    // Bind the token to THIS payload. Without it, one valid token settles any
+    // order the attacker names.
+    const claimedOrder = String(claims.order_id ?? claims.orderId ?? claims.sub ?? "");
+    if (claimedOrder && claimedOrder !== providerRef) {
+      throw new UnauthorizedException("tamaraToken does not match this order");
+    }
+
     const eventType = String(body.event_type ?? "").toLowerCase();
     const status: WebhookEvent["status"] =
       eventType === "order_approved" || eventType === "order_authorised"
         ? "CAPTURED"
         : eventType === "order_refunded"
           ? "REFUNDED"
-          : "FAILED";
-    if (!providerRef) throw new BadRequestException("Missing order id");
-    return { providerRef, status, raw: body };
+          : eventType === "order_declined" || eventType === "order_expired" || eventType === "order_canceled"
+            ? "FAILED"
+            : "IGNORED";
+    return {
+      providerRef,
+      status,
+      provider: "tamara",
+      eventType,
+      // Tamara re-sends both order_approved and order_authorised for one order;
+      // scoping the replay key by event type keeps each actionable once.
+      eventId: `${providerRef}:${eventType}`,
+      raw: body,
+    };
   }
 
   /** Dev-only settlement hook for the mock provider (PAYMENTS_MODE=mock). */
@@ -104,14 +153,56 @@ export class WebhooksService {
       throw new UnauthorizedException("Bad webhook secret");
     }
     const providerRef = String(body.providerRef ?? "");
-    const status = body.status === "FAILED" ? "FAILED" : ("CAPTURED" as const);
+    // Explicit, like the real adapters: an unrecognised status is a no-op, not
+    // an implicit capture. Omitting `status` still means CAPTURED so existing
+    // callers that just settle an order keep working.
+    const raw = body.status === undefined ? "CAPTURED" : String(body.status);
+    const status: WebhookEvent["status"] =
+      raw === "CAPTURED" ? "CAPTURED" : raw === "FAILED" ? "FAILED" : raw === "REFUNDED" ? "REFUNDED" : "IGNORED";
     if (!providerRef) throw new BadRequestException("Missing providerRef");
-    return { providerRef, status, raw: body };
+    return {
+      providerRef,
+      status,
+      provider: "mock",
+      eventType: String(body.status ?? "CAPTURED"),
+      // Mock deliveries are re-fired by tests on purpose; keep them replayable
+      // by including a nonce when one is supplied.
+      eventId: body.eventId ? String(body.eventId) : undefined,
+      raw: body,
+    };
   }
 
   // ── Settlement (idempotent) ───────────────────────────────────────────────
 
   async settle(event: WebhookEvent) {
+    // A non-actionable lifecycle event (authorised, created, updated…). Ack it
+    // so the PSP stops retrying, and change nothing.
+    if (event.status === "IGNORED") {
+      this.logger.log(
+        `ignoring non-actionable ${event.provider ?? "?"} event ${event.eventType ?? "?"} for ${event.providerRef}`
+      );
+      return { orderNumber: null, status: "ignored" as const };
+    }
+
+    // Replay suppression. Signature verification proves authenticity, not
+    // freshness: a captured delivery can be replayed verbatim. Claiming the
+    // event id first makes a repeat a no-op rather than a second settlement.
+    if (event.eventId && event.provider) {
+      try {
+        await this.prisma.processedWebhookEvent.create({
+          data: {
+            provider: event.provider,
+            eventId: event.eventId,
+            eventType: event.eventType ?? null,
+            payloadRef: event.providerRef,
+          },
+        });
+      } catch {
+        this.logger.warn(`replayed ${event.provider} event ${event.eventId} — ignoring`);
+        return { orderNumber: null, status: "replayed" as const };
+      }
+    }
+
     const payment = await this.prisma.payment.findFirst({
       where: { providerRef: event.providerRef },
       include: {
@@ -234,8 +325,62 @@ export class WebhooksService {
       return { orderNumber: payment.order.orderNumber, status: "failed" };
     }
 
-    // REFUNDED — reconcile if the PSP initiated it.
-    await this.prisma.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } });
+    // ── REFUNDED ────────────────────────────────────────────────────────────
+    // Previously an unguarded status write. Two failures came out of that:
+    //
+    //   * A PSP-initiated refund left the order CONFIRMED, the invoice PAID and
+    //     the subscription ACTIVE, and wrote no Refund row — so the
+    //     `refundedSoFar` aggregate read 0 and the books said "paid" while the
+    //     money was gone.
+    //   * An out-of-order void arriving while the payment was still PENDING
+    //     flipped it to REFUNDED, and the genuine capture that followed then
+    //     failed the CAS claim, wedging the order in PENDING forever.
+    //
+    // Refunding is only meaningful for money actually collected.
+    if (payment.status !== "CAPTURED") {
+      this.logger.warn(
+        `refund event for ${payment.order.orderNumber} while payment is ${payment.status} — ignoring`
+      );
+      return { orderNumber: payment.order.orderNumber, status: "ignored" };
+    }
+
+    const amount = Number(payment.amount);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } });
+      // Mirrors the terminal states the admin refund path already writes
+      // (refunds.service.ts) so both routes leave the books in one shape.
+      await tx.refund.create({
+        data: {
+          paymentId: payment.id,
+          amount: new Prisma.Decimal(amount),
+          reason: "Refunded by payment provider",
+          providerRef: event.providerRef,
+        },
+      });
+      await tx.order.update({ where: { id: payment.orderId }, data: { status: "RETURNED" } });
+      await tx.invoice.updateMany({
+        where: { orderId: payment.orderId },
+        data: { status: "REFUNDED" },
+      });
+      // A refunded first charge means the membership never really began.
+      if (payment.order.subscriptionId) {
+        await tx.subscription.updateMany({
+          where: { id: payment.order.subscriptionId, status: { in: ["DRAFT", "ACTIVE"] } },
+          data: { status: "CANCELLED", cancelledAt: new Date() },
+        });
+      }
+    });
+
+    await this.notifications
+      .notify(payment.order.userId, {
+        category: "ORDER",
+        type: "order_refunded",
+        params: { orderNumber: payment.order.orderNumber, total: amount, currency: payment.currency },
+        data: { orderNumber: payment.order.orderNumber },
+      })
+      .catch((e) => this.logger.error(`refund notification failed: ${e}`));
+
+    this.logger.log(`refunded ${payment.order.orderNumber} via webhook (${amount})`);
     return { orderNumber: payment.order.orderNumber, status: "refunded" };
   }
 
@@ -396,13 +541,37 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
-/** Minimal HS256 JWT verification (header.payload.signature). */
-function verifyHs256Jwt(token: string, secret: string): boolean {
+/**
+ * HS256 JWT verification that also validates the claims.
+ *
+ * Signature-only verification was replayable: a single legitimately-obtained
+ * token (an attacker's own order is enough) stayed valid forever and could be
+ * presented alongside an attacker-chosen body to force-settle ANY pending order,
+ * because nothing tied the token to the payload it arrived with.
+ *
+ * Returns the decoded claims on success so the caller can bind them to the body.
+ */
+function verifyHs256Jwt(token: string, secret: string): Record<string, unknown> | null {
   const parts = token.split(".");
-  if (parts.length !== 3) return false;
+  if (parts.length !== 3) return null;
   const [header, payload, signature] = parts as [string, string, string];
   const expected = createHmac("sha256", secret)
     .update(`${header}.${payload}`)
     .digest("base64url");
-  return safeEqual(signature, expected);
+  if (!safeEqual(signature, expected)) return null;
+
+  let claims: Record<string, unknown>;
+  try {
+    claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const skew = 300; // tolerate modest clock drift between us and the PSP
+  if (typeof claims.exp === "number" && claims.exp + skew < now) return null;
+  if (typeof claims.nbf === "number" && claims.nbf - skew > now) return null;
+  if (typeof claims.iat === "number" && claims.iat - skew > now) return null;
+
+  return claims;
 }

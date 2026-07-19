@@ -339,9 +339,10 @@ function VetShell({ children }: { children: React.ReactNode }) {
             className="flex items-center justify-center gap-2 border-b border-border bg-muted px-4 py-2 text-center text-xs font-medium text-muted-foreground"
           >
             <WifiOff className="size-3.5 shrink-0" aria-hidden />
+            {/* Offline verification does not exist yet — see scan/page.tsx. */}
             {isAr
-              ? "لا يوجد اتصال — البطاقات الموقّعة ما زالت تُقرأ، وبقية العمل سيُزامَن."
-              : "Offline — signed cards still verify; everything else will sync."}
+              ? "لا يوجد اتصال — التحقق يحتاج الشبكة، ونعيد المحاولة تلقائياً عند عودته."
+              : "Offline — verification needs the network; we'll retry automatically."}
           </div>
         )}
 

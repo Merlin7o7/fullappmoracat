@@ -52,6 +52,7 @@ export type VetErrorCode =
   | "VET_SEARCH_SCOPED"
   | "VET_SEARCH_TOO_SHORT"
   | "VET_NO_CONSENT"
+  | "VET_NO_TREATMENT_RELATIONSHIP"
   | "VET_CONSENT_EXISTS"
   | "VET_NOT_OWNER"
   | "VET_VISIT_NOT_FOUND"
@@ -177,6 +178,15 @@ export interface ResolvedAccess {
 }
 
 const TIER_RANK: Record<EffectiveTier, number> = { T0: 0, T1: 1, T2: 2 };
+
+/**
+ * How long after a visit closes a clinic may still author against that patient.
+ * Lab results, histology and discharge addenda routinely arrive days after the
+ * cat has gone home; forcing a new visit for those would corrupt the encounter
+ * record. Amendments to existing entries are governed separately by
+ * `requireOwnEntry` and are not time-boxed by this.
+ */
+const AMENDMENT_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 // ── Bilingual furniture ───────────────────────────────────────────────────
 
@@ -390,6 +400,41 @@ export class VetPatientsService {
   }
 
   /**
+   * Authoring gate for clinical writes.
+   *
+   * Consent governs how much *history* a clinic may read. It does not license
+   * authoring: a clinic may only write facts about a patient it is actually
+   * treating. Without this, any staff member at any org could author a
+   * diagnosis, weight or prescription onto any cat in the network — rows that
+   * then surface in every other clinic's T0 alerts and in the emergency payload.
+   *
+   * A treatment relationship is an open visit at this org, or one closed inside
+   * the amendment window (lab results and discharge notes legitimately land
+   * after the cat has gone home). Emergency break-glass deliberately does NOT
+   * qualify — it is a read-only escape hatch.
+   */
+  async requireTreatmentRelationship(catId: string, orgId: string): Promise<void> {
+    const since = new Date(Date.now() - AMENDMENT_WINDOW_MS);
+    const visit = await this.prisma.visit.findFirst({
+      where: {
+        catId,
+        orgId,
+        OR: [{ state: "OPEN" }, { closedAt: { gte: since } }],
+      },
+      select: { id: true },
+    });
+    if (visit) return;
+
+    throw vetForbidden("VET_NO_TREATMENT_RELATIONSHIP", "Open a visit before recording care", {
+      catId,
+      hint: {
+        ar: "لتسجيل رعاية لهذه القطة، افتحوا زيارة أولاً. السجل الطبي يُكتب من واقع زيارة فعلية.",
+        en: "To record care for this cat, open a visit first. Clinical records are written from an actual encounter.",
+      },
+    });
+  }
+
+  /**
    * Write the owner-visible ledger row. Awaited, not fire-and-forget: a read the
    * owner cannot see is a read that did not respect them. Failures are logged
    * loudly but never break clinical care mid-consult.
@@ -399,7 +444,7 @@ export class VetPatientsService {
     orgId: string;
     staffId?: string | null;
     tier: EffectiveTier;
-    surface: "profile" | "timeline" | "entry" | "emergency" | "export" | "search" | "attachment";
+    surface: "profile" | "timeline" | "entry" | "emergency" | "export" | "search" | "attachment" | "write";
     emergency?: boolean;
     ipAddress?: string | null;
   }): Promise<void> {
@@ -963,6 +1008,80 @@ export class VetPatientsService {
           };
         })
         .sort((a, b) => (b.lastEntryAt?.getTime() ?? 0) - (a.lastEntryAt?.getTime() ?? 0)),
+    };
+  }
+
+  // ── 1b · The clinic's own patients ──────────────────────────────────────
+
+  /**
+   * Cats this clinic has actually treated, newest visit first.
+   *
+   * The portal has always linked to a patients list; the endpoint did not
+   * exist, so the nav item 404'd. Scoped to cats with a visit at THIS org —
+   * a clinic's patient list is its treatment history, never the whole network,
+   * which is also what keeps the privacy boundary intact.
+   */
+  async listOwnPatients(
+    actor: VetActor,
+    query: { q?: string; cursor?: string; limit?: number }
+  ) {
+    const limit = Math.min(Math.max(query.limit ?? 25, 1), 50);
+    const term = query.q?.trim();
+
+    const where: Prisma.CatWhereInput = {
+      deletedAt: null,
+      visits: { some: { orgId: actor.orgId } },
+      ...(term
+        ? {
+            OR: [
+              { nameNormalized: { contains: normalizeName(term) } },
+              { catIdNumber: { contains: term.toUpperCase() } },
+              { microchipNo: { contains: term } },
+            ],
+          }
+        : {}),
+    };
+
+    // take+1 is the hasMore probe; ordering is [id] so the cursor is stable
+    // while consults write new rows underneath.
+    const rows = await this.prisma.cat.findMany({
+      where,
+      take: limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      orderBy: { id: "desc" },
+      select: {
+        id: true,
+        name: true,
+        catIdNumber: true,
+        photoUrl: true,
+        membershipStatus: true,
+        user: { select: { ownerNickname: true, firstName: true, lastName: true } },
+        visits: {
+          where: { orgId: actor.orgId },
+          orderBy: { checkedInAt: "desc" },
+          take: 1,
+          select: { checkedInAt: true, state: true },
+        },
+      },
+    });
+
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+
+    return {
+      items: page.map((c) => ({
+        catId: c.id,
+        name: c.name,
+        catIdNumber: c.catIdNumber,
+        photoUrl: c.photoUrl,
+        membershipStatus: c.membershipStatus,
+        ownerName: ownerDisplayName(c.user),
+        lastVisitAt: c.visits[0]?.checkedInAt ?? null,
+        hasOpenVisit: c.visits[0]?.state === "OPEN",
+        isOwnPatient: true,
+      })),
+      nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null,
+      hasMore,
     };
   }
 

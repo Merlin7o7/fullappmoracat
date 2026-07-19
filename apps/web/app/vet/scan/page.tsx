@@ -281,9 +281,16 @@ export default function VetScanPage() {
           role="status"
           className="rounded-xl border border-border bg-muted px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
         >
+          {/*
+            Honest copy. This previously promised that "signed cards still
+            verify" offline — they do not: OfflinePassKey is referenced by no
+            application code, there is no Ed25519 verification anywhere, and the
+            QR carries an opaque token with nothing to check locally. Staff who
+            believed it would tell a waiting member their card was bad.
+          */}
           {isAr
-            ? "لا يوجد اتصال — البطاقات الموقّعة ما زالت تُقرأ، وأي تحقق يحتاج الشبكة سيُستكمل عند عودتها. قلنا لك قبل أن تمسح، لا بعد."
-            : "You're offline — signed cards still verify, and anything needing the network completes when it returns. We're telling you before you scan, not after."}
+            ? "لا يوجد اتصال — التحقق من الهوية يحتاج الشبكة، فما نقدر نتأكد من العضوية الآن. نعيد المحاولة تلقائياً أول ما يرجع الاتصال. قلنا لك قبل ما تمسح، لا بعد."
+            : "You're offline — verifying a Cat ID needs the network, so we can't confirm membership right now. We'll retry automatically the moment you're back. We're telling you before you scan, not after."}
         </p>
       )}
 

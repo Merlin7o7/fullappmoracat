@@ -16,6 +16,8 @@ import type {
 @Injectable()
 export class MockPaymentProvider implements IPaymentProvider {
   readonly name = "mock";
+  /** So the renewal engine is exercisable end-to-end in dev and e2e. */
+  readonly supportsRecurring = true;
   private readonly logger = new Logger("MockPayments");
 
   async charge(req: ChargeRequest): Promise<ChargeResult> {
@@ -42,6 +44,25 @@ export class MockPaymentProvider implements IPaymentProvider {
         redirectUrl: `https://checkout.mock.moraqat.sa/${ref}`,
       };
     }
+    return { success: true, status: "CAPTURED", providerRef: `mock_${randomUUID()}` };
+  }
+
+  /**
+   * Off-session renewal charge. Settles synchronously like a real card rail:
+   * a renewal never redirects, because there is no shopper present.
+   * The .13 decline convention is preserved so dunning is testable.
+   */
+  async chargeStored(req: ChargeRequest & { token: string }): Promise<ChargeResult> {
+    const cents = Math.round(req.amount * 100) % 100;
+    if (cents === 13 || req.token === "tok_declined") {
+      return {
+        success: false,
+        status: "FAILED",
+        providerRef: `mock_${randomUUID()}`,
+        failureReason: "Card declined (mock)",
+      };
+    }
+    this.logger.log(`stored charge ${req.amount} ${req.currency} for ${req.reference}`);
     return { success: true, status: "CAPTURED", providerRef: `mock_${randomUUID()}` };
   }
 

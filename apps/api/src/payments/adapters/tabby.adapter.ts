@@ -16,6 +16,8 @@ import type {
 @Injectable()
 export class TabbyAdapter implements IPaymentProvider {
   readonly name = "tabby";
+  /** BNPL underwrites each order individually — no off-session charging. */
+  readonly supportsRecurring = false;
   private readonly logger = new Logger("TabbyAdapter");
   private readonly baseUrl = process.env.TABBY_BASE_URL ?? "https://api.tabby.ai/api/v2";
 

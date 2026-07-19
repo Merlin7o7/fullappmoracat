@@ -99,7 +99,7 @@ export default function RecordsPanel({
     );
   }
 
-  const entries = (timeline.data?.entries ?? []).filter((e) => e.status !== "RETRACTED");
+  const entries = (timeline.data?.items ?? []).filter((e) => e.status !== "RETRACTED");
   const procedures = entries.filter((e) => PROCEDURE_KINDS.includes(e.kind));
 
   return (
@@ -108,7 +108,7 @@ export default function RecordsPanel({
       <StandingModule alerts={alerts} />
       <PrescriptionsModule
         catId={catId}
-        data={prescriptions.data?.prescriptions}
+        data={prescriptions.data?.items}
         isLoading={prescriptions.isLoading}
         isError={prescriptions.isError}
         onRetry={() => void prescriptions.refetch()}
@@ -344,22 +344,34 @@ function StandingModule({ alerts }: { alerts: MedicalAlert[] }) {
 
 // ── prescriptions ────────────────────────────────────────────────────────
 
+// Mirrors RX_TRANSITIONS in vet-records.service.ts. The portal previously knew
+// only ACTIVE/COMPLETED/CANCELLED — three values the API never sends — so every
+// real prescription fell through every branch and rendered unlabelled.
 const STATUS_FLOW: Record<PrescriptionStatus, PrescriptionStatus[]> = {
-  ACTIVE: ["COMPLETED", "CANCELLED"],
+  ISSUED: ["COLLECTED", "COMPLETED", "CANCELLED"],
+  COLLECTED: ["REFILLED", "COMPLETED", "CANCELLED"],
+  REFILLED: ["REFILLED", "COMPLETED", "CANCELLED"],
   COMPLETED: [],
   CANCELLED: [],
+  EXPIRED: [],
 };
 
 const STATUS_LABEL: Record<PrescriptionStatus, { ar: string; en: string }> = {
-  ACTIVE: { ar: "سارية", en: "Active" },
+  ISSUED: { ar: "مصروفة", en: "Issued" },
+  COLLECTED: { ar: "استُلمت", en: "Collected" },
+  REFILLED: { ar: "أُعيد صرفها", en: "Refilled" },
   COMPLETED: { ar: "اكتملت", en: "Completed" },
   CANCELLED: { ar: "أُلغيت", en: "Cancelled" },
+  EXPIRED: { ar: "منتهية", en: "Expired" },
 };
 
 const STATUS_BADGE: Record<PrescriptionStatus, "success" | "secondary" | "outline"> = {
-  ACTIVE: "success",
+  ISSUED: "success",
+  COLLECTED: "success",
+  REFILLED: "success",
   COMPLETED: "secondary",
   CANCELLED: "outline",
+  EXPIRED: "outline",
 };
 
 function PrescriptionsModule({

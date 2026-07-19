@@ -10,6 +10,7 @@ import { IlloCat, IlloFish, IlloSprig, Sticker } from "@/components/illustration
 import { formatDate } from "@/lib/datetime";
 import { BRAND } from "@/lib/org";
 import type { BlogPost } from "@/lib/api";
+import { jsonLdProps } from "@/lib/json-ld";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
@@ -135,7 +136,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script {...jsonLdProps(jsonLd)} />
       <article className="container max-w-3xl py-12">
         <Link href="/blog">
           <Button variant="ghost" size="sm" className="mb-8">

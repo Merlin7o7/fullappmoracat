@@ -83,6 +83,12 @@ console.log("━━ wallet pass (R034) ━━");
 console.log("━━ storefront + checkout (direct capture) ━━");
 const plans = (await call("/plans")).json;
 ok(plans.length === 3 && plans.every((p) => p.nameAr), "3 official plans with Arabic names");
+// The box must be a genuine saving against our own shelf prices — it previously
+// cost 19–35% MORE than buying the same items à-la-carte.
+ok(plans.every((p) => p.retailValue > p.price), "every plan undercuts its own à-la-carte value");
+ok(plans.every((p) => p.savingsPct >= 15), `every plan saves >=15% (${plans.map((p) => p.savingsPct + "%").join(", ")})`);
+// Arabic box contents must exist, or the Arabic checkout renders English.
+ok(plans.every((p) => p.contents.every((c) => c.labelAr && c.unitAr)), "box contents carry Arabic label + unit");
 // Admin login early: the storefront test buys an admin-created product, since the
 // imported supplier catalog stays unpublished (individual store not public yet).
 const admin = (await call("/auth/login", "POST", { email: "admin@moraqat.sa", password: "Admin!2026" })).json;
@@ -91,10 +97,19 @@ ok(!!A, "admin login");
 const ss = rnd();
 const dry = (await call("/admin/products", "POST", { slug: `smoke-dry-${ss}`, sku: `SMKD-${ss.toUpperCase()}`, type: "DRY_FOOD", nameEn: "Smoke Dry", nameAr: "جاف", price: 49 }, A)).json;
 let cart = (await call("/cart", "POST")).json;
-cart = (await call(`/cart/${cart.id}/items`, "POST", { productId: dry.id, quantity: 2 })).json;
-cart = (await call(`/cart/${cart.id}/coupon`, "POST", { code: "WELCOME10" })).json;
+// Returned exactly once, at creation — later views never re-expose it.
+const guestToken = cart.guestToken;
+ok(!!guestToken, "guest cart mints a capability token");
+const CT = { "x-cart-token": guestToken };
+// A cart id is a routing identifier, not a credential: without the token an
+// attacker who guesses/obtains an id must not be able to read or mutate it.
+ok((await call(`/cart/${cart.id}`)).status === 404, "guest cart unreadable without token");
+ok((await call(`/cart/${cart.id}/items`, "POST", { productId: dry.id, quantity: 1 })).status === 404,
+  "guest cart unmutatable without token");
+cart = (await call(`/cart/${cart.id}/items`, "POST", { productId: dry.id, quantity: 2 }, undefined, CT)).json;
+cart = (await call(`/cart/${cart.id}/coupon`, "POST", { code: "WELCOME10" }, undefined, CT)).json;
 ok(cart.totals.discountTotal > 0, "coupon applied");
-const order = (await call("/checkout", "POST", { cartId: cart.id, provider: "MADA" }, C)).json;
+const order = (await call("/checkout", "POST", { cartId: cart.id, cartToken: guestToken, provider: "MADA" }, C)).json;
 ok(order.status === "CONFIRMED" && order.invoice?.status === "PAID", `order ${order.orderNumber} confirmed+paid`);
 ok(Math.abs(order.taxTotal) < 0.01, "0% VAT (Moracat not VAT-registered)");
 // Value made visible (R041): the savings tally reflects the coupon discount.
@@ -107,13 +122,98 @@ console.log("━━ pending flow + webhook ━━");
 const s = rnd();
 const bnplProduct = (await call("/admin/products", "POST", { slug: `smoke-bnpl-${s}`, sku: `SMK-${s.toUpperCase()}`, type: "TOY", nameEn: "Smoke BNPL", nameAr: "دخان", price: 52.77 }, A)).json;
 let cart2 = (await call("/cart", "POST")).json;
-cart2 = (await call(`/cart/${cart2.id}/items`, "POST", { productId: bnplProduct.id, quantity: 1 })).json;
-const pending = (await call("/checkout", "POST", { cartId: cart2.id, provider: "TABBY" }, C)).json;
+const guestToken2 = cart2.guestToken;
+const CT2 = { "x-cart-token": guestToken2 };
+cart2 = (await call(`/cart/${cart2.id}/items`, "POST", { productId: bnplProduct.id, quantity: 1 }, undefined, CT2)).json;
+const pending = (await call("/checkout", "POST", { cartId: cart2.id, cartToken: guestToken2, provider: "TABBY" }, C)).json;
 ok(pending.status === "PENDING" && !!pending.redirectUrl, "BNPL checkout pending + redirect");
 const badHook = await call("/payments/webhooks/mock", "POST", { providerRef: pending.payment.providerRef, status: "CAPTURED" }, undefined, { "x-webhook-secret": "wrong" });
 ok(badHook.status === 401, "webhook bad signature 401");
 const hook = await call("/payments/webhooks/mock", "POST", { providerRef: pending.payment.providerRef, status: "CAPTURED" }, undefined, { "x-webhook-secret": process.env.MOCK_WEBHOOK_SECRET ?? "mock-webhook-secret" });
 ok(hook.json?.status === "captured", "webhook captures pending order");
+
+console.log("━━ security regressions ━━");
+// Cross-account cart takeover: a second member must not be able to check out
+// (or destroy) a cart owned by someone else, even with a valid cart id.
+const victimEmail = `victim+${rnd()}@e.com`;
+const victim = (await call("/auth/register", "POST", { email: victimEmail, password: "S3cure!pass", firstName: "Victim", acceptTerms: true })).json;
+let vCart = (await call("/cart", "POST")).json;
+const vToken = vCart.guestToken;
+await call(`/cart/${vCart.id}/items`, "POST", { productId: dry.id, quantity: 1 }, undefined, { "x-cart-token": vToken });
+// Claim it for the victim, which clears the guest token.
+ok((await call(`/cart/${vCart.id}`, "GET", undefined, victim.accessToken, { "x-cart-token": vToken })).status === 200,
+  "signed-in user claims their guest cart");
+ok((await call(`/cart/${vCart.id}`, "GET", undefined, C)).status === 404,
+  "another member cannot read an owned cart");
+ok((await call("/checkout", "POST", { cartId: vCart.id, provider: "MADA" }, C)).status === 404,
+  "another member cannot check out an owned cart");
+ok((await call(`/cart/${vCart.id}`, "GET", undefined, undefined, { "x-cart-token": vToken })).status === 404,
+  "guest token is revoked once the cart is claimed");
+
+// Unsettleable rails must be refused at the edge, not routed to the mock —
+// otherwise a live request marks an order paid with zero money moved.
+ok((await call("/checkout", "POST", { cartId: vCart.id, provider: "WALLET" }, victim.accessToken)).status === 400,
+  "WALLET rejected (no settlement engine)");
+ok((await call("/checkout", "POST", { cartId: vCart.id, provider: "GIFT_CARD" }, victim.accessToken)).status === 400,
+  "GIFT_CARD rejected (no settlement engine)");
+
+console.log("━━ commerce integrity ━━");
+// Idempotency: the same key must replay the first result, never charge twice.
+const idemCart = (await call("/cart", "POST")).json;
+await call(`/cart/${idemCart.id}/items`, "POST", { productId: dry.id, quantity: 1 }, undefined, { "x-cart-token": idemCart.guestToken });
+const idemKey = `idem-${rnd()}${rnd()}`;
+const idemBody = { cartId: idemCart.id, cartToken: idemCart.guestToken, provider: "MADA" };
+const first = await call("/checkout", "POST", idemBody, C, { "idempotency-key": idemKey });
+const replay = await call("/checkout", "POST", idemBody, C, { "idempotency-key": idemKey });
+ok(first.json?.orderNumber && replay.json?.orderNumber === first.json.orderNumber,
+  "idempotency-key replays the original order instead of charging twice");
+const idemOrders = (await call("/orders", "GET", undefined, C)).json;
+ok(idemOrders.filter((o) => o.orderNumber === first.json.orderNumber).length === 1,
+  "replayed checkout created exactly one order");
+
+// Concurrent double-tap on one cart: the status claim must let exactly one win.
+const raceCart = (await call("/cart", "POST")).json;
+await call(`/cart/${raceCart.id}/items`, "POST", { productId: dry.id, quantity: 1 }, undefined, { "x-cart-token": raceCart.guestToken });
+const raceBody = { cartId: raceCart.id, cartToken: raceCart.guestToken, provider: "MADA" };
+const [r1, r2] = await Promise.all([
+  call("/checkout", "POST", raceBody, C),
+  call("/checkout", "POST", raceBody, C),
+]);
+const created = [r1, r2].filter((r) => r.status === 201).length;
+ok(created === 1, `concurrent checkout on one cart creates exactly one order (got ${created})`);
+
+// A redemption ledger row is written for every coupon actually used, which is
+// what makes perUserLimit enforceable (unit-tested in common/coupons.test.ts).
+const couponOrder = idemOrders.find((o) => o.couponCode === "WELCOME10");
+ok(!!couponOrder, "coupon-bearing order recorded with its code");
+
+console.log("━━ webhook integrity ━━");
+const HOOK = { "x-webhook-secret": process.env.MOCK_WEBHOOK_SECRET ?? "mock-webhook-secret" };
+// Build a fresh pending order to settle.
+const whCart = (await call("/cart", "POST")).json;
+await call(`/cart/${whCart.id}/items`, "POST", { productId: bnplProduct.id, quantity: 1 }, undefined, { "x-cart-token": whCart.guestToken });
+const whOrder = (await call("/checkout", "POST", { cartId: whCart.id, cartToken: whCart.guestToken, provider: "TABBY" }, C)).json;
+const whRef = whOrder.payment.providerRef;
+
+// An unknown/non-actionable event must be a no-op, NOT a failure. Previously
+// anything unrecognised voided the invoice and emailed the shopper.
+const unknownEvt = await call("/payments/webhooks/mock", "POST", { providerRef: whRef, status: "SOMETHING_NEW" }, undefined, HOOK);
+const afterUnknown = (await call(`/orders/${whOrder.orderNumber}`, "GET", undefined, C)).json;
+ok(afterUnknown.status === "PENDING", "unknown webhook event leaves the order untouched");
+
+// Replay: the same event id must settle once.
+const evtId = `evt-${rnd()}${rnd()}`;
+const cap1 = await call("/payments/webhooks/mock", "POST", { providerRef: whRef, status: "CAPTURED", eventId: evtId }, undefined, HOOK);
+const cap2 = await call("/payments/webhooks/mock", "POST", { providerRef: whRef, status: "CAPTURED", eventId: evtId }, undefined, HOOK);
+ok(cap1.json?.status === "captured", "first delivery captures");
+ok(cap2.json?.status === "replayed", "replayed delivery is suppressed");
+
+// Refund reconciliation: order + invoice must move together, with a Refund row.
+const refundEvt = await call("/payments/webhooks/mock", "POST", { providerRef: whRef, status: "REFUNDED", eventId: `evt-${rnd()}${rnd()}` }, undefined, HOOK);
+ok(refundEvt.json?.status === "refunded", "PSP-initiated refund is processed");
+const refunded = (await call(`/orders/${whOrder.orderNumber}`, "GET", undefined, C)).json;
+ok(refunded.status === "RETURNED" && refunded.invoice?.status === "REFUNDED",
+  "refund reconciles order + invoice (books no longer say 'paid')");
 
 console.log("━━ membership activation (plan builder → checkout) ━━");
 // The plan is computed from the cat and bought on one honest page (D2/D3):
@@ -131,6 +231,20 @@ ok(Math.abs(sub.taxTotal) < 0.01, "membership 0% VAT (not VAT-registered)");
 const billAt = new Date(sub.nextBillingAt);
 const expectBill = new Date(); expectBill.setMonth(expectBill.getMonth() + term);
 ok(Math.abs(billAt - expectBill) < 36e5 * 25, `renewal at term end (${term} months, R021/R025)`);
+
+// ── auto-renew: opt-out by default, one tap off, never chargeable without a
+// credential that can actually be charged off-session.
+const subId = sub.subscriptionId;
+ok((await call(`/subscriptions/${subId}`, "GET", undefined, C)).json?.autoRenew !== true,
+  "auto-renew is OFF by default (no member is retroactively enrolled)");
+const noPm = await call(`/subscriptions/${subId}/auto-renew`, "POST", { enabled: true }, C);
+ok(noPm.status === 400, "enabling auto-renew without a payment method is rejected");
+const offAgain = await call(`/subscriptions/${subId}/auto-renew`, "POST", { enabled: false }, C);
+ok(offAgain.status === 201 && offAgain.json?.autoRenew === false && !!offAgain.json?.notice?.ar,
+  "auto-renew can be turned off in one call, with honest bilingual copy");
+// Ownership: another member must not be able to touch this subscription.
+ok((await call(`/subscriptions/${subId}/auto-renew`, "POST", { enabled: false }, victim.accessToken)).status === 404,
+  "auto-renew is scoped to the owner");
 const coveredCat = (await call(`/cats/${cat.id}`, "GET", undefined, C)).json;
 ok(coveredCat.membershipStatus === "ACTIVE", "cat membership flips ACTIVE on capture");
 // One cat, one membership — the double-charge is prevented, never refunded (R115).

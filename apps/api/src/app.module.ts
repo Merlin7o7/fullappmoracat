@@ -8,6 +8,7 @@ import { LoggerModule } from "nestjs-pino";
 import type { IncomingMessage } from "node:http";
 import { SentryExceptionFilter } from "./common/sentry-exception.filter";
 import { PrismaModule } from "./prisma/prisma.module";
+import { CommonModule } from "./common/common.module";
 import { HealthModule } from "./health/health.module";
 import { PlansModule } from "./plans/plans.module";
 import { AuthModule } from "./auth/auth.module";
@@ -79,6 +80,8 @@ import { VetModule } from "./vet/vet.module";
     // vaccination reminders, birthdays/anniversaries, DRAFT expiry).
     ScheduleModule.forRoot(),
     PrismaModule,
+
+    CommonModule,
     IdsModule,
     HealthModule,
     PlansModule,

@@ -360,6 +360,7 @@ model User {
   orders         Order[]
   invoices       Invoice[]
   carts          Cart[]
+  couponRedemptions CouponRedemption[]
   wallet         Wallet?
   loyalty        LoyaltyAccount?
   reviews        ProductReview[]
@@ -626,8 +627,9 @@ model PaymentMethod {
   isDefault  Boolean         @default(false)
   createdAt  DateTime        @default(now())
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payments Payment[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+  subscriptions Subscription[]
 
   @@index([userId])
   @@map("payment_methods")
@@ -750,7 +752,7 @@ model Cat {
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
 
-  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   primaryOfUser   User?                   @relation("PrimaryCat")
   breed           Breed?                  @relation(fields: [breedId], references: [id])
   healthConds     CatHealthCondition[]
@@ -781,6 +783,12 @@ model Cat {
   @@index([isPublic, hiddenAt, likeCount])
   @@index([isPublic, isFeatured])
   @@index([nameNormalized])
+  /// Microchip is the ONLY identifier that works for a stray or a cat that
+  /// isn't a Moracat member — the single most important vet lookup — and it was
+  /// the one identifier with no index, so it seq-scanned the whole table.
+  @@index([microchipNo])
+  /// Serves the lifecycle passes and the clinic patient list.
+  @@index([status, deletedAt])
   @@map("cats")
 }
 
@@ -1269,6 +1277,11 @@ model Plan {
   descriptionAr String?
   basePrice     Decimal  @db.Decimal(10, 2) // monthly price, from financial model
   cogs          Decimal  @db.Decimal(10, 2)
+  /// What the same contents cost bought individually from our own store.
+  /// Persisted so the member-facing saving is a computed fact rather than a
+  /// marketing claim — the UI previously had no honest number to show and
+  /// displayed "0 SAR saved" forever.
+  retailValue   Decimal? @db.Decimal(10, 2)
   currency      String   @default("SAR")
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
@@ -1286,8 +1299,14 @@ model PlanContent {
   planId    String
   productId String?
   label     String // "Dry food — premium (kg)"
+  /// Arabic label + unit. Without these the Arabic checkout rendered its box
+  /// contents in English ("Wet food pouches ١٥pouch") on the screen where the
+  /// member commits money — the Arabic already existed in the seed and was
+  /// being discarded on write.
+  labelAr   String?
   quantity  Float
   unit      String // kg, pouch, pack, each
+  unitAr    String?
   /// When set, this box line is CHOOSABLE: the member picks any subscribable
   /// product of this type (brand + flavor) in the box builder, and `productId`
   /// is the recommended default. Null = fixed line (no choice offered).
@@ -1330,21 +1349,43 @@ model Subscription {
   /// confiscates a paid term.
   cancelAtTermEnd Boolean           @default(false)
   cancelledAt    DateTime?
+
+  /// Whether the membership renews itself at term end.
+  ///
+  /// Opt-OUT by default, because manual re-purchase every term means re-selling
+  /// the entire base four times a year and roughly halves LTV. This is NOT a
+  /// silent charge: `autoRenewNoticeAt` records the T-7 notice that must go out
+  /// before any renewal is attempted, `renewalPaymentMethodId` pins the exact
+  /// stored credential used, and one tap sets cancelAtTermEnd. R025 is honoured
+  /// by making the charge loudly expected, not by refusing to charge at all.
+  autoRenew            Boolean   @default(false)
+  /// Stored credential the renewal will charge. Null means no reusable
+  /// credential exists (e.g. the term was bought on a BNPL rail, which cannot
+  /// do merchant-initiated transactions) — renewal then falls back to an
+  /// invitation instead of failing silently.
+  renewalPaymentMethodId String?
+  /// When the member was last told a renewal is coming. A renewal must never
+  /// run without this being set and in the past.
+  autoRenewNoticeAt    DateTime?
   vacationMode   Boolean            @default(false)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan    Plan?               @relation(fields: [planId], references: [id])
-  address Address?            @relation(fields: [addressId], references: [id])
-  items   SubscriptionItem[]
-  cats    SubscriptionCat[]
-  events  SubscriptionEvent[]
-  orders  Order[]
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                Plan?               @relation(fields: [planId], references: [id])
+  address             Address?            @relation(fields: [addressId], references: [id])
+  renewalPaymentMethod PaymentMethod?     @relation(fields: [renewalPaymentMethodId], references: [id], onDelete: SetNull)
+  items               SubscriptionItem[]
+  cats                SubscriptionCat[]
+  events              SubscriptionEvent[]
+  orders              Order[]
 
   @@index([userId])
   @@index([status])
   @@index([nextBillingAt])
+  /// Drives the lapse pass and the auto-renew pass; status alone is too
+  /// low-selectivity to serve either.
+  @@index([status, endsAt])
   @@map("subscriptions")
 }
 
@@ -1396,12 +1437,33 @@ model SubscriptionEvent {
 //  COMMERCE — cart, orders, payments, invoices, discounts
 // ─────────────────────────────────────────────────────────────────────────
 
+/// Lifecycle of a cart. CHECKING_OUT is claimed by a status-guarded update
+/// *before* the PSP is called, so a double-tapped checkout cannot charge twice:
+/// the second request finds the cart already claimed and is rejected.
+enum CartStatus {
+  ACTIVE
+  CHECKING_OUT
+  CONVERTED
+  ABANDONED
+}
+
 model Cart {
-  id        String   @id @default(cuid())
-  userId    String?
-  sessionId String? // guest carts
-  currency  String   @default("SAR")
-  couponId  String?
+  id String @id @default(cuid())
+
+  /// Owner once the shopper is authenticated. A cart with a userId is
+  /// accessible ONLY to that user — the id alone is never sufficient.
+  userId String?
+
+  /// Capability secret for anonymous carts. The cart id is a routing
+  /// identifier, not a credential; this is the bearer secret a guest presents
+  /// (x-cart-token) to read or mutate their own basket. Cleared when the cart
+  /// is claimed by a signed-in user so a stale token cannot resurrect access.
+  guestToken String? @unique
+
+  status   CartStatus @default(ACTIVE)
+  currency String     @default("SAR")
+  couponId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1409,7 +1471,7 @@ model Cart {
   items CartItem[]
 
   @@index([userId])
-  @@index([sessionId])
+  @@index([status, updatedAt])
   @@map("carts")
 }
 
@@ -1448,15 +1510,18 @@ model Order {
   user         User            @relation(fields: [userId], references: [id])
   subscription Subscription?   @relation(fields: [subscriptionId], references: [id])
   address      Address?        @relation(fields: [addressId], references: [id])
-  items        OrderItem[]
-  payments     Payment[]
-  invoice      Invoice?
-  shipment     Shipment?
-  returns      ReturnRequest[]
+  items             OrderItem[]
+  payments          Payment[]
+  invoice           Invoice?
+  shipment          Shipment?
+  returns           ReturnRequest[]
+  couponRedemptions CouponRedemption[]
 
   @@index([userId])
   @@index([status])
   @@index([placedAt])
+  /// "Orders for this subscription" is a core query and was unindexed.
+  @@index([subscriptionId])
   @@map("orders")
 }
 
@@ -1493,11 +1558,17 @@ model Payment {
   capturedAt      DateTime?
   createdAt       DateTime        @default(now())
 
-  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
   paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
   refunds       Refund[]
 
   @@index([orderId])
+  /// providerRef is THE idempotency key for every PSP webhook. Without a unique
+  /// constraint duplicates were representable and `findFirst` silently picked an
+  /// arbitrary row; without an index every webhook scanned the whole table.
+  /// Scoped by provider because refs are only unique within a PSP.
+  @@unique([provider, providerRef])
+  @@index([status, createdAt])
   @@map("payments")
 }
 
@@ -1529,7 +1600,7 @@ model Invoice {
   paidAt        DateTime?
   pdfUrl        String?
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
   user  User  @relation(fields: [userId], references: [id])
 
   @@index([userId])
@@ -1550,7 +1621,91 @@ model Coupon {
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
 
+  redemptions CouponRedemption[]
+
   @@map("coupons")
+}
+
+/// One row per successful coupon use.
+///
+/// `Coupon.perUserLimit` existed but was unenforceable: there was no ledger to
+/// count a given user's redemptions against, and `Order.couponCode` is a loose
+/// unindexed string. This makes per-user caps real and gives finance an audit
+/// trail of who redeemed what.
+/// ── Deletion policy ────────────────────────────────────────────────────────
+///
+/// Two deliberate classes, do not "harmonise" them:
+///
+///   Cascade  — owner-generated content (likes, reports, photos, owner-entered
+///              health notes). If a cat row is ever truly purged for a PDPL
+///              erasure request, this data SHOULD go with it.
+///
+///   Restrict — clinical records, consent grants, the access ledger, payments
+///              and invoices. These are legal artefacts: a tax document must not
+///              vanish because an order row was removed, and the vet section
+///              states clinical records cannot be deleted by design. Cats, users
+///              and orders are soft-deleted (`deletedAt`), so Restrict never
+///              blocks normal operation — it only blocks the accident.
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  userId    String
+  orderId   String
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  /// One redemption row per order — makes the write idempotent under retry.
+  @@unique([couponId, orderId])
+  @@index([couponId, userId])
+  @@index([userId])
+  @@map("coupon_redemptions")
+}
+
+/// Replay ledger for inbound PSP webhooks.
+///
+/// PSPs retry aggressively and deliver duplicates by design (Tamara emits both
+/// `order_approved` and `order_authorised`). Signature verification alone does
+/// not stop a captured-and-replayed delivery, so every processed event is
+/// recorded here and a repeat is a no-op rather than a second settlement.
+model ProcessedWebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  eventId    String
+  eventType  String?
+  payloadRef String?
+  receivedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([receivedAt])
+  @@map("processed_webhook_events")
+}
+
+/// Idempotency records for money-moving requests.
+///
+/// A double-tapped checkout previously created two orders, two PSP charges and
+/// two invoices, and incremented the coupon counter twice. The client sends an
+/// Idempotency-Key; the first request claims it, later requests with the same
+/// key replay the stored response instead of charging again.
+///
+/// `requestHash` guards against a client reusing a key for a *different* body,
+/// which would otherwise return someone else's result.
+model IdempotencyKey {
+  id          String    @id @default(cuid())
+  scope       String
+  key         String
+  userId      String?
+  requestHash String
+  status      String    @default("IN_PROGRESS")
+  responseJson Json?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@unique([scope, key])
+  @@index([createdAt])
+  @@map("idempotency_keys")
 }
 
 model GiftCard {
@@ -1796,7 +1951,7 @@ model ReturnRequest {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
   user  User  @relation(fields: [userId], references: [id])
 
   @@index([orderId])
@@ -2536,7 +2691,7 @@ model Visit {
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 
-  cat      Cat             @relation(fields: [catId], references: [id], onDelete: Cascade)
+  cat      Cat             @relation(fields: [catId], references: [id], onDelete: Restrict)
   org      PartnerOrg      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   branch   Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
   openedBy PartnerStaff?   @relation("VisitOpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
@@ -2578,7 +2733,7 @@ model ClinicalEntry {
 
   createdAt DateTime @default(now())
 
-  cat        Cat            @relation(fields: [catId], references: [id], onDelete: Cascade)
+  cat        Cat            @relation(fields: [catId], references: [id], onDelete: Restrict)
   org        PartnerOrg     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   visit      Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
   author     PartnerStaff?  @relation("EntryAuthor", fields: [authorId], references: [id], onDelete: SetNull)
@@ -2649,7 +2804,7 @@ model Prescription {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  cat        Cat            @relation(fields: [catId], references: [id], onDelete: Cascade)
+  cat        Cat            @relation(fields: [catId], references: [id], onDelete: Restrict)
   org        PartnerOrg     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   entry      ClinicalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
   prescriber PartnerStaff?  @relation(fields: [prescriberId], references: [id], onDelete: SetNull)
@@ -2673,7 +2828,7 @@ model CatWeightRecord {
   source     String   @default("clinic") // clinic | owner
   createdAt  DateTime @default(now())
 
-  cat   Cat            @relation(fields: [catId], references: [id], onDelete: Cascade)
+  cat   Cat            @relation(fields: [catId], references: [id], onDelete: Restrict)
   entry ClinicalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
 
   @@index([catId, measuredAt])
@@ -2698,7 +2853,7 @@ model ConsentGrant {
   emergency   Boolean     @default(false)
   reason      String?
 
-  cat       Cat        @relation(fields: [catId], references: [id], onDelete: Cascade)
+  cat       Cat        @relation(fields: [catId], references: [id], onDelete: Restrict)
   org       PartnerOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
   grantedBy User?      @relation("ConsentGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
   revokedBy User?      @relation("ConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
@@ -2723,7 +2878,7 @@ model RecordAccessLog {
   ipAddress String?
   at        DateTime    @default(now())
 
-  cat   Cat           @relation(fields: [catId], references: [id], onDelete: Cascade)
+  cat   Cat           @relation(fields: [catId], references: [id], onDelete: Restrict)
   org   PartnerOrg    @relation(fields: [orgId], references: [id], onDelete: Cascade)
   staff PartnerStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
 

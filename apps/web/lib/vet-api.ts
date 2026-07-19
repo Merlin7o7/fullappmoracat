@@ -24,8 +24,13 @@ import * as React from "react";
 import {
   can as coreCan,
   capabilitiesFor,
+  assertShape,
   type VetCapability,
   type VetRole,
+  type Paginated,
+  type RecordList,
+  type VisitState as CoreVisitState,
+  type PrescriptionStatus as CorePrescriptionStatus,
 } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { ApiError, fetchWithTimeout, httpError } from "@/lib/http";
@@ -291,7 +296,14 @@ export interface VetTimelineEntry {
   attachments?: VetAttachment[];
 }
 
-export type VetPrescriptionStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
+/**
+ * Re-exported from the shared contract rather than redeclared.
+ *
+ * These were previously invented client-side and did not match the API on ANY
+ * value — the portal tested for "ACTIVE"/"COMPLETED" against a server that
+ * sends ISSUED/COLLECTED/REFILLED/COMPLETED/EXPIRED/CANCELLED.
+ */
+export type VetPrescriptionStatus = CorePrescriptionStatus;
 
 export interface VetPrescription {
   id: string;
@@ -316,38 +328,97 @@ export interface VetPrescription {
  * Visits
  * ──────────────────────────────────────────────────────────────────────────*/
 
-export type VetVisitState = "WAITING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+/**
+ * A visit is OPEN or CLOSED — there is no waiting/in-progress state.
+ *
+ * The old four-value union is why `visits/[visitId]` computed
+ * `state === "COMPLETED" || state === "CANCELLED"` and got `false` for every
+ * closed visit: a vet saw an editable chart, wrote a full SOAP note, and the
+ * save 409'd with VET_VISIT_CLOSED.
+ */
+export type VetVisitState = CoreVisitState;
 
+/** One row of the clinic's own patient list. */
+export interface VetOwnPatient {
+  catId: string;
+  name: string;
+  catIdNumber: string | null;
+  photoUrl: string | null;
+  membershipStatus: string;
+  ownerName: string | null;
+  lastVisitAt: string | null;
+  hasOpenVisit: boolean;
+  isOwnPatient: true;
+}
+
+export interface VetOwnPatientsResponse {
+  items: VetOwnPatient[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+/** Record reads carry the consent context they were resolved under. */
+export type VetTimelineResponse = RecordList<VetTimelineEntry> & {
+  hiddenSections?: Array<{
+    section: string;
+    reason: { code: string; ar: string; en: string };
+    remedy?: unknown;
+  }>;
+  ledgerNotice?: { ar: string; en: string };
+};
+
+export type VetPrescriptionResponse = RecordList<VetPrescription>;
+
+/** Weights come back as a described series, not bare points. */
+export interface VetWeightSeriesResponse {
+  catId: string;
+  catName: string;
+  currentWeightKg: number | null;
+  windowMonths: number;
+  series: VetWeightPoint[];
+  /** Arithmetic restated in words. Deliberately never a diagnosis. */
+  trend: { ar: string; en: string; direction?: string; deltaKg?: number } | null;
+}
+
+/** Mirrors VetVisitsService.present() exactly. */
 export interface VetVisit {
   id: string;
   catId: string;
-  catName: string;
-  catIdNumber: string;
-  catPhotoUrl: string | null;
-  ownerName?: string | null;
-  branchId?: string | null;
-  branchNameEn?: string | null;
-  branchNameAr?: string | null;
+  cat: {
+    id: string;
+    name: string;
+    catIdNumber: string | null;
+    photoUrl: string | null;
+    membershipStatus: string;
+  };
+  mode: string;
   state: VetVisitState;
-  reasonEn?: string | null;
-  reasonAr?: string | null;
+  reason: string | null;
+  presentingComplaint: string | null;
+  branch: { id: string; ar: string; en: string } | null;
+  openedBy: { id: string; name: string; role: string } | null;
+  closedBy: { id: string; name: string; role: string } | null;
   checkedInAt: string;
-  startedAt?: string | null;
-  closedAt?: string | null;
-  assignedStaffId?: string | null;
-  assignedStaffName?: string | null;
-  /** Gross billing to the member, in SAR (VAT-inclusive). */
-  grossAmount?: number | null;
-  /** The member rate honoured on this visit, in SAR. */
-  benefitHonouredAmount?: number | null;
-  /** True when a clinical entry on this visit is still a draft. */
-  hasOpenDraft?: boolean;
+  closedAt: string | null;
+  followUpAt: string | null;
+  entryCount: number;
+  ownerSummary: string | null;
+  summarySentAt: string | null;
+  /** Minutes since check-in for an OPEN visit; null once closed. */
+  waitMinutes: number | null;
+  /** A calm nudge, not an alarm — amber at 10 minutes is the only escalation. */
+  waitLevel: "calm" | "amber" | null;
 }
 
-export interface VetVisitListResponse {
-  visits: VetVisit[];
-  /** Server-side totals for the queried window, when provided. */
-  counts?: { open: number; completed: number };
+export type VetVisitListResponse = Paginated<VetVisit> & {
+  summary: { openNow: number };
+};
+
+/** getVisit returns the visit WITH its entries — not a bare visit. */
+export interface VetVisitDetail {
+  visit: VetVisit;
+  entries: VetTimelineEntry[];
+  draftCount: number;
 }
 
 export interface VetVisitQuery {
@@ -356,6 +427,7 @@ export interface VetVisitQuery {
   state?: VetVisitState;
   branchId?: string;
   catId?: string;
+  page?: number;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -1079,20 +1151,18 @@ export interface VetApi {
   /** GET /vet/patients/:catId — the clinical profile, consent-filtered. */
   getPatient: (catId: string) => Promise<VetPatientProfile>;
   /** GET /vet/patients/:catId/timeline */
-  getPatientTimeline: (catId: string) => Promise<{ entries: VetTimelineEntry[] }>;
+  getPatientTimeline: (catId: string) => Promise<VetTimelineResponse>;
   /** GET /vet/patients/:catId/prescriptions */
-  getPatientPrescriptions: (catId: string) => Promise<{ prescriptions: VetPrescription[] }>;
+  getPatientPrescriptions: (catId: string) => Promise<VetPrescriptionResponse>;
   /** GET /vet/patients/:catId/weights */
-  getPatientWeights: (catId: string) => Promise<{ points: VetWeightPoint[] }>;
+  getPatientWeights: (catId: string) => Promise<VetWeightSeriesResponse>;
   /** GET /vet/patients — the clinic's own browsable patient memory. */
-  listPatients: (params?: { q?: string; cursor?: string }) => Promise<{
-    patients: VetSearchResult[];
-    nextCursor?: string | null;
-  }>;
+  /** GET /vet/patients — the clinic's own browsable patient memory. */
+  listPatients: (params?: { q?: string; cursor?: string }) => Promise<VetOwnPatientsResponse>;
   /** GET /vet/visits?date=&state= — the day-book. */
   listVisits: (query?: VetVisitQuery) => Promise<VetVisitListResponse>;
-  /** GET /vet/visits/:id */
-  getVisit: (id: string) => Promise<VetVisit>;
+  /** GET /vet/visits/:id — returns the visit WITH its entries. */
+  getVisit: (id: string) => Promise<VetVisitDetail>;
   /** POST /vet/visits — open a visit for a cat. */
   openVisit: (input: { catId: string; reason?: string; branchId?: string }) => Promise<VetVisit>;
   /** POST /vet/visits/:id/close */
@@ -1177,23 +1247,38 @@ export function useVetApi(): VetApi {
 
       getPatient: (catId) => vetFetch<VetPatientProfile>(`/vet/patients/${encodeURIComponent(catId)}`),
 
-      getPatientTimeline: (catId) =>
-        vetFetch<{ entries: VetTimelineEntry[] }>(`/vet/patients/${encodeURIComponent(catId)}/timeline`),
-
-      getPatientPrescriptions: (catId) =>
-        vetFetch<{ prescriptions: VetPrescription[] }>(
-          `/vet/patients/${encodeURIComponent(catId)}/prescriptions`,
+      // Each of these validates the envelope it is about to read. The previous
+      // bare casts are why a contract mismatch rendered a blank screen instead
+      // of an error: the data was wrong and nothing ever threw.
+      getPatientTimeline: async (catId) =>
+        assertShape<VetTimelineResponse>(
+          await vetFetch(`/vet/patients/${encodeURIComponent(catId)}/timeline`),
+          ["items", "access", "pagination"],
+          "GET /vet/patients/:catId/timeline",
         ),
 
-      getPatientWeights: (catId) =>
-        vetFetch<{ points: VetWeightPoint[] }>(`/vet/patients/${encodeURIComponent(catId)}/weights`),
+      getPatientPrescriptions: async (catId) =>
+        assertShape<VetPrescriptionResponse>(
+          await vetFetch(`/vet/patients/${encodeURIComponent(catId)}/prescriptions`),
+          ["items", "access", "pagination"],
+          "GET /vet/patients/:catId/prescriptions",
+        ),
+
+      getPatientWeights: async (catId) =>
+        assertShape<VetWeightSeriesResponse>(
+          await vetFetch(`/vet/patients/${encodeURIComponent(catId)}/weights`),
+          ["series", "trend"],
+          "GET /vet/patients/:catId/weights",
+        ),
 
       listPatients: (params) => {
         const qs = new URLSearchParams();
         if (params?.q) qs.set("q", params.q);
         if (params?.cursor) qs.set("cursor", params.cursor);
         const suffix = qs.toString();
-        return vetFetch(`/vet/patients${suffix ? `?${suffix}` : ""}`);
+        return vetFetch(`/vet/patients${suffix ? `?${suffix}` : ""}`).then((r) =>
+          assertShape<VetOwnPatientsResponse>(r, ["items", "hasMore"], "GET /vet/patients"),
+        );
       },
 
       listVisits: (query) => {
@@ -1202,11 +1287,19 @@ export function useVetApi(): VetApi {
         if (query?.state) qs.set("state", query.state);
         if (query?.branchId) qs.set("branchId", query.branchId);
         if (query?.catId) qs.set("catId", query.catId);
+        if (query?.page) qs.set("page", String(query.page));
         const suffix = qs.toString();
-        return vetFetch<VetVisitListResponse>(`/vet/visits${suffix ? `?${suffix}` : ""}`);
+        return vetFetch(`/vet/visits${suffix ? `?${suffix}` : ""}`).then((r) =>
+          assertShape<VetVisitListResponse>(r, ["items", "summary", "pagination"], "GET /vet/visits"),
+        );
       },
 
-      getVisit: (id) => vetFetch<VetVisit>(`/vet/visits/${encodeURIComponent(id)}`),
+      getVisit: async (id) =>
+        assertShape<VetVisitDetail>(
+          await vetFetch(`/vet/visits/${encodeURIComponent(id)}`),
+          ["visit", "entries", "draftCount"],
+          "GET /vet/visits/:id",
+        ),
 
       openVisit: (input) =>
         vetFetch<VetVisit>("/vet/visits", { method: "POST", body: JSON.stringify(input) }),
@@ -1317,16 +1410,7 @@ export function formatCatAge(months: number | null | undefined, isAr: boolean): 
 
 /** Bilingual label for a visit state — colour is never the only signal (R093). */
 export function vetVisitStateLabel(state: VetVisitState, isAr: boolean): string {
-  switch (state) {
-    case "WAITING":
-      return isAr ? "في الانتظار" : "Waiting";
-    case "IN_PROGRESS":
-      return isAr ? "جارية" : "In progress";
-    case "COMPLETED":
-      return isAr ? "مكتملة" : "Completed";
-    default:
-      return isAr ? "ملغاة" : "Cancelled";
-  }
+  return state === "OPEN" ? (isAr ? "زيارة مفتوحة" : "Open") : isAr ? "مُغلقة" : "Closed";
 }
 
 /** Bilingual label for a membership standing. */

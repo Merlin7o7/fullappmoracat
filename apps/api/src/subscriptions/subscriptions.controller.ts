@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { SubscriptionsService } from "./subscriptions.service";
-import { ActivateSubscriptionDto, PauseDto, RefundRequestDto } from "./dto/subscription.dto";
+import { ActivateSubscriptionDto, PauseDto, RefundRequestDto, SetAutoRenewDto } from "./dto/subscription.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Commercial } from "../common/decorators/commercial.decorator";
 
@@ -74,6 +74,20 @@ export class SubscriptionsController {
   @ApiOperation({ summary: "Cancel a subscription (won't-renew during a paid term; never confiscates it)" })
   cancel(@CurrentUser("id") userId: string, @Param("id") id: string) {
     return this.subs.cancel(userId, id);
+  }
+
+  // Auto-renewal is opt-out by design, so turning it OFF must be as cheap as a
+  // single tap — anything harder would make the default a trap rather than a
+  // convenience (R025/R063).
+  @Post(":id/auto-renew")
+  @Commercial()
+  @ApiOperation({ summary: "Turn auto-renewal on or off for a membership" })
+  setAutoRenew(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @Body() dto: SetAutoRenewDto
+  ) {
+    return this.subs.setAutoRenew(userId, id, dto.enabled, dto.paymentMethodId);
   }
 
   // Resume an abandoned redirect payment — returns the stored checkout URL so a

@@ -39,6 +39,9 @@ const env = {
   WALLET_GOOGLE_TEST_PUBLIC_KEY: escapePem(walletPublicPem),
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? "e2e-access-secret",
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? "e2e-refresh-secret",
+  // Distinct key material for vet counter-mode PIN tokens — signing those with
+  // the access secret would make a 4-digit PIN mint a full member access token.
+  JWT_COUNTER_SECRET: process.env.JWT_COUNTER_SECRET ?? "e2e-counter-secret",
   PAYMENTS_MODE: "mock",
   // Exercise the full commerce engine (checkout/subscriptions/webhooks) against
   // the mock provider. Real deploys keep COMMERCE_ENABLED=false (Community Mode);

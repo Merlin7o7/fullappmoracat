@@ -86,7 +86,7 @@ export default function ChartsPanel({ catId, className }: { catId: string; class
   }
 
   // Oldest → newest, so the line reads as time.
-  const points = [...(query.data?.points ?? [])].sort(
+  const points = [...(query.data?.series ?? [])].sort(
     (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()
   );
 

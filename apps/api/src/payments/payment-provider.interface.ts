@@ -57,7 +57,23 @@ export interface CaptureResult {
 
 export interface IPaymentProvider {
   readonly name: string;
+  /**
+   * Whether this rail can perform a merchant-initiated transaction — a charge
+   * with no shopper present, against a stored credential.
+   *
+   * This is a real capability boundary, not a config toggle: BNPL rails
+   * (Tamara, Tabby) underwrite each order individually and cannot be charged
+   * off-session, so a membership bought on BNPL can never silently renew. The
+   * auto-renew engine reads this to decide between charging and inviting, so
+   * the product stays honest about which memberships actually renew themselves.
+   */
+  readonly supportsRecurring?: boolean;
   charge(req: ChargeRequest): Promise<ChargeResult>;
+  /**
+   * Charge a stored credential off-session. Only implemented by rails where
+   * `supportsRecurring` is true.
+   */
+  chargeStored?(req: ChargeRequest & { token: string }): Promise<ChargeResult>;
   refund(providerRef: string, amount: number, currency: string): Promise<RefundResult>;
   /**
    * Optional explicit capture. Some rails only *authorise* when the shopper
@@ -78,7 +94,21 @@ export interface IPaymentProvider {
 /** Normalized event parsed from a PSP webhook. */
 export interface WebhookEvent {
   providerRef: string;
-  status: "CAPTURED" | "FAILED" | "REFUNDED";
+  /**
+   * IGNORED is load-bearing. PSPs emit many lifecycle events we take no action
+   * on (`payment_authorized`, `created`, `updated`…). These previously fell
+   * through a ternary's else-branch to FAILED, which voided the invoice, killed
+   * the draft subscription and emailed "your payment didn't go through" while
+   * the shopper was still mid-flow — and the genuine success event that
+   * followed was then ignored because the payment was no longer PENDING.
+   * Unknown or non-actionable events must be an explicit no-op.
+   */
+  status: "CAPTURED" | "FAILED" | "REFUNDED" | "IGNORED";
+  /** Provider-side event identifier, used for replay suppression. */
+  eventId?: string;
+  /** Which PSP this came from — scopes the replay ledger. */
+  provider?: string;
+  eventType?: string;
   raw?: unknown;
 }
 
