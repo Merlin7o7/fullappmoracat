@@ -226,15 +226,32 @@ export interface VetPatientProfile {
  * The record
  * ──────────────────────────────────────────────────────────────────────────*/
 
+/**
+ * Timeline kinds. The first group mirrors the database's `ClinicalEntryType`
+ * one-for-one — all fourteen of them, deliberately: in an append-only medical
+ * record, filing a surgery as a "note" would lose that fact permanently and
+ * silently, because nothing can ever be edited back. The last three are
+ * display-only markers the timeline synthesises (a visit boundary, a bare
+ * attachment, a consent change); they are never sent to `createRecord`.
+ */
 export type VetTimelineKind =
-  | "VISIT"
-  | "NOTE"
+  // ── real clinical entry types (must match the Prisma enum exactly) ──
   | "EXAM"
+  | "DIAGNOSIS"
   | "VACCINATION"
+  | "TREATMENT"
   | "PRESCRIPTION"
   | "LAB"
   | "IMAGING"
+  | "SURGERY"
+  | "DENTAL"
+  | "HOSPITALIZATION"
   | "WEIGHT"
+  | "NUTRITION"
+  | "SUPPLEMENT"
+  | "NOTE"
+  // ── timeline-only display markers ──
+  | "VISIT"
   | "ATTACHMENT"
   | "CONSENT";
 
