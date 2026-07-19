@@ -14,8 +14,12 @@ export const dict = {
     announce: "نرحّب بقططكم في كل مدن السعودية — انضمّ للمجتمع",
     hero: {
       badge: "التعداد الوطني للقطط",
-      title: "كم قط يعيش في السعودية؟",
-      titleAccent: "أحد ما يدري",
+      // The headline is the census question, and nothing else. `titleAccent` is
+      // the tail of that same sentence rather than a second line: it carries the
+      // marker-underline signature, and the two always render as one phrase —
+      // "كم قط يعيش في السعودية؟" — including where auth-shell concatenates them.
+      title: "كم قط يعيش",
+      titleAccent: "في السعودية؟",
       subtitle:
         "إحنا نعدّهم، قط قط. سجّل قطك وياخذ هوية رسمية باسمه ورقمه — مجاناً، في أقل من دقيقتين. سجله الصحي ومجتمع أهل القطط يجون معها.",
       namePrompt: "وش اسم قطك؟",
@@ -114,8 +118,8 @@ export const dict = {
     announce: "Now welcoming cats across Saudi Arabia — join the community",
     hero: {
       badge: "The Saudi Cat Census",
-      title: "How many cats live in Saudi Arabia?",
-      titleAccent: "Nobody knows",
+      title: "How many cats live in",
+      titleAccent: "Saudi Arabia?",
       subtitle:
         "We're counting them, one cat at a time. Register your cat and they get an official Cat ID with their name and their own number — free, in under two minutes. Their health record and the community come with it.",
       namePrompt: "What's your cat's name?",
