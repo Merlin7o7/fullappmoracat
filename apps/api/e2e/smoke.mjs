@@ -83,6 +83,12 @@ console.log("━━ wallet pass (R034) ━━");
 console.log("━━ storefront + checkout (direct capture) ━━");
 const plans = (await call("/plans")).json;
 ok(plans.length === 3 && plans.every((p) => p.nameAr), "3 official plans with Arabic names");
+// The box must be a genuine saving against our own shelf prices — it previously
+// cost 19–35% MORE than buying the same items à-la-carte.
+ok(plans.every((p) => p.retailValue > p.price), "every plan undercuts its own à-la-carte value");
+ok(plans.every((p) => p.savingsPct >= 15), `every plan saves >=15% (${plans.map((p) => p.savingsPct + "%").join(", ")})`);
+// Arabic box contents must exist, or the Arabic checkout renders English.
+ok(plans.every((p) => p.contents.every((c) => c.labelAr && c.unitAr)), "box contents carry Arabic label + unit");
 // Admin login early: the storefront test buys an admin-created product, since the
 // imported supplier catalog stays unpublished (individual store not public yet).
 const admin = (await call("/auth/login", "POST", { email: "admin@moraqat.sa", password: "Admin!2026" })).json;

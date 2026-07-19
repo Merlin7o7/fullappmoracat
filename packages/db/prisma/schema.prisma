@@ -1270,6 +1270,11 @@ model Plan {
   descriptionAr String?
   basePrice     Decimal  @db.Decimal(10, 2) // monthly price, from financial model
   cogs          Decimal  @db.Decimal(10, 2)
+  /// What the same contents cost bought individually from our own store.
+  /// Persisted so the member-facing saving is a computed fact rather than a
+  /// marketing claim — the UI previously had no honest number to show and
+  /// displayed "0 SAR saved" forever.
+  retailValue   Decimal? @db.Decimal(10, 2)
   currency      String   @default("SAR")
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
@@ -1287,8 +1292,14 @@ model PlanContent {
   planId    String
   productId String?
   label     String // "Dry food — premium (kg)"
+  /// Arabic label + unit. Without these the Arabic checkout rendered its box
+  /// contents in English ("Wet food pouches ١٥pouch") on the screen where the
+  /// member commits money — the Arabic already existed in the seed and was
+  /// being discarded on write.
+  labelAr   String?
   quantity  Float
   unit      String // kg, pouch, pack, each
+  unitAr    String?
   /// When set, this box line is CHOOSABLE: the member picks any subscribable
   /// product of this type (brand + flavor) in the box builder, and `productId`
   /// is the recommended default. Null = fixed line (no choice offered).
