@@ -39,6 +39,7 @@ import { CommunityModule } from "./community/community.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { WalletModule } from "./wallet/wallet.module";
 import { LifecycleModule } from "./lifecycle/lifecycle.module";
+import { VetModule } from "./vet/vet.module";
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { LifecycleModule } from "./lifecycle/lifecycle.module";
     SupportModule,
     WaitlistModule,
     LifecycleModule,
+    VetModule,
   ],
   providers: [
     // Order matters: rate-limit → Community-Mode kill-switch → authenticate →

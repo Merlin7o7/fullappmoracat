@@ -2349,14 +2349,19 @@ model PartnerOrg {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  agreements PartnerAgreement[]
-  branches   Branch[]
-  staff      PartnerStaff[]
-  invites    PartnerInvite[]
-  visits     Visit[]
-  consents   ConsentGrant[]
-  accessLogs RecordAccessLog[]
-  passKeys   OfflinePassKey[]
+  agreements    PartnerAgreement[]
+  branches      Branch[]
+  staff         PartnerStaff[]
+  invites       PartnerInvite[]
+  visits        Visit[]
+  consents      ConsentGrant[]
+  accessLogs    RecordAccessLog[]
+  passKeys      OfflinePassKey[]
+  // Authorship provenance: every clinical record and prescription names the
+  // clinic that created it — a cross-clinic timeline is only trustworthy if
+  // each entry says who wrote it.
+  clinicalEntries ClinicalEntry[]
+  prescriptions   Prescription[]
 
   @@index([status])
   @@map("partner_orgs")
@@ -2574,6 +2579,7 @@ model ClinicalEntry {
   createdAt DateTime @default(now())
 
   cat        Cat            @relation(fields: [catId], references: [id], onDelete: Cascade)
+  org        PartnerOrg     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   visit      Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
   author     PartnerStaff?  @relation("EntryAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   coSignedBy PartnerStaff?  @relation("EntryCoSigner", fields: [coSignedById], references: [id], onDelete: SetNull)
@@ -2644,6 +2650,7 @@ model Prescription {
   updatedAt      DateTime           @updatedAt
 
   cat        Cat            @relation(fields: [catId], references: [id], onDelete: Cascade)
+  org        PartnerOrg     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   entry      ClinicalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
   prescriber PartnerStaff?  @relation(fields: [prescriberId], references: [id], onDelete: SetNull)
 

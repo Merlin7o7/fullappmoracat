@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing, UserCog, Flag, ScrollText, SlidersHorizontal,
+  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing, UserCog, Flag, ScrollText, SlidersHorizontal, Stethoscope,
 } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -19,6 +19,9 @@ import { Logo } from "@/components/logo";
 const NAV = [
   { href: "/admin", icon: LayoutDashboard, en: "Dashboard", ar: "لوحة التحكم", exact: true, perm: "dashboard.read" },
   { href: "/admin/customers", icon: Users, en: "Customers", ar: "العملاء", perm: "customers.read" },
+  // The veterinary network console: approve clinics, verify licences, audit
+  // who opened which cat's record. Write actions need partners.write.
+  { href: "/admin/partners", icon: Stethoscope, en: "Partners", ar: "الشركاء", perm: "partners.read" },
   { href: "/admin/orders", icon: ShoppingBag, en: "Orders", ar: "الطلبات", perm: "orders.read" },
   { href: "/admin/products", icon: Boxes, en: "Products", ar: "المنتجات", perm: "products.read" },
   { href: "/admin/content", icon: FileText, en: "Content", ar: "المحتوى", perm: "cms.read" },

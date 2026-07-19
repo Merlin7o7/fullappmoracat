@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users, LifeBuoy, Bell, Info,
+  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users, LifeBuoy, Bell, Info, ShieldCheck,
 } from "lucide-react";
 import { commerceEnabled } from "@/lib/features";
 
@@ -27,6 +27,9 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { href: "/portal/cats", icon: Cat, en: "My Cats", ar: "قططي", primary: true },
   { href: "/portal/community", icon: Users, en: "Community", ar: "المجتمع", primary: true },
   { href: "/portal/notifications", icon: Bell, en: "Notifications", ar: "الإشعارات" },
+  // Who may open your cat's medical record — and a ledger of everyone who has.
+  // Privacy is only real if the member can find it (R106).
+  { href: "/portal/health-access", icon: ShieldCheck, en: "Health access", ar: "الوصول الطبي" },
   { href: "/portal/subscriptions", icon: Repeat, en: "Subscriptions", ar: "الاشتراكات", commercial: true },
   { href: "/portal/orders", icon: Package, en: "Orders", ar: "الطلبات", commercial: true },
   { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين" },
