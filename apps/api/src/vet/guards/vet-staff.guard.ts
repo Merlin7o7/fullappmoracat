@@ -227,7 +227,7 @@ export class VetStaffGuard implements CanActivate {
     let payload: CounterTokenPayload;
     try {
       payload = await this.jwt.verifyAsync<CounterTokenPayload>(token, {
-        secret: resolveJwtSecret("JWT_ACCESS_SECRET"),
+        secret: resolveJwtSecret("JWT_COUNTER_SECRET"),
       });
     } catch {
       throw new UnauthorizedException(

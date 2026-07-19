@@ -1,6 +1,14 @@
 import { randomBytes } from "node:crypto";
 
-type JwtSecretName = "JWT_ACCESS_SECRET" | "JWT_REFRESH_SECRET";
+/**
+ * Distinct key material per token class. A counter-mode PIN token and a member
+ * access token must never be interchangeable: the counter token is deliberately
+ * long-lived (12h), reduced-scope, and unlocked by a 4-digit PIN, so if it were
+ * signed with the access secret it would also be a full-privilege bearer token
+ * for that staff member's personal account. Separate secrets make that
+ * substitution fail at the signature check, before any claim is read.
+ */
+type JwtSecretName = "JWT_ACCESS_SECRET" | "JWT_REFRESH_SECRET" | "JWT_COUNTER_SECRET";
 
 // Per-process ephemeral secrets for dev/test ONLY — random, never a known
 // constant, and consistent within a single process so sign+verify agree.

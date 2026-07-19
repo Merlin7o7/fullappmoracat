@@ -73,6 +73,10 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
+      # Separate key material for vet counter-mode PIN tokens. Must differ from
+      # the access secret — boot validation refuses to start if they match.
+      - key: JWT_COUNTER_SECRET
+        generateValue: true
       # CORS: the web origin allowed to call this API.
       - key: NEXT_PUBLIC_SITE_URL
         value: https://moracat.co

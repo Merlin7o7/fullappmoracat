@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 
 /** Flat delivery fee (SAR); waived above the free-shipping threshold. */
@@ -17,16 +19,87 @@ export interface CartTotals {
   itemCount: number;
 }
 
+/**
+ * Who is asking. A cart is reachable either by its owner (authenticated) or by
+ * a guest holding the capability token minted at creation. The cart id alone is
+ * NEVER sufficient — it is a routing identifier, not a credential.
+ */
+export interface CartActor {
+  userId?: string | null;
+  token?: string | null;
+}
+
+function tokensMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
+
 @Injectable()
 export class CartService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(userId?: string) {
-    const cart = await this.prisma.cart.create({ data: { userId: userId ?? null } });
-    return this.get(cart.id);
+  /**
+   * Create a cart. An authenticated shopper owns it outright; an anonymous one
+   * receives a single-use capability token that must accompany every later
+   * request. The token is returned exactly once, here.
+   */
+  async create(actor: CartActor = {}) {
+    const guestToken = actor.userId ? null : randomBytes(32).toString("base64url");
+    const cart = await this.prisma.cart.create({
+      data: { userId: actor.userId ?? null, guestToken },
+    });
+    const view = await this.get(cart.id, { userId: actor.userId, token: guestToken });
+    return { ...view, guestToken };
   }
 
-  async get(cartId: string) {
+  /**
+   * Load a cart the actor is entitled to, claiming an unowned guest cart for a
+   * signed-in user in the process. Every read and mutation funnels through here.
+   */
+  private async requireAccess(cartId: string, actor: CartActor, opts: { mutating?: boolean } = {}) {
+    const cart = await this.prisma.cart.findUnique({
+      where: { id: cartId },
+      select: { id: true, userId: true, guestToken: true, status: true, couponId: true, currency: true },
+    });
+    // Same shape for "no such cart" and "not yours" — no existence oracle.
+    if (!cart) throw new NotFoundException("Cart not found");
+
+    if (cart.userId) {
+      if (!actor.userId || cart.userId !== actor.userId) throw new NotFoundException("Cart not found");
+    } else if (!tokensMatch(cart.guestToken, actor.token)) {
+      throw new NotFoundException("Cart not found");
+    } else if (actor.userId) {
+      // A signed-in shopper presenting a valid guest token adopts the basket.
+      // The token is cleared so it can never be replayed against the now-owned
+      // cart (e.g. from a shared device the guest previously used).
+      await this.prisma.cart.update({
+        where: { id: cart.id },
+        data: { userId: actor.userId, guestToken: null },
+      });
+      cart.userId = actor.userId;
+      cart.guestToken = null;
+    }
+
+    if (opts.mutating && cart.status !== "ACTIVE") {
+      throw new ForbiddenException(
+        cart.status === "CHECKING_OUT"
+          ? "This cart is being checked out and cannot be changed."
+          : "This cart is no longer active."
+      );
+    }
+    return cart;
+  }
+
+  async get(cartId: string, actor: CartActor) {
+    await this.requireAccess(cartId, actor);
+    return this.view(cartId);
+  }
+
+  /** Render a cart that access has already been established for. */
+  private async view(cartId: string) {
     const cart = await this.prisma.cart.findUnique({
       where: { id: cartId },
       include: {
@@ -45,9 +118,13 @@ export class CartService {
     });
     if (!cart) throw new NotFoundException("Cart not found");
 
-    const coupon = cart.couponId
-      ? await this.prisma.coupon.findUnique({ where: { id: cart.couponId } })
-      : null;
+    // Re-validate the attached coupon on every read. Validity was previously
+    // only checked at apply-time, so a coupon that expired or was deactivated
+    // afterwards kept discounting the basket indefinitely.
+    const coupon = cart.couponId ? await this.loadValidCoupon(cart.couponId) : null;
+    if (cart.couponId && !coupon) {
+      await this.prisma.cart.update({ where: { id: cart.id }, data: { couponId: null } });
+    }
 
     const items = cart.items.map((i) => ({
       id: i.id,
@@ -65,14 +142,15 @@ export class CartService {
     return {
       id: cart.id,
       currency: cart.currency,
+      status: cart.status,
       coupon: coupon ? { code: coupon.code, type: coupon.type, value: Number(coupon.value) } : null,
       items,
       totals,
     };
   }
 
-  async addItem(cartId: string, productId: string, quantity: number) {
-    await this.assertCart(cartId);
+  async addItem(cartId: string, actor: CartActor, productId: string, quantity: number) {
+    await this.requireAccess(cartId, actor, { mutating: true });
     const product = await this.prisma.product.findFirst({
       where: { id: productId, isActive: true, deletedAt: null },
     });
@@ -85,55 +163,75 @@ export class CartService {
     if (existing) {
       await this.prisma.cartItem.update({
         where: { id: existing.id },
-        data: { quantity: existing.quantity + quantity },
+        // Re-snapshot the price so a basket cannot hold a stale unit price
+        // indefinitely after a repricing.
+        data: { quantity: existing.quantity + quantity, unitPrice: product.price },
       });
     } else {
       await this.prisma.cartItem.create({
         data: { cartId, productId, quantity, unitPrice: product.price },
       });
     }
-    return this.get(cartId);
+    return this.view(cartId);
   }
 
-  async updateItem(cartId: string, itemId: string, quantity: number) {
+  async updateItem(cartId: string, actor: CartActor, itemId: string, quantity: number) {
+    await this.requireAccess(cartId, actor, { mutating: true });
     await this.assertItem(cartId, itemId);
     if (quantity === 0) {
       await this.prisma.cartItem.delete({ where: { id: itemId } });
     } else {
       await this.prisma.cartItem.update({ where: { id: itemId }, data: { quantity } });
     }
-    return this.get(cartId);
+    return this.view(cartId);
   }
 
-  async removeItem(cartId: string, itemId: string) {
+  async removeItem(cartId: string, actor: CartActor, itemId: string) {
+    await this.requireAccess(cartId, actor, { mutating: true });
     await this.assertItem(cartId, itemId);
     await this.prisma.cartItem.delete({ where: { id: itemId } });
-    return this.get(cartId);
+    return this.view(cartId);
   }
 
-  async applyCoupon(cartId: string, code: string) {
-    await this.assertCart(cartId);
+  async applyCoupon(cartId: string, actor: CartActor, code: string) {
+    await this.requireAccess(cartId, actor, { mutating: true });
     const coupon = await this.prisma.coupon.findUnique({ where: { code } });
-    const now = new Date();
-    const valid =
-      coupon &&
-      coupon.isActive &&
-      (!coupon.startsAt || coupon.startsAt <= now) &&
-      (!coupon.expiresAt || coupon.expiresAt >= now) &&
-      (!coupon.maxRedemptions || coupon.redeemedCount < coupon.maxRedemptions);
-    if (!valid) throw new BadRequestException("Coupon is invalid or expired");
-
+    if (!coupon || !this.isCouponValid(coupon)) {
+      throw new BadRequestException("Coupon is invalid or expired");
+    }
     await this.prisma.cart.update({ where: { id: cartId }, data: { couponId: coupon.id } });
-    return this.get(cartId);
+    return this.view(cartId);
   }
 
-  async removeCoupon(cartId: string) {
-    await this.assertCart(cartId);
+  async removeCoupon(cartId: string, actor: CartActor) {
+    await this.requireAccess(cartId, actor, { mutating: true });
     await this.prisma.cart.update({ where: { id: cartId }, data: { couponId: null } });
-    return this.get(cartId);
+    return this.view(cartId);
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
+
+  private isCouponValid(c: {
+    isActive: boolean;
+    startsAt: Date | null;
+    expiresAt: Date | null;
+    maxRedemptions: number | null;
+    redeemedCount: number;
+  }): boolean {
+    const now = new Date();
+    return (
+      c.isActive &&
+      (!c.startsAt || c.startsAt <= now) &&
+      (!c.expiresAt || c.expiresAt >= now) &&
+      (!c.maxRedemptions || c.redeemedCount < c.maxRedemptions)
+    );
+  }
+
+  private async loadValidCoupon(couponId: string) {
+    const c = await this.prisma.coupon.findUnique({ where: { id: couponId } });
+    return c && this.isCouponValid(c) ? c : null;
+  }
+
   private computeTotals(
     items: { lineTotal: number; quantity: number }[],
     coupon: { type: string; value: unknown; minSubtotal: unknown } | null
@@ -165,11 +263,6 @@ export class CartService {
       grandTotal: round(discountedSubtotal + shippingTotal),
       itemCount,
     };
-  }
-
-  private async assertCart(cartId: string) {
-    const c = await this.prisma.cart.findUnique({ where: { id: cartId }, select: { id: true } });
-    if (!c) throw new NotFoundException("Cart not found");
   }
 
   private async assertItem(cartId: string, itemId: string) {

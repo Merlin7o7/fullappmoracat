@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CommunityProfileView } from "@/components/community-profile-view";
 import type { CommunityProfile } from "@/lib/api";
+import { jsonLdProps } from "@/lib/json-ld";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
@@ -64,7 +65,7 @@ export default async function CommunityProfilePage({ params }: { params: { slug:
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script {...jsonLdProps(jsonLd)} />
       <CommunityProfileView cat={cat} slug={params.slug} />
       <SiteFooter />
     </div>

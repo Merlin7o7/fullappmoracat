@@ -1396,12 +1396,33 @@ model SubscriptionEvent {
 //  COMMERCE — cart, orders, payments, invoices, discounts
 // ─────────────────────────────────────────────────────────────────────────
 
+/// Lifecycle of a cart. CHECKING_OUT is claimed by a status-guarded update
+/// *before* the PSP is called, so a double-tapped checkout cannot charge twice:
+/// the second request finds the cart already claimed and is rejected.
+enum CartStatus {
+  ACTIVE
+  CHECKING_OUT
+  CONVERTED
+  ABANDONED
+}
+
 model Cart {
-  id        String   @id @default(cuid())
-  userId    String?
-  sessionId String? // guest carts
-  currency  String   @default("SAR")
-  couponId  String?
+  id String @id @default(cuid())
+
+  /// Owner once the shopper is authenticated. A cart with a userId is
+  /// accessible ONLY to that user — the id alone is never sufficient.
+  userId String?
+
+  /// Capability secret for anonymous carts. The cart id is a routing
+  /// identifier, not a credential; this is the bearer secret a guest presents
+  /// (x-cart-token) to read or mutate their own basket. Cleared when the cart
+  /// is claimed by a signed-in user so a stale token cannot resurrect access.
+  guestToken String? @unique
+
+  status   CartStatus @default(ACTIVE)
+  currency String     @default("SAR")
+  couponId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1409,7 +1430,7 @@ model Cart {
   items CartItem[]
 
   @@index([userId])
-  @@index([sessionId])
+  @@index([status, updatedAt])
   @@map("carts")
 }
 

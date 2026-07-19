@@ -461,7 +461,9 @@ export class VetAuthService {
       deviceId: device.id,
     };
     const token = await this.jwt.signAsync(payload, {
-      secret: resolveJwtSecret("JWT_ACCESS_SECRET"),
+      // Counter-specific key material — see JwtSecretName. Signing this with the
+      // access secret would make a 4-digit PIN mint a full member bearer token.
+      secret: resolveJwtSecret("JWT_COUNTER_SECRET"),
       expiresIn: COUNTER_TTL_SECONDS,
     });
 

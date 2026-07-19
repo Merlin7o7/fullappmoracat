@@ -91,10 +91,19 @@ ok(!!A, "admin login");
 const ss = rnd();
 const dry = (await call("/admin/products", "POST", { slug: `smoke-dry-${ss}`, sku: `SMKD-${ss.toUpperCase()}`, type: "DRY_FOOD", nameEn: "Smoke Dry", nameAr: "جاف", price: 49 }, A)).json;
 let cart = (await call("/cart", "POST")).json;
-cart = (await call(`/cart/${cart.id}/items`, "POST", { productId: dry.id, quantity: 2 })).json;
-cart = (await call(`/cart/${cart.id}/coupon`, "POST", { code: "WELCOME10" })).json;
+// Returned exactly once, at creation — later views never re-expose it.
+const guestToken = cart.guestToken;
+ok(!!guestToken, "guest cart mints a capability token");
+const CT = { "x-cart-token": guestToken };
+// A cart id is a routing identifier, not a credential: without the token an
+// attacker who guesses/obtains an id must not be able to read or mutate it.
+ok((await call(`/cart/${cart.id}`)).status === 404, "guest cart unreadable without token");
+ok((await call(`/cart/${cart.id}/items`, "POST", { productId: dry.id, quantity: 1 })).status === 404,
+  "guest cart unmutatable without token");
+cart = (await call(`/cart/${cart.id}/items`, "POST", { productId: dry.id, quantity: 2 }, undefined, CT)).json;
+cart = (await call(`/cart/${cart.id}/coupon`, "POST", { code: "WELCOME10" }, undefined, CT)).json;
 ok(cart.totals.discountTotal > 0, "coupon applied");
-const order = (await call("/checkout", "POST", { cartId: cart.id, provider: "MADA" }, C)).json;
+const order = (await call("/checkout", "POST", { cartId: cart.id, cartToken: guestToken, provider: "MADA" }, C)).json;
 ok(order.status === "CONFIRMED" && order.invoice?.status === "PAID", `order ${order.orderNumber} confirmed+paid`);
 ok(Math.abs(order.taxTotal) < 0.01, "0% VAT (Moracat not VAT-registered)");
 // Value made visible (R041): the savings tally reflects the coupon discount.
@@ -107,13 +116,40 @@ console.log("━━ pending flow + webhook ━━");
 const s = rnd();
 const bnplProduct = (await call("/admin/products", "POST", { slug: `smoke-bnpl-${s}`, sku: `SMK-${s.toUpperCase()}`, type: "TOY", nameEn: "Smoke BNPL", nameAr: "دخان", price: 52.77 }, A)).json;
 let cart2 = (await call("/cart", "POST")).json;
-cart2 = (await call(`/cart/${cart2.id}/items`, "POST", { productId: bnplProduct.id, quantity: 1 })).json;
-const pending = (await call("/checkout", "POST", { cartId: cart2.id, provider: "TABBY" }, C)).json;
+const guestToken2 = cart2.guestToken;
+const CT2 = { "x-cart-token": guestToken2 };
+cart2 = (await call(`/cart/${cart2.id}/items`, "POST", { productId: bnplProduct.id, quantity: 1 }, undefined, CT2)).json;
+const pending = (await call("/checkout", "POST", { cartId: cart2.id, cartToken: guestToken2, provider: "TABBY" }, C)).json;
 ok(pending.status === "PENDING" && !!pending.redirectUrl, "BNPL checkout pending + redirect");
 const badHook = await call("/payments/webhooks/mock", "POST", { providerRef: pending.payment.providerRef, status: "CAPTURED" }, undefined, { "x-webhook-secret": "wrong" });
 ok(badHook.status === 401, "webhook bad signature 401");
 const hook = await call("/payments/webhooks/mock", "POST", { providerRef: pending.payment.providerRef, status: "CAPTURED" }, undefined, { "x-webhook-secret": process.env.MOCK_WEBHOOK_SECRET ?? "mock-webhook-secret" });
 ok(hook.json?.status === "captured", "webhook captures pending order");
+
+console.log("━━ security regressions ━━");
+// Cross-account cart takeover: a second member must not be able to check out
+// (or destroy) a cart owned by someone else, even with a valid cart id.
+const victimEmail = `victim+${rnd()}@e.com`;
+const victim = (await call("/auth/register", "POST", { email: victimEmail, password: "S3cure!pass", firstName: "Victim", acceptTerms: true })).json;
+let vCart = (await call("/cart", "POST")).json;
+const vToken = vCart.guestToken;
+await call(`/cart/${vCart.id}/items`, "POST", { productId: dry.id, quantity: 1 }, undefined, { "x-cart-token": vToken });
+// Claim it for the victim, which clears the guest token.
+ok((await call(`/cart/${vCart.id}`, "GET", undefined, victim.accessToken, { "x-cart-token": vToken })).status === 200,
+  "signed-in user claims their guest cart");
+ok((await call(`/cart/${vCart.id}`, "GET", undefined, C)).status === 404,
+  "another member cannot read an owned cart");
+ok((await call("/checkout", "POST", { cartId: vCart.id, provider: "MADA" }, C)).status === 404,
+  "another member cannot check out an owned cart");
+ok((await call(`/cart/${vCart.id}`, "GET", undefined, undefined, { "x-cart-token": vToken })).status === 404,
+  "guest token is revoked once the cart is claimed");
+
+// Unsettleable rails must be refused at the edge, not routed to the mock —
+// otherwise a live request marks an order paid with zero money moved.
+ok((await call("/checkout", "POST", { cartId: vCart.id, provider: "WALLET" }, victim.accessToken)).status === 400,
+  "WALLET rejected (no settlement engine)");
+ok((await call("/checkout", "POST", { cartId: vCart.id, provider: "GIFT_CARD" }, victim.accessToken)).status === 400,
+  "GIFT_CARD rejected (no settlement engine)");
 
 console.log("━━ membership activation (plan builder → checkout) ━━");
 // The plan is computed from the cat and bought on one honest page (D2/D3):

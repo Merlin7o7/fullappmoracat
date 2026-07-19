@@ -20,13 +20,22 @@ export function assertProductionConfig(): void {
 
   const errors: string[] = [];
 
-  for (const key of ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"]) {
+  const jwtSecrets = ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "JWT_COUNTER_SECRET"];
+  for (const key of jwtSecrets) {
     const val = process.env[key];
     if (!val || DEFAULT_SECRETS.has(val)) {
       errors.push(`${key} is missing or set to a known default value.`);
     } else if (val.length < 32) {
       errors.push(`${key} is too short — need ≥32 chars, got ${val.length}.`);
     }
+  }
+
+  // Token classes must not share key material. If two secrets are equal, a
+  // token minted for one purpose verifies as the other and the type separation
+  // collapses — which is exactly the counter-mode escalation this guards.
+  const distinct = new Set(jwtSecrets.map((k) => process.env[k]).filter(Boolean));
+  if (distinct.size !== jwtSecrets.filter((k) => process.env[k]).length) {
+    errors.push("JWT secrets must all differ — sharing key material defeats token-type separation.");
   }
 
   // Core infrastructure the app cannot function without in production. Missing

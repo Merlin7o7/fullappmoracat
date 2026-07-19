@@ -129,6 +129,9 @@ export class VetRecordsService {
 
   async create(actor: VetActor, dto: CreateClinicalEntryDto) {
     const cat = await this.patients.requireCat(dto.catId);
+    // Authoring requires an encounter at THIS clinic. Consent governs read
+    // depth, never the right to write facts onto someone else's patient.
+    await this.patients.requireTreatmentRelationship(cat.id, actor.orgId);
     const payload = this.parsePayload(dto.type, dto.payload);
     const occurredAt = this.parseOccurredAt(dto.occurredAt);
 
@@ -182,6 +185,16 @@ export class VetRecordsService {
       });
       const effects = isDraft ? { deferred: true as const } : await this.applySideEffects(tx, actor, entry);
       return { entry, effects };
+    });
+
+    // The ledger is the owner's answer to "who touched my cat's record". A
+    // clinic authoring a diagnosis is at least as material as one reading it.
+    await this.patients.logAccess({
+      catId: cat.id,
+      orgId: actor.orgId,
+      staffId: actor.staffId,
+      tier: "T1",
+      surface: "write",
     });
 
     return {

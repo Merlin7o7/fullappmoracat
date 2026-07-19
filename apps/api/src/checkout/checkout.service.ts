@@ -41,7 +41,11 @@ export class CheckoutService {
       );
     }
 
-    const cart = await this.cart.get(dto.cartId); // throws if missing
+    // Ownership-checked: the buyer must own this cart, or present the guest
+    // token for a basket they built before signing in (which claims it). A cart
+    // id alone is not a credential — previously any id could be checked out,
+    // charging the wrong person and destroying the real owner's basket.
+    const cart = await this.cart.get(dto.cartId, { userId, token: dto.cartToken ?? null });
     if (cart.items.length === 0) throw new BadRequestException("Cart is empty");
 
     if (dto.addressId) {
