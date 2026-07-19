@@ -78,7 +78,21 @@ export interface IPaymentProvider {
 /** Normalized event parsed from a PSP webhook. */
 export interface WebhookEvent {
   providerRef: string;
-  status: "CAPTURED" | "FAILED" | "REFUNDED";
+  /**
+   * IGNORED is load-bearing. PSPs emit many lifecycle events we take no action
+   * on (`payment_authorized`, `created`, `updated`…). These previously fell
+   * through a ternary's else-branch to FAILED, which voided the invoice, killed
+   * the draft subscription and emailed "your payment didn't go through" while
+   * the shopper was still mid-flow — and the genuine success event that
+   * followed was then ignored because the payment was no longer PENDING.
+   * Unknown or non-actionable events must be an explicit no-op.
+   */
+  status: "CAPTURED" | "FAILED" | "REFUNDED" | "IGNORED";
+  /** Provider-side event identifier, used for replay suppression. */
+  eventId?: string;
+  /** Which PSP this came from — scopes the replay ledger. */
+  provider?: string;
+  eventType?: string;
   raw?: unknown;
 }
 

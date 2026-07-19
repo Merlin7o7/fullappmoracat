@@ -18,6 +18,7 @@ export type NotificationType =
   | "support_resolved"
   | "order_confirmed"
   | "order_pending"
+  | "order_refunded"
   | "payment_received"
   | "payment_failed"
   // lifecycle engine — the machinery that keeps the "we never charge silently"
@@ -171,6 +172,17 @@ export function buildNotificationText(
         en: {
           title: "Order confirmed",
           body: `${p(params, "orderNumber")} — ${p(params, "total")} ${p(params, "currency")}. We're preparing your box!`,
+        },
+      };
+    case "order_refunded":
+      return {
+        ar: {
+          title: "رجّعنا لك المبلغ",
+          body: `${p(params, "orderNumber")} — ${p(params, "total")} ${p(params, "currency")}. يوصل حسابك خلال ٥ إلى ١٠ أيام عمل حسب بنكك.`,
+        },
+        en: {
+          title: "Your refund is on its way",
+          body: `${p(params, "orderNumber")} — ${p(params, "total")} ${p(params, "currency")}. It reaches your account within 5–10 business days, depending on your bank.`,
         },
       };
     case "order_pending":

@@ -1,16 +1,35 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
+/** Upper bound on a single history fetch — see `list`. */
+const MAX_ORDERS = 100;
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * A member's order history, newest first.
+   *
+   * `_count` rather than loading every OrderItem: the list only needs a count,
+   * and hydrating the rows meant a 60-order member pulled ~480 item rows to
+   * render 60 numbers. Bounded by MAX_ORDERS so the query cannot grow without
+   * limit as an account ages.
+   */
   async list(userId: string) {
     const orders = await this.prisma.order.findMany({
       where: { userId },
       orderBy: { placedAt: "desc" },
-      include: {
-        items: { select: { id: true } },
+      take: MAX_ORDERS,
+      select: {
+        orderNumber: true,
+        status: true,
+        source: true,
+        grandTotal: true,
+        currency: true,
+        placedAt: true,
+        couponCode: true,
+        _count: { select: { items: true } },
         shipment: { select: { status: true, trackingNumber: true, estimatedAt: true } },
       },
     });
@@ -20,7 +39,8 @@ export class OrdersService {
       source: o.source,
       grandTotal: Number(o.grandTotal),
       currency: o.currency,
-      itemCount: o.items.length,
+      itemCount: o._count.items,
+      couponCode: o.couponCode,
       placedAt: o.placedAt,
       shipment: o.shipment,
     }));

@@ -151,6 +151,64 @@ ok((await call("/checkout", "POST", { cartId: vCart.id, provider: "WALLET" }, vi
 ok((await call("/checkout", "POST", { cartId: vCart.id, provider: "GIFT_CARD" }, victim.accessToken)).status === 400,
   "GIFT_CARD rejected (no settlement engine)");
 
+console.log("━━ commerce integrity ━━");
+// Idempotency: the same key must replay the first result, never charge twice.
+const idemCart = (await call("/cart", "POST")).json;
+await call(`/cart/${idemCart.id}/items`, "POST", { productId: dry.id, quantity: 1 }, undefined, { "x-cart-token": idemCart.guestToken });
+const idemKey = `idem-${rnd()}${rnd()}`;
+const idemBody = { cartId: idemCart.id, cartToken: idemCart.guestToken, provider: "MADA" };
+const first = await call("/checkout", "POST", idemBody, C, { "idempotency-key": idemKey });
+const replay = await call("/checkout", "POST", idemBody, C, { "idempotency-key": idemKey });
+ok(first.json?.orderNumber && replay.json?.orderNumber === first.json.orderNumber,
+  "idempotency-key replays the original order instead of charging twice");
+const idemOrders = (await call("/orders", "GET", undefined, C)).json;
+ok(idemOrders.filter((o) => o.orderNumber === first.json.orderNumber).length === 1,
+  "replayed checkout created exactly one order");
+
+// Concurrent double-tap on one cart: the status claim must let exactly one win.
+const raceCart = (await call("/cart", "POST")).json;
+await call(`/cart/${raceCart.id}/items`, "POST", { productId: dry.id, quantity: 1 }, undefined, { "x-cart-token": raceCart.guestToken });
+const raceBody = { cartId: raceCart.id, cartToken: raceCart.guestToken, provider: "MADA" };
+const [r1, r2] = await Promise.all([
+  call("/checkout", "POST", raceBody, C),
+  call("/checkout", "POST", raceBody, C),
+]);
+const created = [r1, r2].filter((r) => r.status === 201).length;
+ok(created === 1, `concurrent checkout on one cart creates exactly one order (got ${created})`);
+
+// A redemption ledger row is written for every coupon actually used, which is
+// what makes perUserLimit enforceable (unit-tested in common/coupons.test.ts).
+const couponOrder = idemOrders.find((o) => o.couponCode === "WELCOME10");
+ok(!!couponOrder, "coupon-bearing order recorded with its code");
+
+console.log("━━ webhook integrity ━━");
+const HOOK = { "x-webhook-secret": process.env.MOCK_WEBHOOK_SECRET ?? "mock-webhook-secret" };
+// Build a fresh pending order to settle.
+const whCart = (await call("/cart", "POST")).json;
+await call(`/cart/${whCart.id}/items`, "POST", { productId: bnplProduct.id, quantity: 1 }, undefined, { "x-cart-token": whCart.guestToken });
+const whOrder = (await call("/checkout", "POST", { cartId: whCart.id, cartToken: whCart.guestToken, provider: "TABBY" }, C)).json;
+const whRef = whOrder.payment.providerRef;
+
+// An unknown/non-actionable event must be a no-op, NOT a failure. Previously
+// anything unrecognised voided the invoice and emailed the shopper.
+const unknownEvt = await call("/payments/webhooks/mock", "POST", { providerRef: whRef, status: "SOMETHING_NEW" }, undefined, HOOK);
+const afterUnknown = (await call(`/orders/${whOrder.orderNumber}`, "GET", undefined, C)).json;
+ok(afterUnknown.status === "PENDING", "unknown webhook event leaves the order untouched");
+
+// Replay: the same event id must settle once.
+const evtId = `evt-${rnd()}${rnd()}`;
+const cap1 = await call("/payments/webhooks/mock", "POST", { providerRef: whRef, status: "CAPTURED", eventId: evtId }, undefined, HOOK);
+const cap2 = await call("/payments/webhooks/mock", "POST", { providerRef: whRef, status: "CAPTURED", eventId: evtId }, undefined, HOOK);
+ok(cap1.json?.status === "captured", "first delivery captures");
+ok(cap2.json?.status === "replayed", "replayed delivery is suppressed");
+
+// Refund reconciliation: order + invoice must move together, with a Refund row.
+const refundEvt = await call("/payments/webhooks/mock", "POST", { providerRef: whRef, status: "REFUNDED", eventId: `evt-${rnd()}${rnd()}` }, undefined, HOOK);
+ok(refundEvt.json?.status === "refunded", "PSP-initiated refund is processed");
+const refunded = (await call(`/orders/${whOrder.orderNumber}`, "GET", undefined, C)).json;
+ok(refunded.status === "RETURNED" && refunded.invoice?.status === "REFUNDED",
+  "refund reconciles order + invoice (books no longer say 'paid')");
+
 console.log("━━ membership activation (plan builder → checkout) ━━");
 // The plan is computed from the cat and bought on one honest page (D2/D3):
 // charge-first, VAT broken out, first renewal exactly one month out (R021).
