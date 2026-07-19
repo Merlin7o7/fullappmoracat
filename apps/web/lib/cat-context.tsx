@@ -24,6 +24,10 @@ export interface PortalCat {
   id: string;
   name: string;
   catIdNumber: string | null;
+  /** The census ordinal — this cat's real place in the count (Founding ≤ 1000). */
+  catNumber: number;
+  /** Server-derived founding standing; the card recomputes it from catNumber. */
+  isFoundingMember: boolean;
   qrToken: string | null;
   idIssuedAt: string | null;
   photoUrl: string | null;

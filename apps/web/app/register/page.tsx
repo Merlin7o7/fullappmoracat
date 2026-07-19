@@ -14,6 +14,7 @@ import { AuthShell } from "@/components/auth-shell";
 import { OtpBoxes } from "@/components/otp-boxes";
 import { ApiError } from "@/lib/http";
 import { friendlyError } from "@/lib/errors";
+import { useCaptureSource } from "@/lib/source";
 
 // Draft persistence (R117 — never lose entered data). Name, phone and email
 // only — NEVER the password, never the terms tick.
@@ -42,6 +43,10 @@ export default function RegisterPage() {
     const r = new URLSearchParams(window.location.search).get("ref");
     if (r) setRefCode(r);
   }, []);
+  // The stand's own code (`?src=stand-004`, MRC-GTM-001 §2) travels with the
+  // registration to the cat row. Captured here as well as on the home page
+  // because a stand tile may link to either.
+  useCaptureSource();
   const { locale } = useLocale();
   const { toast } = useToast();
   const isAr = locale === "ar";

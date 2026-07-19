@@ -748,6 +748,20 @@ export class SubscriptionsService {
     token: string;
     provider: PaymentProviderKey;
   }): Promise<{ ok: true; endsAt: Date } | { ok: false; reason: string }> {
+    // Kill-switch double-check. Unlike activate(), nothing HTTP guards this path:
+    // the hourly lifecycle cron calls it in-process, so CommerceGuard (an
+    // APP_GUARD, which only ever sees requests) cannot see it. Without this a
+    // Community Mode deploy would still charge a real stored card. Thrown, not
+    // returned as { ok: false } — a decline is a business outcome that feeds
+    // dunning and notifies the member; commerce being off is a configuration
+    // fact that must not masquerade as a failed card (R040).
+    if (!commerceEnabled()) {
+      throw new ForbiddenException({
+        code: "MEMBERSHIPS_COMING_SOON",
+        message: "Memberships are launching soon.",
+      });
+    }
+
     const sub = await this.prisma.subscription.findUnique({
       where: { id: input.subscriptionId },
       select: {
@@ -854,6 +868,17 @@ export class SubscriptionsService {
    * reconciliation sweep; safe to re-run.
    */
   async completeCapturedOrder(paymentId: string, providerRef: string): Promise<void> {
+    // Kill-switch double-check. @Commercial() on the webhook controller stops a
+    // PSP event from settling an order, but the reconciliation sweep reaches the
+    // very same settlement from the cron — closing the front door and leaving
+    // this one open would activate memberships while commerce is off.
+    if (!commerceEnabled()) {
+      throw new ForbiddenException({
+        code: "MEMBERSHIPS_COMING_SOON",
+        message: "Memberships are launching soon.",
+      });
+    }
+
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
       select: { id: true, status: true, orderId: true, order: { select: { subscriptionId: true } } },

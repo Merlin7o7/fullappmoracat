@@ -15,6 +15,7 @@ import {
   Min,
   MinLength,
 } from "class-validator";
+import { SOURCE_CODE_MAX } from "@moraqat/core";
 
 /** Trim incoming strings so " " can never masquerade as a real value. */
 const Trim = () =>
@@ -171,6 +172,21 @@ export class CreateCatDto {
   @IsOptional()
   @IsObject()
   profile?: Record<string, unknown>;
+
+  /**
+   * Acquisition source — the `?src=` code the registration arrived with, e.g.
+   * `stand-004` for the Al-Olaya counter stand (MRC-GTM-001 §2).
+   *
+   * Write-once at creation: `catScalarData` (the update whitelist) deliberately
+   * omits it, so a later PATCH cannot rewrite where a member came from. Yield
+   * per stand decides the Year-1 channel strategy and cannot be backfilled.
+   */
+  @ApiPropertyOptional({ example: "stand-004" })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @MaxLength(SOURCE_CODE_MAX)
+  sourceCode?: string;
 }
 
 export class UpdateCatDto extends PartialType(CreateCatDto) {}

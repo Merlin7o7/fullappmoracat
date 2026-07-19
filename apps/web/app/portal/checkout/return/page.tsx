@@ -22,6 +22,7 @@ import { Card, Button } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
+import { commerceEnabled } from "@/lib/features";
 import { localizeName } from "@/lib/translit";
 import { formatMoneyDate } from "@/lib/money";
 import { CatIdCard } from "@/components/cat-id-card";
@@ -69,6 +70,14 @@ function ReturnInner() {
   const qc = useQueryClient();
   const { activeCats } = useCats();
 
+  // Commerce-facing surface must be unreachable in Community Mode — a stale
+  // bookmark or a crafted ?ref= must never flash "Confirming your payment…"
+  // when no payment can exist (R040). Mirrors checkout/page.tsx.
+  const commerceOn = commerceEnabled();
+  React.useEffect(() => {
+    if (!commerceOn) router.replace("/portal");
+  }, [commerceOn, router]);
+
   // No reference to poll — nothing to confirm. Back to the portal.
   React.useEffect(() => {
     if (!ref) router.replace("/portal");
@@ -82,7 +91,7 @@ function ReturnInner() {
   const { data, isError } = useQuery({
     queryKey: ["activation", ref],
     queryFn: () => authedFetch<ActivationStatus>(`/subscriptions/order-status/${ref}`),
-    enabled: !!user && !!ref && !timedOut,
+    enabled: commerceOn && !!user && !!ref && !timedOut,
     refetchInterval: (q) => {
       if (q.state.data?.state !== "pending") return false;
       if (Date.now() - startedAt >= POLL_CAP_MS) return false;
@@ -123,6 +132,9 @@ function ReturnInner() {
     const cat = data.cats[0]?.id;
     return `/portal/checkout?plan=${data.plan.tier}${cat ? `&cat=${cat}` : ""}`;
   }, [data]);
+
+  // Every hook has run — safe to bail before painting anything commercial.
+  if (!commerceOn) return null;
 
   // ── Couldn't find the order ────────────────────────────────────────────────
   if (isError) {

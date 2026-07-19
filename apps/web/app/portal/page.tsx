@@ -190,6 +190,7 @@ export default function OverviewPage() {
             <CatIdCard
               catName={featured.name}
               catIdNumber={featured.catIdNumber ?? "MRC-••••-••••"}
+              catNumber={featured.catNumber}
               issuedAt={featured.idIssuedAt}
               photoUrl={featured.photoUrl}
               isAr={isAr}

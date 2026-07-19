@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { OrderStatus } from "@moraqat/db";
+import { FOUNDING_MEMBER_LIMIT } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 
 /**
@@ -12,6 +13,63 @@ const NON_REVENUE_STATUSES: OrderStatus[] = ["CANCELLED", "FAILED", "RETURNED"];
 @Injectable()
 export class AdminAnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Census yield (MRC-GTM-001 §1–§2).
+   *
+   * Phase 0's whole operating question is "which stand is producing cats?" —
+   * the strategy says kill or move any stand under 20 IDs/month, and that
+   * decision needs per-source counts, not revenue. Registrations without a
+   * `?src=` are reported honestly as "direct" rather than being folded into
+   * whichever stand happens to sort first.
+   */
+  async census() {
+    const now = new Date();
+    const d30 = new Date(now.getTime() - 30 * 86400_000);
+    const live = { deletedAt: null };
+
+    const [total, last30, founding, bySource, bySource30, recent] = await Promise.all([
+      this.prisma.cat.count({ where: live }),
+      this.prisma.cat.count({ where: { ...live, createdAt: { gte: d30 } } }),
+      // Founding places issued, by the high-water ordinal — NOT by a live count,
+      // because a deleted founding cat does not reopen its place.
+      this.prisma.cat.aggregate({ _max: { catNumber: true } }),
+      this.prisma.cat.groupBy({
+        by: ["sourceCode"],
+        where: live,
+        _count: { _all: true },
+        orderBy: { _count: { sourceCode: "desc" } },
+      }),
+      this.prisma.cat.groupBy({
+        by: ["sourceCode"],
+        where: { ...live, createdAt: { gte: d30 } },
+        _count: { _all: true },
+      }),
+      this.prisma.cat.findMany({
+        where: live,
+        orderBy: { catNumber: "desc" },
+        take: 10,
+        select: { catNumber: true, name: true, catIdNumber: true, sourceCode: true, createdAt: true },
+      }),
+    ]);
+
+    const per30 = new Map(bySource30.map((r) => [r.sourceCode ?? "", r._count._all]));
+
+    return {
+      registered: total,
+      registeredLast30Days: last30,
+      foundingLimit: FOUNDING_MEMBER_LIMIT,
+      foundingIssued: Math.min(founding._max.catNumber ?? 0, FOUNDING_MEMBER_LIMIT),
+      sources: bySource.map((row) => ({
+        // "direct" is a real answer, not a missing one: it means the person
+        // arrived without a stand code and we should not pretend otherwise.
+        source: row.sourceCode ?? "direct",
+        total: row._count._all,
+        last30Days: per30.get(row.sourceCode ?? "") ?? 0,
+      })),
+      recent,
+    };
+  }
 
   async dashboard() {
     const now = new Date();

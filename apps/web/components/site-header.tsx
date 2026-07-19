@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
+import { commerceEnabled } from "@/lib/features";
 import { ThemeToggle, LangToggle } from "./toggles";
 import { Logo } from "./logo";
 import { IlloPaw } from "./illustrations";
@@ -57,12 +58,16 @@ export function SiteHeader() {
     };
   }, [menuOpen]);
 
+  // In Community Mode the plans section is gone from the homepage and the shop
+  // has nothing to sell — a nav item pointing at either is a promise the site
+  // can't keep (R040/R112). Both return the moment commerce is switched on.
+  const commerce = commerceEnabled();
   const navItems = [
     { href: "/#how", label: t.nav.how },
-    { href: "/#plans", label: t.nav.plans },
+    ...(commerce ? [{ href: "/#plans", label: t.nav.plans }] : []),
     { href: "/benefits", label: t.nav.benefits },
     { href: "/community", label: t.nav.community },
-    { href: "/products", label: t.nav.products },
+    ...(commerce ? [{ href: "/products", label: t.nav.products }] : []),
     { href: "/blog", label: t.nav.blog },
     { href: "/tools/feeding", label: t.nav.tools },
   ];

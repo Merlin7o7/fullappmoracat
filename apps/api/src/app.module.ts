@@ -34,6 +34,7 @@ import { SupportModule } from "./support/support.module";
 import { IdsModule } from "./ids/ids.module";
 import { VerifyModule } from "./verify/verify.module";
 import { WaitlistModule } from "./waitlist/waitlist.module";
+import { CensusModule } from "./census/census.module";
 import { MailModule } from "./mail/mail.module";
 import { StorageModule } from "./storage/storage.module";
 import { CommunityModule } from "./community/community.module";
@@ -75,7 +76,15 @@ import { VetModule } from "./vet/vet.module";
     UploadsModule,
     WalletModule,
     // Rate limiting — 120 requests / minute per IP by default.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    //
+    // Overridable only so the E2E suite (which drives hundreds of requests from
+    // a single IP in seconds) isn't fighting the limiter instead of testing the
+    // product. The default is unchanged and applies whenever the var is unset
+    // or unparseable, so a missing/typo'd value fails *closed* to 120 rather
+    // than to "unlimited".
+    ThrottlerModule.forRoot([
+      { ttl: 60_000, limit: Number(process.env.THROTTLE_LIMIT) || 120 },
+    ]),
     // Cron host for the lifecycle engine (term-end invitations, graceful lapse,
     // vaccination reminders, birthdays/anniversaries, DRAFT expiry).
     ScheduleModule.forRoot(),
@@ -103,6 +112,7 @@ import { VetModule } from "./vet/vet.module";
     NotificationsModule,
     SupportModule,
     WaitlistModule,
+    CensusModule,
     LifecycleModule,
     VetModule,
   ],

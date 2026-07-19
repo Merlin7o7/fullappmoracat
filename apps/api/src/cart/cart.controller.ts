@@ -12,6 +12,7 @@ import { CartService, type CartActor } from "./cart.service";
 import { AddItemDto, ApplyCouponDto, UpdateItemDto } from "./dto/cart.dto";
 import { OptionalAuth } from "../common/decorators/optional-auth.decorator";
 import { CurrentCartActor, CART_TOKEN_HEADER } from "./cart-actor.decorator";
+import { Commercial } from "../common/decorators/commercial.decorator";
 
 /**
  * Carts work for guests AND signed-in members, so the whole controller is
@@ -19,9 +20,17 @@ import { CurrentCartActor, CART_TOKEN_HEADER } from "./cart-actor.decorator";
  * but when a bearer token IS present we resolve the user so the cart can be
  * owned and claimed. Authorisation itself lives in CartService.requireAccess —
  * a cart id is never sufficient on its own.
+ *
+ * @Commercial sits at the CONTROLLER level because there is no non-commercial
+ * route here: every one of these ends in the pricing engine (subtotal, discount,
+ * shipping, grandTotal) or in coupon validation. Letting an anonymous caller
+ * price a basket during the census is the coupon-barker product Moracat refuses
+ * to be (R006, R085) — and lets someone fill a cart that can never check out
+ * (R040). Frozen, never deleted: one env var restores the whole engine.
  */
 @ApiTags("cart")
 @OptionalAuth()
+@Commercial()
 @ApiHeader({
   name: CART_TOKEN_HEADER,
   required: false,

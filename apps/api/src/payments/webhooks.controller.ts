@@ -14,8 +14,28 @@ import { Public } from "../common/decorators/public.decorator";
 import { Commercial } from "../common/decorators/commercial.decorator";
 import { WebhooksService } from "./webhooks.service";
 
+/**
+ * ⚠️ READ BEFORE FLIPPING COMMERCE_ENABLED — this controller is the one place
+ * where the kill-switch is NOT symmetric.
+ *
+ * @Commercial() here 403s every INCOMING PSP event. That is safe today and only
+ * today: nothing is for sale during the census, so no transaction is in flight
+ * and no event is lost. It stops being safe the moment real money moves.
+ *
+ * Once live, turning commerce OFF does not pause payments — it strands the ones
+ * already mid-flight. The PSP keeps retrying a 403 for its retry budget
+ * (hours, not days) and then drops the event PERMANENTLY. The member is charged,
+ * the capture never settles, and no later re-enable brings the event back;
+ * recovery is manual reconciliation against the provider, member by member.
+ *
+ * So: after launch, the kill-switch must stop new CHECKOUTS, never inbound
+ * webhooks. Ungate this controller as part of the go-live change (settlement of
+ * an already-authorised charge is finishing an obligation, not making a sale) —
+ * or accept the outage window knowingly and drain in-flight payments first.
+ * Do NOT ungate it before then: it is the last door into completeCapturedOrder().
+ */
 @ApiTags("payments")
-@Commercial() // Community Mode: no payment webhook is processable.
+@Commercial() // Community Mode: no payment webhook is processable. See the hazard note above.
 @Controller("payments/webhooks")
 export class WebhooksController {
   constructor(private readonly webhooks: WebhooksService) {}

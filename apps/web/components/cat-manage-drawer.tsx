@@ -77,6 +77,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
           <CatIdCard
             catName={cat.name}
             catIdNumber={cat.catIdNumber ?? "MRC-••••-••••"}
+            catNumber={cat.catNumber}
             issuedAt={cat.idIssuedAt}
             photoUrl={cat.photoUrl}
             isAr={isAr}

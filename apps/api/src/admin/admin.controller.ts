@@ -47,6 +47,18 @@ export class AdminController {
     return this.analytics.dashboard();
   }
 
+  // ── The Census (Phase 0, MRC-GTM-001 §1–§2) ───────────────────────────
+  // The commerce dashboard above reads all-zeros while nothing is for sale, so
+  // it cannot answer the only question Phase 0 asks: which stand is actually
+  // producing cats. Deliberately NOT @Commercial() — this is the operating
+  // instrument *while* commerce is off.
+  @Get("census")
+  @RequirePermissions("dashboard.read")
+  @ApiOperation({ summary: "Census yield — registrations over time and per acquisition source" })
+  census() {
+    return this.analytics.census();
+  }
+
   // ── Audit log (read-only accountability surface) ───────────────────────
   // Gated on settings.read (super-admin/owner/manager/analyst) — an existing
   // permission, so the viewer works on deploy without a re-seed.

@@ -20,6 +20,8 @@ import { formatDate } from "@/lib/datetime";
 import { formatSAR, formatAmount } from "@/lib/money";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
+import { MembershipsClosedNotice } from "@/components/membership";
+import { commerceEnabled } from "@/lib/features";
 import { IlloCan, IlloPaw } from "@/components/illustrations";
 
 interface OrderRow {
@@ -59,17 +61,20 @@ export default function OrdersPage() {
   const { locale } = useLocale();
   const isAr = locale === "ar";
   const [openOrder, setOpenOrder] = React.useState<string | null>(null);
+  // Hidden from nav in Community Mode but still URL-reachable. Nothing has ever
+  // been sold, so no total and no "VAT (15%)" line may render (R040).
+  const commerce = commerceEnabled();
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["orders", user?.id],
     queryFn: () => authedFetch<OrderRow[]>("/orders"),
-    enabled: !!user,
+    enabled: !!user && commerce,
   });
 
   const detail = useQuery({
     queryKey: ["order-detail", openOrder],
     queryFn: () => authedFetch<OrderDetail>(`/orders/${openOrder}`),
-    enabled: !!user && !!openOrder,
+    enabled: !!user && !!openOrder && commerce,
     staleTime: 60_000,
   });
 
@@ -78,6 +83,25 @@ export default function OrdersPage() {
 
   const inv = detail.data;
   const provider = inv?.payment ? PROVIDER_LABEL[inv.payment.provider] ?? { en: inv.payment.provider, ar: inv.payment.provider } : null;
+
+  // Every hook has run — safe to swap the commercial body for the honest one.
+  if (!commerce) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "الطلبات" : "Orders"}</h1>
+        </div>
+        <MembershipsClosedNotice
+          isAr={isAr}
+          body={
+            isAr
+              ? "ما فتحنا العضويات بعد، فما فيه طلبات ولا فواتير. أول ما نفتح، كل طلب وفاتورة يوصلك هنا."
+              : "Memberships aren't open yet, so there are no orders or invoices. The moment we open, every one of them lands here."
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

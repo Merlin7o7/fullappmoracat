@@ -14,3 +14,6 @@ export * from "./pricing/box-economics";
 export * from "./vet-contract";
 // Vaccination standing, derived from the records rather than stored as a claim.
 export * from "./vaccination-status";
+// The Census (Phase 0) — founding status derived from the sequential Cat ID
+// number, so the badge cannot be set, only earned.
+export * from "./census";

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing, UserCog, Flag, ScrollText, SlidersHorizontal, Stethoscope,
+  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing, UserCog, Flag, ScrollText, SlidersHorizontal, Stethoscope, ScanLine,
 } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -18,6 +18,11 @@ import { Logo } from "@/components/logo";
 // tools, not CMS/settings). Keys mirror the @RequirePermissions on the routes.
 const NAV = [
   { href: "/admin", icon: LayoutDashboard, en: "Dashboard", ar: "لوحة التحكم", exact: true, perm: "dashboard.read" },
+  // Sits directly under the dashboard because during Phase 0 it *is* the
+  // dashboard: the commerce KPIs above read zero while nothing is for sale,
+  // and per-stand yield is the only number the census phase turns on
+  // (MRC-GTM-001 §1–§2). Same permission as the dashboard it stands in for.
+  { href: "/admin/census", icon: ScanLine, en: "Census", ar: "التعداد", perm: "dashboard.read" },
   { href: "/admin/customers", icon: Users, en: "Customers", ar: "العملاء", perm: "customers.read" },
   // The veterinary network console: approve clinics, verify licences, audit
   // who opened which cat's record. Write actions need partners.write.

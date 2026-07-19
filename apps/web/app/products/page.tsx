@@ -25,6 +25,13 @@ const SORTS = [
 export default function ProductsPage() {
   const { locale } = useLocale();
   const isAr = locale === "ar";
+  // Phase 0 — the Census. Nothing is for sale, so the shop shows no price, no
+  // sort-by-price, no grid, and never asks the API (which answers 403 while
+  // commerce is off). One honest forthcoming page instead of a broken one
+  // (R040 — never claim what the product doesn't do; R112 — no error state
+  // for a deliberate decision). Flipping NEXT_PUBLIC_COMMERCE_ENABLED restores
+  // every line below untouched.
+  const commerce = commerceEnabled();
   const [type, setType] = React.useState("");
   const [sort, setSort] = React.useState("newest");
   const [search, setSearch] = React.useState("");
@@ -37,6 +44,7 @@ export default function ProductsPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["products", type, sort, debounced],
     queryFn: () => api.products({ type: type || undefined, sort, search: debounced || undefined }),
+    enabled: commerce,
   });
 
   return (
@@ -50,35 +58,37 @@ export default function ProductsPage() {
             <IlloFish tone="orange" className="h-7 w-auto opacity-80" />
           </Sticker>
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-primary shadow-e1">
-            <IlloCan tone="pink" className="h-4 w-auto" /> {isAr ? "المتجر" : "Shop"}
+            <IlloCan tone="pink" className="h-4 w-auto" />{" "}
+            {commerce ? (isAr ? "المتجر" : "Shop") : isAr ? "قريباً" : "Coming soon"}
           </p>
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-            {isAr ? "منتجات مختارة لقطك" : "Curated products for your cat"}
+            {commerce
+              ? isAr ? "منتجات مختارة لقطك" : "Curated products for your cat"
+              : isAr ? "نجهّز متجرنا بهدوء" : "We're preparing the shop"}
           </h1>
         </div>
 
-        {/* Pre-commerce honesty (R006): these products aren't bought one by one —
-            they arrive inside the plan. The button names what it does (R086). */}
-        {!commerceEnabled() && (
-          <div
-            role="status"
-            className="mx-auto mb-8 flex max-w-2xl flex-col items-center gap-4 rounded-2xl border border-border bg-cream/70 px-5 py-5 text-center text-sm text-foreground/80 dark:bg-cream/40 sm:flex-row sm:text-start"
-          >
-            <p className="flex-1">
+        {/* ── Census mode: an honest forthcoming page, not an empty grid ────── */}
+        {!commerce ? (
+          <div className="mx-auto max-w-md rounded-[2rem] bg-cream/60 px-6 py-14 text-center dark:bg-cream/40">
+            <IlloCan tone="green" className="mx-auto mb-5 h-14 w-auto" />
+            <h2 className="font-display text-xl font-semibold tracking-tight">
+              {isAr ? "لا شيء معروض للبيع بعد" : "Nothing is for sale yet"}
+            </h2>
+            {/* No prices, no tiers, no dates we can't keep (R006/R040). */}
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
               {isAr
-                ? "منتجاتنا ما تُشترى قطعة قطعة — توصلك ضمن خطة قطك الشهرية، على مقاسه."
-                : "These products aren't bought one by one — they arrive inside your cat's monthly plan, sized to them."}
+                ? "نحن الآن في مرحلة التعداد — نتعرّف على قطط السعودية أولاً. نختار المنتجات بعناية، وحين نفتح المتجر ستكون هوية قطك جاهزة قبل الجميع."
+                : "We're in the Census right now — getting to know Saudi's cats first. We're curating carefully, and when the shop opens your cat's ID will already be waiting."}
             </p>
-            <Link
-              href="/portal/subscribe?from=shop"
-              className={cn(buttonVariants({ variant: "brand", size: "md" }), "shrink-0")}
-            >
+            {/* One clear action (R005), and it's free — trust precedes the ask (R004). */}
+            <Link href="/register" className={cn(buttonVariants({ variant: "brand", size: "md" }), "mt-6")}>
               <Sparkles className="size-4" />
-              {isAr ? "ابدأ عضوية قطك" : "Start your cat's membership"}
+              {isAr ? "سجّل هوية قطك مجاناً" : "Register your cat's ID — free"}
             </Link>
           </div>
-        )}
-
+        ) : (
+        <>
         {/* Filters */}
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
@@ -160,6 +170,8 @@ export default function ProductsPage() {
             title={isAr ? "لا توجد منتجات" : "No products found"}
             body={isAr ? "جرّب فلتراً آخر." : "Try a different filter."}
           />
+        )}
+        </>
         )}
       </section>
 

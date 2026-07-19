@@ -25,6 +25,14 @@ export class SubscriptionsController {
     return this.subs.activate(userId, dto);
   }
 
+  // DELIBERATELY NOT @Commercial — the three GETs below stay open in Community
+  // Mode. Cart, plans, products and orders are gated because they advertise a
+  // shop that isn't open; a membership someone already paid for is the opposite
+  // — hiding it would take away the record of money they spent. Preserve records
+  // (R064), honest cancel (R063), "leaving is easy": a member must be able to
+  // read, and act on, what they hold even when we're not selling. In practice
+  // this leaks nothing today (zero real subscriptions exist), and after launch
+  // the reason only gets stronger.
   @Get()
   @ApiOperation({ summary: "List the user's subscriptions" })
   findAll(@CurrentUser("id") userId: string) {

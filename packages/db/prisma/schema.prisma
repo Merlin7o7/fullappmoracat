@@ -672,6 +672,20 @@ model Cat {
   /// The soul of the product: issued with ceremony, never a silent DB row.
   catIdNumber    String?       @unique
   idIssuedAt     DateTime?
+  /// The census ordinal — this cat's place in the national count, assigned by a
+  /// Postgres sequence at insert. Monotonic and immutable: it is *derived* order,
+  /// never a settable status. "Founding Member" is exactly `catNumber <= 1000`
+  /// (FOUNDING_MEMBER_LIMIT in packages/core) — there is deliberately no
+  /// `isFounding` flag, because a flag someone can set is a flag someone can
+  /// fake, and honest scarcity is the whole campaign (R006).
+  /// Gaps are possible (a rolled-back insert consumes a value); that is fine,
+  /// because founding status is defined by the *number*, not by a running count.
+  catNumber      Int           @unique @default(autoincrement())
+  /// Acquisition attribution — the `?src=` code the registration arrived with
+  /// (e.g. "stand-004" for the Al-Olaya counter stand, MRC-GTM-001 §2).
+  /// Per-stand yield decides the Year-1 channel strategy and cannot be
+  /// backfilled, so it is captured at creation and never overwritten.
+  sourceCode     String?
   /// Opaque, revocable QR verification token (NOT a public URL). Scanned only by
   /// the Moracat app / authorized partners to check identity + membership (R057).
   qrToken        String?       @unique
@@ -789,6 +803,11 @@ model Cat {
   @@index([microchipNo])
   /// Serves the lifecycle passes and the clinic patient list.
   @@index([status, deletedAt])
+  /// The census counter counts live registrations; without this it seq-scans.
+  @@index([deletedAt])
+  /// Per-stand yield reporting in admin (MRC-GTM-001 §2 — kill any stand under
+  /// 20 IDs/month, which requires grouping by source cheaply).
+  @@index([sourceCode])
   @@map("cats")
 }
 
@@ -2320,9 +2339,14 @@ model WaitlistEntry {
   userId       String?
   catName      String?
   planInterest String? // ESSENTIAL / PREMIUM / COMPLETE_CARE / MULTI_CAT / unsure
-  source       String? // where they joined from (page, cat-id, etc.)
+  source       String? // where they joined from (page, cat-id, stand-004, etc.)
   locale       Locale    @default(ar)
   notifiedAt   DateTime? // set when we email them at launch
+  /// PDPL consent (R106), stamped server-side the moment the person ticks the
+  /// box that says we may email them when memberships open. Mirrors
+  /// `Cat.shareConsentAt`: never written from a client-supplied timestamp, and
+  /// null means we have no permission to contact them.
+  consentAt    DateTime?
   createdAt    DateTime  @default(now())
 
   @@index([createdAt])

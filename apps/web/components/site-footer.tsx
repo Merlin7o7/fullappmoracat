@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Instagram, Phone } from "lucide-react";
 import { useLocale } from "@/app/providers";
+import { commerceEnabled } from "@/lib/features";
 import { CONTACT, LEGAL_ENTITY, copyright } from "@/lib/org";
 import { IlloCat, IlloMouse, IlloPaw, IlloSprig } from "./illustrations";
 
@@ -15,21 +16,28 @@ export function SiteFooter() {
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
 
+  // Community Mode: the homepage has no plans section and the shop sells
+  // nothing, so neither link may appear — and the column that held the shop is
+  // renamed to what it actually still offers (R040). Both restore on flip.
+  const commerce = commerceEnabled();
+
   const cols: { title: string; links: { href: string; label: string }[] }[] = [
     {
       title: isAr ? "العضوية" : "Membership",
       links: [
         { href: "/about", label: isAr ? "ما هو مرقط؟" : "What is Moracat?" },
         { href: "/#how", label: t.nav.how },
-        { href: "/#plans", label: t.nav.plans },
+        ...(commerce ? [{ href: "/#plans", label: t.nav.plans }] : []),
         { href: "/benefits", label: isAr ? "مزايا الأعضاء" : "Member benefits" },
         { href: "/register", label: t.hero.cta },
       ],
     },
     {
-      title: isAr ? "المتجر والأدوات" : "Shop & tools",
+      title: commerce
+        ? isAr ? "المتجر والأدوات" : "Shop & tools"
+        : isAr ? "أدوات ومقالات" : "Tools & reading",
       links: [
-        { href: "/products", label: t.nav.products },
+        ...(commerce ? [{ href: "/products", label: t.nav.products }] : []),
         { href: "/tools/feeding", label: t.nav.tools },
         { href: "/blog", label: t.nav.blog },
       ],

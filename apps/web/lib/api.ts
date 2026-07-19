@@ -113,6 +113,20 @@ export interface LikeToggleResponse {
   likeCount: number;
 }
 
+/**
+ * The census snapshot. Every field is a fact read from the database — the web
+ * never rounds, pads or projects these numbers (R040/R006). Note the absence
+ * of any "places remaining" field: that is a scarcity clock and we don't ship
+ * one; the page shows the true count and the true cohort size instead.
+ */
+export interface CensusSnapshot {
+  registered: number;
+  foundingLimit: number;
+  foundingClosed: boolean;
+  latestPublicCatName: string | null;
+  latestPublicCatNumber: number | null;
+}
+
 export const api = {
   community(
     params: { breedId?: string; cityId?: string; gender?: string; stage?: string; sort?: string; search?: string; page?: number } = {}
@@ -145,6 +159,13 @@ export const api = {
   },
   testimonials() {
     return get<Testimonial[]>("/content/testimonials");
+  },
+  /**
+   * The live census count (MRC-GTM-001 §1). Public and deliberately NOT
+   * commerce-gated — it is the front door precisely while nothing is for sale.
+   */
+  census() {
+    return get<CensusSnapshot>("/census");
   },
 };
 

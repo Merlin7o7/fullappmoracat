@@ -19,6 +19,8 @@ import { PLANS } from "@/lib/plans";
 import { api } from "@/lib/api";
 import { commerceEnabled } from "@/lib/features";
 import { localizeName } from "@/lib/translit";
+import { CensusCounter, FoundingNote, useCensus } from "@/components/census-counter";
+import { useCaptureSource } from "@/lib/source";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -37,6 +39,9 @@ export default function HomePage() {
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
   const [catName, setCatName] = React.useState("");
+  // A stand's QR/NFC tile may point here rather than straight at /register
+  // (MRC-GTM-001 §2), so the `?src=stand-004` code is captured on this page too.
+  useCaptureSource();
   // A name remembered from an earlier visit (hero form / feeding tool) lets the
   // closing invitation greet the cat personally (R001/R082).
   const [storedName, setStoredName] = React.useState("");
@@ -119,10 +124,19 @@ export default function HomePage() {
                 </Link>
               </div>
               <p className="mt-3.5 text-xs text-muted-foreground">{t.hero.trust}</p>
+              {/* The live count sits with the action, not in a banner: the whole
+                  proposition is "join a count that is really happening", so the
+                  number belongs where the decision is made. Real figure only —
+                  see components/census-counter.tsx (R040/R006). */}
+              <CensusCounter
+                isAr={isAr}
+                t={t.census}
+                className="mt-4"
+              />
               {/* Quiet secondary path for the unconvinced (R005: still one primary action). */}
               <p className="mt-2.5 text-sm">
                 <Link
-                  href="/#how"
+                  href="/#census"
                   className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {t.hero.ctaSecondary}
@@ -183,23 +197,30 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── One membership, built from the cat (D2/R021/R085) — the plan is
-           computed from the cat's profile, never chosen from a tier table. ── */}
-      <section id="plans" className="border-y border-border/70 bg-cream/60 py-20 sm:py-24">
-        <div className="container">
-          <div className="mx-auto mb-14 max-w-2xl text-center">
-            <h2 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">{t.plans.title}</h2>
-            <p className="mt-4 text-lg text-muted-foreground">{t.plans.subtitle}</p>
-          </div>
+      {/* ── The Census (Phase 0) / the membership (at launch) ──────────────
+           While commerce is off the site's job is to count cats, so this slot
+           carries the census — the real number, the founding cohort, and an
+           honest statement that nothing is for sale. When the switch flips,
+           the membership panel returns in its place, unchanged. ────────── */}
+      {commerceEnabled() ? (
+        <section id="plans" className="border-y border-border/70 bg-cream/60 py-20 sm:py-24">
+          <div className="container">
+            <div className="mx-auto mb-14 max-w-2xl text-center">
+              <h2 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">{t.plans.title}</h2>
+              <p className="mt-4 text-lg text-muted-foreground">{t.plans.subtitle}</p>
+            </div>
 
-          <motion.div
-            variants={fadeUp} initial="hidden" whileInView="show"
-            viewport={{ once: true, margin: "-60px" }}
-          >
-            <MembershipPanel t={t} />
-          </motion.div>
-        </div>
-      </section>
+            <motion.div
+              variants={fadeUp} initial="hidden" whileInView="show"
+              viewport={{ once: true, margin: "-60px" }}
+            >
+              <MembershipPanel t={t} />
+            </motion.div>
+          </div>
+        </section>
+      ) : (
+        <CensusSection t={t} isAr={isAr} />
+      )}
 
       {/* ── Member voices · social proof (Dossier Stage 1 trust) ─────────── */}
       <MemberVoices isAr={isAr} title={t.voices.title} />
@@ -400,6 +421,73 @@ function FeatureRow({ index, eyebrow, title, body, flip }: { index: number; eyeb
         {art.art}
       </div>
     </motion.div>
+  );
+}
+
+/* ── The Census section (Phase 0, MRC-GTM-001 §1) ────────────────────────
+ * The slot the priced membership panel occupies at launch. Three beats, in
+ * the order a stranger needs them: the real number, why the number matters
+ * (founding cohort, honestly sequential), and what is *not* happening yet.
+ * No price, no plan tier, no countdown — the last of those is the one the
+ * brand refuses on principle (R006).
+ */
+
+function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr: boolean }) {
+  const { data } = useCensus();
+
+  return (
+    <section id="census" className="border-y border-border/70 bg-cream/60 py-20 sm:py-24">
+      <div className="container">
+        <motion.div
+          variants={fadeUp} initial="hidden" whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+          className="mx-auto max-w-3xl text-center"
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-butter/70 px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-foreground/75 dark:bg-butter/20">
+            <IlloPaw tone="orange" className="size-4" />
+            {t.census.eyebrow}
+          </span>
+          <h2 className="mt-5 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
+            {t.census.title}
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
+            {t.census.body}
+          </p>
+
+          {/* The number, at the size the campaign deserves. */}
+          <CensusCounter isAr={isAr} t={t.census} variant="strip" className="mt-12" />
+        </motion.div>
+
+        {/* Founding cohort — real cohort size, never a remaining-places clock. */}
+        <motion.div
+          variants={fadeUp} initial="hidden" whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+          className="relative mx-auto mt-14 max-w-2xl overflow-hidden rounded-[2rem] border border-border bg-card p-8 shadow-e1 sm:p-10"
+        >
+          <Sticker rotate={-12} className="start-7 top-7 hidden sm:block">
+            <IlloHeart tone="orange" className="size-8 opacity-80" />
+          </Sticker>
+          <Sticker rotate={13} className="end-8 top-9 hidden sm:block">
+            <IlloSprig tone="leaf" className="h-14 w-auto opacity-70" />
+          </Sticker>
+          <FoundingNote data={data} isAr={isAr} t={t.census} />
+        </motion.div>
+
+        {/* What is NOT happening yet, said plainly and unprompted (R040). A
+            visitor who came looking for a box should learn the truth here
+            rather than by hitting a dead checkout. */}
+        <motion.div
+          variants={fadeUp} initial="hidden" whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+          className="mx-auto mt-10 max-w-2xl rounded-[2rem] border border-dashed border-border bg-transparent p-8 text-center sm:p-10"
+        >
+          <h3 className="font-display text-xl font-semibold tracking-tight">{t.census.soonTitle}</h3>
+          <p className="mx-auto mt-3 max-w-lg text-base leading-relaxed text-muted-foreground">
+            {t.census.soonBody}
+          </p>
+        </motion.div>
+      </div>
+    </section>
   );
 }
 

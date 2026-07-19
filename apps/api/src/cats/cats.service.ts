@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import { Prisma } from "@moraqat/db";
+import { isFoundingMember, normaliseSourceCode } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { IdsService } from "../ids/ids.service";
 import { StorageService } from "../storage/storage.service";
@@ -47,6 +48,8 @@ type CatRow = {
   id: string;
   name: string;
   catIdNumber: string | null;
+  /** The census ordinal — this cat's place in the national count. */
+  catNumber: number;
   qrToken: string | null;
   idIssuedAt: Date | null;
   photoUrl: string | null;
@@ -273,6 +276,12 @@ export class CatsService implements OnModuleInit {
         catIdNumber: await this.ids.newCatId(),
         qrToken: await this.ids.newQrToken(),
         idIssuedAt: new Date(),
+        // Where this registration came from — `?src=stand-004` off a physical
+        // stand's QR tile (MRC-GTM-001 §2). Normalised, never trusted raw, and
+        // written ONLY here: per-stand yield decides the Year-1 channel strategy
+        // and is impossible to reconstruct after the fact, so it is captured at
+        // birth and never overwritten by a later edit.
+        sourceCode: normaliseSourceCode(dto.sourceCode),
         ...catScalarData(dto),
         // name is required on create (the shared helper types it optional for the
         // update path); re-assert it so Prisma sees a definite string.
@@ -841,6 +850,11 @@ export class CatsService implements OnModuleInit {
       id: cat.id,
       name: cat.name,
       catIdNumber: cat.catIdNumber,
+      // The census ordinal + the founding badge it implies. `isFoundingMember`
+      // is a restatement of the number, never an independent flag — see
+      // packages/core/src/census.ts for why that matters (R006).
+      catNumber: cat.catNumber,
+      isFoundingMember: isFoundingMember(cat.catNumber),
       // The QR token is the owner's own secret for their card — safe to return to
       // the authenticated owner; partners resolve it via /verify, never the URL.
       qrToken: cat.qrToken,

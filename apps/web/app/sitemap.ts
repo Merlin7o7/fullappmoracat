@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { LEGAL_DOCS } from "@/lib/legal";
+import { commerceEnabled } from "@/lib/features";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
@@ -22,7 +23,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   // Public, indexable pages only — auth screens (/login, /register) are app
   // chrome, not landing pages, and don't belong in the sitemap.
-  const staticRoutes = ["", "/about", "/benefits", "/community", "/products", "/blog", "/tools/feeding", "/contact"].map(
+  // Commerce surfaces are submitted only when they have something to sell:
+  // asking Google to index a priced page during the Census would advertise what
+  // we can't deliver (R040). /benefits carries no price, so it always stays.
+  const commerceRoutes = commerceEnabled() ? ["/products"] : [];
+  const staticRoutes = ["", "/about", "/benefits", "/community", ...commerceRoutes, "/blog", "/tools/feeding", "/contact"].map(
     (path) => ({
       url: `${SITE}${path}`,
       lastModified: now,

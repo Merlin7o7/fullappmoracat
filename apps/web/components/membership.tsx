@@ -20,11 +20,12 @@ import {
   BadgeCheck, Package, Percent, Stethoscope, Users, Gift, ArrowRight,
   Sparkles, CalendarClock, Truck, Settings, Clock,
 } from "lucide-react";
-import { Button, Badge } from "@moraqat/ui";
+import { Button, Badge, Card } from "@moraqat/ui";
 import { localizeName } from "@/lib/translit";
 import { formatDate } from "@/lib/datetime";
 import { effectiveNextDelivery } from "@/lib/launch";
 import { LaunchDeliveryNote } from "./launch-note";
+import { IlloCan, IlloPaw } from "./illustrations";
 
 export interface MembershipBenefit {
   icon: React.ComponentType<{ className?: string }>;
@@ -101,7 +102,12 @@ export function MembershipCard({
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <StatTile icon={CalendarClock} label={isAr ? "التجديد" : "Renews"} value={fmt(subscription.nextBillingAt)} />
+          {/* "Renews" is a money promise — it may only appear when there is a
+              billing rail behind it (R040). Off-commerce it is simply absent,
+              never a date we can't honour. */}
+          {commerce && (
+            <StatTile icon={CalendarClock} label={isAr ? "التجديد" : "Renews"} value={fmt(subscription.nextBillingAt)} />
+          )}
           {/* Pre-launch, the next box is the founding first-delivery date; after
               launch it's the member's real scheduled delivery. */}
           <StatTile
@@ -114,14 +120,19 @@ export function MembershipCard({
         {/* Founding-member first-delivery reminder — retires after launch. */}
         <LaunchDeliveryNote isAr={isAr} variant="inline" className="mt-3 justify-start !text-primary-foreground/90" />
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/portal/subscriptions">
-            <Button variant="glass" size="sm"><Settings className="size-4" /> {isAr ? "إدارة العضوية" : "Manage membership"}</Button>
-          </Link>
-          <Link href={subscribeHref}>
-            <Button variant="glass" size="sm"><ArrowRight className="size-4 rtl:rotate-180" /> {isAr ? "ترقية الباقة" : "Upgrade plan"}</Button>
-          </Link>
-        </div>
+        {/* Manage/Upgrade both land on commerce surfaces that are closed in
+            Community Mode — offering them would be a door that doesn't open
+            (R005: one clear action; R112: never a dead end). */}
+        {commerce && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href="/portal/subscriptions">
+              <Button variant="glass" size="sm"><Settings className="size-4" /> {isAr ? "إدارة العضوية" : "Manage membership"}</Button>
+            </Link>
+            <Link href={subscribeHref}>
+              <Button variant="glass" size="sm"><ArrowRight className="size-4 rtl:rotate-180" /> {isAr ? "ترقية الباقة" : "Upgrade plan"}</Button>
+            </Link>
+          </div>
+        )}
       </section>
     );
   }
@@ -175,6 +186,31 @@ export function MembershipCard({
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * The honest stand-in for a commerce surface that is closed in Community Mode
+ * (/portal/subscriptions, /portal/orders). Those pages stay URL-reachable even
+ * though nav hides them, and a member who lands there deserves a welcome, not
+ * an error and not a blank grid (R111/R112). There are no subscribers and no
+ * orders while commerce is off, so "not open yet" is the whole truth (R040).
+ * The pages themselves are untouched underneath — the switch restores them.
+ */
+export function MembershipsClosedNotice({ isAr, body }: { isAr: boolean; body: string }) {
+  return (
+    <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
+      <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
+      <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
+      <IlloCan tone="green" className="h-24 w-auto" />
+      <p className="font-display text-lg font-bold tracking-tight">
+        {isAr ? "العضويات لم تُفتح بعد" : "Memberships aren't open yet"}
+      </p>
+      <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">{body}</p>
+      <Link href="/portal">
+        <Button size="sm">{isAr ? "إلى لوحتي" : "Go to my dashboard"}</Button>
+      </Link>
+    </Card>
   );
 }
 

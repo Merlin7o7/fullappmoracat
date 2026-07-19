@@ -10,6 +10,7 @@ import {
   vaccinationReminderTemplate,
 } from "../mail/mail.templates";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
+import { commerceEnabled } from "../common/config/features";
 import {
   PAYMENT_PROVIDER_FACTORY,
   type IPaymentProviderFactory,
@@ -58,6 +59,10 @@ const STUCK_PAYMENT_MS = 10 * 60_000;
 export class LifecycleService {
   private readonly logger = new Logger("Lifecycle");
 
+  /** Last commerce-mode value we announced. Steady state is not news: logging
+   *  the skip every hour would bury the task failures worth reading. */
+  private loggedCommerceMode: boolean | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -74,20 +79,49 @@ export class LifecycleService {
   @Cron(CronExpression.EVERY_HOUR, { name: "lifecycle" })
   async run() {
     const started = Date.now();
+    // The kill-switch has to be read HERE as well as inside the services: this
+    // cron runs in-process, and CommerceGuard is an APP_GUARD that only ever
+    // sees HTTP requests. Care continues in Community Mode — a cat's vaccination
+    // is due whether or not anything is for sale (R049/P8); money, membership
+    // state, and renewal money-copy do not (R040: never say "your membership
+    // renews" while memberships aren't sold).
+    const commerce = commerceEnabled();
+    this.logCommerceMode(commerce);
     const results = await Promise.allSettled([
-      this.termEndInvitations(),
-      // Runs BEFORE gracefulLapse so a renewable membership is charged rather
-      // than lapsed in the same pass.
-      this.autoRenewals(),
-      this.gracefulLapse(),
+      ...(commerce
+        ? [
+            this.termEndInvitations(),
+            // Runs BEFORE gracefulLapse so a renewable membership is charged
+            // rather than lapsed in the same pass.
+            this.autoRenewals(),
+            this.gracefulLapse(),
+            // Commercial too: a DRAFT is half of a payment in flight. Expiring
+            // it while reconcileStuckPayments is frozen would cancel the
+            // membership of someone the PSP may still have charged — exactly the
+            // charged-with-no-membership outcome that sweep exists to prevent.
+            this.expireStaleDrafts(),
+            this.reconcileStuckPayments(),
+          ]
+        : []),
       this.vaccinationReminders(),
       this.birthdaysAndAnniversaries(),
-      this.expireStaleDrafts(),
-      this.reconcileStuckPayments(),
     ]);
     const failures = results.filter((r) => r.status === "rejected");
     for (const f of failures) if (f.status === "rejected") this.logger.error(`lifecycle task failed: ${String(f.reason)}`);
     this.logger.log(`lifecycle pass done in ${Date.now() - started}ms (${failures.length} task failures)`);
+  }
+
+  /** Announce the commerce mode on the first pass, and again only when it flips —
+   *  so the day someone sets COMMERCE_ENABLED there is one unambiguous line in
+   *  the log saying which half of the engine just woke up. */
+  private logCommerceMode(commerce: boolean) {
+    if (this.loggedCommerceMode === commerce) return;
+    this.loggedCommerceMode = commerce;
+    this.logger.log(
+      commerce
+        ? "commerce ON — running commercial lifecycle tasks (renewal invitations, auto-renewal, lapse, draft expiry, payment reconciliation)"
+        : "Community Mode (COMMERCE_ENABLED!=true) — skipping commercial lifecycle tasks; care tasks (vaccination reminders, birthdays) still run"
+    );
   }
 
   // ── term-end invitations (R025) ────────────────────────────────────────────

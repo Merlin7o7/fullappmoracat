@@ -4,6 +4,7 @@ import * as React from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ImageDown, RotateCcw } from "lucide-react";
 import { Button, cn, useFocusTrap, useToast } from "@moraqat/ui";
+import { isFoundingMember } from "@moraqat/core";
 import { CatIdCard } from "./cat-id-card";
 import { CatIdStory } from "./cat-id-story";
 import { shareStoryPng, exportSafeSrc } from "@/lib/card-export";
@@ -12,6 +13,8 @@ import { IlloPaw } from "./illustrations";
 interface CeremonyCat {
   name: string;
   catIdNumber: string;
+  /** Census ordinal — lets the reveal show founding standing (MRC-GTM-001 §1). */
+  catNumber?: number | null;
   idIssuedAt?: string | null;
   photoUrl?: string | null;
   /** Enables the story-frame QR — the pride export works without it. */
@@ -407,6 +410,7 @@ function RevealAct({
         <CatIdCard
           catName={cat.name}
           catIdNumber={cat.catIdNumber}
+          catNumber={cat.catNumber}
           issuedAt={cat.idIssuedAt}
           photoUrl={cat.photoUrl}
           isAr={isAr}
@@ -433,6 +437,23 @@ function RevealAct({
           <>Member no. <bdi dir="ltr">{cat.catIdNumber}</bdi> · Issued {formatIssued(cat.idIssuedAt, false)}</>
         )}
       </motion.p>
+      {/* Founding standing, stated once at the moment it is earned — the census
+          ordinal is the proof, so it is shown right beside the claim. Rendered
+          only when the number actually says so; there is no "you just missed
+          it" consolation line, because that would be scarcity theatre (R006). */}
+      {isFoundingMember(cat.catNumber) && (
+        <motion.p
+          {...fade(0.9)}
+          className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[hsl(30_80%_82%)]"
+        >
+          <IlloPaw tone="orange" className="size-3.5" />
+          {isAr ? (
+            <>عضو مؤسِّس · دفعة الرياض ٢٠٢٦ · <bdi dir="ltr">رقم {cat.catNumber}</bdi></>
+          ) : (
+            <>Founding Member · Riyadh Class of 2026 · <bdi dir="ltr">#{cat.catNumber}</bdi></>
+          )}
+        </motion.p>
+      )}
       {/* The oath — the card's first real job, said plainly (R033/R040). */}
       <motion.p {...fade(0.95)} className="mt-2 text-xs leading-relaxed text-white/60">
         {isAr
@@ -691,6 +712,7 @@ function MiniAct({
         <CatIdCard
           catName={cat.name}
           catIdNumber={cat.catIdNumber}
+          catNumber={cat.catNumber}
           issuedAt={cat.idIssuedAt}
           photoUrl={cat.photoUrl}
           isAr={isAr}

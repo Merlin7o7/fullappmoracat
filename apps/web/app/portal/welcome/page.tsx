@@ -206,7 +206,24 @@ function WelcomeInner() {
         </ul>
 
         {/* The three plans — the recommendation is computed later from the cat;
-            here we simply show what's on offer, priced, honestly. */}
+            here we simply show what's on offer, priced, honestly.
+            PLANS is a *static* import, so no server switch can suppress it —
+            the gate has to live right here. While commerce is off we show no
+            price, no tier name and no "most popular" (a tier table implies you
+            can buy it — R006/R040). Flipping the flag restores it verbatim. */}
+        {!commerce ? (
+          <div className="mx-auto max-w-xl rounded-2xl border border-border bg-cream/60 px-6 py-7 text-center dark:bg-cream/40">
+            <p className="font-display text-lg font-bold">
+              {isAr ? "العناية الشهرية تُفتح قريباً" : "Monthly care opens soon"}
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+              {isAr
+                ? `نبني الآن العناية الشهرية على مقاس كل قط — حسب وزنه وعمره وبيته. ما راح نعرض عليك أسعاراً قبل ما تكون العناية جاهزة فعلاً، وأنت وسط ${name} أول من نخبرهم.`
+                : `We're building monthly care sized to each cat — their weight, age, and household. We won't show you prices before the care is genuinely ready, and you and ${name} will be among the first we tell.`}
+            </p>
+          </div>
+        ) : (
+        <>
         <div className="grid gap-4 sm:grid-cols-3">
           {PLANS.map((p) => (
             <div key={p.tier} className={cn("relative rounded-2xl border bg-card p-5 shadow-e1", p.popular ? "border-primary ring-1 ring-primary/30" : "border-border")}>
@@ -235,6 +252,8 @@ function WelcomeInner() {
             ? "الحد الأدنى ٣ أشهر · تُدفع المدة مقدّماً عبر تمارا · بدون ضريبة"
             : "3-month minimum · pay the term upfront via Tamara · no VAT"}
         </p>
+        </>
+        )}
 
         {/* Founding-member launch note — first delivery date. */}
         <LaunchDeliveryNote isAr={isAr} className="mx-auto max-w-xl" />

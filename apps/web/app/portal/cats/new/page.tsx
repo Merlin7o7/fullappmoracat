@@ -15,6 +15,7 @@ import { CatOnboardingJourney } from "@/components/cat-onboarding-journey";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { friendlyMessage } from "@/lib/errors";
+import { consumeSource } from "@/lib/source";
 
 /**
  * Issuing a Cat ID — the cat's name comes FIRST, and almost nothing else is
@@ -36,6 +37,47 @@ function NewCatInner() {
   const params = useSearchParams();
   const completeCatId = params.get("cat");
   return completeCatId ? <CompleteFileForm catId={completeCatId} /> : <IssueIdFlow />;
+}
+
+/* ══ Waitlist consent ═════════════════════════════════════════════════════
+ * Registering a Cat ID means joining the membership waitlist, so we say that
+ * here — at the moment of registration, in the person's own words, before the
+ * button rather than in a footer nobody reads (R106, PDPL; R004 trust precedes
+ * the ask).
+ *
+ * Unticked by default and entirely optional: the Cat ID is issued either way,
+ * and the copy says so. A checkbox that arrives pre-ticked is not consent, and
+ * a free identity that quietly costs you your inbox is not free.
+ */
+function WaitlistConsent({
+  isAr,
+  checked,
+  onChange,
+}: {
+  isAr: boolean;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-dashed border-border p-3 text-xs leading-relaxed text-muted-foreground transition-colors hover:bg-muted/30 focus-within:ring-2 focus-within:ring-ring">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        // 44px touch target via padding on the label + a real focus ring (R092/R097).
+        className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:outline-none"
+      />
+      <span>
+        <span className="font-medium text-foreground">
+          {isAr ? "أبلغوني أول ما تفتح العضويات" : "Email me when memberships open"}
+        </span>
+        <br />
+        {isAr
+          ? "تسجيل قطك يضيفك لقائمة انتظار العضوية. ما نرسل لك شي إلا إذا وافقت هنا، وتقدر توقف الرسائل في أي وقت. هوية قطك تصدر سواء وافقت أو لا."
+          : "Registering your cat adds you to the membership waitlist. We won't email you unless you tick this, and you can stop the emails at any time. Your cat's ID is issued either way."}
+      </span>
+    </label>
+  );
 }
 
 /* ══ The issue flow · name → contact → ceremony ═══════════════════════════ */
@@ -62,6 +104,9 @@ function IssueIdFlow() {
     gender: "UNKNOWN",
     ownerName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
     ownerPhone: user?.phone ?? "",
+    // Never pre-ticked. Consent that arrives switched on isn't consent (R106),
+    // and the Cat ID is issued whether or not this is checked.
+    waitlistConsent: false,
   });
   const set = (patch: Partial<typeof f>) => setF((s) => ({ ...s, ...patch }));
   // When the account already carries a name + number, the contact step
@@ -151,6 +196,10 @@ function IssueIdFlow() {
         typeof carried.ageMonths === "number" && carried.ageMonths > 0
           ? new Date(Date.now() - carried.ageMonths * 30.44 * 86_400_000).toISOString()
           : undefined;
+      // The stand code that started this journey (`?src=stand-004`) lands on the
+      // cat row here, at the one moment it can — consumed so a second cat added
+      // later in the same session isn't wrongly credited to the stand.
+      const sourceCode = consumeSource();
       const cat = await authedFetch<PortalCat & { firstCatIdIssued?: boolean }>("/cats", {
         method: "POST",
         body: JSON.stringify({
@@ -159,9 +208,27 @@ function IssueIdFlow() {
           photoUrl: f.photoUrl.trim() || undefined,
           weightKg: typeof carried.weightKg === "number" ? carried.weightKg : undefined,
           birthDate,
+          ...(sourceCode ? { sourceCode } : {}),
         }),
       });
       try { sessionStorage.removeItem("moraqat.pendingCatProfile"); } catch { /* ignore */ }
+
+      // Registering a Cat ID means joining the membership waitlist — so we say
+      // so at the point of registration and only act on an explicit yes (PDPL,
+      // R106). Never blocks the Cat ID: attribution and consent are secondary
+      // to the thing the person actually came for.
+      if (f.waitlistConsent && user?.email) {
+        void authedFetch("/waitlist", {
+          method: "POST",
+          body: JSON.stringify({
+            email: user.email,
+            catName: f.name.trim(),
+            consent: true,
+            locale: isAr ? "ar" : "en",
+            ...(sourceCode ? { source: sourceCode } : {}),
+          }),
+        }).catch(() => { /* the ID is what matters; the list can wait */ });
+      }
       return cat;
     },
     onSuccess: (cat) => {
@@ -287,6 +354,12 @@ function IssueIdFlow() {
                   : `If ${catName || "your cat"} is ever lost, this is the number that brings them home.`}
               </p>
 
+              <WaitlistConsent
+                isAr={isAr}
+                checked={f.waitlistConsent}
+                onChange={(v) => set({ waitlistConsent: v })}
+              />
+
               <div className="mt-2 flex items-center justify-between gap-3">
                 <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")} disabled={create.isPending}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "إلغاء" : "Cancel"}
@@ -361,6 +434,11 @@ function IssueIdFlow() {
                   ? `لو ضاع ${catName || "قطك"} يوم من الأيام، هذا الرقم اللي يوصله له اللي يلقاه.`
                   : `If ${catName || "your cat"} is ever lost, this is the number that brings them home.`}
               </p>
+              <WaitlistConsent
+                isAr={isAr}
+                checked={f.waitlistConsent}
+                onChange={(v) => set({ waitlistConsent: v })}
+              />
               <div className="mt-2 flex items-center justify-between gap-3">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setStep(0)} disabled={create.isPending}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "رجوع" : "Back"}
@@ -420,7 +498,7 @@ function IssueIdFlow() {
           (set in create.onSuccess) — never on hope (R115/R117). */}
       {ceremonyCat?.catIdNumber && (
         <CatIdCeremony
-          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl, qrToken: ceremonyCat.qrToken }}
+          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, catNumber: ceremonyCat.catNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl, qrToken: ceremonyCat.qrToken }}
           isAr={isAr}
           // The full rite is for the household's first ID; every next family
           // member gets the warm, familiar mini welcome (R031/R009).

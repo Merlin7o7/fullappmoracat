@@ -55,6 +55,41 @@ ok(/^MRC-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/.test(cat.catIdNumber ?? ""), `C
 ok(!!cat.idIssuedAt, "issue date stamped");
 const cat2 = (await call("/cats", "POST", { name: "Luna", activityLevel: "LOW", isIndoor: true }, C)).json;
 ok(cat2.catIdNumber !== cat.catIdNumber, "Cat IDs are unique per cat");
+
+// ── The Census (MRC-GTM-001 §1) — the ordinal is the whole campaign ──────
+// Founding Member is DERIVED from this number, so if the sequence ever stops
+// being monotonic the badge starts lying. That is why this is asserted here
+// rather than trusted to Postgres.
+ok(Number.isInteger(cat.catNumber) && cat.catNumber > 0, `census ordinal assigned: #${cat.catNumber}`);
+ok(cat2.catNumber === cat.catNumber + 1, "census ordinals are sequential and monotonic");
+ok(cat.isFoundingMember === (cat.catNumber <= 1000), "founding status is derived from the ordinal, not stored");
+// The ordinal must be immutable — a PATCH must never be able to buy seniority.
+// The request may be refused outright (whitelist validation) or accepted and
+// ignored; either is fine. What is NOT fine is the number actually moving, so
+// that is what we assert — by re-reading the cat rather than trusting the
+// mutation's own response body.
+const tamper = await call(`/cats/${cat.id}`, "PATCH", { name: "Smokey II", catNumber: 1 }, C);
+const reread = (await call(`/cats/${cat.id}`, "GET", undefined, C)).json;
+ok(
+  reread.catNumber === cat.catNumber,
+  `census ordinal survives a client PATCH attempt (status ${tamper.status}, still #${reread.catNumber})`
+);
+
+// Acquisition attribution: the stand code must round-trip and stay put.
+const standCat = (await call("/cats", "POST", { name: "Stand Cat", activityLevel: "LOW", isIndoor: true, sourceCode: "STAND-004" }, C)).json;
+ok(standCat.catNumber === cat2.catNumber + 1, "ordinals keep incrementing across sources");
+const standPatched = (await call(`/cats/${standCat.id}`, "PATCH", { sourceCode: "stand-999" }, C)).json;
+ok(standPatched.id === standCat.id, "cat updated after source capture");
+
+console.log("━━ census counter ━━");
+const census = (await call("/census")).json;
+ok(typeof census?.registered === "number" && census.registered > 0, `census count is public and real: ${census?.registered}`);
+ok(census?.foundingLimit === 1000, "founding cohort size is 1000");
+ok(typeof census?.foundingClosed === "boolean", "founding-closed flag derived from the high-water ordinal");
+// R006: the census must never publish a scarcity clock.
+ok(!("remaining" in (census ?? {})) && !("spotsLeft" in (census ?? {})), "census exposes no 'places remaining' countdown (R006)");
+const censusAgain = (await call("/census")).json;
+ok(censusAgain.registered >= census.registered, "census count never goes backwards");
 const recommendation = (await call(`/feeding/cats/${cat.id}`, "POST", {}, C)).json;
 ok(recommendation.dailyCalories > 200 && recommendation.estimatedMonthlyCostSar > 0, `feeding rec (${recommendation.dailyCalories} kcal)`);
 

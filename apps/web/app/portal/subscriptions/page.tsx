@@ -37,6 +37,8 @@ import { formatDate, monthsLabel } from "@/lib/datetime";
 import { formatSAR, formatAmount, formatMoneyDate } from "@/lib/money";
 import { friendlyError } from "@/lib/errors";
 import { QueryError } from "@/components/query-error";
+import { MembershipsClosedNotice } from "@/components/membership";
+import { commerceEnabled } from "@/lib/features";
 import { IlloCan, IlloPaw } from "@/components/illustrations";
 
 type SubStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "CANCELLED" | "PAST_DUE" | "EXPIRED";
@@ -69,6 +71,11 @@ export default function SubscriptionsPage() {
   const { toast } = useToast();
   const isAr = locale === "ar";
   const qc = useQueryClient();
+  // Hidden from nav in Community Mode but still URL-reachable. No one has a
+  // subscription yet, so every price, "paid upfront" claim and "Complete
+  // payment" button below must stay unrendered (R040) — and the page must read
+  // as a welcome, not a failure (R111).
+  const commerce = commerceEnabled();
 
   // The cancel conversation happens in a dialog that tells the truth about the
   // paid term and offers pause + refund paths before the quiet "won't renew".
@@ -84,7 +91,7 @@ export default function SubscriptionsPage() {
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["subscriptions", user?.id],
     queryFn: () => authedFetch<Sub[]>("/subscriptions"),
-    enabled: !!user,
+    enabled: !!user && commerce,
   });
 
   const closeCancelDialog = () => {
@@ -174,6 +181,27 @@ export default function SubscriptionsPage() {
 
   const fmtShort = (d: string | null) =>
     d ? formatDate(d, isAr ? "ar" : "en", { day: "numeric", month: "short" }) : "—";
+
+  // Every hook has run — safe to swap the commercial body for the honest one.
+  if (!commerce) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+            {isAr ? "الاشتراكات" : "Subscriptions"}
+          </h1>
+        </div>
+        <MembershipsClosedNotice
+          isAr={isAr}
+          body={
+            isAr
+              ? "ما فتحنا العضويات بعد، فما فيه اشتراك تديره الآن. هوية قطك وسجلّه معك، وأول ما نفتح نخبرك."
+              : "Memberships aren't open yet, so there's nothing to manage here. Your cat's ID and records are yours already, and we'll tell you the moment we open."
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
+import { isFoundingMember } from "@moraqat/core";
 import { localizeName } from "@/lib/translit";
 import { formatDate } from "@/lib/datetime";
 import { commerceEnabled } from "@/lib/features";
@@ -13,6 +14,14 @@ import { IlloPaw } from "@/components/illustrations";
 interface CatIdCardProps {
   catName: string;
   catIdNumber: string;
+  /**
+   * The census ordinal — this cat's real place in the national count
+   * (MRC-GTM-001 §1). Drives the Founding Member mark, which is *derived* from
+   * the number and can therefore never be granted, bought or faked (R006).
+   * Absent on previews: we don't yet know what number a stranger would get,
+   * and guessing would be a claim about a future we don't control (R040).
+   */
+  catNumber?: number | null;
   issuedAt?: string | null;
   photoUrl?: string | null;
   /** Optional cover/backdrop — a faint wash behind the card (community era). */
@@ -95,7 +104,7 @@ function frameStyle(frame: string | undefined, accentHsl: string): {
  * output can never crop or distort (R034).
  */
 export function CatIdCard({
-  catName, catIdNumber, issuedAt, photoUrl, coverUrl, isAr, preview, hideStatus,
+  catName, catIdNumber, catNumber, issuedAt, photoUrl, coverUrl, isAr, preview, hideStatus,
   membershipActive, animated, detailed, ownerName, ownerPhone, breed, favoriteFood,
   gender, birthDate, vaccinationStatus, qrToken, exportMode,
   themeField, accentHsl, frame, stickers, className,
@@ -111,6 +120,10 @@ export function CatIdCard({
   const dispOwner = ownerName ? localizeName(ownerName, loc) : ownerName;
   // Before launch every membership is "Coming Soon"; after, inactive means lapsed.
   const comingSoon = !membershipActive && !commerceEnabled();
+  // Founding standing is a restatement of the ordinal, computed here and never
+  // passed in as a boolean — a caller cannot decorate a cat it didn't earn.
+  const founding = !preview && isFoundingMember(catNumber);
+  const ordinal = isAr ? `رقم ${catNumber}` : `#${catNumber}`;
   const age = birthDate ? ageLabel(birthDate, isAr) : null;
   const sex = genderLabel(gender, isAr);
   const meta = [sex, age, breed].filter(Boolean).join(" · ");
@@ -230,10 +243,26 @@ export function CatIdCard({
               {detailed && meta && (
                 <p className="mt-[1cqw] truncate text-[2.6cqw] leading-snug text-white/75">{meta}</p>
               )}
-              {!detailed && since && (
-                <p className="mt-[1.2cqw] font-mono text-[2.2cqw] uppercase tracking-[0.16em] text-white/55">
-                  {isAr ? `عضو منذ ${since}` : `Member since ${since}`}
+              {/* Founding standing outranks tenure in the one line there is room
+                  for: "I was here first" is the prouder, rarer fact, and it
+                  carries its own proof (the ordinal) right beside it. Everyone
+                  else keeps the tenure line unchanged. */}
+              {!detailed && founding ? (
+                <p className="mt-[1.2cqw] font-mono text-[2.2cqw] uppercase tracking-[0.16em] text-[hsl(30_80%_78%)]">
+                  {/* Only the DIGITS are isolated, never the Arabic label. An
+                      earlier version wrapped "رقم 57" in dir="ltr" and bidi
+                      reordering collapsed it to "عضو مؤسِّسرقم · 57". The label
+                      is RTL text and must stay in the paragraph's own flow;
+                      <bdi> isolates just the numeral (R101/R104). */}
+                  {isAr ? "عضو مؤسِّس · رقم " : "Founding Member · #"}
+                  <bdi dir="ltr">{catNumber}</bdi>
                 </p>
+              ) : (
+                !detailed && since && (
+                  <p className="mt-[1.2cqw] font-mono text-[2.2cqw] uppercase tracking-[0.16em] text-white/55">
+                    {isAr ? `عضو منذ ${since}` : `Member since ${since}`}
+                  </p>
+                )
               )}
             </div>
           </div>
@@ -255,8 +284,14 @@ export function CatIdCard({
             <p className="truncate font-mono text-[1.9cqw] uppercase tracking-[0.26em] text-[hsl(168_30%_34%)]">
               {isAr ? "رقم الهوية" : "Cat ID"}
               {/* Tenure shows under the name in simple mode — only the detailed
-                  card (no room up top) carries it here. Never both. */}
-              {detailed && since ? (isAr ? ` · عضو منذ ${since}` : ` · Member since ${since}`) : ""}
+                  card (no room up top) carries it here. Never both. Founding
+                  standing takes the slot when it applies, same precedence as
+                  the simple card, so the two modes never disagree. */}
+              {detailed && founding
+                ? (isAr ? ` · عضو مؤسِّس ${ordinal}` : ` · Founding Member ${ordinal}`)
+                : detailed && since
+                  ? (isAr ? ` · عضو منذ ${since}` : ` · Member since ${since}`)
+                  : ""}
             </p>
             <p className="mt-[1.6cqw] font-mono text-[4.4cqw] font-medium tracking-[0.16em] text-[hsl(170_82%_12%)] tabular" dir="ltr">
               {catIdNumber}
