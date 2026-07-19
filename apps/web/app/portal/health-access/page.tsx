@@ -37,15 +37,16 @@ import { ConfirmDialog } from "@/app/admin/_components/confirm";
 import { AccessLedger } from "./access-ledger";
 import {
   type ConsentGrant,
-  type ConsentResponse,
   type VetTier,
   AlwaysVisibleNote,
+  CONSENT_ENDPOINTS,
   EmergencyBadge,
   TierBadge,
   TierExplainer,
   isGrantLive,
   orgName,
   tierLabel,
+  toConsentResponse,
 } from "@/components/vet-consent-card";
 
 interface DirectoryClinic {
@@ -174,13 +175,13 @@ function ConsentSection({ catId, catName, isAr }: { catId: string; catName: stri
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: consentKey,
-    queryFn: () => authedFetch<ConsentResponse>(`/vet/owner/consent?catId=${encodeURIComponent(catId)}`),
+    queryFn: async () => toConsentResponse(await authedFetch<unknown>(CONSENT_ENDPOINTS.list(catId))),
     enabled: !!user && !!catId,
   });
 
   const revoke = useMutation({
     mutationFn: (grantId: string) =>
-      authedFetch(`/vet/owner/consent/${grantId}/revoke`, { method: "POST", body: "{}" }),
+      authedFetch(CONSENT_ENDPOINTS.revoke(grantId), { method: "POST", body: "{}" }),
     onSuccess: (_res, grantId) => {
       const g = data?.grants.find((x) => x.id === grantId);
       setRevoking(null);
@@ -463,7 +464,7 @@ function GrantDialog({
         expiry === "none"
           ? undefined
           : new Date(Date.now() + Number(expiry) * 24 * 60 * 60 * 1000).toISOString();
-      return authedFetch("/vet/owner/consent", {
+      return authedFetch(CONSENT_ENDPOINTS.create, {
         method: "POST",
         body: JSON.stringify({ catId, orgId: picked!.orgId, tier, ...(expiresAt ? { expiresAt } : {}) }),
       });

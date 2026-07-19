@@ -44,6 +44,55 @@ export interface ConsentResponse {
   grants: ConsentGrant[];
 }
 
+/**
+ * The owner-consent endpoints, in one place.
+ *
+ * The API is the contract of record and serves these under `/vet/owner/consent/
+ * grants`, returning `{ items }` with the clinic nested as `{ id, ar, en }`.
+ * These screens were written against a flatter shape, so rather than let the
+ * two drift (a 404 that surfaces to a member as "something went wrong"), the
+ * paths and the adapter live here and every caller goes through them.
+ */
+export const CONSENT_ENDPOINTS = {
+  list: (catId: string) => `/vet/owner/consent/grants?catId=${encodeURIComponent(catId)}`,
+  create: "/vet/owner/consent/grants",
+  revoke: (grantId: string) => `/vet/owner/consent/grants/${encodeURIComponent(grantId)}/revoke`,
+} as const;
+
+/** The API's grant row, as actually returned. */
+interface ApiConsentGrant {
+  id: string;
+  tier: VetTier;
+  grantedAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  emergency: boolean;
+  reason: string | null;
+  clinic?: { id: string; ar: string; en: string; logoUrl?: string | null } | null;
+}
+
+/** Map the API's `{ items, clinic:{…} }` onto the flat shape these screens read. */
+export function toConsentResponse(raw: unknown): ConsentResponse {
+  const rows =
+    (raw as { items?: ApiConsentGrant[]; grants?: ApiConsentGrant[] } | null)?.items ??
+    (raw as { grants?: ApiConsentGrant[] } | null)?.grants ??
+    [];
+  return {
+    grants: rows.map((g) => ({
+      id: g.id,
+      orgId: g.clinic?.id ?? "",
+      orgNameEn: g.clinic?.en ?? "",
+      orgNameAr: g.clinic?.ar ?? "",
+      tier: g.tier,
+      grantedAt: g.grantedAt,
+      expiresAt: g.expiresAt ?? null,
+      revokedAt: g.revokedAt ?? null,
+      emergency: !!g.emergency,
+      reason: g.reason ?? null,
+    })),
+  };
+}
+
 export interface AccessLogItem {
   id: string;
   orgNameEn: string;
@@ -316,7 +365,7 @@ export function VetConsentCard({
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["vet-consent", user?.id, catId],
-    queryFn: () => authedFetch<ConsentResponse>(`/vet/owner/consent?catId=${encodeURIComponent(catId)}`),
+    queryFn: async () => toConsentResponse(await authedFetch<unknown>(CONSENT_ENDPOINTS.list(catId))),
     enabled: !!user && !!catId,
   });
 
