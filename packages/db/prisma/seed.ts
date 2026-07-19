@@ -156,7 +156,10 @@ async function main() {
   await seedResearchedOptions(prisma);
 
   // ── RBAC: system roles + core permissions ───────────────────────────────
-  const resources = ["dashboard", "customers", "orders", "products", "subscriptions", "inventory", "payments", "cms", "support", "settings"];
+  // "partners" governs the Moracat-side veterinary network console (approving
+  // clinics, verifying licences, auditing record access). Clinic-side capability
+  // is separate and per-org — see packages/core/src/vet-permissions.ts.
+  const resources = ["dashboard", "customers", "orders", "products", "subscriptions", "inventory", "payments", "cms", "support", "settings", "partners"];
   const actions = ["read", "write", "delete"];
   for (const resource of resources) {
     for (const action of actions) {
@@ -181,7 +184,7 @@ async function main() {
     { key: "owner", name: "Owner", scope: StaffScope.OWNER, grants: ["*"] },
     {
       key: "manager", name: "Manager", scope: StaffScope.MANAGER,
-      grants: ["dashboard.*", "customers.*", "orders.*", "products.*", "subscriptions.*", "inventory.*", "cms.*", "support.*", "payments.read", "settings.read"],
+      grants: ["dashboard.*", "customers.*", "orders.*", "products.*", "subscriptions.*", "inventory.*", "cms.*", "support.*", "payments.read", "settings.read", "partners.read", "partners.write"],
     },
     {
       key: "warehouse", name: "Warehouse", scope: StaffScope.WAREHOUSE,
@@ -197,7 +200,7 @@ async function main() {
     },
     {
       key: "support", name: "Customer Support", scope: StaffScope.SUPPORT,
-      grants: ["dashboard.read", "support.read", "support.write", "customers.read", "orders.read", "subscriptions.read"],
+      grants: ["dashboard.read", "support.read", "support.write", "customers.read", "orders.read", "subscriptions.read", "partners.read"],
     },
     {
       key: "content", name: "Content Manager", scope: StaffScope.CONTENT,

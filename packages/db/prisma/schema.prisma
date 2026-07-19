@@ -377,6 +377,12 @@ model User {
   referralsMade  Referral[]               @relation("Referrer")
   referredBy     Referral?                @relation("Referred")
   badges         UserBadge[]
+  // ── Veterinary platform (MRC-VET-001) ──────────────────────────────────
+  partnerStaff       PartnerStaff[]
+  consentsGranted    ConsentGrant[]      @relation("ConsentGrantedBy")
+  consentsRevoked    ConsentGrant[]      @relation("ConsentRevokedBy")
+  registeredDevices  CounterDevice[]     @relation("DeviceRegisteredBy")
+  partnerInvitesSent PartnerInvite[]     @relation("PartnerInviteSender")
 
   @@index([status])
   @@index([createdAt])
@@ -757,6 +763,14 @@ model Cat {
   photos          CatPhoto[]
   likes           CatLike[]
   reports         CatReport[]
+  // ── Veterinary platform (MRC-VET-001) ──────────────────────────────────
+  visits            Visit[]
+  clinicalEntries   ClinicalEntry[]
+  prescriptions     Prescription[]
+  weightRecords     CatWeightRecord[]
+  consentGrants     ConsentGrant[]
+  recordAccessLogs  RecordAccessLog[]
+  emergencyContacts CatEmergencyContact[]
 
   @@index([userId])
   @@index([userId, status])
@@ -1664,8 +1678,10 @@ model City {
   nameAr   String
   isActive Boolean @default(true)
 
-  zones     DeliveryZone[]
-  addresses Address[]
+  zones        DeliveryZone[]
+  addresses    Address[]
+  branches     Branch[]
+  applications PartnerApplication[]
 
   @@map("cities")
 }
@@ -2156,4 +2172,593 @@ model WaitlistEntry {
 
   @@index([createdAt])
   @@map("waitlist_entries")
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+//  VETERINARY PLATFORM — MRC-VET-001
+//
+//  The Cat ID becomes a permanent medical identity. Design commitments this
+//  schema encodes as FACTS (not UI promises):
+//
+//   1. Clinical records are APPEND-ONLY and revisioned. `ClinicalEntry` is
+//      never updated in place: a correction creates a new row pointing at the
+//      one it supersedes (`revisionOf`), and a withdrawal sets `retractedAt`
+//      with a reason. The full history stays legally reconstructable, forever.
+//   2. Privacy is structural. A clinic sees a cat's record only through a
+//      `ConsentGrant` (T1/T2); safety-critical alerts (allergies, chronic
+//      conditions, current meds) are tier-0 and always visible, because a
+//      hidden allergy can kill. Every read writes a `RecordAccessLog` row,
+//      which the OWNER can see — privacy as a visible ledger, not a claim.
+//   3. Vaccinations written here flow into the existing `CatVaccination`
+//      table, so the lifecycle engine's owner reminders fire automatically.
+//      One clinical act, and the owner is cared for. That is the whole thesis.
+//   4. Nothing here can silently move money or overwrite member-owned data.
+// ═════════════════════════════════════════════════════════════════════════
+
+enum PartnerOrgStatus {
+  APPLIED
+  IN_REVIEW
+  APPROVED // approved, not yet switched on
+  LIVE
+  SUSPENDED
+  OFFBOARDED
+}
+
+enum PartnerApplicationStatus {
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+/// Clinic-side roles. Capability resolves from this plus the partner.*
+/// permission namespace: a receptionist can never author clinical records and
+/// a vet can never touch billing (the permission matrix).
+enum PartnerStaffRole {
+  OWNER
+  MANAGER
+  VET_SENIOR
+  VET
+  VET_TECH
+  RECEPTION
+  FINANCE
+  INTERN // entries stay DRAFT until a senior co-signs
+}
+
+enum PartnerStaffStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  OFFBOARDED
+}
+
+enum BranchDocumentKind {
+  MEWA_LICENCE
+  CR
+  VAT
+  INSURANCE
+  OTHER
+}
+
+enum VisitMode {
+  QUICK // counter / benefit only
+  STANDARD
+  EMERGENCY
+}
+
+enum VisitState {
+  OPEN
+  CLOSED
+}
+
+/// The clinical record spine. `payload` is validated per-type by typed DTOs at
+/// the API boundary, keeping the table narrow while the timeline stays one
+/// queryable stream.
+enum ClinicalEntryType {
+  EXAM
+  DIAGNOSIS
+  VACCINATION
+  TREATMENT
+  PRESCRIPTION
+  LAB
+  IMAGING
+  SURGERY
+  DENTAL
+  HOSPITALIZATION
+  WEIGHT
+  NUTRITION
+  SUPPLEMENT
+  NOTE
+}
+
+enum ClinicalEntryStatus {
+  DRAFT // intern-authored, awaiting co-sign
+  FINAL
+  AMENDED // superseded by a later revision
+  RETRACTED
+}
+
+/// Consent tiers. T0 (safety alerts) is implicit and needs no grant — it is the
+/// floor that keeps a cat alive in an emergency.
+enum ConsentTier {
+  T1 // this clinic's own records + core identity
+  T2 // full cross-clinic medical history
+}
+
+enum PrescriptionStatus {
+  ISSUED
+  COLLECTED
+  REFILLED
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
+enum EmergencyContactKind {
+  OWNER
+  SECONDARY
+  CLINIC
+  OTHER
+}
+
+/// A clinic's application to join the network. Kept separate from PartnerOrg so
+/// a rejected or withdrawn application never pollutes the live directory.
+model PartnerApplication {
+  id           String                   @id @default(cuid())
+  clinicName   String
+  crNumber     String                   @unique
+  contactName  String
+  contactEmail String
+  contactPhone String
+  cityId       String?
+  addressLine  String?
+  licenceNo    String?
+  notes        String?
+  status       PartnerApplicationStatus @default(SUBMITTED)
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+  orgId        String? // set when approved: the org that was created
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  city City? @relation(fields: [cityId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("partner_applications")
+}
+
+/// A partner organisation (a clinic group). Branches hang off it; staff and
+/// consent are scoped to the ORG, so a member's grant follows them between a
+/// group's branches without re-consenting at every door.
+model PartnerOrg {
+  id            String           @id @default(cuid())
+  slug          String           @unique
+  nameEn        String
+  nameAr        String
+  crNumber      String?          @unique
+  vatNumber     String?
+  logoUrl       String?
+  status        PartnerOrgStatus @default(APPLIED)
+  /// Verified = documents checked by Moracat. Drives the directory badge.
+  verifiedAt    DateTime?
+  tier          String? // founding | standard
+  suspendedAt   DateTime?
+  suspendReason String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  agreements PartnerAgreement[]
+  branches   Branch[]
+  staff      PartnerStaff[]
+  invites    PartnerInvite[]
+  visits     Visit[]
+  consents   ConsentGrant[]
+  accessLogs RecordAccessLog[]
+  passKeys   OfflinePassKey[]
+
+  @@index([status])
+  @@map("partner_orgs")
+}
+
+model PartnerAgreement {
+  id           String    @id @default(cuid())
+  orgId        String
+  version      Int       @default(1)
+  benefitRules Json? // scope / rate / floor / exclusions
+  docUrl       String?
+  signedAt     DateTime?
+  signedByName String?
+  createdAt    DateTime  @default(now())
+
+  org PartnerOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, version])
+  @@map("partner_agreements")
+}
+
+model Branch {
+  id               String    @id @default(cuid())
+  orgId            String
+  nameEn           String
+  nameAr           String
+  cityId           String?
+  addressLine      String?
+  lat              Float?
+  lng              Float?
+  mapsUrl          String?
+  phone            String?
+  email            String?
+  /// Opening hours as [{day, open, close, closed}] — rendered, never parsed for
+  /// logic beyond the "open now" badge.
+  hours            Json?
+  specialties      String[]
+  services         String[]
+  photos           String[]
+  emergency24h     Boolean   @default(false)
+  directoryVisible Boolean   @default(false)
+  licenceNo        String?
+  licenceExpiresAt DateTime?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  org       PartnerOrg       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  city      City?            @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  documents BranchDocument[]
+  devices   CounterDevice[]
+  visits    Visit[]
+  staff     PartnerStaff[] // branch scope (implicit m2m)
+
+  @@index([orgId])
+  @@index([directoryVisible, isActive])
+  @@map("partner_branches")
+}
+
+model BranchDocument {
+  id         String             @id @default(cuid())
+  branchId   String
+  kind       BranchDocumentKind
+  fileUrl    String
+  expiresAt  DateTime?
+  verifiedAt DateTime?
+  createdAt  DateTime           @default(now())
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@index([expiresAt])
+  @@map("partner_branch_documents")
+}
+
+/// A shared front-desk terminal. Counter Mode multiplexes staff identity by PIN
+/// on a manager-registered device with REDUCED scope — never a general session:
+/// no exports, no settings, no staff management.
+model CounterDevice {
+  id             String    @id @default(cuid())
+  branchId       String
+  name           String
+  registeredById String
+  lastSeenAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  branch       Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  registeredBy User   @relation("DeviceRegisteredBy", fields: [registeredById], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@map("partner_counter_devices")
+}
+
+/// Clinic staff membership. A User may belong to several orgs (a locum vet), so
+/// identity stays on User and capability lives here.
+model PartnerStaff {
+  id           String             @id @default(cuid())
+  orgId        String
+  userId       String
+  role         PartnerStaffRole
+  status       PartnerStaffStatus @default(INVITED)
+  title        String? // "Dr." / speciality line shown on records
+  licenceNo    String? // practitioner licence
+  /// Counter-Mode PIN (bcrypt). Only meaningful on registered devices.
+  pinHash      String?
+  invitedById  String?
+  joinedAt     DateTime?
+  offboardedAt DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  org      PartnerOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branches Branch[] // scope; empty = every branch in the org
+
+  visitsOpened    Visit[]           @relation("VisitOpenedBy")
+  visitsClosed    Visit[]           @relation("VisitClosedBy")
+  entriesAuthored ClinicalEntry[]   @relation("EntryAuthor")
+  entriesCoSigned ClinicalEntry[]   @relation("EntryCoSigner")
+  accessLogs      RecordAccessLog[]
+  prescriptions   Prescription[]
+
+  // One membership per user per org.
+  @@unique([orgId, userId])
+  @@index([orgId, status])
+  @@index([userId])
+  @@map("partner_staff")
+}
+
+/// A pending staff invitation (token emailed). Separate from PartnerStaff so an
+/// unaccepted invite never counts as a member of the clinic.
+model PartnerInvite {
+  id          String           @id @default(cuid())
+  orgId       String
+  email       String
+  role        PartnerStaffRole
+  tokenHash   String           @unique
+  invitedById String?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime         @default(now())
+
+  org       PartnerOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invitedBy User?      @relation("PartnerInviteSender", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([email])
+  @@map("partner_invites")
+}
+
+/// One episode of care. Groups clinical entries so a timeline reads as visits,
+/// not a flat wall of records.
+model Visit {
+  id                  String     @id @default(cuid())
+  catId               String
+  orgId               String
+  branchId            String?
+  mode                VisitMode  @default(STANDARD)
+  state               VisitState @default(OPEN)
+  reason              String?
+  presentingComplaint String?
+  openedById          String?
+  closedById          String?
+  checkedInAt         DateTime   @default(now())
+  closedAt            DateTime?
+  /// The owner-facing summary the vet sends home (also delivered in-app).
+  ownerSummary        String?
+  summarySentAt       DateTime?
+  followUpAt          DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  cat      Cat             @relation(fields: [catId], references: [id], onDelete: Cascade)
+  org      PartnerOrg      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  branch   Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  openedBy PartnerStaff?   @relation("VisitOpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
+  closedBy PartnerStaff?   @relation("VisitClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  entries  ClinicalEntry[]
+
+  // The cat's chronological timeline, and each clinic's day-book.
+  @@index([catId, checkedInAt])
+  @@index([orgId, checkedInAt])
+  @@index([branchId, state])
+  @@index([followUpAt])
+  @@map("vet_visits")
+}
+
+/// The immutable clinical record. NEVER updated in place: a correction inserts a
+/// new row whose `revisionOf` points at its predecessor (which becomes AMENDED);
+/// a withdrawal sets `retractedAt` plus a reason. Deletion is impossible by
+/// design — medical history must be reconstructable years later.
+model ClinicalEntry {
+  id         String              @id @default(cuid())
+  catId      String
+  visitId    String?
+  orgId      String
+  type       ClinicalEntryType
+  status     ClinicalEntryStatus @default(FINAL)
+  /// Type-specific body, validated by a typed DTO at the API boundary.
+  payload    Json
+  /// Free-text clinician note, kept out of payload so it stays searchable.
+  note       String?
+  occurredAt DateTime            @default(now())
+
+  authorId     String?
+  coSignedById String?
+  coSignedAt   DateTime?
+
+  revisionOfId  String?   @unique
+  retractedAt   DateTime?
+  retractReason String?
+
+  createdAt DateTime @default(now())
+
+  cat        Cat            @relation(fields: [catId], references: [id], onDelete: Cascade)
+  visit      Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  author     PartnerStaff?  @relation("EntryAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  coSignedBy PartnerStaff?  @relation("EntryCoSigner", fields: [coSignedById], references: [id], onDelete: SetNull)
+  /// The entry this one corrects (1:1 chain).
+  revisionOf ClinicalEntry? @relation("EntryRevision", fields: [revisionOfId], references: [id], onDelete: SetNull)
+  revisedBy  ClinicalEntry? @relation("EntryRevision")
+
+  attachments   EntryAttachment[]
+  prescriptions Prescription[]
+  weightRecord  CatWeightRecord?
+
+  // Timeline reads: newest-first per cat, filterable by type.
+  @@index([catId, occurredAt])
+  @@index([catId, type, occurredAt])
+  @@index([visitId])
+  @@index([orgId, createdAt])
+  @@index([status])
+  @@map("vet_clinical_entries")
+}
+
+model EntryAttachment {
+  id         String   @id @default(cuid())
+  entryId    String
+  /// Object-storage key (R2/S3), served through a signed, access-logged URL —
+  /// medical images are never public objects.
+  fileUrl    String
+  fileName   String?
+  mime       String?
+  bytes      Int?
+  kind       String? // xray | ultrasound | photo | pdf | lab
+  scanStatus String   @default("pending") // pending | clean | flagged
+  createdAt  DateTime @default(now())
+
+  entry ClinicalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@map("vet_entry_attachments")
+}
+
+/// A digital prescription with its own lifecycle, projected from the clinical
+/// entry that created it, so the OWNER can track collection without being
+/// exposed to the clinical record itself.
+model Prescription {
+  id             String             @id @default(cuid())
+  catId          String
+  entryId        String?
+  orgId          String
+  prescriberId   String?
+  medication     String
+  strength       String?
+  form           String? // tablet | suspension | injection | topical
+  dosage         String
+  frequency      String
+  durationDays   Int?
+  quantity       String?
+  instructions   String?
+  status         PrescriptionStatus @default(ISSUED)
+  issuedAt       DateTime           @default(now())
+  collectedAt    DateTime?
+  completedAt    DateTime?
+  expiresAt      DateTime?
+  refillsAllowed Int                @default(0)
+  refillsUsed    Int                @default(0)
+  /// Interaction / allergy warnings raised at issue time — recorded for the
+  /// audit trail, never auto-blocking (clinical judgement is the vet's).
+  warnings       String[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  cat        Cat            @relation(fields: [catId], references: [id], onDelete: Cascade)
+  entry      ClinicalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+  prescriber PartnerStaff?  @relation(fields: [prescriberId], references: [id], onDelete: SetNull)
+
+  @@index([catId, issuedAt])
+  @@index([status])
+  @@index([orgId])
+  @@map("vet_prescriptions")
+}
+
+/// Chart-optimised weight series. Written alongside a WEIGHT clinical entry so
+/// the growth chart is one indexed read rather than a JSON scan.
+model CatWeightRecord {
+  id         String   @id @default(cuid())
+  catId      String
+  entryId    String?  @unique
+  weightKg   Float
+  /// Body condition score, 1–9 (WSAVA).
+  bcs        Int?
+  measuredAt DateTime @default(now())
+  source     String   @default("clinic") // clinic | owner
+  createdAt  DateTime @default(now())
+
+  cat   Cat            @relation(fields: [catId], references: [id], onDelete: Cascade)
+  entry ClinicalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@index([catId, measuredAt])
+  @@map("cat_weight_records")
+}
+
+/// The owner's grant of record access to a clinic. Without a live grant a clinic
+/// sees only tier-0 safety alerts. Grants are org-scoped, optionally time-boxed,
+/// and revocable at any moment from the owner's portal.
+model ConsentGrant {
+  id          String      @id @default(cuid())
+  catId       String
+  orgId       String
+  tier        ConsentTier
+  grantedById String? // the owner
+  grantedAt   DateTime    @default(now())
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  revokedById String?
+  /// Set when a clinic self-declared emergency access (break-glass). Always
+  /// disclosed to the owner and reviewable by Moracat.
+  emergency   Boolean     @default(false)
+  reason      String?
+
+  cat       Cat        @relation(fields: [catId], references: [id], onDelete: Cascade)
+  org       PartnerOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  grantedBy User?      @relation("ConsentGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+  revokedBy User?      @relation("ConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@index([catId, orgId])
+  @@index([orgId])
+  @@index([expiresAt])
+  @@map("vet_consent_grants")
+}
+
+/// Owner-visible access ledger: every time a clinic reads a cat's record, a row
+/// lands here. Privacy becomes something the member can SEE, not merely trust.
+model RecordAccessLog {
+  id        String      @id @default(cuid())
+  catId     String
+  orgId     String
+  staffId   String?
+  tier      ConsentTier
+  /// What was opened: profile | timeline | entry | emergency | export
+  surface   String
+  emergency Boolean     @default(false)
+  ipAddress String?
+  at        DateTime    @default(now())
+
+  cat   Cat           @relation(fields: [catId], references: [id], onDelete: Cascade)
+  org   PartnerOrg    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  staff PartnerStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([catId, at])
+  @@index([orgId, at])
+  @@map("vet_record_access_logs")
+}
+
+/// Ed25519 public keys for offline verification of a Cat ID pass at a counter
+/// with no connectivity. Versioned and rotatable; passes carry issued-at plus a
+/// 30-day validity so a stale snapshot can never honour a dead membership
+/// forever.
+model OfflinePassKey {
+  id         String    @id @default(cuid())
+  orgId      String?
+  version    Int
+  publicKey  String
+  algorithm  String    @default("ed25519")
+  activeFrom DateTime  @default(now())
+  retiredAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  org PartnerOrg? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, version])
+  @@map("vet_offline_pass_keys")
+}
+
+/// Who to call when it matters. Surfaced on the emergency screen without any
+/// consent grant — tier 0.
+model CatEmergencyContact {
+  id        String               @id @default(cuid())
+  catId     String
+  kind      EmergencyContactKind @default(SECONDARY)
+  name      String
+  phone     String
+  relation  String?
+  isPrimary Boolean              @default(false)
+  createdAt DateTime             @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId])
+  @@map("cat_emergency_contacts")
 }
