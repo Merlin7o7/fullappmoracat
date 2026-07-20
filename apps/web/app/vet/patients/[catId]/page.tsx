@@ -66,6 +66,7 @@ import {
   vetMembershipStateLabel,
   type ConsentTier,
   type PatientProfile,
+  flattenTier0Alerts,
 } from "@/lib/vet-api";
 
 // Panels are code-split: nothing below the alerts band is in the first paint.
@@ -134,7 +135,7 @@ export default function PatientProfilePage({ params }: { params: { catId: string
       <Hero profile={profile} missingCount={missing.length} />
 
       {/* ── The safety floor. Above everything. Always. ─────────────────── */}
-      <AlertsBand alerts={profile.alerts} missingVaccinations={missing} catName={profile.name} />
+      <AlertsBand alerts={flattenTier0Alerts(profile.alerts)} missingVaccinations={missing} catName={profile.name} />
 
       <ConsentBanner profile={profile} catId={catId} />
 
@@ -203,10 +204,10 @@ export default function PatientProfilePage({ params }: { params: { catId: string
                       <RecordsPanel
                         catId={catId}
                         vaccinations={profile.vaccinations}
-                        alerts={profile.alerts}
+                        alerts={flattenTier0Alerts(profile.alerts)}
                       />
                     )}
-                    {t.key === "timeline" && <TimelinePanel catId={catId} alerts={profile.alerts} />}
+                    {t.key === "timeline" && <TimelinePanel catId={catId} alerts={flattenTier0Alerts(profile.alerts)} />}
                     {t.key === "charts" && <ChartsPanel catId={catId} />}
                     {t.key === "gallery" && <GalleryPanel catId={catId} />}
                   </>

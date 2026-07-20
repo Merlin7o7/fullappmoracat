@@ -56,6 +56,7 @@ import {
   useVetApi,
   vetFriendlyError,
   type EmergencyPayload,
+  flattenTier0Alerts,
 } from "@/lib/vet-api";
 
 const PRESETS: { value: string; ar: string; en: string }[] = [
@@ -344,7 +345,7 @@ function BreakGlassView({ payload }: { payload: EmergencyPayload }) {
       </div>
 
       {/* The alerts, in display posture — the reason this screen exists. */}
-      <AlertsBand alerts={payload.alerts} posture="display" catName={payload.name} />
+      <AlertsBand alerts={flattenTier0Alerts(payload.alerts)} posture="display" catName={payload.name} />
 
       <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
         <h2 className="text-lg font-semibold text-foreground">{isAr ? "اتصل الآن" : "Call now"}</h2>

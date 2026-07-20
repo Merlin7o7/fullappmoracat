@@ -182,6 +182,108 @@ export interface VetMedicalAlert {
   notedAt?: string | null;
 }
 
+/**
+ * Tier-0 safety data, exactly as the API groups it.
+ *
+ * The portal declared this as a flat `VetMedicalAlert[]` and called `.filter`
+ * on it. The API has always sent a GROUPED OBJECT, so `alerts ?? []` never
+ * helped — the object is not null, it simply has no `.filter` — and the whole
+ * visit screen crashed to the error boundary the moment a patient actually had
+ * an allergy on file. It only surfaced once real demo data existed, because an
+ * empty clinic never reached this code.
+ */
+export interface VetTier0Alerts {
+  allergies: Array<{ id: string; allergen: string; severity?: string | null; notedAt?: string | null }>;
+  conditions: Array<{ id: string; condition?: string; name?: string; notedAt?: string | null }>;
+  currentMedications: {
+    ownerReported: string | null;
+    prescribed: Array<{
+      id: string;
+      medication: string;
+      strength?: string | null;
+      dosage?: string | null;
+      frequency?: string | null;
+      status?: string;
+      issuedAt?: string;
+      expiresAt?: string | null;
+      clinic?: { id: string; ar: string; en: string; logoUrl: string | null; isYours: boolean };
+    }>;
+  };
+  handlingNotes: Array<{ id?: string; note?: string } | string>;
+  emergencyNotes: string | null;
+  vaccinationStatus: string | null;
+  /** True when anything in here is life-threatening. Drives the solid-fill band. */
+  hasCritical: boolean;
+}
+
+/**
+ * Flatten the grouped tier-0 payload into the display list the alerts band
+ * renders. Kept here, beside the type, so every screen showing alerts gets the
+ * same ordering and severity rules rather than each inventing them.
+ */
+export function flattenTier0Alerts(
+  alerts: VetTier0Alerts | VetMedicalAlert[] | null | undefined
+): VetMedicalAlert[] {
+  // Tolerate an already-flat array so a future API change cannot re-break this.
+  if (Array.isArray(alerts)) return alerts;
+  if (!alerts) return [];
+
+  const out: VetMedicalAlert[] = [];
+
+  for (const a of alerts.allergies ?? []) {
+    out.push({
+      id: a.id,
+      kind: "ALLERGY",
+      labelEn: a.allergen,
+      labelAr: a.allergen,
+      // An allergy is life-threatening until someone says otherwise.
+      severity: "CRITICAL",
+      notedAt: a.notedAt ?? null,
+    });
+  }
+
+  for (const c of alerts.conditions ?? []) {
+    const label = c.condition ?? c.name ?? "";
+    if (!label) continue;
+    out.push({ id: c.id, kind: "CONDITION", labelEn: label, labelAr: label, severity: "IMPORTANT", notedAt: c.notedAt ?? null });
+  }
+
+  for (const m of alerts.currentMedications?.prescribed ?? []) {
+    const dose = [m.dosage, m.frequency].filter(Boolean).join(" · ");
+    const label = dose ? `${m.medication} — ${dose}` : m.medication;
+    out.push({ id: m.id, kind: "MEDICATION", labelEn: label, labelAr: label, severity: "IMPORTANT", notedAt: m.issuedAt ?? null });
+  }
+
+  const ownerMeds = alerts.currentMedications?.ownerReported;
+  if (ownerMeds) {
+    out.push({
+      id: "owner-reported-meds",
+      kind: "MEDICATION",
+      labelEn: `Owner reports: ${ownerMeds}`,
+      labelAr: `المالك ذكر: ${ownerMeds}`,
+      severity: "IMPORTANT",
+    });
+  }
+
+  for (const [i, h] of (alerts.handlingNotes ?? []).entries()) {
+    const label = typeof h === "string" ? h : (h.note ?? "");
+    if (!label) continue;
+    out.push({ id: (typeof h === "string" ? undefined : h.id) ?? `handling-${i}`, kind: "BEHAVIOUR", labelEn: label, labelAr: label, severity: "INFO" });
+  }
+
+  if (alerts.emergencyNotes) {
+    out.push({
+      id: "emergency-notes",
+      kind: "OTHER",
+      labelEn: alerts.emergencyNotes,
+      labelAr: alerts.emergencyNotes,
+      severity: "IMPORTANT",
+    });
+  }
+
+  return out;
+}
+
 export type VetMembershipState = "ACTIVE" | "EXPIRED" | "SUSPENDED" | "PENDING" | "NONE";
 
 /** The five-second answer: does this membership stand, and what rate is honoured? */
@@ -239,7 +341,8 @@ export interface VetPatientProfile {
   microchip?: string | null;
   membership: VetMembershipStanding;
   owner: VetOwnerContact;
-  alerts: VetMedicalAlert[];
+  /** GROUPED, not a flat array — flatten with flattenTier0Alerts() to display. */
+  alerts: VetTier0Alerts;
   /** The tier this clinic currently holds for this cat. */
   consentTier: VetConsentTier;
   /** True when the owner narrowed the default — say so, never render a silent void. */
@@ -510,7 +613,8 @@ export interface VetEmergencyPayload {
   ageMonths?: number | null;
   weightKg?: number | null;
   microchip?: string | null;
-  alerts: VetMedicalAlert[];
+  /** GROUPED, not a flat array — flatten with flattenTier0Alerts() to display. */
+  alerts: VetTier0Alerts;
   owner: VetOwnerContact;
   /** Recorded against the actor; the owner is notified. */
   accessId: string;

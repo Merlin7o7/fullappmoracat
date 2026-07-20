@@ -56,6 +56,7 @@ import {
   vetVisitStateLabel,
   type MedicalAlert,
   type TimelineEntry,
+  flattenTier0Alerts,
 } from "@/lib/vet-api";
 
 // ── SOAP templates ───────────────────────────────────────────────────────
@@ -193,7 +194,9 @@ export default function VisitWorkspacePage({ params }: { params: { visitId: stri
   // ALWAYS false, so a closed chart rendered as editable and every save 409d.
   const closed = v.state === "CLOSED";
   const canWrite = actor.can("record.write") && !closed;
-  const alerts: MedicalAlert[] = patient.data?.alerts ?? [];
+  // The API groups tier-0 data ({allergies, conditions, currentMedications, …});
+  // the band renders a flat list. One adapter, so no screen re-derives it.
+  const alerts: MedicalAlert[] = flattenTier0Alerts(patient.data?.alerts);
   const missing = deriveMissingVaccinations(patient.data?.vaccinations, isAr);
   const reason = v.reason ?? "";
   const branch = (isAr ? v.branch?.ar : v.branch?.en) ?? "";

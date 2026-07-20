@@ -138,8 +138,15 @@ export function AlertsBand({
         .filter(Boolean)
         .join(" · ");
 
+    // Array.isArray, not `?? []`: the API sends tier-0 data as a GROUPED OBJECT,
+    // and an object is not null — so the nullish default never fired and this
+    // threw "filter is not a function", taking the whole clinical screen down
+    // to the error boundary the moment a patient actually had an allergy.
+    // Callers should pass flattenTier0Alerts(...); this is the last line of
+    // defence, because a crash here hides exactly the data that keeps a cat safe.
+    const safe = Array.isArray(alerts) ? alerts : [];
     const pick = (kind: MedicalAlert["kind"]) =>
-      (alerts ?? []).filter((a) => a.kind === kind).sort(bySeverity);
+      safe.filter((a) => a.kind === kind).sort(bySeverity);
 
     // Allergies lead, always — the single most lethal omission. A CRITICAL
     // allergy escalates the whole group to a solid fill.
