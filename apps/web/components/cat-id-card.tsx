@@ -22,6 +22,13 @@ interface CatIdCardProps {
    * and guessing would be a claim about a future we don't control (R040).
    */
   catNumber?: number | null;
+  /**
+   * The full founding class as composed by the API — «عضو مؤسِّس — دفعة جدة
+   * ٢٠٢٦». Passed in rather than built here because only the server knows the
+   * cat's city. Used in detailed mode, which has room for it; the simple card
+   * shows the short form plus the ordinal instead.
+   */
+  foundingClass?: string | null;
   issuedAt?: string | null;
   photoUrl?: string | null;
   /** Optional cover/backdrop — a faint wash behind the card (community era). */
@@ -104,7 +111,7 @@ function frameStyle(frame: string | undefined, accentHsl: string): {
  * output can never crop or distort (R034).
  */
 export function CatIdCard({
-  catName, catIdNumber, catNumber, issuedAt, photoUrl, coverUrl, isAr, preview, hideStatus,
+  catName, catIdNumber, catNumber, foundingClass, issuedAt, photoUrl, coverUrl, isAr, preview, hideStatus,
   membershipActive, animated, detailed, ownerName, ownerPhone, breed, favoriteFood,
   gender, birthDate, vaccinationStatus, qrToken, exportMode,
   themeField, accentHsl, frame, stickers, className,
@@ -287,8 +294,12 @@ export function CatIdCard({
                   card (no room up top) carries it here. Never both. Founding
                   standing takes the slot when it applies, same precedence as
                   the simple card, so the two modes never disagree. */}
+              {/* Detailed mode has the width for the full class, city and all
+                  — and it is the mode people export and print, so it carries
+                  the complete, true statement. Falls back to the short form
+                  for pre-census cats whose city we never asked for. */}
               {detailed && founding
-                ? (isAr ? ` · عضو مؤسِّس ${ordinal}` : ` · Founding Member ${ordinal}`)
+                ? ` · ${foundingClass ?? (isAr ? "عضو مؤسِّس" : "Founding Member")} ${ordinal}`
                 : detailed && since
                   ? (isAr ? ` · عضو منذ ${since}` : ` · Member since ${since}`)
                   : ""}

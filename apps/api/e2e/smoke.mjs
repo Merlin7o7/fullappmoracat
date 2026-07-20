@@ -48,12 +48,12 @@ ok(community.status === 200 && typeof community.json?.pagination?.total === "num
 ok((await call("/uploads/image", "POST", {})).status === 401, "image upload requires auth (401)");
 
 console.log("━━ cats + Cat ID + feeding ━━");
-const cat = (await call("/cats", "POST", { name: "Smokey", weightKg: 4.5, activityLevel: "MODERATE", isIndoor: true }, C)).json;
+const cat = (await call("/cats", "POST", { name: "Smokey", weightKg: 4.5, activityLevel: "MODERATE", isIndoor: true, gender: "MALE", birthDate: "2022-05-01", cityCode: "jeddah" }, C)).json;
 ok(!!cat.id, "cat created");
 // The Cat ID (Dossier §05): unique, human-readable, issued instantly (R032).
 ok(/^MRC-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/.test(cat.catIdNumber ?? ""), `Cat ID issued: ${cat.catIdNumber}`);
 ok(!!cat.idIssuedAt, "issue date stamped");
-const cat2 = (await call("/cats", "POST", { name: "Luna", activityLevel: "LOW", isIndoor: true }, C)).json;
+const cat2 = (await call("/cats", "POST", { name: "Luna", activityLevel: "LOW", isIndoor: true, gender: "FEMALE", birthDate: "2023-01-10", cityCode: "riyadh" }, C)).json;
 ok(cat2.catIdNumber !== cat.catIdNumber, "Cat IDs are unique per cat");
 
 // ── The Census (MRC-GTM-001 §1) — the ordinal is the whole campaign ──────
@@ -76,10 +76,52 @@ ok(
 );
 
 // Acquisition attribution: the stand code must round-trip and stay put.
-const standCat = (await call("/cats", "POST", { name: "Stand Cat", activityLevel: "LOW", isIndoor: true, sourceCode: "STAND-004" }, C)).json;
+const standCat = (await call("/cats", "POST", { name: "Stand Cat", activityLevel: "LOW", isIndoor: true, gender: "UNKNOWN", birthDate: "2024-03-01", cityCode: "makkah", sourceCode: "STAND-004" }, C)).json;
 ok(standCat.catNumber === cat2.catNumber + 1, "ordinals keep incrementing across sources");
 const standPatched = (await call(`/cats/${standCat.id}`, "PATCH", { sourceCode: "stand-999" }, C)).json;
 ok(standPatched.id === standCat.id, "cat updated after source capture");
+
+// ── The founding class must name the cat's REAL city ────────────────────
+// This shipped claiming «دفعة الرياض ٢٠٢٦ / Riyadh Class of 2026» for every
+// member while registration never asked where anyone lived — a false statement
+// on an identity card (R040). These assertions exist so it cannot come back.
+ok(cat.cityCode === "jeddah", "census city persisted from registration");
+ok(
+  cat.foundingClass?.en?.includes("Jeddah") === true && !cat.foundingClass.en.includes("Riyadh"),
+  `founding class names the cat's own city: ${cat.foundingClass?.en}`
+);
+ok(cat.foundingClass?.ar?.includes("جدة") === true, `Arabic class names the city: ${cat.foundingClass?.ar}`);
+ok(cat2.foundingClass?.en?.includes("Riyadh") === true, "a Riyadh cat gets the Riyadh class");
+ok(standCat.foundingClass?.en?.includes("Makkah") === true, "a Makkah cat gets the Makkah class");
+// The year is derived from the issue date, not hard-coded.
+ok(
+  cat.foundingClass?.en?.includes(`Class of ${new Date(cat.idIssuedAt).getFullYear()}`) === true,
+  "class year comes from the real issue date"
+);
+// An unrecognised city must be REFUSED, never silently stored or defaulted.
+const badCity = await call("/cats", "POST", { name: "Nowhere", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2023-01-01", cityCode: "atlantis" }, C);
+ok(badCity.status === 400, "an unknown city code is rejected (400), never defaulted");
+// The three newly-required fields must actually be required.
+for (const [field, body] of [
+  ["cityCode", { name: "NoCity", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2023-01-01" }],
+  ["gender", { name: "NoSex", activityLevel: "LOW", isIndoor: true, birthDate: "2023-01-01", cityCode: "riyadh" }],
+  ["birthDate", { name: "NoAge", activityLevel: "LOW", isIndoor: true, gender: "MALE", cityCode: "riyadh" }],
+]) {
+  ok((await call("/cats", "POST", body, C)).status === 400, `${field} is required at registration`);
+}
+
+// A shared household number must fail as a sentence, not a 500. Registration
+// now REQUIRES a mobile, so this sits squarely on the critical path (R109 —
+// households share a number; R084/R112 — an error is a recovery, not a wall).
+{
+  const shared = `+96650${Math.floor(1000000 + Math.random() * 8999999)}`;
+  ok((await call("/account/profile", "PATCH", { phone: shared }, C)).status === 200, "member can set a mobile");
+  const otherEmail = `dup+${rnd()}@e.com`;
+  const other = (await call("/auth/register", "POST", { email: otherEmail, password: "S3cure!pass", acceptTerms: true })).json;
+  const clash = await call("/account/profile", "PATCH", { phone: shared }, other.accessToken);
+  ok(clash.status === 409, `duplicate mobile is a 409, never a 500 (got ${clash.status})`);
+  ok(clash.json?.code === "PHONE_ALREADY_REGISTERED", "duplicate mobile returns a machine-readable code the UI can translate");
+}
 
 console.log("━━ census counter ━━");
 const census = (await call("/census")).json;
@@ -293,7 +335,7 @@ ok(
   !!selLine && selLine.options.some((o) => o.recommended) && selLine.options.some((o) => !o.inStock),
   "box options: recommended default + honest to-source flag"
 );
-const cat1 = (await call("/cats", "POST", { name: "Monthly", weightKg: 4, activityLevel: "LOW", isIndoor: true }, C)).json;
+const cat1 = (await call("/cats", "POST", { name: "Monthly", weightKg: 4, activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2022-11-01", cityCode: "riyadh" }, C)).json;
 // An invalid brand/flavor pick fails the box BEFORE any charge (R115) — cat stays uncovered.
 const badSel = await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat1.id], addressId: addr.id, provider: "TAMARA", selections: [{ contentId: selLine.contentId, productId: "does-not-exist" }] }, C);
 ok(badSel.status === 400, "invalid box selection rejected before charge (400)");
@@ -381,7 +423,7 @@ ok(Array.isArray(prefs) && prefs.some((p) => p.category === "COMMUNITY"), "notif
 const ovc = (await call("/account/overview", "GET", undefined, C)).json;
 ok(ovc.primaryCat?.completion && typeof ovc.primaryCat.completion.percent === "number", "profile completion computed on overview");
 // Arabic search normalization: a diacritic-free query finds a diacritic name.
-const arCat = (await call("/cats", "POST", { name: "مِشْمِش", activityLevel: "LOW", isIndoor: true }, C)).json;
+const arCat = (await call("/cats", "POST", { name: "مِشْمِش", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2021-09-01", cityCode: "dammam" }, C)).json;
 await call(`/cats/${arCat.id}/visibility`, "PATCH", { isPublic: true }, C);
 const arSearch = (await call(`/community/cats?search=${encodeURIComponent("مشمش")}`)).json;
 ok(arSearch.pagination.total >= 1, "Arabic search matches across diacritics/tatweel");

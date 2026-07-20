@@ -15,6 +15,8 @@ interface CeremonyCat {
   catIdNumber: string;
   /** Census ordinal — lets the reveal show founding standing (MRC-GTM-001 §1). */
   catNumber?: number | null;
+  /** Full founding class from the API, e.g. «عضو مؤسِّس — دفعة جدة ٢٠٢٦». */
+  foundingClass?: string | null;
   idIssuedAt?: string | null;
   photoUrl?: string | null;
   /** Enables the story-frame QR — the pride export works without it. */
@@ -411,6 +413,7 @@ function RevealAct({
           catName={cat.name}
           catIdNumber={cat.catIdNumber}
           catNumber={cat.catNumber}
+          foundingClass={cat.foundingClass}
           issuedAt={cat.idIssuedAt}
           photoUrl={cat.photoUrl}
           isAr={isAr}
@@ -447,11 +450,15 @@ function RevealAct({
           className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[hsl(30_80%_82%)]"
         >
           <IlloPaw tone="orange" className="size-3.5" />
-          {isAr ? (
-            <>عضو مؤسِّس · دفعة الرياض ٢٠٢٦ · <bdi dir="ltr">رقم {cat.catNumber}</bdi></>
-          ) : (
-            <>Founding Member · Riyadh Class of 2026 · <bdi dir="ltr">#{cat.catNumber}</bdi></>
-          )}
+          {/* The class comes from the API, built from THIS cat's city and issue
+              year. It was once hard-coded to "دفعة الرياض ٢٠٢٦" for everybody,
+              which told a Jeddah owner their cat belonged to a Riyadh cohort —
+              a false claim in the one moment the product asks to be believed
+              (R040). An unknown city drops out of the phrase; it is never
+              filled in with a guess. */}
+          {cat.foundingClass ?? (isAr ? "عضو مؤسِّس" : "Founding Member")}
+          {" · "}
+          <bdi dir="ltr">{isAr ? `رقم ${cat.catNumber}` : `#${cat.catNumber}`}</bdi>
         </motion.p>
       )}
       {/* The oath — the card's first real job, said plainly (R033/R040). */}
@@ -713,6 +720,7 @@ function MiniAct({
           catName={cat.name}
           catIdNumber={cat.catIdNumber}
           catNumber={cat.catNumber}
+          foundingClass={cat.foundingClass}
           issuedAt={cat.idIssuedAt}
           photoUrl={cat.photoUrl}
           isAr={isAr}

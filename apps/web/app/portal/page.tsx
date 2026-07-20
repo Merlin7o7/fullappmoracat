@@ -191,6 +191,7 @@ export default function OverviewPage() {
               catName={featured.name}
               catIdNumber={featured.catIdNumber ?? "MRC-••••-••••"}
               catNumber={featured.catNumber}
+              foundingClass={isAr ? featured.foundingClass?.ar : featured.foundingClass?.en}
               issuedAt={featured.idIssuedAt}
               photoUrl={featured.photoUrl}
               isAr={isAr}

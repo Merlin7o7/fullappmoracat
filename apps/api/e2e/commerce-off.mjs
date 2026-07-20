@@ -87,7 +87,7 @@ ok(typeof census?.registered === "number", `census count served with commerce of
 ok(census?.foundingLimit === 1000, "founding cohort size published");
 ok(!("remaining" in (census ?? {})), "still no scarcity countdown (R006)");
 
-const cat = (await call("/cats", "POST", { name: "Census Cat", activityLevel: "LOW", isIndoor: true, sourceCode: "stand-004" }, C)).json;
+const cat = (await call("/cats", "POST", { name: "Census Cat", activityLevel: "LOW", isIndoor: true, gender: "FEMALE", birthDate: "2023-06-01", cityCode: "makkah", sourceCode: "stand-004" }, C)).json;
 ok(!!cat.id && /^MRC-/.test(cat.catIdNumber ?? ""), "Cat ID is still issued free while commerce is off");
 ok(Number.isInteger(cat.catNumber) && cat.catNumber > 0, `census ordinal still assigned: #${cat.catNumber}`);
 ok(cat.isFoundingMember === (cat.catNumber <= 1000), "founding status still derived correctly");

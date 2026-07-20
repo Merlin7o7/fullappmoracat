@@ -28,6 +28,14 @@ export interface PortalCat {
   catNumber: number;
   /** Server-derived founding standing; the card recomputes it from catNumber. */
   isFoundingMember: boolean;
+  /** Census city code (packages/core SAUDI_CITIES); null for pre-census cats. */
+  cityCode: string | null;
+  /**
+   * The founding class, pre-composed by the API in both languages — e.g.
+   * «عضو مؤسِّس — دفعة جدة ٢٠٢٦». Null when not a founding member; the city
+   * is simply omitted when unknown, never guessed (R040).
+   */
+  foundingClass: { ar: string | null; en: string | null };
   qrToken: string | null;
   idIssuedAt: string | null;
   photoUrl: string | null;

@@ -30,6 +30,21 @@ const MAP: Record<string, Copy> = {
     ar: { title: "هذا الرقم مسجّل من قبل", message: "عندك حساب بهذا الرقم. سجّل دخولك بدلاً من إنشاء حساب جديد." },
     en: { title: "This number is already registered", message: "You already have an account with this number. Sign in instead of creating a new one." },
   },
+  // Distinct from PHONE_TAKEN: this person is already signed in and adding a
+  // contact number to an existing account, so "sign in instead" would be
+  // nonsense advice. Reachable in a household where two carers share a number
+  // (R109), which is a legitimate situation, not user error — so the copy
+  // explains and offers a way through rather than scolding (R084/R112).
+  PHONE_ALREADY_REGISTERED: {
+    ar: {
+      title: "هذا الرقم مستخدم في حساب ثاني",
+      message: "الرقم مسجّل على حساب آخر عندنا. استخدم رقم ثاني، أو راسلنا إذا كان حسابك أنت ونبي نجمعهم.",
+    },
+    en: {
+      title: "That number is on another account",
+      message: "This mobile is already registered to a different Moracat account. Use another number, or contact us if both accounts are yours and you'd like them merged.",
+    },
+  },
   BAD_CREDENTIALS: {
     ar: { title: "البيانات غير صحيحة", message: "البريد أو كلمة المرور غير متطابقين. جرّب مرة ثانية، أو استخدم «نسيت كلمة المرور»." },
     en: { title: "That didn't match", message: "The email or password doesn't match. Try again, or use “Forgot password”." },

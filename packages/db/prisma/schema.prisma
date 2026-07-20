@@ -667,6 +667,13 @@ model Breed {
 
 model Cat {
   id             String        @id @default(cuid())
+  /// A fictional cat that exists only to demonstrate the product.
+  ///
+  /// Excluded from the census count, the community feed, and every real
+  /// clinic's search. A demo cat must never inflate a public number — the
+  /// census ordinal IS the founding-member campaign, so a fake cat in it is a
+  /// false public claim (R006).
+  isDemo         Boolean       @default(false)
   userId         String
   /// The Cat ID — a unique, human-readable membership number (R032).
   /// The soul of the product: issued with ceremony, never a silent DB row.
@@ -681,6 +688,14 @@ model Cat {
   /// Gaps are possible (a rolled-back insert consumes a value); that is fine,
   /// because founding status is defined by the *number*, not by a running count.
   catNumber      Int           @unique @default(autoincrement())
+  /// Where this cat lives — a census city code from packages/core SAUDI_CITIES
+  /// (e.g. "jeddah", "makkah"). NOT a FK to the `cities` table: that one is the
+  /// *delivery* city list and knows only where we can ship, which during the
+  /// census is nowhere. The founding-class name on the ID card is built from
+  /// this, so an absent value must stay absent rather than default to a guess.
+  /// Nullable because cats registered before the census asked have no answer,
+  /// and inventing one for them would be exactly the bug this field fixes.
+  cityCode       String?
   /// Acquisition attribution — the `?src=` code the registration arrived with
   /// (e.g. "stand-004" for the Al-Olaya counter stand, MRC-GTM-001 §2).
   /// Per-stand yield decides the Year-1 channel strategy and cannot be
@@ -808,6 +823,9 @@ model Cat {
   /// Per-stand yield reporting in admin (MRC-GTM-001 §2 — kill any stand under
   /// 20 IDs/month, which requires grouping by source cheaply).
   @@index([sourceCode])
+  /// Per-city census counts — "how many cats does Riyadh have?" is the
+  /// question the campaign is built on (MRC-GTM-001 §1).
+  @@index([cityCode])
   @@map("cats")
 }
 
@@ -2513,6 +2531,15 @@ model PartnerApplication {
 /// group's branches without re-consenting at every door.
 model PartnerOrg {
   id            String           @id @default(cuid())
+  /// A demo clinic, for showing the portal to prospective partners.
+  ///
+  /// QUARANTINED BY CONSTRUCTION: a demo clinic can only ever reach demo cats,
+  /// and a real clinic can never reach demo ones. It is also hidden from the
+  /// public directory. Without this, handing demo credentials to a visiting vet
+  /// would hand them a lookup tool over real members — patient search matches
+  /// ANY registered cat by exact identifier, which is correct for a real clinic
+  /// and unacceptable for a sales demo.
+  isDemo        Boolean          @default(false)
   slug          String           @unique
   nameEn        String
   nameAr        String

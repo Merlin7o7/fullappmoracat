@@ -17,3 +17,6 @@ export * from "./vaccination-status";
 // The Census (Phase 0) — founding status derived from the sequential Cat ID
 // number, so the badge cannot be set, only earned.
 export * from "./census";
+// Where a cat lives, for the census — deliberately independent of the delivery
+// City table, which only knows the cities we can actually ship to.
+export * from "./saudi-cities";

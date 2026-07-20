@@ -30,8 +30,50 @@
  */
 export const FOUNDING_MEMBER_LIMIT = 1000;
 
-/** The founding cohort's permanent name (MRC-GTM-001 §1). */
-export const FOUNDING_CLASS = { ar: "العضوية المؤسِّسة — دفعة الرياض ٢٠٢٦", en: "Founding Member — Riyadh Class of 2026" } as const;
+/**
+ * The founding cohort's name — assembled from facts, never hard-coded.
+ *
+ * This used to read "دفعة الرياض ٢٠٢٦ / Riyadh Class of 2026" for everybody,
+ * lifted verbatim from the strategy doc, while registration never asked where
+ * anyone lived. For a Jeddah owner that was not marketing shorthand — it was a
+ * false statement printed on their cat's identity card, which is the one
+ * surface that must never lie (R040, and the Cat ID's whole premise).
+ *
+ * Both halves are now derived:
+ *   * the city from what the owner actually told us, and
+ *   * the year from when the ID was actually issued.
+ *
+ * When we don't know the city — an owner who picked "another city", or any of
+ * the cats registered before this field existed — the class simply omits it.
+ * Saying less is always available; saying something untrue is not.
+ */
+export function foundingClassLabel(
+  catNumber: number | null | undefined,
+  cityLabel: string | null,
+  issuedAt: Date | string | null | undefined,
+  locale: "ar" | "en"
+): string | null {
+  if (!isFoundingMember(catNumber)) return null;
+
+  const d = issuedAt ? new Date(issuedAt) : null;
+  const year = d && !Number.isNaN(d.getTime()) ? d.getFullYear() : null;
+
+  if (locale === "ar") {
+    // Arabic-Indic digits for a prose year (this is a phrase, not an
+    // identifier — unlike the Cat ID number, which stays Latin, dir=ltr).
+    const y = year ? toArabicDigits(year) : null;
+    const parts = ["عضو مؤسِّس", ["دفعة", cityLabel, y].filter(Boolean).join(" ")];
+    return parts.filter((p) => p && p !== "دفعة").join(" — ");
+  }
+
+  const tail = [cityLabel, year ? `Class of ${year}` : null].filter(Boolean).join(" ");
+  return tail ? `Founding Member — ${tail}` : "Founding Member";
+}
+
+const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+function toArabicDigits(n: number): string {
+  return String(n).replace(/\d/g, (d) => ARABIC_DIGITS[Number(d)]!);
+}
 
 /**
  * Is this census ordinal inside the founding cohort?

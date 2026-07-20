@@ -8,7 +8,12 @@ import {
 } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import { Prisma } from "@moraqat/db";
-import { isFoundingMember, normaliseSourceCode } from "@moraqat/core";
+import {
+  foundingClassLabel,
+  isFoundingMember,
+  normaliseSourceCode,
+  saudiCityLabel,
+} from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { IdsService } from "../ids/ids.service";
 import { StorageService } from "../storage/storage.service";
@@ -50,6 +55,8 @@ type CatRow = {
   catIdNumber: string | null;
   /** The census ordinal — this cat's place in the national count. */
   catNumber: number;
+  /** Census city code (packages/core SAUDI_CITIES); null for pre-census cats. */
+  cityCode: string | null;
   qrToken: string | null;
   idIssuedAt: Date | null;
   photoUrl: string | null;
@@ -111,6 +118,10 @@ function catScalarData(dto: Partial<CreateCatDto>) {
     vaccinationStatus: dto.vaccinationStatus,
     currentMedications: dto.currentMedications,
     emergencyNotes: dto.emergencyNotes,
+    // The census city. Unlike sourceCode (write-once attribution), this IS
+    // editable: people move, and a card that names the wrong city is the bug
+    // this field was added to fix.
+    cityCode: dto.cityCode,
     // Undefined leaves it unchanged (Prisma); an object replaces it wholesale —
     // the journey always sends the complete merged profile, so replace is safe
     // and simpler than a deep server merge. Always sanitised first (never raw).
@@ -855,6 +866,15 @@ export class CatsService implements OnModuleInit {
       // packages/core/src/census.ts for why that matters (R006).
       catNumber: cat.catNumber,
       isFoundingMember: isFoundingMember(cat.catNumber),
+      cityCode: cat.cityCode,
+      // The founding class, pre-composed in both languages so the card, the
+      // ceremony and any export all say the same thing. Built from the cat's
+      // OWN city and issue year — null city yields a class with no city in it
+      // rather than a guess (R040). Null entirely when not a founding member.
+      foundingClass: {
+        ar: foundingClassLabel(cat.catNumber, saudiCityLabel(cat.cityCode, "ar"), cat.idIssuedAt, "ar"),
+        en: foundingClassLabel(cat.catNumber, saudiCityLabel(cat.cityCode, "en"), cat.idIssuedAt, "en"),
+      },
       // The QR token is the owner's own secret for their card — safe to return to
       // the authenticated owner; partners resolve it via /verify, never the URL.
       qrToken: cat.qrToken,

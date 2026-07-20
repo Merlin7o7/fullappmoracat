@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
+import { PhoneField, composePhone } from "@/components/phone-field";
 import { CatIdCeremony, type ShareChoice } from "@/components/cat-id-ceremony";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatOnboardingJourney } from "@/components/cat-onboarding-journey";
@@ -16,6 +17,7 @@ import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { friendlyMessage } from "@/lib/errors";
 import { consumeSource } from "@/lib/source";
+import { SAUDI_CITIES } from "@moraqat/core";
 
 /**
  * Issuing a Cat ID — the cat's name comes FIRST, and almost nothing else is
@@ -37,6 +39,118 @@ function NewCatInner() {
   const params = useSearchParams();
   const completeCatId = params.get("cat");
   return completeCatId ? <CompleteFileForm catId={completeCatId} /> : <IssueIdFlow />;
+}
+
+/* ══ The cat's age ════════════════════════════════════════════════════════
+ * Asked as an approximation, never as a birthday. Most owners — especially of
+ * a rescue — simply don't know the date, and a required date picker would turn
+ * a warm question into an exam they can only pass by inventing an answer
+ * (R002 effort is the enemy; R040 we shouldn't record precision we don't have).
+ *
+ * Age is what the product actually consumes: life stage, feeding guidance, and
+ * when vaccinations fall due. Months matter for kittens, so both fields exist;
+ * for an adult cat, years alone is a complete answer.
+ */
+function CatAge({
+  isAr,
+  catName,
+  years,
+  months,
+  onChange,
+}: {
+  isAr: boolean;
+  catName: string;
+  years: string;
+  months: string;
+  onChange: (years: string, months: string) => void;
+}) {
+  const clamp = (v: string, max: number) => {
+    const digits = v.replace(/\D/g, "").slice(0, 2);
+    if (digits === "") return "";
+    return String(Math.min(Number(digits), max));
+  };
+  const who = catName || (isAr ? "قطك" : "your cat");
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-sm font-medium text-foreground/80">
+        {isAr ? `كم عمر ${who}؟` : `How old is ${who}?`}{" "}
+        <span aria-hidden className="text-destructive">*</span>
+      </legend>
+      <div className="flex items-end gap-3">
+        <label className="flex-1">
+          <span className="mb-1.5 block text-xs text-muted-foreground">{isAr ? "سنوات" : "Years"}</span>
+          <input
+            inputMode="numeric"
+            value={years}
+            onChange={(e) => onChange(clamp(e.target.value, 25), months)}
+            placeholder="0"
+            // ≥44px target, real focus ring (R092/R097).
+            className="h-12 w-full rounded-xl border border-input bg-card px-4 text-base tabular outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </label>
+        <label className="flex-1">
+          <span className="mb-1.5 block text-xs text-muted-foreground">{isAr ? "أشهر" : "Months"}</span>
+          <input
+            inputMode="numeric"
+            value={months}
+            onChange={(e) => onChange(years, clamp(e.target.value, 11))}
+            placeholder="0"
+            className="h-12 w-full rounded-xl border border-input bg-card px-4 text-base tabular outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </label>
+      </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        {isAr
+          ? "تقريبي يكفي — نستخدمه لإرشاد التغذية ومواعيد التطعيم، مو للاحتفال بعيد ميلاده."
+          : "An estimate is fine — it guides feeding and vaccination timing, not a birthday reminder."}
+      </p>
+    </fieldset>
+  );
+}
+
+/* ══ The census city ══════════════════════════════════════════════════════
+ * The field whose absence made the Cat ID lie. The founding class is printed
+ * on the card, and until this existed it read «دفعة الرياض ٢٠٢٦» for an owner
+ * in Jeddah or Makkah (R040).
+ *
+ * The list is SAUDI_CITIES from packages/core — deliberately NOT the delivery
+ * city table, which knows only the two cities we can ship to. The census is a
+ * national question and must be answerable from anywhere on day one. The copy
+ * therefore says what the city IS used for and carefully does not imply we
+ * deliver there, because right now we deliver nowhere.
+ */
+function CityPicker({
+  isAr,
+  catName,
+  value,
+  onChange,
+}: {
+  isAr: boolean;
+  catName: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const who = catName || (isAr ? "قطك" : "your cat");
+  return (
+    <div className="flex flex-col gap-1.5">
+      <SelectField
+        label={isAr ? `وين يعيش ${who}؟` : `Where does ${who} live?`}
+        required
+        value={value}
+        onChange={onChange}
+        options={[
+          { value: "", label: isAr ? "اختر مدينتك…" : "Choose your city…" },
+          ...SAUDI_CITIES.map((c) => ({ value: c.code, label: isAr ? c.ar : c.en })),
+        ]}
+      />
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        {isAr
+          ? "مدينتك تحدد دفعة قطك في التعداد — وبعدين توصلك عيادات الشركاء القريبة منك."
+          : "Your city sets your cat's class in the census — and later, which partner clinics are near you."}
+      </p>
+    </div>
+  );
 }
 
 /* ══ Waitlist consent ═════════════════════════════════════════════════════
@@ -101,9 +215,23 @@ function IssueIdFlow() {
   const [f, setF] = React.useState({
     name: "",
     photoUrl: "",
-    gender: "UNKNOWN",
+    // Empty, not "UNKNOWN": the census needs an answer the owner actually gave.
+    // "Not sure" stays a legitimate CHOICE (a rescue's sex may genuinely be
+    // unknown) — it just can no longer be a default nobody looked at.
+    gender: "",
+    // Approximate age. Asked in years+months rather than as a birthday because
+    // most owners don't know the date, and life stage / feeding / vaccination
+    // timing need the age, not the day (R002 — don't tax people for precision
+    // the product never uses).
+    ageYears: "",
+    ageMonths: "",
+    // Census city (SAUDI_CITIES). Required: the founding class on the Cat ID
+    // is built from it, and before we asked, the card told every member they
+    // belonged to a Riyadh cohort (R040).
+    cityCode: "",
     ownerName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
     ownerPhone: user?.phone ?? "",
+    ownerDialCode: user?.dialCode ?? "+966",
     // Never pre-ticked. Consent that arrives switched on isn't consent (R106),
     // and the Cat ID is issued whether or not this is checked.
     waitlistConsent: false,
@@ -126,6 +254,25 @@ function IssueIdFlow() {
         setF((s) => (s.name ? s : { ...s, name: pending }));
         sessionStorage.removeItem("moraqat.pendingCatName");
       }
+      // If they already told the feeding calculator how old their cat is, the
+      // age field arrives filled — never ask the same question twice (R117).
+      // The raw blob is left in place; the create mutation is what consumes
+      // and clears it, and it still carries the weight we don't ask for here.
+      const rawProfile = sessionStorage.getItem("moraqat.pendingCatProfile");
+      if (rawProfile) {
+        const carried = JSON.parse(rawProfile) as { ageMonths?: number };
+        if (typeof carried.ageMonths === "number" && carried.ageMonths > 0) {
+          setF((s) =>
+            s.ageYears || s.ageMonths
+              ? s
+              : {
+                  ...s,
+                  ageYears: String(Math.floor(carried.ageMonths! / 12)),
+                  ageMonths: String(carried.ageMonths! % 12),
+                }
+          );
+        }
+      }
     } catch { /* ignore */ }
   }, []);
 
@@ -144,7 +291,7 @@ function IssueIdFlow() {
           body: JSON.stringify({
             firstName: parts[0] || undefined,
             lastName: parts.slice(1).join(" ") || undefined,
-            ...(f.ownerPhone.trim() ? { phone: f.ownerPhone.trim() } : {}),
+            ...(f.ownerPhone.trim() ? { phone: composePhone(f.ownerDialCode, f.ownerPhone), dialCode: f.ownerDialCode } : {}),
           }),
         });
         if (attempt > 0) {
@@ -182,7 +329,7 @@ function IssueIdFlow() {
       const parts = f.ownerName.trim().split(/\s+/);
       if (f.ownerName.trim() || f.ownerPhone.trim()) {
         void saveOwnerContact(0);
-        updateUser({ firstName: parts[0] || user?.firstName, lastName: parts.slice(1).join(" ") || user?.lastName, phone: f.ownerPhone.trim() || user?.phone });
+        updateUser({ firstName: parts[0] || user?.firstName, lastName: parts.slice(1).join(" ") || user?.lastName, phone: (f.ownerPhone.trim() ? composePhone(f.ownerDialCode, f.ownerPhone) : user?.phone) });
       }
       // The feeding calculator's bridge promise made true (R002/R117): if the
       // visitor computed a plan there, their cat's weight and age travel here
@@ -192,9 +339,14 @@ function IssueIdFlow() {
         const raw = sessionStorage.getItem("moraqat.pendingCatProfile");
         if (raw) carried = JSON.parse(raw) as { weightKg?: number; ageMonths?: number };
       } catch { /* ignore */ }
+      // Age → birth date. The age the owner just typed wins over anything the
+      // calculator carried, since it's the more recent answer; the same
+      // months-to-date conversion is used either way so the two paths can never
+      // disagree about what "18 months old" means.
+      const months = ageKnown ? ageTotalMonths : carried.ageMonths;
       const birthDate =
-        typeof carried.ageMonths === "number" && carried.ageMonths > 0
-          ? new Date(Date.now() - carried.ageMonths * 30.44 * 86_400_000).toISOString()
+        typeof months === "number" && months > 0
+          ? new Date(Date.now() - months * 30.44 * 86_400_000).toISOString()
           : undefined;
       // The stand code that started this journey (`?src=stand-004`) lands on the
       // cat row here, at the one moment it can — consumed so a second cat added
@@ -205,6 +357,8 @@ function IssueIdFlow() {
         body: JSON.stringify({
           name: f.name.trim(),
           gender: f.gender,
+          // Where the cat lives — decides the founding class on their card.
+          cityCode: f.cityCode,
           photoUrl: f.photoUrl.trim() || undefined,
           weightKg: typeof carried.weightKg === "number" ? carried.weightKg : undefined,
           birthDate,
@@ -241,6 +395,30 @@ function IssueIdFlow() {
   });
 
   const catName = f.name.trim();
+
+  /* ── The six required inputs (onboarding north star: under six) ──────────
+   * cat name · sex · age · owner name · owner mobile · city.
+   * `ageKnown` treats "0 years 0 months" as unanswered rather than as a
+   * newborn: an untouched pair of fields is silence, not a claim.
+   */
+  const ageTotalMonths = Number(f.ageYears || 0) * 12 + Number(f.ageMonths || 0);
+  const ageKnown = (f.ageYears !== "" || f.ageMonths !== "") && ageTotalMonths > 0;
+  const catStepReady = Boolean(catName) && f.gender !== "" && ageKnown;
+  const ownerStepReady =
+    Boolean(f.ownerName.trim()) && f.ownerPhone.replace(/\D/g, "").length >= 9 && f.cityCode !== "";
+  const allReady = catStepReady && ownerStepReady;
+
+  /** What's still missing, named plainly so the button never just sits dead (R084/R113). */
+  const missingLabel = React.useMemo(() => {
+    const gaps: string[] = [];
+    if (!catName) gaps.push(isAr ? "اسم القط" : "your cat's name");
+    if (f.gender === "") gaps.push(isAr ? "الجنس" : "sex");
+    if (!ageKnown) gaps.push(isAr ? "العمر" : "age");
+    if (!f.ownerName.trim()) gaps.push(isAr ? "اسمك" : "your name");
+    if (f.ownerPhone.replace(/\D/g, "").length < 9) gaps.push(isAr ? "رقم جوالك" : "your mobile");
+    if (f.cityCode === "") gaps.push(isAr ? "المدينة" : "your city");
+    return gaps.length ? gaps.join(isAr ? " · " : " · ") : null;
+  }, [catName, f.gender, ageKnown, f.ownerName, f.ownerPhone, f.cityCode, isAr]);
   // Another living, active cat already carrying this exact name?
   const duplicateName = React.useMemo(
     () => cats.some((c) => c.status === "ACTIVE" && c.name.trim().toLowerCase() === catName.toLowerCase()),
@@ -302,14 +480,25 @@ function IssueIdFlow() {
                 hint={f.name.length >= 50 ? `${f.name.length}/60` : undefined}
               />
               <SelectField
-                label={isAr ? "الجنس (اختياري)" : "Sex (optional)"}
+                label={isAr ? "الجنس" : "Sex"}
+                required
                 value={f.gender}
                 onChange={(v) => set({ gender: v })}
                 options={[
-                  { value: "UNKNOWN", label: isAr ? "غير محدد" : "Not sure" },
+                  // Empty first option = "unanswered". "Not sure" sits below as
+                  // a real answer, because for a rescue it often IS the answer.
+                  { value: "", label: isAr ? "اختر…" : "Choose…" },
                   { value: "MALE", label: isAr ? "ذكر" : "Male" },
                   { value: "FEMALE", label: isAr ? "أنثى" : "Female" },
+                  { value: "UNKNOWN", label: isAr ? "ما أدري" : "Not sure" },
                 ]}
+              />
+              <CatAge
+                isAr={isAr}
+                catName={catName}
+                years={f.ageYears}
+                months={f.ageMonths}
+                onChange={(years, months) => set({ ageYears: years, ageMonths: months })}
               />
               <PhotoUploader
                 endpoint="/uploads/image"
@@ -327,7 +516,15 @@ function IssueIdFlow() {
               {editContact ? (
                 <div className="flex flex-col gap-4 rounded-xl bg-muted/50 p-3">
                   <Field label={isAr ? "اسمك الكامل" : "Your full name"} required value={f.ownerName} onChange={(v) => set({ ownerName: v })} />
-                  <Field label={isAr ? "رقم جوالك" : "Your mobile number"} value={f.ownerPhone} onChange={(v) => set({ ownerPhone: v })} inputMode="tel" />
+                  <PhoneField
+                    label={isAr ? "رقم جوالك" : "Your mobile number"}
+                    required
+                    isAr={isAr}
+                    dialCode={f.ownerDialCode}
+                    onDialCode={(v) => set({ ownerDialCode: v })}
+                    value={f.ownerPhone}
+                    onValue={(v) => set({ ownerPhone: v })}
+                  />
                 </div>
               ) : (
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -354,17 +551,29 @@ function IssueIdFlow() {
                   : `If ${catName || "your cat"} is ever lost, this is the number that brings them home.`}
               </p>
 
+              <CityPicker
+                isAr={isAr}
+                catName={catName}
+                value={f.cityCode}
+                onChange={(v) => set({ cityCode: v })}
+              />
+
               <WaitlistConsent
                 isAr={isAr}
                 checked={f.waitlistConsent}
                 onChange={(v) => set({ waitlistConsent: v })}
               />
 
+              {missingLabel && (
+                <p className="text-xs leading-relaxed text-muted-foreground" aria-live="polite">
+                  {isAr ? `باقي: ${missingLabel}` : `Still needed: ${missingLabel}`}
+                </p>
+              )}
               <div className="mt-2 flex items-center justify-between gap-3">
                 <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")} disabled={create.isPending}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "إلغاء" : "Cancel"}
                 </Button>
-                <Button type="submit" size="lg" disabled={!catName || create.isPending}>
+                <Button type="submit" size="lg" disabled={!allReady || create.isPending}>
                   {create.isPending ? (
                     <><Loader2 className="size-4 animate-spin" /> {isAr ? "جارٍ إصدار الهوية…" : "Issuing the ID…"}</>
                   ) : (
@@ -374,7 +583,7 @@ function IssueIdFlow() {
               </div>
             </form>
           ) : step === 0 ? (
-            <form onSubmit={(e) => { e.preventDefault(); if (catName) setStep(1); }} className="flex flex-col gap-4">
+            <form onSubmit={(e) => { e.preventDefault(); if (catStepReady) setStep(1); }} className="flex flex-col gap-4">
               <Field
                 label={isAr ? "وش اسم قطك؟" : "What's your cat's name?"}
                 required
@@ -386,14 +595,25 @@ function IssueIdFlow() {
                 hint={f.name.length >= 50 ? `${f.name.length}/60` : undefined}
               />
               <SelectField
-                label={isAr ? "الجنس (اختياري)" : "Sex (optional)"}
+                label={isAr ? "الجنس" : "Sex"}
+                required
                 value={f.gender}
                 onChange={(v) => set({ gender: v })}
                 options={[
-                  { value: "UNKNOWN", label: isAr ? "غير محدد" : "Not sure" },
+                  // Empty first option = "unanswered". "Not sure" sits below as
+                  // a real answer, because for a rescue it often IS the answer.
+                  { value: "", label: isAr ? "اختر…" : "Choose…" },
                   { value: "MALE", label: isAr ? "ذكر" : "Male" },
                   { value: "FEMALE", label: isAr ? "أنثى" : "Female" },
+                  { value: "UNKNOWN", label: isAr ? "ما أدري" : "Not sure" },
                 ]}
+              />
+              <CatAge
+                isAr={isAr}
+                catName={catName}
+                years={f.ageYears}
+                months={f.ageMonths}
+                onChange={(years, months) => set({ ageYears: years, ageMonths: months })}
               />
               <PhotoUploader
                 endpoint="/uploads/image"
@@ -405,11 +625,16 @@ function IssueIdFlow() {
                 label={isAr ? "صورته (اختياري — تطلع على الهوية)" : "Photo (optional — it goes on the ID)"}
                 onUploaded={(res) => set({ photoUrl: (res.url as string) ?? "" })}
               />
+              {missingLabel && (
+                <p className="text-xs leading-relaxed text-muted-foreground" aria-live="polite">
+                  {isAr ? `باقي: ${missingLabel}` : `Still needed: ${missingLabel}`}
+                </p>
+              )}
               <div className="mt-2 flex items-center justify-between gap-3">
                 <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "إلغاء" : "Cancel"}
                 </Button>
-                <Button type="submit" size="lg" disabled={!catName}>
+                <Button type="submit" size="lg" disabled={!catStepReady}>
                   {isAr ? "التالي" : "Next"} <ArrowRight className="size-4 rtl:rotate-180" />
                 </Button>
               </div>
@@ -426,7 +651,15 @@ function IssueIdFlow() {
               className="flex flex-col gap-4"
             >
               <Field label={isAr ? "اسمك الكامل" : "Your full name"} required value={f.ownerName} onChange={(v) => set({ ownerName: v })} />
-              <Field label={isAr ? "رقم جوالك" : "Your mobile number"} value={f.ownerPhone} onChange={(v) => set({ ownerPhone: v })} inputMode="tel" />
+              <PhoneField
+                    label={isAr ? "رقم جوالك" : "Your mobile number"}
+                    required
+                    isAr={isAr}
+                    dialCode={f.ownerDialCode}
+                    onDialCode={(v) => set({ ownerDialCode: v })}
+                    value={f.ownerPhone}
+                    onValue={(v) => set({ ownerPhone: v })}
+                  />
               {/* Trust precedes the ask (R004): say plainly why we want a number. */}
               <p className="flex items-start gap-2 rounded-xl bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -434,16 +667,28 @@ function IssueIdFlow() {
                   ? `لو ضاع ${catName || "قطك"} يوم من الأيام، هذا الرقم اللي يوصله له اللي يلقاه.`
                   : `If ${catName || "your cat"} is ever lost, this is the number that brings them home.`}
               </p>
+              <CityPicker
+                isAr={isAr}
+                catName={catName}
+                value={f.cityCode}
+                onChange={(v) => set({ cityCode: v })}
+              />
+
               <WaitlistConsent
                 isAr={isAr}
                 checked={f.waitlistConsent}
                 onChange={(v) => set({ waitlistConsent: v })}
               />
+              {missingLabel && (
+                <p className="text-xs leading-relaxed text-muted-foreground" aria-live="polite">
+                  {isAr ? `باقي: ${missingLabel}` : `Still needed: ${missingLabel}`}
+                </p>
+              )}
               <div className="mt-2 flex items-center justify-between gap-3">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setStep(0)} disabled={create.isPending}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "رجوع" : "Back"}
                 </Button>
-                <Button type="submit" size="lg" disabled={!catName || create.isPending}>
+                <Button type="submit" size="lg" disabled={!allReady || create.isPending}>
                   {create.isPending ? (
                     // The wait has a purpose, and it says so (R119).
                     <><Loader2 className="size-4 animate-spin" /> {isAr ? "جارٍ إصدار الهوية…" : "Issuing the ID…"}</>
@@ -498,7 +743,7 @@ function IssueIdFlow() {
           (set in create.onSuccess) — never on hope (R115/R117). */}
       {ceremonyCat?.catIdNumber && (
         <CatIdCeremony
-          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, catNumber: ceremonyCat.catNumber, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl, qrToken: ceremonyCat.qrToken }}
+          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, catNumber: ceremonyCat.catNumber, foundingClass: isAr ? ceremonyCat.foundingClass?.ar : ceremonyCat.foundingClass?.en, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl, qrToken: ceremonyCat.qrToken }}
           isAr={isAr}
           // The full rite is for the household's first ID; every next family
           // member gets the warm, familiar mini welcome (R031/R009).

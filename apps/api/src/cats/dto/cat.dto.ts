@@ -15,7 +15,7 @@ import {
   Min,
   MinLength,
 } from "class-validator";
-import { SOURCE_CODE_MAX } from "@moraqat/core";
+import { SAUDI_CITY_CODES, SOURCE_CODE_MAX } from "@moraqat/core";
 
 /** Trim incoming strings so " " can never masquerade as a real value. */
 const Trim = () =>
@@ -50,15 +50,38 @@ export class CreateCatDto {
   @IsString()
   breedId?: string;
 
-  @ApiPropertyOptional({ enum: GENDERS })
-  @IsOptional()
+  /**
+   * Required since the census (MRC-GTM-001 §1). "UNKNOWN" remains a legitimate
+   * answer — a rescue's sex genuinely may not be known — but it must now be a
+   * *choice* the owner made rather than a default nobody looked at.
+   */
+  @ApiProperty({ enum: GENDERS })
   @IsIn(GENDERS)
-  gender?: CatGender;
+  gender!: CatGender;
 
-  @ApiPropertyOptional({ example: "2022-05-01" })
-  @IsOptional()
+  /**
+   * Required since the census. Collected as an approximate age in the wizard
+   * and converted to a date, because most owners don't know the birthday —
+   * life stage, feeding guidance and vaccination timing all need it, and none
+   * of them need the exact day.
+   */
+  @ApiProperty({ example: "2022-05-01" })
   @IsDateString()
-  birthDate?: string;
+  birthDate!: string;
+
+  /**
+   * Where the cat lives — a census city code (SAUDI_CITIES in packages/core).
+   *
+   * Required because the founding class printed on the Cat ID card is built
+   * from it. Before this existed the card claimed «دفعة الرياض ٢٠٢٦» for
+   * everyone, including owners in Jeddah and Makkah — a false statement on an
+   * identity document (R040). Validated against the list so a typo can never
+   * become a city.
+   */
+  @ApiProperty({ example: "jeddah", enum: SAUDI_CITY_CODES })
+  @Trim()
+  @IsIn(SAUDI_CITY_CODES)
+  cityCode!: string;
 
   @ApiPropertyOptional({ example: 4.5 })
   @IsOptional()

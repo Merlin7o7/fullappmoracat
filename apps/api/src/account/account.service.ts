@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   PayloadTooLargeException,
@@ -57,10 +58,33 @@ export class AccountService {
     // regression) must never let a client set isStaff/status/etc. avatarUrl is
     // intentionally excluded here: it has its own validated upload path.
     const { firstName, lastName, phone, dialCode, gender, locale } = dto;
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { firstName, lastName, phone, dialCode, gender, locale },
-    });
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { firstName, lastName, phone, dialCode, gender, locale },
+      });
+    } catch (e) {
+      // `User.phone` is @unique, and a P2002 here used to escape as a bare 500
+      // ("Internal server error") — a dead end with nothing to act on. It is
+      // reachable in ordinary use: a household where two carers share a number
+      // (R109), or someone re-entering a number they already registered.
+      // Registration now REQUIRES a mobile, so this sits on the critical path
+      // and must fail as a sentence a person can act on (R084/R112/R113).
+      // Matched on the code rather than `instanceof
+      // Prisma.PrismaClientKnownRequestError`. The error is thrown by the
+      // generated client while the class would arrive here via the @moraqat/db
+      // re-export, and those are not guaranteed to be the same constructor
+      // identity across package boundaries — a mismatch would make the branch
+      // silently dead and put the 500 straight back. The code is the contract.
+      const code = (e as { code?: unknown })?.code;
+      if (code === "P2002") {
+        throw new ConflictException({
+          code: "PHONE_ALREADY_REGISTERED",
+          message: "That mobile number is already on another Moracat account.",
+        });
+      }
+      throw e;
+    }
     return this.profile(userId);
   }
 

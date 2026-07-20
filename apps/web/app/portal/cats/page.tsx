@@ -383,6 +383,7 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
     catName: cat.name,
     catIdNumber: cat.catIdNumber!,
     catNumber: cat.catNumber,
+    foundingClass: isAr ? cat.foundingClass?.ar : cat.foundingClass?.en,
     issuedAt: cat.idIssuedAt,
     isAr,
     membershipActive: cat.membershipStatus === "ACTIVE",
