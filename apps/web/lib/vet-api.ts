@@ -71,16 +71,40 @@ export interface VetBranch {
   nameAr: string;
 }
 
-/** One person's standing inside one clinic. The unit of authorisation. */
+/** The clinic itself, as the auth context returns it. */
+export interface VetMembershipOrg {
+  id: string;
+  slug: string;
+  nameEn: string;
+  nameAr: string;
+  logoUrl: string | null;
+  status: VetOrgStatus;
+  verified: boolean;
+  suspended: boolean;
+}
+
+/**
+ * One person's standing inside one clinic. The unit of authorisation.
+ *
+ * The clinic arrives NESTED under `org`. The portal previously declared flat
+ * `orgId` / `orgNameEn` / `orgNameAr` fields that the API has never sent, so
+ * `orgId` was always undefined — every subsequent call went out with
+ * `x-moracat-org: undefined` and came back VET_NOT_STAFF. The entire clinic
+ * portal was unreachable from its very first request, and because the fetch
+ * helper cast without validating, it surfaced as empty screens rather than an
+ * error.
+ */
 export interface VetMembership {
-  orgId: string;
-  orgNameEn: string;
-  orgNameAr: string;
+  staffId: string;
+  org: VetMembershipOrg;
   role: VetRole;
+  roleLabel?: { ar: string; en: string };
   status: VetMembershipStatus;
+  title?: string | null;
+  joinedAt?: string | null;
+  hasCounterPin?: boolean;
   branches: VetBranch[];
-  /** Present when the API shares the clinic's lifecycle state. */
-  orgStatus?: VetOrgStatus;
+  capabilities?: VetCapability[];
 }
 
 export interface VetAuthContext {
@@ -587,11 +611,19 @@ export interface VetApplicationResult {
   reviewDays?: number;
 }
 
+/**
+ * Accepting an invite returns a FLAT orgId plus a name-only `org` — a different
+ * shape from the auth context's membership, which nests the full clinic. Kept
+ * distinct rather than forced into one type, because pretending they match is
+ * exactly how the portal ended up sending `x-moracat-org: undefined`.
+ */
 export interface VetInviteResult {
+  staffId: string;
   orgId: string;
-  orgNameEn: string;
-  orgNameAr: string;
   role: VetRole;
+  roleLabel?: { ar: string; en: string };
+  capabilities?: VetCapability[];
+  org: { nameEn: string; nameAr: string };
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -986,17 +1018,17 @@ export function VetActorProvider({ children }: { children: React.ReactNode }) {
       const list = ctx?.memberships ?? [];
       setMemberships(list);
       setOrgId((current) => {
-        if (current && list.some((m) => m.orgId === current)) return current;
+        if (current && list.some((m) => m.org.id === current)) return current;
         let stored: string | null = null;
         try {
           stored = localStorage.getItem(ORG_STORAGE_KEY);
         } catch {
           /* ignore */
         }
-        if (stored && list.some((m) => m.orgId === stored)) return stored;
+        if (stored && list.some((m) => m.org.id === stored)) return stored;
         // Prefer a clinic the person can actually work in today.
         const usable = list.find((m) => m.status === "ACTIVE") ?? list[0];
-        return usable?.orgId ?? null;
+        return usable?.org.id ?? null;
       });
       setError(null);
     } catch (err) {
@@ -1021,7 +1053,7 @@ export function VetActorProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore */
     }
-    const org = memberships.find((m) => m.orgId === orgId);
+    const org = memberships.find((m) => m.org.id === orgId);
     setBranchId(stored && org?.branches.some((b) => b.id === stored) ? stored : null);
   }, [orgId, memberships]);
 
@@ -1050,7 +1082,7 @@ export function VetActorProvider({ children }: { children: React.ReactNode }) {
   );
 
   const org = React.useMemo(
-    () => memberships.find((m) => m.orgId === orgId) ?? null,
+    () => memberships.find((m) => m.org.id === orgId) ?? null,
     [memberships, orgId],
   );
   const role = org?.role ?? null;
@@ -1430,9 +1462,9 @@ export function vetMembershipStateLabel(state: VetMembershipState, isAr: boolean
 }
 
 /** The org's name in the reader's language, with a graceful fallback. */
-export function vetOrgName(m: Pick<VetMembership, "orgNameAr" | "orgNameEn"> | null, isAr: boolean): string {
-  if (!m) return "";
-  return (isAr ? m.orgNameAr : m.orgNameEn) || m.orgNameEn || m.orgNameAr;
+export function vetOrgName(m: Pick<VetMembership, "org"> | null, isAr: boolean): string {
+  if (!m?.org) return "";
+  return (isAr ? m.org.nameAr : m.org.nameEn) || m.org.nameEn || m.org.nameAr;
 }
 
 /** A branch's name in the reader's language. */

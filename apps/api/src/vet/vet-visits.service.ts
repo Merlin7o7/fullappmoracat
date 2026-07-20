@@ -77,7 +77,7 @@ export class VetVisitsService {
    * consultation is how a medication gets given twice.
    */
   async open(actor: VetActor, dto: OpenVisitDto) {
-    const cat = await this.patients.requireCat(dto.catId);
+    const cat = await this.patients.requireCat(dto.catId, actor);
     const branch = await this.patients.requireBranchInScope(actor, dto.branchId);
 
     const existing = await this.prisma.visit.findFirst({

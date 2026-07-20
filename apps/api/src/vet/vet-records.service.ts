@@ -128,7 +128,7 @@ export class VetRecordsService {
   // ── 4 · Author an entry ─────────────────────────────────────────────────
 
   async create(actor: VetActor, dto: CreateClinicalEntryDto) {
-    const cat = await this.patients.requireCat(dto.catId);
+    const cat = await this.patients.requireCat(dto.catId, actor);
     // Authoring requires an encounter at THIS clinic. Consent governs read
     // depth, never the right to write facts onto someone else's patient.
     await this.patients.requireTreatmentRelationship(cat.id, actor.orgId);

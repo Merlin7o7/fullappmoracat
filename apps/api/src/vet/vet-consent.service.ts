@@ -61,7 +61,7 @@ export class VetConsentService {
    * they do nothing, nothing happens — silence is never consent.
    */
   async request(actor: VetActor, dto: RequestConsentDto) {
-    const cat = await this.patients.requireCat(dto.catId);
+    const cat = await this.patients.requireCat(dto.catId, actor);
     const existing = await this.patients.resolveAccess(cat.id, actor.orgId);
     if (existing.tier === dto.tier || (existing.tier === "T2" && dto.tier === "T1")) {
       return {
@@ -118,7 +118,7 @@ export class VetConsentService {
 
   /** What this clinic may currently see, and what it would take to see more. */
   async effectiveTier(actor: VetActor, catId: string) {
-    const cat = await this.patients.requireCat(catId);
+    const cat = await this.patients.requireCat(catId, actor);
     const access = await this.patients.resolveAccess(cat.id, actor.orgId);
     return {
       catId: cat.id,

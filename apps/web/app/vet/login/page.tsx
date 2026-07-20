@@ -67,7 +67,7 @@ export default function VetLoginPage() {
       const usable = list.filter((m) => m.status === "ACTIVE");
       const only = usable.length === 1 ? usable[0] : undefined;
       if (only) {
-        rememberVetOrg(only.orgId);
+        rememberVetOrg(only.org.id);
         router.replace(destination());
       }
     } catch (err) {
@@ -100,7 +100,7 @@ export default function VetLoginPage() {
   }
 
   function chooseOrg(m: VetMembership) {
-    rememberVetOrg(m.orgId);
+    rememberVetOrg(m.org.id);
     toast({
       title: isAr ? `أهلاً بك في ${vetOrgName(m, true)}` : `Welcome to ${vetOrgName(m, false)}`,
       description: VET_ROLE_LABELS[m.role][isAr ? "ar" : "en"],
@@ -165,7 +165,7 @@ export default function VetLoginPage() {
                 const paused = m.status !== "ACTIVE";
                 return (
                   <button
-                    key={m.orgId}
+                    key={m.org.id}
                     type="button"
                     disabled={paused}
                     onClick={() => chooseOrg(m)}

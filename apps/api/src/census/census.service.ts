@@ -79,12 +79,14 @@ export class CensusService {
       // Soft-deleted cats leave the count: they are no longer registered. Their
       // ordinal is NOT recycled, which is why `foundingClosed` reads the high
       // water mark separately instead of comparing against this number.
-      this.prisma.cat.count({ where: { deletedAt: null } }),
-      this.prisma.cat.aggregate({ _max: { catNumber: true } }),
+      // isDemo excluded: the census ordinal IS the founding-member campaign, so
+      // a fictional cat inside it is a false public claim (R006).
+      this.prisma.cat.count({ where: { deletedAt: null, isDemo: false } }),
+      this.prisma.cat.aggregate({ _max: { catNumber: true }, where: { isDemo: false } }),
       // Only cats whose owner opted into the public community, and that a
       // moderator hasn't hidden. Everything else is private by default.
       this.prisma.cat.findFirst({
-        where: { deletedAt: null, isPublic: true, hiddenAt: null },
+        where: { deletedAt: null, isPublic: true, hiddenAt: null, isDemo: false },
         orderBy: { catNumber: "desc" },
         select: { name: true, catNumber: true },
       }),

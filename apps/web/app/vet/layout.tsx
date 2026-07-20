@@ -186,11 +186,11 @@ function VetShell({ children }: { children: React.ReactNode }) {
   // The clinic (or this person's seat in it) isn't serving a counter right now.
   const membershipPaused = actor.org?.status && actor.org.status !== "ACTIVE";
   const orgNotLive =
-    actor.org?.orgStatus &&
-    actor.org.orgStatus !== "LIVE" &&
-    actor.org.orgStatus !== "ONBOARDING";
+    actor.org?.org.status &&
+    actor.org.org.status !== "LIVE" &&
+    actor.org.org.status !== "ONBOARDING";
   if (membershipPaused || orgNotLive) {
-    const suspended = actor.org?.orgStatus === "SUSPENDED" || actor.org?.orgStatus === "OFFBOARDED";
+    const suspended = actor.org?.org.status === "SUSPENDED" || actor.org?.org.status === "OFFBOARDED";
     return (
       <BlockedShell isAr={isAr} onLogout={handleLogout}>
         <EmptyState

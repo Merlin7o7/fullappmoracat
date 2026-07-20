@@ -209,6 +209,39 @@ ok(badHook.status === 401, "webhook bad signature 401");
 const hook = await call("/payments/webhooks/mock", "POST", { providerRef: pending.payment.providerRef, status: "CAPTURED" }, undefined, { "x-webhook-secret": process.env.MOCK_WEBHOOK_SECRET ?? "mock-webhook-secret" });
 ok(hook.json?.status === "captured", "webhook captures pending order");
 
+console.log("━━ demo quarantine ━━");
+// A demo clinic exists so the vet portal can be shown to prospective partners
+// on the SAME database as real members. Patient search deliberately matches any
+// registered cat by exact identifier — correct for a real clinic, and a lookup
+// tool over the member base if a demo account could do it. These assertions are
+// what make hosting the demo beside real data defensible.
+{
+  const demoLogin = await call("/auth/login", "POST", { email: "demo.vet@moracat.co", password: "DemoVet!2026" });
+  if (demoLogin.status !== 200) {
+    ok(true, "demo clinic not seeded here — quarantine checks skipped (run db:seed:vet-demo)");
+  } else {
+    const DT = demoLogin.json.accessToken;
+    const ctx = (await call("/vet/auth/context", "POST", {}, DT)).json;
+    const demoOrg = ctx?.memberships?.[0]?.org?.id;
+    ok(!!demoOrg, "demo vet resolves a clinic (auth context nests org — flat orgId was always undefined)");
+    const H = { "x-moracat-org": demoOrg };
+
+    // The real cat created earlier in this suite is NOT a demo cat.
+    const byId = await call(`/vet/patients/search?q=${encodeURIComponent(cat.catIdNumber)}`, "GET", undefined, DT, H);
+    ok((byId.json?.results ?? []).length === 0, "demo clinic cannot find a REAL cat by its Cat ID");
+    ok((await call(`/vet/patients/${cat.id}`, "GET", undefined, DT, H)).status === 404,
+      "demo clinic cannot open a REAL cat by id");
+    // …and it can still do its job on its own patients.
+    const own = await call("/vet/patients/search?q=968000011122233", "GET", undefined, DT, H);
+    ok((own.json?.results ?? []).length === 1, "demo clinic CAN find its own demo patient (quarantine isn't a wall)");
+    // Demo data must never reach a public surface.
+    const feed = await call("/community/cats?search=%D9%85%D8%B4%D9%85%D8%B4");
+    ok(!(feed.json?.items ?? []).some((c) => c.name === "مشمش"), "demo cats never appear in the community feed");
+    const dir = await call("/vet/directory");
+    ok(!JSON.stringify(dir.json ?? {}).includes("demo-alnoor-vet"), "demo clinic never appears in the public directory");
+  }
+}
+
 console.log("━━ security regressions ━━");
 // Cross-account cart takeover: a second member must not be able to check out
 // (or destroy) a cart owned by someone else, even with a valid cart id.

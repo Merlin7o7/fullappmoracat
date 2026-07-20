@@ -21,7 +21,8 @@
     "seed:catalog": "tsx prisma/seed-catalog.ts",
     "local": "node scripts/pg-local.mjs",
     "studio": "prisma studio",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed:vet-demo": "tsx prisma/seed-vet-demo.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

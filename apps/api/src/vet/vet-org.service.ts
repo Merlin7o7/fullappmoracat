@@ -170,7 +170,10 @@ export class VetOrgService {
       // Hits @@index([directoryVisible, isActive]).
       directoryVisible: true,
       isActive: true,
-      org: { status: "LIVE", verifiedAt: { not: null }, suspendedAt: null },
+      // isDemo excluded: a demo clinic is LIVE and verified so the portal works
+      // for a sales demo, but it is not a real place — a member must never be
+      // shown an address they could drive to (R040).
+      org: { status: "LIVE", verifiedAt: { not: null }, suspendedAt: null, isDemo: false },
       ...(query.cityId ? { cityId: query.cityId } : {}),
       ...(query.emergency === "true" ? { emergency24h: true } : {}),
       ...(query.q

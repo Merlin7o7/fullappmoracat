@@ -41,6 +41,9 @@ export class CommunityService {
       // Never surface cats of a deactivated / soft-deleted owner (suspension also
       // hides cats explicitly; this covers the other account states too).
       user: { is: { status: "ACTIVE", deletedAt: null } },
+      // Demo cats are fictional and exist only to show the vet portal to
+      // prospective partners. They must never appear to a real member.
+      isDemo: false,
     };
   }
 

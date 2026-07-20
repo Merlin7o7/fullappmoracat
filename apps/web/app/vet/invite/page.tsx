@@ -18,7 +18,7 @@ import { Button, Card, cn, useToast } from "@moraqat/ui";
 import { VET_ROLE_LABELS } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
-import { rememberVetOrg, vetFriendlyError, vetOrgName, type VetInviteResult } from "@/lib/vet-api";
+import { rememberVetOrg, vetFriendlyError, type VetInviteResult } from "@/lib/vet-api";
 
 export default function VetInvitePage() {
   const { locale } = useLocale();
@@ -51,7 +51,7 @@ export default function VetInvitePage() {
       setAccepted(result);
       rememberVetOrg(result.orgId);
       toast({
-        title: isAr ? `أهلاً بك في ${vetOrgName(result, true)}` : `Welcome to ${vetOrgName(result, false)}`,
+        title: isAr ? `أهلاً بك في ${(result.org.nameAr || result.org.nameEn)}` : `Welcome to ${(result.org.nameEn || result.org.nameAr)}`,
         description: VET_ROLE_LABELS[result.role][isAr ? "ar" : "en"],
         variant: "success",
       });
@@ -94,7 +94,7 @@ export default function VetInvitePage() {
           <CheckCircle2 className="size-6" />
         </span>
         <h1 className="font-display text-xl font-semibold">
-          {isAr ? `أنت الآن ضمن ${vetOrgName(accepted, true)}` : `You're on the team at ${vetOrgName(accepted, false)}`}
+          {isAr ? `أنت الآن ضمن ${(accepted.org.nameAr || accepted.org.nameEn)}` : `You're on the team at ${(accepted.org.nameEn || accepted.org.nameAr)}`}
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
           {isAr

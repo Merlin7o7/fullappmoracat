@@ -27,7 +27,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "db:local": "pnpm --filter @moraqat/db local",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "db:seed:vet-demo": "pnpm --filter @moraqat/db seed:vet-demo"
   },
   "devDependencies": {
     "prettier": "^3.3.3",

@@ -197,7 +197,7 @@ export class VetStaffGuard implements CanActivate {
         orgId: true,
         role: true,
         status: true,
-        org: { select: { status: true, suspendedAt: true } },
+        org: { select: { status: true, suspendedAt: true, isDemo: true } },
         branches: { select: { id: true } },
       },
     });
@@ -214,6 +214,8 @@ export class VetStaffGuard implements CanActivate {
     return this.buildActor({
       staffId: staff.id,
       orgId: staff.orgId,
+      // Two-way demo quarantine — see VetActor.orgIsDemo.
+      orgIsDemo: staff.org.isDemo,
       userId: staff.userId,
       role: staff.role as VetRole,
       branchIds: staff.branches.map((b) => b.id),
@@ -266,7 +268,7 @@ export class VetStaffGuard implements CanActivate {
           orgId: true,
           role: true,
           status: true,
-          org: { select: { status: true, suspendedAt: true } },
+          org: { select: { status: true, suspendedAt: true, isDemo: true } },
           branches: { select: { id: true } },
         },
       }),
@@ -298,6 +300,8 @@ export class VetStaffGuard implements CanActivate {
     return this.buildActor({
       staffId: staff.id,
       orgId: staff.orgId,
+      // Two-way demo quarantine — see VetActor.orgIsDemo.
+      orgIsDemo: staff.org.isDemo,
       userId: staff.userId,
       role: staff.role as VetRole,
       branchIds: staff.branches.map((b) => b.id),

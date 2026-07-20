@@ -218,16 +218,16 @@ export function OrgSwitcher({ className }: { className?: string }) {
                 {isAr ? "العيادة" : "Clinic"}
               </p>
               {memberships.map((m) => {
-                const active = m.orgId === orgId;
+                const active = m.org.id === orgId;
                 const suspended = m.status !== "ACTIVE";
                 return (
                   <button
-                    key={m.orgId}
+                    key={m.org.id}
                     type="button"
                     role="option"
                     aria-selected={active}
                     onClick={() => {
-                      setOrg(m.orgId);
+                      setOrg(m.org.id);
                       setOpen(false);
                     }}
                     className={cn(

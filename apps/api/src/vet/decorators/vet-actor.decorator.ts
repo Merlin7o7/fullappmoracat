@@ -17,6 +17,14 @@ export interface VetActor {
   staffId: string;
   /** PartnerOrg.id resolved from the `x-moracat-org` header. */
   orgId: string;
+  /**
+   * True when this is a DEMO clinic.
+   *
+   * Drives a hard, two-way quarantine: a demo clinic sees only demo cats, and a
+   * real clinic never sees them. Carried on the actor so the decision is local
+   * to every query instead of an extra lookup that someone will forget.
+   */
+  orgIsDemo: boolean;
   /** User.id — the human behind the membership. */
   userId: string;
   /** Clinic role driving the capability matrix. */

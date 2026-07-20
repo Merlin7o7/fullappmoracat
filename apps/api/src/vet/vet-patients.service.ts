@@ -507,9 +507,12 @@ export class VetPatientsService {
   }
 
   /** Load a cat or 404 with a code the counter UI can turn into recovery copy. */
-  async requireCat(catId: string) {
+  async requireCat(catId: string, actor?: Pick<VetActor, "orgIsDemo">) {
     const cat = await this.prisma.cat.findFirst({
-      where: { id: catId, deletedAt: null },
+      // Same quarantine as search: a demo clinic resolves only demo cats, and a
+      // real clinic never resolves one. Falls through to the ordinary not-found
+      // error, so the boundary is not itself an information leak.
+      where: { id: catId, deletedAt: null, ...(actor ? { isDemo: actor.orgIsDemo } : {}) },
       select: CAT_CARD_SELECT,
     });
     if (!cat) {
@@ -567,7 +570,7 @@ export class VetPatientsService {
     const limit = Math.min(query.limit ?? 10, 25);
     const detected = detectQuery(raw);
 
-    const where = this.buildSearchWhere(detected, actor.orgId);
+    const where = this.buildSearchWhere(detected, actor.orgId, actor.orgIsDemo);
     if (!where) {
       // A malformed Moracat-looking number: say so as-you-type, keep their input.
       throw vetBadRequest("VET_PATIENT_NOT_FOUND", "Unrecognised identifier", {
@@ -644,9 +647,17 @@ export class VetPatientsService {
   /** The privacy boundary, expressed as a Prisma filter. */
   private buildSearchWhere(
     detected: DetectedQuery,
-    orgId: string
+    orgId: string,
+    orgIsDemo = false
   ): Prisma.CatWhereInput | null {
-    const base: Prisma.CatWhereInput = { deletedAt: null };
+    // THE DEMO QUARANTINE, applied to the base of EVERY branch below.
+    //
+    // Exact identifiers (Cat ID, microchip, phone) deliberately match any
+    // registered cat — correct when a real member is standing at the counter,
+    // and unacceptable for a demo account handed to a visiting vet. Scoping
+    // here, on the shared base, means a new search branch inherits it by
+    // default rather than having to remember.
+    const base: Prisma.CatWhereInput = { deletedAt: null, isDemo: orgIsDemo };
     switch (detected.kind) {
       case "catId":
         return { ...base, catIdNumber: detected.normalized };
@@ -827,7 +838,7 @@ export class VetPatientsService {
 
   /** The consent-tier-resolved clinical profile. Always logged. */
   async getProfile(actor: VetActor, catId: string, ip?: string | null) {
-    const cat = await this.requireCat(catId);
+    const cat = await this.requireCat(catId, actor);
     const access = await this.resolveAccess(catId, actor.orgId);
     const canSeeCare = TIER_RANK[access.tier] >= 1;
 
@@ -1031,6 +1042,7 @@ export class VetPatientsService {
     const where: Prisma.CatWhereInput = {
       deletedAt: null,
       visits: { some: { orgId: actor.orgId } },
+      isDemo: actor.orgIsDemo,
       ...(term
         ? {
             OR: [
@@ -1088,7 +1100,7 @@ export class VetPatientsService {
   // ── 2 · Medical timeline ────────────────────────────────────────────────
 
   async getTimeline(actor: VetActor, catId: string, query: TimelineQueryDto, ip?: string | null) {
-    await this.requireCat(catId);
+    await this.requireCat(catId, actor);
     const access = await this.resolveAccess(catId, actor.orgId);
 
     const limit = Math.min(query.limit ?? PAGE_DEFAULT, 100);
@@ -1298,7 +1310,7 @@ export class VetPatientsService {
   // ── 7 · Weight series ───────────────────────────────────────────────────
 
   async getWeights(actor: VetActor, catId: string, query: WeightSeriesQueryDto, ip?: string | null) {
-    const cat = await this.requireCat(catId);
+    const cat = await this.requireCat(catId, actor);
     const access = await this.resolveAccess(catId, actor.orgId);
     if (TIER_RANK[access.tier] < 1) {
       throw vetForbidden("VET_NO_CONSENT", "Weight history needs at least T1 consent", {
@@ -1406,7 +1418,7 @@ export class VetPatientsService {
     query: PrescriptionListQueryDto,
     ip?: string | null
   ) {
-    await this.requireCat(catId);
+    await this.requireCat(catId, actor);
     const access = await this.resolveAccess(catId, actor.orgId);
     const limit = Math.min(query.limit ?? PAGE_DEFAULT, 100);
     const page = Math.max(1, query.page ?? 1);
