@@ -22,6 +22,10 @@ export function TurnstileWidget({ className }: { className?: string }) {
   const { locale } = useLocale();
   const ref = React.useRef<HTMLDivElement>(null);
   const widgetId = React.useRef<string | null>(null);
+  // If the challenge errors/hangs (e.g. Cloudflare 300030 on an unconfigured
+  // domain), hide the widget rather than leaving a broken box on the form. The
+  // backend fails open, so registration still works without a token.
+  const [errored, setErrored] = React.useState(false);
 
   const render = React.useCallback(() => {
     const ts = (window as unknown as { turnstile?: TurnstileApi }).turnstile;
@@ -29,9 +33,9 @@ export function TurnstileWidget({ className }: { className?: string }) {
     widgetId.current = ts.render(ref.current, {
       sitekey: turnstileSiteKey(),
       language: locale === "ar" ? "ar" : "en",
-      callback: (token: string) => setTurnstileToken(token),
+      callback: (token: string) => { setTurnstileToken(token); setErrored(false); },
       "expired-callback": () => setTurnstileToken(null),
-      "error-callback": () => setTurnstileToken(null),
+      "error-callback": () => { setTurnstileToken(null); setErrored(true); },
     });
   }, [locale]);
 
@@ -57,8 +61,9 @@ export function TurnstileWidget({ className }: { className?: string }) {
         strategy="afterInteractive"
         onLoad={render}
       />
-      {/* Left-aligned with the form; the widget owns its own sizing. */}
-      <div ref={ref} className={className} />
+      {/* Hidden on error so a hung challenge never shows a broken box (the div
+          stays mounted so Cloudflare's script keeps its render target). */}
+      <div ref={ref} className={className} hidden={errored} />
     </>
   );
 }
