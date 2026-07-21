@@ -28,4 +28,13 @@ export class CensusController {
   snapshot() {
     return this.census.snapshot();
   }
+
+  // The founding-member benefits — static, public, cacheable for an hour. What
+  // "Founding Member" actually grants, from the same source the product honours.
+  @Get("founding-benefits")
+  @Header("Cache-Control", "public, max-age=3600, s-maxage=3600")
+  @ApiOperation({ summary: "What founding-member status grants (bilingual)" })
+  foundingBenefits() {
+    return this.census.foundingBenefits();
+  }
 }

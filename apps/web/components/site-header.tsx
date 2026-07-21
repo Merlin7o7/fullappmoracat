@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
+import { useAuth } from "@/lib/auth";
 import { commerceEnabled } from "@/lib/features";
 import { ThemeToggle, LangToggle } from "./toggles";
 import { Logo } from "./logo";
@@ -13,6 +14,7 @@ import { IlloPaw } from "./illustrations";
 
 export function SiteHeader() {
   const { t, locale } = useLocale();
+  const { user, ready } = useAuth();
   const isAr = locale === "ar";
   const [scrolled, setScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -111,10 +113,19 @@ export function SiteHeader() {
           <div className="flex items-center gap-1">
             <LangToggle />
             <ThemeToggle />
-            {/* Login is reachable at EVERY width (returning members on phones). */}
-            <Link href="/login" className="ms-1 inline-flex">
-              <Button variant="brand" size="sm">{t.nav.login}</Button>
-            </Link>
+            {/* Recognition first (R001): a signed-in member is greeted with their
+                portal, not asked to log in again. Rendered only once the session
+                is known so it never flickers Login → My portal. The slot keeps a
+                stable min-width so the toggles don't jump while it resolves. */}
+            <span className="ms-1 inline-flex min-w-[5.5rem] justify-end">
+              {ready && (
+                <Link href={user ? "/portal" : "/login"} className="inline-flex">
+                  <Button variant="brand" size="sm">
+                    {user ? (isAr ? "بوابتي" : "My portal") : t.nav.login}
+                  </Button>
+                </Link>
+              )}
+            </span>
             {/* Mobile nav disclosure — the links that md:flex hides. */}
             <button
               ref={toggleRef}

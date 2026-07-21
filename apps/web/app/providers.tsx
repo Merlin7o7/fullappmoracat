@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "@moraqat/ui";
 import { dict, type Locale } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
-import { CookieConsent } from "@/components/cookie-consent";
 import { type CalendarPref, CALENDAR_STORAGE_KEY, setCurrentCalendar } from "@/lib/datetime";
 
 type Dictionary = (typeof dict)[Locale];
@@ -109,7 +108,11 @@ export function Providers({
             <ToastProvider>
               <LocaleContext.Provider value={value}>
                 {children}
-                <CookieConsent />
+                {/* Consent is now a single surface: the analytics ConsentBanner
+                    (mounted in layout.tsx) is the meaningful opt-in — accept turns
+                    analytics on, decline keeps the site on essential storage only.
+                    The old "no ad trackers" cookie notice was retired because it
+                    would contradict the pixels the moment they ship (R040). */}
               </LocaleContext.Provider>
             </ToastProvider>
           </AuthProvider>

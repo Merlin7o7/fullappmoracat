@@ -20,3 +20,6 @@ export * from "./census";
 // Where a cat lives, for the census — deliberately independent of the delivery
 // City table, which only knows the cities we can actually ship to.
 export * from "./saudi-cities";
+// Referral recognition (§9) — «عزيمة». Recognition of real cats brought into the
+// census, never a buyable queue position (R006) or a points game.
+export * from "./referral";

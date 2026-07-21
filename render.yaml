@@ -77,6 +77,15 @@ services:
       # the access secret — boot validation refuses to start if they match.
       - key: JWT_COUNTER_SECRET
         generateValue: true
+      # Census integrity — Cloudflare Turnstile secret (proof-of-humanity on
+      # registration + cat creation). Empty = challenge is a no-op. Set this AND
+      # NEXT_PUBLIC_TURNSTILE_SITE_KEY on the web to enforce it. Paste in the
+      # dashboard; never commit.
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      # Stable salt so the integrity audit stores hashed (never raw) IP/UA.
+      - key: SECURITY_SALT
+        generateValue: true
       # CORS: the web origin allowed to call this API.
       - key: NEXT_PUBLIC_SITE_URL
         value: https://moracat.co

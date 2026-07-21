@@ -42,6 +42,7 @@ import { UploadsModule } from "./uploads/uploads.module";
 import { WalletModule } from "./wallet/wallet.module";
 import { LifecycleModule } from "./lifecycle/lifecycle.module";
 import { VetModule } from "./vet/vet.module";
+import { SecurityModule } from "./security/security.module";
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { VetModule } from "./vet/vet.module";
     // vaccination reminders, birthdays/anniversaries, DRAFT expiry).
     ScheduleModule.forRoot(),
     PrismaModule,
+    SecurityModule,
 
     CommonModule,
     IdsModule,

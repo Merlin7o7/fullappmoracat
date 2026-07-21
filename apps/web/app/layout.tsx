@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 import { Providers } from "./providers";
 import type { Locale } from "@/lib/i18n";
 import { BRAND, LEGAL_ENTITY, CONTACT } from "@/lib/org";
+import { AnalyticsPixels } from "@/components/analytics/pixels";
+import { ConsentBanner } from "@/components/consent-banner";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -69,6 +71,12 @@ export const metadata: Metadata = {
     description:
       "Give your cat an identity of their own — delivery across Saudi Arabia, founding partners starting in Jeddah & Riyadh.",
     url: siteUrl,
+    // Arabic is the default experience (R101); English is the alternate. Both
+    // are served at the SAME URL via the `locale` cookie (see providers.tsx /
+    // middleware) — there are no /ar /en routes — so these OG locale hints are
+    // the honest way to declare bilingualism without inventing paths that 404.
+    locale: "ar_AR",
+    alternateLocale: ["en_US"],
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Moracat — the cat membership" }],
   },
   twitter: {
@@ -150,7 +158,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           {locale === "ar" ? "تخطَّ إلى المحتوى" : "Skip to content"}
         </a>
-        <Providers initialLocale={locale}>{children}</Providers>
+        <Providers initialLocale={locale}>
+          {children}
+          {/* Consent-gated analytics. Both live INSIDE Providers so they read the
+              locale context; the pixels stay inert (render nothing) until the member
+              accepts via the banner, satisfying the PDPL opt-in promise (R106). */}
+          <AnalyticsPixels />
+          <ConsentBanner />
+        </Providers>
       </body>
     </html>
   );

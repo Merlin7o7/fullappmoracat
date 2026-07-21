@@ -26,14 +26,19 @@ export class AdminAnalyticsService {
   async census() {
     const now = new Date();
     const d30 = new Date(now.getTime() - 30 * 86400_000);
-    const live = { deletedAt: null };
+    // Exclude demo/quarantined cats, exactly as the public CensusService does —
+    // the admin dashboard is the operating instrument for the same campaign, so
+    // it must count the same population. A fictional demo cat inside these totals
+    // is a false internal claim (R006).
+    const live = { deletedAt: null, isDemo: false };
 
     const [total, last30, founding, bySource, bySource30, recent] = await Promise.all([
       this.prisma.cat.count({ where: live }),
       this.prisma.cat.count({ where: { ...live, createdAt: { gte: d30 } } }),
       // Founding places issued, by the high-water ordinal — NOT by a live count,
-      // because a deleted founding cat does not reopen its place.
-      this.prisma.cat.aggregate({ _max: { catNumber: true } }),
+      // because a deleted founding cat does not reopen its place. Demo cats are
+      // excluded so a quarantined fixture can't inflate the founding high-water.
+      this.prisma.cat.aggregate({ _max: { catNumber: true }, where: { isDemo: false } }),
       this.prisma.cat.groupBy({
         by: ["sourceCode"],
         where: live,

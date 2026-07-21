@@ -19,6 +19,7 @@ import { IdsService } from "../ids/ids.service";
 import { StorageService } from "../storage/storage.service";
 import { MailService } from "../mail/mail.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { CensusIntegrityService } from "../security/census-integrity.service";
 import { catIdIssuedTemplate } from "../mail/mail.templates";
 import { normalizeName } from "../common/text";
 import type { UpdateVisibilityDto } from "./dto/cat-visibility.dto";
@@ -228,7 +229,8 @@ export class CatsService implements OnModuleInit {
     private readonly ids: IdsService,
     private readonly storage: StorageService,
     private readonly mail: MailService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly integrity: CensusIntegrityService
   ) {}
 
   /**
@@ -277,7 +279,16 @@ export class CatsService implements OnModuleInit {
     }
   }
 
-  async create(userId: string, dto: CreateCatDto) {
+  async create(
+    userId: string,
+    dto: CreateCatDto,
+    ctx?: { ip?: string | null; userAgent?: string | null }
+  ) {
+    // Census integrity: stop a scripted account at the door, before it can take
+    // a founding ordinal it will never use (R006). A genuine large household
+    // that trips this can continue the next day.
+    await this.integrity.assertWithinDailyCap(userId);
+
     const cat = await this.prisma.cat.create({
       data: {
         userId,
@@ -345,6 +356,17 @@ export class CatsService implements OnModuleInit {
         void this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
       }
     }
+
+    // Integrity bookkeeping — a hashed-IP/UA audit row + velocity alerts. Fire
+    // and forget: it must never fail or slow the Cat ID ceremony (R071).
+    void this.integrity.recordRegistration({
+      userId,
+      catId: cat.id,
+      catNumber: cat.catNumber,
+      ip: ctx?.ip ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      sourceCode: cat.sourceCode ?? null,
+    });
 
     return { ...this.serialize(cat as CatRow, user?.primaryCatId ?? cat.id), firstCatIdIssued };
   }

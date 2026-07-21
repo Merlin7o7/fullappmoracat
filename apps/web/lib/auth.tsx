@@ -3,6 +3,7 @@
 import * as React from "react";
 import { fetchWithTimeout, httpError, ApiError, friendly } from "./http";
 import { clearAllCachedCats } from "./offline";
+import { consumeTurnstileToken } from "./turnstile";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 const STORAGE_KEY = "moraqat.auth";
@@ -89,9 +90,16 @@ export function useAuth() {
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  // Registration carries the Turnstile proof when the challenge is configured
+  // (single-use token; header absent when Turnstile is off). Only the register
+  // path consumes it, so a refresh/login can never spend the token.
+  const turnstile = path === "/auth/register" ? consumeTurnstileToken() : null;
   const res = await fetchWithTimeout(`${BASE}/api${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(turnstile ? { "x-turnstile-token": turnstile } : {}),
+    },
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => null);

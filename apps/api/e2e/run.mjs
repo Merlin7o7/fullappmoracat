@@ -53,6 +53,11 @@ const env = {
   // exactly like real assertion failures. Raised here only; production keeps
   // the default (see app.module.ts).
   THROTTLE_LIMIT: "100000",
+  // The census-integrity limiters (per-route cat-creation throttle + per-account
+  // daily cap) are likewise relaxed for the suite, which registers many cats on
+  // one account in seconds. Production keeps the safe defaults (4/min, 8/day).
+  CENSUS_CREATE_THROTTLE: "100000",
+  CENSUS_MAX_CATS_PER_DAY: "100000",
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
 };
 

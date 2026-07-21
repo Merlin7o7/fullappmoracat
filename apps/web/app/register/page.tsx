@@ -15,6 +15,8 @@ import { OtpBoxes } from "@/components/otp-boxes";
 import { ApiError } from "@/lib/http";
 import { friendlyError } from "@/lib/errors";
 import { useCaptureSource } from "@/lib/source";
+import { TurnstileWidget } from "@/components/turnstile-widget";
+import { track } from "@/lib/analytics";
 
 // Draft persistence (R117 — never lose entered data). Name, phone and email
 // only — NEVER the password, never the terms tick.
@@ -35,7 +37,14 @@ const PASSWORD_CHECKS = [
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, requestOtp, loginWithGoogle } = useAuth();
+  const { register, requestOtp, loginWithGoogle, user, ready } = useAuth();
+  // A signed-in member who lands on /register isn't here to make a second
+  // account (that would only hit EMAIL_TAKEN) — they're here to register
+  // another cat. Send them straight to the Cat ID flow, and render nothing but
+  // a spinner meanwhile so the signup form never flashes (R002/R112).
+  React.useEffect(() => {
+    if (ready && user) router.replace("/portal/cats/new");
+  }, [ready, user, router]);
   // Referral code from ?ref= — read from the URL without useSearchParams so the
   // page needn't be wrapped in a Suspense boundary at build time.
   const [refCode, setRefCode] = React.useState<string | undefined>(undefined);
@@ -64,6 +73,15 @@ export default function RegisterPage() {
   const [otp, setOtp] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+
+  // `registration_started` — fired once, on first interaction with the form
+  // (funnel entry). Never carries any field value (no PII).
+  const startTracked = React.useRef(false);
+  const markStarted = () => {
+    if (startTracked.current) return;
+    startTracked.current = true;
+    track("registration_started");
+  };
 
   // Restore a saved draft on mount — but never clobber anything already typed.
   React.useEffect(() => {
@@ -98,8 +116,11 @@ export default function RegisterPage() {
   }, [draftName, draftDial, draftPhone, draftEmail]);
 
   const phoneDigits = form.phone.replace(/\D/g, "");
-  // Phone is optional now that OTP is off; include it only if a real number is given.
-  const fullPhone = phoneDigits.length >= 8 ? composePhone(form.dialCode, form.phone) : undefined;
+  // Phone is optional now that OTP is off; include it only if a real number is
+  // given. Minimum 9 digits — a full Saudi mobile after the dial code (the
+  // PhoneField placeholder is "5X XXX XXXX"), matching the Cat ID flow so the
+  // same number never passes here yet fails there (single source of truth).
+  const fullPhone = phoneDigits.length >= 9 ? composePhone(form.dialCode, form.phone) : undefined;
   // SMS OTP is only usable once a provider is wired. Until then, verify-by-SMS is
   // skipped so signups still work.
   const smsEnabled = process.env.NEXT_PUBLIC_SMS_ENABLED === "true";
@@ -120,7 +141,9 @@ export default function RegisterPage() {
       ...(withOtp ? { otp: withOtp } : {}),
       ...(refCode ? { ref: refCode } : {}),
     });
-    // Account created — the draft has done its job.
+    // Account created — the draft has done its job. A successful sign-up is the
+    // funnel's key conversion (no PII in the event).
+    track("sign_up");
     clearSignupDraft();
     // Straight to the Cat ID (north star: holding it in under two minutes).
     // Email verification runs in parallel — a quiet portal banner invites it;
@@ -132,7 +155,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     if (!form.terms) { setError(isAr ? "لازم توافق على الشروط وسياسة الخصوصية" : "Please accept the Terms & Privacy Policy"); return; }
-    if (phoneDigits && phoneDigits.length < 8) { setError(isAr ? "رقم الجوال غير صحيح" : "Enter a valid mobile number"); return; }
+    if (phoneDigits && phoneDigits.length < 9) { setError(isAr ? "رقم الجوال غير صحيح" : "Enter a valid mobile number"); return; }
     setLoading(true);
     try {
       if (!smsEnabled) {
@@ -169,11 +192,23 @@ export default function RegisterPage() {
     setError(null);
     try {
       await loginWithGoogle(idToken);
+      // Google on the registration funnel is a sign-up conversion (no PII).
+      track("sign_up", { method: "google" });
       clearSignupDraft();
       router.push(pendingCat ? "/portal/cats/new" : "/portal");
     } catch (err) {
       setError(friendlyError(err, isAr).message);
     }
+  }
+
+  // Hold the page blank (a calm spinner) until we know the session, and while
+  // an authenticated member is being redirected out — never flash the form.
+  if (!ready || user) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" aria-label={isAr ? "جارٍ التحميل" : "Loading"} />
+      </div>
+    );
   }
 
   if (step === "verify") {
@@ -240,7 +275,8 @@ export default function RegisterPage() {
         </>
       )}
 
-      <form onSubmit={startVerification} className="mt-5 flex flex-col gap-4">
+      {/* First focus of any field = funnel entry (registration_started, once). */}
+      <form onSubmit={startVerification} onFocusCapture={markStarted} className="mt-5 flex flex-col gap-4">
         <Field label={isAr ? "الاسم الكامل" : "Full name"} value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} placeholder={isAr ? "مثلاً: سارة العتيبي" : "e.g. Sara Al-Otaibi"} autoComplete="name" />
         {/* The phone field only appears when SMS verification is live — asking
             for a number we'd silently discard breaks trust (R086/R113). */}
@@ -266,6 +302,9 @@ export default function RegisterPage() {
         </label>
 
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {/* Proof-of-humanity for census integrity — renders only when Turnstile
+            is configured; a no-op otherwise so signup stays frictionless. */}
+        <TurnstileWidget />
         <Button type="submit" size="lg" disabled={loading} className="mt-1">
           {loading ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
           {smsEnabled ? (isAr ? "تحقّق من الجوال وأكمل" : "Verify mobile & continue") : continueLabel}

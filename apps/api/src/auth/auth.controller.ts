@@ -5,6 +5,7 @@ import {
   Patch,
   Post,
   Req,
+  UseGuards,
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
@@ -12,6 +13,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { AuthService } from "./auth.service";
+import { TurnstileGuard } from "../security/turnstile.guard";
 
 /**
  * Tight per-route limits on the credential + code-sending surfaces (the global
@@ -51,6 +53,10 @@ export class AuthController {
 
   @Public()
   @Throttle(STRICT)
+  // Proof-of-humanity on the account door (no-op until Turnstile is configured).
+  // Registration is the other half of census integrity: gate the account and the
+  // cat, and a script can't cheaply mint either (R006).
+  @UseGuards(TurnstileGuard)
   @Post("register")
   @ApiOperation({ summary: "Create a new customer account" })
   register(@Body() dto: RegisterDto, @Req() req: Request) {

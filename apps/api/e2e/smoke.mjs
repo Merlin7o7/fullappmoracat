@@ -451,6 +451,10 @@ ok(uc2.unread === 0, "unread drops to 0 after mark-all-read");
 // Wave 8: referral loop, notification preferences, profile completion.
 const ref = (await call("/account/referral", "GET", undefined, C)).json;
 ok(!!ref.code && ref.link.includes(ref.code), "referral code + invite link issued");
+ok(typeof ref.brought === "number" && Array.isArray(ref.milestones) && !!ref.recognition,
+  "referral returns recognition payload (brought count + milestones + recognition)");
+ok(ref.recognition.isFoundingSupporter === (ref.brought >= 1),
+  "founding-supporter recognition is derived from real cats brought, not raw signups");
 const prefs = (await call("/account/notification-preferences", "GET", undefined, C)).json;
 ok(Array.isArray(prefs) && prefs.some((p) => p.category === "COMMUNITY"), "notification preferences load");
 const ovc = (await call("/account/overview", "GET", undefined, C)).json;
@@ -460,6 +464,27 @@ const arCat = (await call("/cats", "POST", { name: "مِشْمِش", activityLev
 await call(`/cats/${arCat.id}/visibility`, "PATCH", { isPublic: true }, C);
 const arSearch = (await call(`/community/cats?search=${encodeURIComponent("مشمش")}`)).json;
 ok(arSearch.pagination.total >= 1, "Arabic search matches across diacritics/tatweel");
+
+console.log("━━ census integrity + founding member ━━");
+// The founding-member promise is real, machine-readable, and public — the same
+// data the product honours, not marketing copy (R040).
+const fb = (await call("/census/founding-benefits")).json;
+ok(fb?.foundingLimit === 1000, "founding cohort size published on the benefits endpoint");
+ok(Array.isArray(fb?.benefits?.en) && fb.benefits.en.some((b) => b.key === "price_lock"),
+  "founding benefits list the locked founding price (en)");
+ok(Array.isArray(fb?.benefits?.ar) && fb.benefits.ar.length === fb.benefits.en.length,
+  "founding benefits are complete in both locales");
+// Human-verification header is accepted (Turnstile disabled in test → guard no-op).
+const humanCat = (await call("/cats", "POST",
+  { name: "Verified", activityLevel: "LOW", isIndoor: true, gender: "FEMALE", birthDate: "2023-02-02", cityCode: "riyadh" },
+  C, { "x-turnstile-token": "test-token" })).json;
+ok(!!humanCat?.catIdNumber, "cat creation succeeds carrying an x-turnstile-token header");
+// The integrity audit recorded these registrations, and admin can review them.
+const abuse = (await call("/admin/census/abuse?windowDays=1", "GET", undefined, A)).json;
+ok(typeof abuse?.totalRegistrations === "number" && abuse.totalRegistrations >= 1,
+  "admin abuse report counts recorded registrations");
+ok(abuse?.thresholds?.maxCatsPerDay >= 1 && Array.isArray(abuse?.suspiciousIps),
+  "admin abuse report exposes thresholds + suspicious-IP review list");
 
 console.log(`\n${fail === 0 ? "✅ SMOKE PASS" : "❌ SMOKE FAILURES"}: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

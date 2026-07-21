@@ -114,6 +114,67 @@ export function foundingBadgeLabel(
 }
 
 /**
+ * The founding-member benefits — the real, enforceable promise behind the badge.
+ *
+ * Marketing (MRC-GTM-001 §1) promises the first 1,000 registrants three things:
+ * a founding price locked for life, first-batch physical tag eligibility, and a
+ * place on the founders' wall. Those were previously copy with nothing behind
+ * them — the audit's "founding perk defined nowhere" finding. This is the single
+ * source of truth: the same structure the marketing page renders, the Cat ID
+ * surfaces, commerce honours (`isFoundingPriceLocked`), and fulfilment reads for
+ * the physical tag run. If a promise isn't in this list, we don't make it (R040).
+ *
+ * `key` is stable and machine-readable so other systems can branch on it without
+ * parsing copy; the labels are display-only.
+ */
+export type FoundingBenefitKey = "price_lock" | "first_tag" | "founders_wall" | "early_access";
+
+export interface FoundingBenefit {
+  key: FoundingBenefitKey;
+  title: string;
+  detail: string;
+}
+
+const FOUNDING_BENEFITS: Record<"ar" | "en", FoundingBenefit[]> = {
+  en: [
+    { key: "price_lock", title: "Founding price, locked for life", detail: "When memberships open, your rate is the founding rate — for as long as you stay a member." },
+    { key: "first_tag", title: "First-batch physical Cat ID tag", detail: "Founding cats are first in line for the engraved metal tag when it ships." },
+    { key: "founders_wall", title: "A place on the Founders' Wall", detail: "Your cat's name and number, kept with the first thousand — online and at the first pop-up." },
+    { key: "early_access", title: "First access at launch", detail: "Founding members are invited before everyone else when the box goes live." },
+  ],
+  ar: [
+    { key: "price_lock", title: "سعر التأسيس، ثابت مدى العضوية", detail: "عند إطلاق العضويات، سعرك هو سعر المؤسِّسين — ما دمت عضوًا." },
+    { key: "first_tag", title: "وسم الهوية المعدني — الدفعة الأولى", detail: "قطط المؤسِّسين أول من يحصل على الوسم المعدني المحفور عند توفّره." },
+    { key: "founders_wall", title: "مكان على جدار المؤسِّسين", detail: "اسم قطك ورقمه محفوظان مع أول ألف — على الإنترنت وفي أول فعالية." },
+    { key: "early_access", title: "أولوية الوصول عند الإطلاق", detail: "يُدعى الأعضاء المؤسِّسون قبل الجميع عند إطلاق الصندوق." },
+  ],
+};
+
+/** The founding benefits list — always available (for the marketing promise), locale-aware. */
+export function foundingBenefits(locale: "ar" | "en"): FoundingBenefit[] {
+  return FOUNDING_BENEFITS[locale];
+}
+
+/** The benefits a SPECIFIC cat has actually earned — its real list, or [] when outside the cohort. */
+export function foundingBenefitsFor(
+  catNumber: number | null | undefined,
+  locale: "ar" | "en"
+): FoundingBenefit[] {
+  return isFoundingMember(catNumber) ? FOUNDING_BENEFITS[locale] : [];
+}
+
+/**
+ * The commerce hook: is this cat entitled to the locked founding rate?
+ *
+ * A derived restatement of the ordinal, exactly like the badge — there is no
+ * stored "priceLocked" flag to drift or be forged. When memberships launch, the
+ * pricing path calls this to honour the promise the census made.
+ */
+export function isFoundingPriceLocked(catNumber: number | null | undefined): boolean {
+  return isFoundingMember(catNumber);
+}
+
+/**
  * A registration's source code, normalised.
  *
  * Arrives from `?src=stand-004` on a physical stand's QR/NFC tile. Kept
