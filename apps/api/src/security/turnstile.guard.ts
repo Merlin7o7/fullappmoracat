@@ -3,7 +3,6 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
-  Logger,
 } from "@nestjs/common";
 import type { Request } from "express";
 import { TurnstileService } from "./turnstile.service";
@@ -19,8 +18,6 @@ import { TurnstileService } from "./turnstile.service";
  */
 @Injectable()
 export class TurnstileGuard implements CanActivate {
-  private readonly logger = new Logger(TurnstileGuard.name);
-
   constructor(private readonly turnstile: TurnstileService) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -31,21 +28,11 @@ export class TurnstileGuard implements CanActivate {
     const token = Array.isArray(header) ? header[0] : header;
 
     const ok = await this.turnstile.verify(token, req.ip);
-    if (ok) return true;
-
-    // The check failed. Only BLOCK when explicitly enforcing — otherwise
-    // fail-open: never let a hung/misconfigured widget stop a real person from
-    // registering. The census stays protected by the throttle, the daily cap,
-    // and the integrity audit either way.
-    if (this.turnstile.enforcing) {
-      // Named code so the client can prompt a fresh challenge (R084).
+    if (!ok) {
+      // Named code so the client can prompt a fresh challenge rather than
+      // showing a generic error (R084 — say what to do next).
       throw new ForbiddenException({ code: "HUMAN_VERIFICATION_REQUIRED" });
     }
-    this.logger.warn(
-      `Turnstile check failed but not enforcing (fail-open) — token ${
-        token ? "present-but-invalid" : "missing"
-      }. Set TURNSTILE_ENFORCE=true once the widget is verified on the live domain.`
-    );
     return true;
   }
 }

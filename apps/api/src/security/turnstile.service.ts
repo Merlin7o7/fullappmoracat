@@ -23,24 +23,9 @@ export class TurnstileService {
   private static readonly ENDPOINT =
     "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
-  /** Whether human-verification is configured (a token will be checked). */
+  /** Whether human-verification is actually enforced in this environment. */
   get enabled(): boolean {
     return this.secret.length > 0;
-  }
-
-  /**
-   * Whether a FAILED check should actually block the request.
-   *
-   * Off by default — deliberately fail-open. A third-party challenge that hangs
-   * (Cloudflare 300030), a domain misconfiguration, or a regional CDN blip must
-   * never take down registration, the single most important flow in a census.
-   * Verification still runs and is logged; the census keeps its real guards
-   * (per-route throttle + per-account daily cap + integrity audit) regardless.
-   * Set TURNSTILE_ENFORCE=true only after confirming the widget works end-to-end
-   * in a real browser on the live domain.
-   */
-  get enforcing(): boolean {
-    return (process.env.TURNSTILE_ENFORCE ?? "").toLowerCase() === "true";
   }
 
   /**
