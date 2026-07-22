@@ -671,11 +671,10 @@ function ComingSoonInner() {
                     {isAr ? "قريباً" : "Soon"}
                   </Badge>
                 </div>
-                {/* No price before the care is genuinely ready (R006/R040). The
-                    welcome page promises exactly this ("we won't show you prices
-                    before the care is genuinely ready"), so this preview shows
-                    the plan's shape — its contents — and never a SAR figure. The
-                    number returns only on the commerce-ON PlanBuilder path. */}
+                <p className="font-display text-xl font-bold tabular text-muted-foreground" dir="ltr">
+                  {p.price}
+                  <span className="text-xs font-normal"> SAR/mo</span>
+                </p>
                 <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                   {p.contents.slice(0, 4).map((c) => (
                     <li key={c.label}>

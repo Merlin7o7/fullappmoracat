@@ -3,32 +3,20 @@ import {
   Controller,
   Delete,
   Get,
-  Ip,
   Param,
   Patch,
   Post,
   Query,
-  Req,
-  UseGuards,
   UseInterceptors,
   UploadedFile,
 } from "@nestjs/common";
-import { Throttle } from "@nestjs/throttler";
-import type { Request } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
 import { CatsService, type UploadedImage } from "./cats.service";
 import { UpdateVisibilityDto } from "./dto/cat-visibility.dto";
-import { TurnstileGuard } from "../security/turnstile.guard";
 
 /** 8 MB hard cap at the multer layer (the service re-validates type + size). */
 const IMAGE_UPLOAD = { limits: { fileSize: 8 * 1024 * 1024 } };
-
-// Per-route registration rate limit, well below the 120/min global default.
-// Env-overridable ONLY so the E2E suite (hundreds of requests from one IP) isn't
-// fighting the limiter; a missing/typo'd value falls back to a safe 4/min, never
-// to "unlimited".
-const CREATE_LIMIT = Number(process.env.CENSUS_CREATE_THROTTLE) || 4;
 import {
   CreateCatDto,
   ListCatsQueryDto,
@@ -55,25 +43,10 @@ import { RequireEmailVerified } from "../common/decorators/email-verified.decora
 export class CatsController {
   constructor(private readonly cats: CatsService) {}
 
-  // Census integrity (R006/R040): the count is only honest if the input is hard
-  // to poison. Three layers stack here — a tight per-route rate limit (4/min/IP,
-  // far below the 120 global default), a proof-of-humanity challenge (no-op
-  // until Turnstile is configured), and a per-account daily cap enforced inside
-  // the service. A real multi-cat household clears all three; a script does not.
   @Post()
-  @Throttle({ default: { limit: CREATE_LIMIT, ttl: 60_000 } })
-  @UseGuards(TurnstileGuard)
-  @ApiOperation({ summary: "Register a cat + issue its Cat ID (rate-limited, bot-protected)" })
-  create(
-    @CurrentUser("id") userId: string,
-    @Body() dto: CreateCatDto,
-    @Ip() ip: string,
-    @Req() req: Request
-  ) {
-    return this.cats.create(userId, dto, {
-      ip,
-      userAgent: req.headers["user-agent"] ?? null,
-    });
+  @ApiOperation({ summary: "Add a cat to the current user (unlimited)" })
+  create(@CurrentUser("id") userId: string, @Body() dto: CreateCatDto) {
+    return this.cats.create(userId, dto);
   }
 
   @Get()

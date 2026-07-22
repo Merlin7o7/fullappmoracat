@@ -72,14 +72,8 @@ export const dict = {
       body:
         "ما فيه سجل وطني للقطط في السعودية. إحنا نبنيه — وقطك يقدر يكون فيه. كل تسجيل ياخذ رقمه بالترتيب، ورقمك هو رقمك للأبد.",
       foundingTitle: "الأعضاء المؤسِّسون",
-      // City-neutral on purpose (R040/R006): the founding class printed on the
-      // card is per-city and comes from the API (packages/core / cats.service),
-      // so this generic copy must never name a city or a year — it once said
-      // «دفعة الرياض ٢٠٢٦» for everybody, which told a Jeddah owner their cat
-      // belonged to a Riyadh cohort. Founding status is described by the real
-      // ordinal only; the card supplies the honest, city-correct label.
       foundingBody:
-        "أول ١٠٠٠ قط يتسجّل يحمل صفة «عضو مؤسِّس» في هويته، دايماً. والأرقام متسلسلة فعلاً — رقم قطك هو ترتيبه الحقيقي في التعداد.",
+        "أول ١٠٠٠ قط يتسجّل يحمل صفة «عضو مؤسِّس — دفعة الرياض ٢٠٢٦» في هويته، دايماً. الأرقام متسلسلة فعلاً: رقم قطك هو ترتيبه الحقيقي في التعداد.",
       foundingClosed:
         "اكتملت دفعة الأعضاء المؤسِّسين (أول ١٠٠٠ قط). التسجيل مستمر — وكل قط يظل ياخذ رقمه بالترتيب.",
       latestPrefix: "آخر تسجيل:",
@@ -172,14 +166,8 @@ export const dict = {
       body:
         "There is no national register of cats in Saudi Arabia. We're building one — and your cat can be in it. Every registration takes the next number in order, and your number is yours for good.",
       foundingTitle: "Founding Members",
-      // City-neutral on purpose (R040/R006): the founding class printed on the
-      // card is per-city and comes from the API (packages/core / cats.service),
-      // so this generic copy must never name a city or a year — it once read
-      // "Riyadh Class of 2026" for everybody, telling a Jeddah owner their cat
-      // belonged to a Riyadh cohort. Founding status is described by the real
-      // ordinal only; the card supplies the honest, city-correct label.
       foundingBody:
-        "The first 1,000 cats registered carry permanent Founding Member status on their ID — and the numbers are genuinely sequential, so your cat's number is their real place in the count.",
+        "The first 1,000 cats registered carry “Founding Member — Riyadh Class of 2026” on their ID, permanently. The numbers are genuinely sequential: your cat's number is their real place in the count.",
       foundingClosed:
         "The founding cohort (the first 1,000 cats) is complete. Registration continues — every cat still takes the next number in order.",
       latestPrefix: "Most recent:",

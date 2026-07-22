@@ -1,32 +1,13 @@
 import { ImageResponse } from "next/og";
 
-// Social share card for the Cat Census — warm paper, brand wordmark, the census
-// question, and (when reachable) the REAL live count. The number is the hook: a
-// share that says "12,431 cats counted" recruits better than any tagline. It is
-// fetched honestly and omitted on failure — never a seeded or rounded figure
-// (R006/R040), exactly like the on-site counter.
+// Static social share card — warm paper background, brand wordmark + the one line
+// the whole product defends. Rendered by Next at build/edge, self-contained.
 export const runtime = "edge";
-export const alt = "Moracat — the national Cat Census";
+export const alt = "Moracat — the cat membership";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-async function liveCount(): Promise<number | null> {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!base) return null;
-  try {
-    const res = await fetch(`${base}/api/census`, { next: { revalidate: 300 } });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { registered?: number };
-    return typeof data.registered === "number" ? data.registered : null;
-  } catch {
-    return null;
-  }
-}
-
-export default async function OpengraphImage() {
-  const count = await liveCount();
-  const counted = count !== null ? new Intl.NumberFormat("en-US").format(count) : null;
-
+export default function OpengraphImage() {
   return new ImageResponse(
     (
       <div
@@ -60,18 +41,11 @@ export default async function OpengraphImage() {
           <div style={{ fontSize: 46, fontWeight: 700, color: "#1a2b23" }}>Moracat</div>
         </div>
         <div style={{ fontSize: 62, fontWeight: 800, color: "#12201a", lineHeight: 1.15, maxWidth: 900 }}>
-          Every cat deserves an identity.
+          Give your cat an identity of their own.
         </div>
-        {counted ? (
-          <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 28 }}>
-            <div style={{ fontSize: 72, fontWeight: 800, color: "#1f6b4f" }}>{counted}</div>
-            <div style={{ fontSize: 30, color: "#4b5a52" }}>cats counted so far · join the Cat Census</div>
-          </div>
-        ) : (
-          <div style={{ fontSize: 30, color: "#4b5a52", marginTop: 24 }}>
-            Join the national Cat Census · reserve your free Cat ID
-          </div>
-        )}
+        <div style={{ fontSize: 30, color: "#4b5a52", marginTop: 24 }}>
+          An official Cat ID · a health record · a community · Jeddah &amp; Riyadh
+        </div>
       </div>
     ),
     { ...size }

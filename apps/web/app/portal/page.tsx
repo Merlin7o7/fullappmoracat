@@ -12,7 +12,6 @@ import { useCats } from "@/lib/cat-context";
 import { buildGreeting, type Gender } from "@/lib/greeting";
 import { localizeName } from "@/lib/translit";
 import { formatDate } from "@/lib/datetime";
-import { track } from "@/lib/analytics";
 import { CatIdCard } from "@/components/cat-id-card";
 import { MembershipCard } from "@/components/membership";
 import { OrderStatusBadge } from "@/components/order-status-badge";
@@ -517,28 +516,7 @@ function CatRail({
   );
 }
 
-/**
- * Invite-with-recognition (§9, «عزيمة»). Recognises the real cats a member has
- * brought into the census — never a buyable queue position (R006) or a points
- * game (design authority: recognition, not gamification). The number shown is
- * `brought` (friends whose cats actually registered), not raw signups.
- */
-interface ReferralData {
-  code: string;
-  invited: number;
-  brought: number;
-  link: string;
-  milestones: number[];
-  recognition: {
-    brought: number;
-    isFoundingSupporter: boolean;
-    nextMilestone: number | null;
-    toNext: number;
-    title: string;
-    detail: string;
-  };
-}
-
+/** Invite-with-recognition (§High) — a member's shareable code + count invited. */
 function ReferralCard({ isAr }: { isAr: boolean }) {
   const { authedFetch, user } = useAuth();
   const { toast } = useToast();
@@ -546,7 +524,7 @@ function ReferralCard({ isAr }: { isAr: boolean }) {
 
   const { data } = useQuery({
     queryKey: ["referral", user?.id],
-    queryFn: () => authedFetch<ReferralData>("/account/referral"),
+    queryFn: () => authedFetch<{ code: string; invited: number; link: string }>("/account/referral"),
     enabled: !!user,
   });
 
@@ -556,16 +534,11 @@ function ReferralCard({ isAr }: { isAr: boolean }) {
       ? `انضم لي في مرقط — عضوية وهوية لقطك: ${data.link}`
       : `Join me on Moracat — a membership and identity for your cat: ${data.link}`;
     if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title: "Moracat", text, url: data.link });
-        track("referral_invite_sent", { channel: "native" });
-        return;
-      } catch { /* cancelled — fall through to copy */ }
+      try { await navigator.share({ title: "Moracat", text, url: data.link }); return; } catch { /* cancelled */ }
     }
     try {
       await navigator.clipboard.writeText(data.link);
       setCopied(true);
-      track("referral_link_copied", {});
       toast({ title: isAr ? "تم نسخ الرابط" : "Link copied", variant: "success" });
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -573,42 +546,17 @@ function ReferralCard({ isAr }: { isAr: boolean }) {
     }
   };
 
-  const rec = data?.recognition;
-  // Progress toward the next gentle threshold — a "cats you've helped join" bar,
-  // framed as impact, never a score or a leaderboard.
-  const target = rec?.nextMilestone ?? (data?.milestones[data.milestones.length - 1] ?? 1);
-  const pct = rec ? Math.min(100, Math.round((rec.brought / target) * 100)) : 0;
-
   return (
     <Card className="flex flex-col gap-3 p-6">
       <div className="flex items-center gap-2">
         <span className="grid size-9 place-items-center rounded-xl bg-secondary/40 text-secondary-foreground"><Gift className="size-5" /></span>
         <div>
-          <p className="font-display font-semibold">{rec?.title ?? (isAr ? "ادعُ صديقاً" : "Invite a friend")}</p>
-          <p className="text-xs text-muted-foreground">{rec?.detail ?? (isAr ? "شارك مرقط مع محبّي القطط" : "Share Moracat with cat people")}</p>
+          <p className="font-display font-semibold">{isAr ? "ادعُ صديقاً" : "Invite a friend"}</p>
+          <p className="text-xs text-muted-foreground">{isAr ? "شارك مرقط مع محبّي القطط" : "Share Moracat with cat people"}</p>
         </div>
       </div>
       {data ? (
         <>
-          {/* Recognition: real cats brought into the census + honest progress. */}
-          {rec && rec.brought > 0 && (
-            <div className="rounded-xl border border-border bg-cream/50 px-3 py-2.5 dark:bg-cream/10">
-              <div className="mb-1.5 flex items-center justify-between text-xs">
-                <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-                  <Sparkles className="size-3.5 text-primary" />
-                  {isAr ? `${rec.brought.toLocaleString("ar-SA")} قط انضمّ بدعوتك` : `${rec.brought} cats joined through you`}
-                </span>
-                {rec.nextMilestone && (
-                  <span className="text-muted-foreground">
-                    {isAr ? `${rec.toNext.toLocaleString("ar-SA")} حتى ${rec.nextMilestone.toLocaleString("ar-SA")}` : `${rec.toNext} to ${rec.nextMilestone}`}
-                  </span>
-                )}
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={rec.brought} aria-valuemin={0} aria-valuemax={target}>
-                <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${pct}%` }} />
-              </div>
-            </div>
-          )}
           <div className="flex items-center justify-between rounded-xl border border-dashed border-border px-3 py-2.5">
             <code className="truncate font-mono text-sm" dir="ltr">{data.code}</code>
             {data.invited > 0 && (

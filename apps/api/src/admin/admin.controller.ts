@@ -9,7 +9,6 @@ import { AdminSubscriptionsService } from "./admin-subscriptions.service";
 import { AdminStaffService } from "./staff.service";
 import { CreateProductDto, UpdateProductDto } from "./admin-products.dto";
 import { RefundsService } from "../payments/refunds.service";
-import { CensusIntegrityService } from "../security/census-integrity.service";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
 import { Commercial } from "../common/decorators/commercial.decorator";
@@ -26,8 +25,7 @@ export class AdminController {
     private readonly subscriptions: AdminSubscriptionsService,
     private readonly staff: AdminStaffService,
     private readonly refunds: RefundsService,
-    private readonly audit: AdminAuditService,
-    private readonly integrity: CensusIntegrityService
+    private readonly audit: AdminAuditService
   ) {}
 
   // ── Me ────────────────────────────────────────────────────────────────
@@ -59,19 +57,6 @@ export class AdminController {
   @ApiOperation({ summary: "Census yield — registrations over time and per acquisition source" })
   census() {
     return this.analytics.census();
-  }
-
-  // Integrity review — the signals that say a registration wave might be
-  // scripted rather than real (one IP behind many accounts, an account
-  // registering unusually fast). Read-only and non-destructive: it surfaces
-  // rows for a human, it never deletes or hides a cat, so the count stays a
-  // mechanical restatement of the table (R006/R040).
-  @Get("census/abuse")
-  @RequirePermissions("dashboard.read")
-  @ApiOperation({ summary: "Suspicious-registration review — census integrity signals" })
-  censusAbuse(@Query("windowDays") windowDays?: string) {
-    const days = Math.min(Math.max(Number(windowDays) || 7, 1), 90);
-    return this.integrity.abuseReport(days);
   }
 
   // ── Audit log (read-only accountability surface) ───────────────────────

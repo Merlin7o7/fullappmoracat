@@ -8,7 +8,6 @@ import {
 } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
-import { referralRecognition } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
 import type { ChangePasswordDto, DeleteAccountDto, UpdateProfileDto } from "./dto/account.dto";
@@ -376,44 +375,16 @@ export class AccountService {
   /** My shareable referral code + how many members I've brought in. Lazily mints
    *  a code on first view so we never generate one we won't use. */
   async referral(userId: string) {
-    const user = await this.prisma.user.findFirst({
-      where: { id: userId, deletedAt: null },
-      select: { referralCode: true, locale: true },
-    });
+    const user = await this.prisma.user.findFirst({ where: { id: userId, deletedAt: null }, select: { referralCode: true } });
     if (!user) throw new NotFoundException("User not found");
     let code = user.referralCode;
     if (!code) {
       code = await this.mintReferralCode();
       await this.prisma.user.update({ where: { id: userId }, data: { referralCode: code } });
     }
-
-    // Two counts, deliberately different:
-    //  • `invited`  — accounts created with this code (kept for continuity).
-    //  • `brought`  — friends who actually REGISTERED A CAT into the census.
-    // Recognition is built on `brought`, not `invited`: an empty throwaway
-    // account brings no cat, so it earns no credit (honest + fraud-resistant,
-    // and it dovetails with the census-integrity limits on fake accounts).
-    const [invited, brought] = await Promise.all([
-      this.prisma.user.count({ where: { referredByCode: code, deletedAt: null } }),
-      this.prisma.user.count({
-        where: {
-          referredByCode: code,
-          deletedAt: null,
-          cats: { some: { deletedAt: null, isDemo: false } },
-        },
-      }),
-    ]);
-
-    const recognition = referralRecognition(brought, user.locale === "en" ? "en" : "ar");
+    const invited = await this.prisma.user.count({ where: { referredByCode: code, deletedAt: null } });
     const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
-    return {
-      code,
-      invited,
-      brought,
-      link: `${base}/register?ref=${code}`,
-      milestones: [1, 3, 5, 10],
-      recognition,
-    };
+    return { code, invited, link: `${base}/register?ref=${code}` };
   }
 
   private async mintReferralCode(): Promise<string> {
@@ -517,26 +488,6 @@ export class AccountService {
     });
     if (!user) throw new NotFoundException("User not found");
 
-    // Gather every stored media object the member owns BEFORE the soft-delete,
-    // so a PDPL erasure actually frees the files — not just the DB rows. The
-    // single-cat delete path already does this; account deletion must match it
-    // or a member's cat photos orphan in R2 forever (a cost + privacy leak).
-    const cats = await this.prisma.cat.findMany({
-      where: { userId },
-      select: { id: true, photoUrl: true, coverUrl: true },
-    });
-    const galleryPhotos = cats.length
-      ? await this.prisma.catPhoto.findMany({
-          where: { catId: { in: cats.map((c) => c.id) } },
-          select: { url: true },
-        })
-      : [];
-    const mediaToRemove = [
-      user.avatarUrl,
-      ...cats.flatMap((c) => [c.photoUrl, c.coverUrl]),
-      ...galleryPhotos.map((p) => p.url),
-    ].filter((u): u is string => Boolean(u));
-
     if (user.passwordHash) {
       const ok = dto.password ? await bcrypt.compare(dto.password, user.passwordHash) : false;
       if (!ok) throw new UnauthorizedException("Password is incorrect");
@@ -584,13 +535,8 @@ export class AccountService {
       }),
     ]);
 
-    // Best-effort removal of every stored object the member owned — avatar,
-    // plus each cat's profile photo, cover, and gallery images. Fire-and-forget
-    // so a storage hiccup never blocks the erasure the member asked for.
-    for (const url of mediaToRemove) void this.storage.remove(url);
-    // The gallery rows themselves are left attached to the soft-deleted cats
-    // (the cats are unpublished + tombstoned above); the objects they point to
-    // are now gone, which is what PDPL erasure requires.
+    // Best-effort removal of the stored avatar object.
+    if (user.avatarUrl) void this.storage.remove(user.avatarUrl);
     return { deleted: true };
   }
 }

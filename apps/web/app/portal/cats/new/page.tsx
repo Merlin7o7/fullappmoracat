@@ -17,9 +17,6 @@ import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { friendlyMessage } from "@/lib/errors";
 import { consumeSource } from "@/lib/source";
-import { consumeTurnstileToken } from "@/lib/turnstile";
-import { TurnstileWidget } from "@/components/turnstile-widget";
-import { track } from "@/lib/analytics";
 import { SAUDI_CITIES } from "@moraqat/core";
 
 /**
@@ -279,16 +276,6 @@ function IssueIdFlow() {
     } catch { /* ignore */ }
   }, []);
 
-  // Funnel: the member reached the issue flow (cat_creation_started, once on
-  // mount — no PII).
-  React.useEffect(() => {
-    track("cat_creation_started");
-  }, []);
-
-  // The `?src=` stand code consumed during the create call, held so the success
-  // event can report attribution without re-reading (it's already cleared).
-  const registeredSource = React.useRef<string | undefined>(undefined);
-
   // The emergency contact is one of the Cat ID's four jobs (safety — "bring my
   // cat home"). A failed save must never be swallowed: it retries quietly in
   // the background and, if it still can't land, says so honestly with where to
@@ -365,13 +352,8 @@ function IssueIdFlow() {
       // cat row here, at the one moment it can — consumed so a second cat added
       // later in the same session isn't wrongly credited to the stand.
       const sourceCode = consumeSource();
-      registeredSource.current = sourceCode;
-      // Proof-of-humanity for census integrity — single-use, absent when
-      // Turnstile is off (the server guard is then also a no-op).
-      const turnstile = consumeTurnstileToken();
       const cat = await authedFetch<PortalCat & { firstCatIdIssued?: boolean }>("/cats", {
         method: "POST",
-        headers: turnstile ? { "x-turnstile-token": turnstile } : undefined,
         body: JSON.stringify({
           name: f.name.trim(),
           gender: f.gender,
@@ -406,15 +388,6 @@ function IssueIdFlow() {
     onSuccess: (cat) => {
       qc.invalidateQueries({ queryKey: ["cats"] });
       qc.invalidateQueries({ queryKey: ["overview"] });
-      // Conversion — the Cat ID was issued. Only non-PII descriptors: the census
-      // ordinal, the city code, and the acquisition source (never name/photo).
-      track("cat_registered", {
-        cat_number: cat.catNumber,
-        city: cat.cityCode ?? "unknown",
-        source: registeredSource.current ?? "direct",
-      });
-      // Setting the ceremony cat opens the reveal on the next render.
-      track("cat_id_revealed");
       setFirstIssue(Boolean(cat.firstCatIdIssued));
       setCeremonyCat(cat); // the reveal — then the welcome (first time) or the cats page
     },
@@ -425,15 +398,11 @@ function IssueIdFlow() {
 
   /* ── The six required inputs (onboarding north star: under six) ──────────
    * cat name · sex · age · owner name · owner mobile · city.
-   * `ageKnown` = the owner actually gave an age. An *untouched* pair of empty
-   * fields is silence (not ready); any explicit numeric entry — including a
-   * deliberate 0/0 — is a real answer, so a genuine newborn (0y 0m) can issue
-   * their ID. The empty-string vs "0" distinction is what separates "left
-   * blank" from "answered zero" (R002/R040 — never demand precision we won't
-   * use, never deadlock an honest answer).
+   * `ageKnown` treats "0 years 0 months" as unanswered rather than as a
+   * newborn: an untouched pair of fields is silence, not a claim.
    */
   const ageTotalMonths = Number(f.ageYears || 0) * 12 + Number(f.ageMonths || 0);
-  const ageKnown = f.ageYears !== "" || f.ageMonths !== "";
+  const ageKnown = (f.ageYears !== "" || f.ageMonths !== "") && ageTotalMonths > 0;
   const catStepReady = Boolean(catName) && f.gender !== "" && ageKnown;
   const ownerStepReady =
     Boolean(f.ownerName.trim()) && f.ownerPhone.replace(/\D/g, "").length >= 9 && f.cityCode !== "";
@@ -600,9 +569,6 @@ function IssueIdFlow() {
                   {isAr ? `باقي: ${missingLabel}` : `Still needed: ${missingLabel}`}
                 </p>
               )}
-              {/* Proof-of-humanity for census integrity — renders only when
-                  Turnstile is configured (R006 defended at the input). */}
-              <TurnstileWidget className="mt-1" />
               <div className="mt-2 flex items-center justify-between gap-3">
                 <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")} disabled={create.isPending}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "إلغاء" : "Cancel"}
@@ -788,12 +754,6 @@ function IssueIdFlow() {
               ? async (choice: ShareChoice) => {
                   const body: Record<string, unknown> = { isPublic: choice.public };
                   if (choice.public) {
-                    // Chose to make the cat visible to the community — a share
-                    // action and a public opt-in. `appearance` (anonymous /
-                    // nickname / first-name) is a non-PII descriptor; the name
-                    // itself is never sent to analytics.
-                    track("public_opt_in", { appearance: choice.appearance ?? "anonymous" });
-                    track("share_click", { channel: "community" });
                     // PDPL attestation gathered inside the ceremony (R106);
                     // the server stamps shareConsentAt itself.
                     body.consent = true;

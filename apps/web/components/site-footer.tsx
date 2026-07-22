@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Instagram, Phone } from "lucide-react";
 import { useLocale } from "@/app/providers";
-import { useAuth } from "@/lib/auth";
 import { commerceEnabled } from "@/lib/features";
 import { CONTACT, LEGAL_ENTITY, copyright } from "@/lib/org";
 import { IlloCat, IlloMouse, IlloPaw, IlloSprig } from "./illustrations";
@@ -15,16 +14,7 @@ import { IlloCat, IlloMouse, IlloPaw, IlloSprig } from "./illustrations";
  */
 export function SiteFooter() {
   const { t, locale } = useLocale();
-  const { user, ready } = useAuth();
   const isAr = locale === "ar";
-  // Recognition first (R001): a signed-in member is offered their portal, not a
-  // "Log in" link. Gated on `ready && !user` so we never show a logged-in member
-  // "Log in" and then yank it away — during hydration the auth links simply hold
-  // at the portal until the session is known. When authenticated, the primary
-  // "Register your cat" CTA also points straight at the add-a-cat flow.
-  const signedIn = ready && Boolean(user);
-  const showLogin = ready && !user;
-  const registerHref = signedIn ? "/portal/cats/new" : "/register";
 
   // Community Mode: the homepage has no plans section and the shop sells
   // nothing, so neither link may appear — and the column that held the shop is
@@ -39,7 +29,7 @@ export function SiteFooter() {
         { href: "/#how", label: t.nav.how },
         ...(commerce ? [{ href: "/#plans", label: t.nav.plans }] : []),
         { href: "/benefits", label: isAr ? "مزايا الأعضاء" : "Member benefits" },
-        { href: registerHref, label: t.hero.cta },
+        { href: "/register", label: t.hero.cta },
       ],
     },
     {
@@ -55,7 +45,7 @@ export function SiteFooter() {
     {
       title: isAr ? "حسابك" : "Your account",
       links: [
-        ...(showLogin ? [{ href: "/login", label: t.nav.login }] : []),
+        { href: "/login", label: t.nav.login },
         { href: "/portal", label: isAr ? "بوابة الأعضاء" : "Member portal" },
         { href: "/contact", label: isAr ? "تواصل معنا" : "Contact us" },
       ],

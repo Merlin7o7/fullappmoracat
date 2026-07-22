@@ -55,11 +55,7 @@ export function Field({
             type="button"
             onClick={() => setShow((s) => !s)}
             aria-label={show ? "Hide password" : "Show password"}
-            // ≥44px touch target (R092): the reveal fills the input's full height
-            // and a 44px-wide column flush to the inline-end edge. The icon keeps
-            // its size-4 glyph, centred where it sat before; the input's pe-11
-            // (44px) padding still clears it in both LTR and RTL (logical end-0).
-            className="absolute inset-y-0 end-0 flex min-w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className="absolute end-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>

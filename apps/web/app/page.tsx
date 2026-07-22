@@ -19,10 +19,8 @@ import { PLANS } from "@/lib/plans";
 import { api } from "@/lib/api";
 import { commerceEnabled } from "@/lib/features";
 import { localizeName } from "@/lib/translit";
-import { foundingBenefits } from "@moraqat/core";
 import { CensusCounter, FoundingNote, useCensus } from "@/components/census-counter";
 import { useCaptureSource } from "@/lib/source";
-import { track } from "@/lib/analytics";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -41,17 +39,6 @@ export default function HomePage() {
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
   const [catName, setCatName] = React.useState("");
-  // Fire `hero_name_entered` exactly once, the first time the field holds a real
-  // name — the earliest signal of intent in the funnel (no PII in the event).
-  const heroNameTracked = React.useRef(false);
-  const onHeroName = (raw: string) => {
-    const next = raw.slice(0, 24);
-    setCatName(next);
-    if (!heroNameTracked.current && next.trim()) {
-      heroNameTracked.current = true;
-      track("hero_name_entered");
-    }
-  };
   // A stand's QR/NFC tile may point here rather than straight at /register
   // (MRC-GTM-001 §2), so the `?src=stand-004` code is captured on this page too.
   useCaptureSource();
@@ -76,7 +63,6 @@ export default function HomePage() {
   const submitName = (e: React.FormEvent) => {
     e.preventDefault();
     rememberName();
-    track("cta_click", { location: "hero" });
     router.push("/register");
   };
 
@@ -127,15 +113,11 @@ export default function HomePage() {
                 <input
                   id="hero-cat-name"
                   value={catName}
-                  onChange={(e) => onHeroName(e.target.value)}
+                  onChange={(e) => setCatName(e.target.value.slice(0, 24))}
                   placeholder={t.hero.namePlaceholder}
                   className="h-13 flex-1 rounded-full border border-input bg-card px-5 text-base shadow-e1 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring sm:h-11 sm:border-0 sm:bg-transparent sm:px-0 sm:shadow-none sm:focus-visible:ring-0"
                 />
-                <Link
-                  href="/register"
-                  onClick={() => { rememberName(); track("cta_click", { location: "hero" }); }}
-                  className="sm:shrink-0"
-                >
+                <Link href="/register" onClick={rememberName} className="sm:shrink-0">
                   <Button size="lg" className="w-full sm:h-11 sm:w-auto sm:px-6">
                     {t.hero.cta} <ArrowRight className="size-4 rtl:rotate-180" />
                   </Button>
@@ -283,7 +265,7 @@ export default function HomePage() {
             {closingTitle}
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-muted-foreground">{t.closing.sub}</p>
-          <Link href="/register" onClick={() => track("cta_click", { location: "closing" })} className="mt-9 inline-block">
+          <Link href="/register" className="mt-9 inline-block">
             <Button size="xl">
               {t.hero.cta} <ArrowRight className="size-4 rtl:rotate-180" />
             </Button>
@@ -453,12 +435,6 @@ function FeatureRow({ index, eyebrow, title, body, flip }: { index: number; eyeb
 function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr: boolean }) {
   const { data } = useCensus();
 
-  // The census section is the whole proposition while commerce is off — count
-  // one view per mount (no PII).
-  React.useEffect(() => {
-    track("census_view");
-  }, []);
-
   return (
     <section id="census" className="border-y border-border/70 bg-cream/60 py-20 sm:py-24">
       <div className="container">
@@ -495,14 +471,6 @@ function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr
             <IlloSprig tone="leaf" className="h-14 w-auto opacity-70" />
           </Sticker>
           <FoundingNote data={data} isAr={isAr} t={t.census} />
-
-          {/* The founding promise, made concrete. These are the real, enforceable
-              perks (@moraqat/core foundingBenefits — the single source of truth
-              commerce/fulfilment also read), not decorative copy: what founding
-              status *grants*, stated plainly. No countdown, no "spots left" — the
-              brand refuses manufactured scarcity (R006), and R040 forbids naming a
-              perk nothing stands behind. Value stays visible before any ask (R003). */}
-          <FoundingBenefits isAr={isAr} />
         </motion.div>
 
         {/* What is NOT happening yet, said plainly and unprompted (R040). A
@@ -520,41 +488,6 @@ function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr
         </motion.div>
       </div>
     </section>
-  );
-}
-
-/* ── The founding benefits — the real promise behind the badge ───────────
- * Rendered only inside the census (commerce-off) branch, beside FoundingNote.
- * Source of truth is @moraqat/core `foundingBenefits(locale)` — already
- * localized (ar/en), the same list commerce honours and fulfilment reads, so
- * the marketing page can never promise a perk the system won't keep (R040).
- * A calm 2×2 grid, not a feature-shout: restraint is the brand (R007/R006).
- */
-function FoundingBenefits({ isAr }: { isAr: boolean }) {
-  const locale = isAr ? "ar" : "en";
-  const benefits = foundingBenefits(locale);
-  return (
-    <div className="mt-8 border-t border-border/70 pt-8">
-      <h4 className="text-center text-xs font-bold uppercase tracking-[0.12em] text-foreground/70">
-        {isAr ? "ما يمنحه لقب المؤسِّس" : "What founding status grants"}
-      </h4>
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-        {benefits.map((b) => (
-          <li
-            key={b.key}
-            className="flex items-start gap-3 rounded-2xl border border-border/70 bg-cream/50 p-5 text-start shadow-e1 dark:bg-cream/10"
-          >
-            <span aria-hidden className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-success/12 text-success">
-              <Check className="size-4" strokeWidth={3} />
-            </span>
-            <div>
-              <p className="font-medium leading-snug">{b.title}</p>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{b.detail}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
@@ -594,7 +527,7 @@ function MembershipPanel({ t }: { t: ReturnType<typeof useLocale>["t"] }) {
               <span className="text-sm text-muted-foreground">SAR {t.plans.month}</span>
             </p>
           </div>
-          <Link href="/register" onClick={() => track("cta_click", { location: "plans" })} className="w-full max-w-60">
+          <Link href="/register" className="w-full max-w-60">
             <Button size="lg" className="w-full">
               {t.plans.cta} <ArrowRight className="size-4 rtl:rotate-180" />
             </Button>

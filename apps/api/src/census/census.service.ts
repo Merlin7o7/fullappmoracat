@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { FOUNDING_MEMBER_LIMIT, foundingBenefits } from "@moraqat/core";
+import { FOUNDING_MEMBER_LIMIT } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 
 /**
@@ -98,20 +98,6 @@ export class CensusService {
       foundingClosed: (highest._max.catNumber ?? 0) >= FOUNDING_MEMBER_LIMIT,
       latestPublicCatName: latestPublic?.name ?? null,
       latestPublicCatNumber: latestPublic?.catNumber ?? null,
-    };
-  }
-
-  /**
-   * The founding-member promise, in both languages — the real benefits behind
-   * the badge (packages/core is the single source of truth). Static and public:
-   * the census page can state exactly what founding status grants, and it is the
-   * same list the Cat ID surfaces and commerce honours (R040 — never promise
-   * what the product doesn't do).
-   */
-  foundingBenefits() {
-    return {
-      foundingLimit: FOUNDING_MEMBER_LIMIT,
-      benefits: { ar: foundingBenefits("ar"), en: foundingBenefits("en") },
     };
   }
 }
