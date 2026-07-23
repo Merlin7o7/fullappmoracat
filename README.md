@@ -79,16 +79,18 @@ pnpm dev
 
 ## Business model reference
 
-Plans and unit economics come from the financial model (all SAR):
+Pricing Model v2 (value-first, market-benchmarked; all SAR, per month per household —
+the base price covers the first cat, each additional cat adds the tier's module, up to 6 cats):
 
-| Plan | Price/mo | COGS | Contribution | Margin |
-|------|---------|------|-------------|--------|
-| Essential | 179 | 96.2 | 34.3 | 19.2% |
-| Premium | 269 | 148.2 | 69.1 | 25.7% |
-| Complete Care | 389 | 215.3 | 115.0 | 29.6% |
-| Multi-Cat | 329 | 190.4 | 71.4 | 21.7% |
+| Plan | Tier enum | Price/mo | + per extra cat |
+|------|-----------|---------|-----------------|
+| Kitten · قطتي الصغيرة | `KITTEN` | 199 | 180 |
+| Essentials · الأساسيات | `STARTER` | 219 | 180 |
+| Complete · العناية الكاملة | `STANDARD` | 329 | 280 |
+| Signature · التوقيع | `PREMIUM` | 479 | 400 |
 
-Break-even ≈ 2,134 subscribers · LTV:CAC 6.7x.
+Prepaid terms: 1/3 months at base, 6 months −5%, 12 months −8%. Full economics,
+invariants and the household-box model: `design/MRC-FIN-002-PRICING-MODEL-V2.md`.
 
 ## Testing & CI
 

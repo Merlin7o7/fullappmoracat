@@ -6,7 +6,7 @@
 import { PrismaClient, PlanTier, ProductType, StaffScope } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { seedResearchedOptions } from "./seed-researched";
-import { computeBoxEconomics, checkBoxInvariants } from "@moraqat/core";
+import { computeBoxEconomics, checkBoxInvariants, DEFAULT_INVARIANTS } from "@moraqat/core";
 import { BOX_COST_MODEL } from "./box-cost-model";
 
 /** Arabic units for box content lines — the Arabic checkout renders these. */
@@ -71,37 +71,39 @@ async function main() {
   // ── Products ────────────────────────────────────────────────────────────
   //
   // Costs mirror the real supplier catalog (data/supplier-catalog-2026-07.psv)
-  // and retail is CATALOG_MARKUP (2.8x) over cost, so this dev fixture obeys the
-  // same box-economics invariants as production. It previously did not: retail
-  // was set so low that every dev plan cost far MORE than buying its own
-  // contents, and the hard-coded plan COGS did not match these products either.
-  // A fixture that contradicts the product rule cannot catch a regression in it.
+  // and retail uses the MARKET-ALIGNED per-category markups of MRC-FIN-001 §3.3
+  // (wet 1.45× / dry 1.7× / litter 1.9× / treats 2.4× / grooming 1.7× / toys
+  // 2.3×), with marketPrice carrying the verified KSA benchmark — so this dev
+  // fixture obeys the same v2 box-economics invariants as production.
   const productData = [
-    { slug: "dry-food-premium-2kg", sku: "MRQ-DRY-PRM-2", type: ProductType.DRY_FOOD, nameEn: "Premium Dry Food 2kg", nameAr: "طعام جاف فاخر ٢كجم", price: 129, costPrice: 46, brand: "royal-canin" },
-    { slug: "dry-food-mass-2kg", sku: "MRQ-DRY-MSS-2", type: ProductType.DRY_FOOD, nameEn: "Everyday Dry Food 2kg", nameAr: "طعام جاف يومي ٢كجم", price: 129, costPrice: 46, brand: "whiskas" },
-    { slug: "wet-pouch-premium-85g", sku: "MRQ-WET-PRM-85", type: ProductType.WET_FOOD, nameEn: "Premium Wet Pouch 85g", nameAr: "كيس رطب فاخر ٨٥جم", price: 14, costPrice: 4.95, brand: "sheba" },
-    { slug: "wet-pouch-mass-85g", sku: "MRQ-WET-MSS-85", type: ProductType.WET_FOOD, nameEn: "Everyday Wet Pouch 85g", nameAr: "كيس رطب يومي ٨٥جم", price: 10, costPrice: 3.5, brand: "whiskas" },
-    { slug: "clumping-litter-10kg", sku: "MRQ-LIT-CLM-10", type: ProductType.LITTER, nameEn: "Clumping Litter 10kg", nameAr: "رمل متكتل ١٠كجم", price: 67, costPrice: 24, brand: "moraqat-care" },
-    { slug: "premium-litter-10kg", sku: "MRQ-LIT-PRM-10", type: ProductType.LITTER, nameEn: "Premium Clumping Litter 10L", nameAr: "رمل فاخر ١٠ لتر", price: 137, costPrice: 49, brand: "moraqat-care" },
-    { slug: "cat-treats-pack", sku: "MRQ-TRT-PCK", type: ProductType.TREATS, nameEn: "Cat Treats Pack", nameAr: "علبة مكافآت", price: 18, costPrice: 6.25, brand: "sheba" },
-    { slug: "dental-care-item", sku: "MRQ-HLT-DNT", type: ProductType.HEALTHCARE, nameEn: "Dental Care Stick", nameAr: "عناية بالأسنان", price: 22, costPrice: 12, brand: "moraqat-care" },
-    { slug: "monthly-supplement", sku: "MRQ-SUP-MTH", type: ProductType.SUPPLEMENT, nameEn: "Grooming Wipes", nameAr: "مناديل عناية", price: 34, costPrice: 12, brand: "moraqat-care" },
-    { slug: "enrichment-toy", sku: "MRQ-TOY-ENR", type: ProductType.TOY, nameEn: "Enrichment Toy", nameAr: "لعبة تفاعلية", price: 15, costPrice: 7, brand: "moraqat-care" },
+    { slug: "dry-food-premium-2kg", sku: "MRQ-DRY-PRM-2", type: ProductType.DRY_FOOD, nameEn: "Premium Dry Food 2kg", nameAr: "طعام جاف فاخر ٢كجم", price: 78, costPrice: 46, marketPrice: 80, brand: "royal-canin" },
+    { slug: "dry-food-mass-2kg", sku: "MRQ-DRY-MSS-2", type: ProductType.DRY_FOOD, nameEn: "Everyday Dry Food 2kg", nameAr: "طعام جاف يومي ٢كجم", price: 78, costPrice: 46, marketPrice: 80, brand: "whiskas" },
+    { slug: "wet-pouch-premium-85g", sku: "MRQ-WET-PRM-85", type: ProductType.WET_FOOD, nameEn: "Premium Wet Pouch 85g", nameAr: "كيس رطب فاخر ٨٥جم", price: 7.25, costPrice: 4.95, marketPrice: 7.75, brand: "sheba" },
+    { slug: "wet-pouch-mass-85g", sku: "MRQ-WET-MSS-85", type: ProductType.WET_FOOD, nameEn: "Everyday Wet Pouch 85g", nameAr: "كيس رطب يومي ٨٥جم", price: 5.25, costPrice: 3.5, marketPrice: 5.5, brand: "whiskas" },
+    { slug: "clumping-litter-10kg", sku: "MRQ-LIT-CLM-10", type: ProductType.LITTER, nameEn: "Clumping Litter 10L", nameAr: "رمل متكتل ١٠ لتر", price: 36, costPrice: 19, marketPrice: 39.95, brand: "moraqat-care" },
+    { slug: "premium-litter-10kg", sku: "MRQ-LIT-PRM-10", type: ProductType.LITTER, nameEn: "Premium Clumping Litter 10L", nameAr: "رمل فاخر ١٠ لتر", price: 73, costPrice: 38.5, marketPrice: 79.5, brand: "moraqat-care" },
+    { slug: "cat-treats-pack", sku: "MRQ-TRT-PCK", type: ProductType.TREATS, nameEn: "Cat Treats Pack", nameAr: "علبة مكافآت", price: 15, costPrice: 6.25, marketPrice: 18.95, brand: "sheba" },
+    { slug: "dental-care-item", sku: "MRQ-HLT-DNT", type: ProductType.HEALTHCARE, nameEn: "Monthly Supplement Course", nameAr: "كورس مكملات شهري", price: 29, costPrice: 12, marketPrice: 70, brand: "moraqat-care" },
+    { slug: "monthly-supplement", sku: "MRQ-SUP-MTH", type: ProductType.SUPPLEMENT, nameEn: "Grooming Wipes", nameAr: "مناديل عناية", price: 20, costPrice: 12, marketPrice: 18.95, brand: "moraqat-care" },
+    { slug: "enrichment-toy", sku: "MRQ-TOY-ENR", type: ProductType.TOY, nameEn: "Enrichment Toy", nameAr: "لعبة تفاعلية", price: 16, costPrice: 7, marketPrice: 27, brand: "moraqat-care" },
   ];
   const products: Record<string, string> = {};
   for (const p of productData) {
+    const { slug, sku, type, nameEn, nameAr, price, costPrice, marketPrice, brand } = p;
+    // update() carries the v2 prices onto pre-existing dev DBs too — a stale
+    // 2.8×-era row would otherwise fail the plan gate below.
+    const priced = { price, costPrice, marketPrice };
     const created = await prisma.product.upsert({
-      where: { sku: p.sku },
-      update: {},
+      where: { sku },
+      update: priced,
       create: {
-        slug: p.slug,
-        sku: p.sku,
-        type: p.type,
-        nameEn: p.nameEn,
-        nameAr: p.nameAr,
-        price: p.price,
-        costPrice: p.costPrice,
-        brandId: brands[p.brand],
+        slug,
+        sku,
+        type,
+        nameEn,
+        nameAr,
+        ...priced,
+        brandId: brands[brand],
         ratingAvg: 4.6,
         ratingCount: 24,
       },
@@ -110,39 +112,66 @@ async function main() {
   }
   console.log(`  ✓ products: ${productData.length}`);
 
-  // ── Official plans (2026-07): Starter / Standard / Premium ──────────────
-  // Prices/COGS from the financial model at 0% VAT. `pnpm db:seed:catalog`
-  // rebuilds these from the REAL supplier catalog; this dev seed mirrors them
-  // using placeholder products so a bare `db:seed` is self-consistent.
+  // ── Official plans (MRC-FIN-002 v2): Kitten / Essentials / Complete / Signature ──
+  // Additive tiers; `pnpm db:seed:catalog` rebuilds these from the REAL supplier
+  // catalog; this dev seed mirrors them with placeholder products so a bare
+  // `db:seed` is self-consistent. Waivers mirror the catalog seed and carry the
+  // same recorded reasons (acquisition tier / pre-negotiation COGS).
+  const PRE_NEGOTIATION =
+    "Pre-negotiation COGS: clears the floor at the −10% supplier terms (MRC-FIN-002 §7.1 gate).";
+  const ACQUISITION =
+    "Acquisition tier by design (MRC-FIN-002 §4): reports to the CAC ledger, not the box P&L.";
   const plans = [
     {
-      tier: PlanTier.STARTER, slug: "starter", nameEn: "Starter", nameAr: "المبتدئة",
-      basePrice: 249, cogs: 104.75,
+      tier: PlanTier.KITTEN, slug: "kitten", nameEn: "Kitten", nameAr: "قطتي الصغيرة",
+      basePrice: 199, modulePrice: 180, deliverySar: 32,
+      invariants: { minMarketSaving: -0.05, minContributionPostVat: 0 },
+      accepted: { CONTRIBUTION: ACQUISITION, CONTRIBUTION_POST_VAT: ACQUISITION } as Partial<Record<string, string>>,
       contents: [
-        { label: "Wet food pouches", labelAr: "أكياس طعام رطب", quantity: 15, unit: "pouch", product: "wet-pouch-mass-85g", sel: ProductType.WET_FOOD },
-        { label: "Dry food 2kg", labelAr: "طعام جاف ٢كجم", quantity: 1, unit: "bag", product: "dry-food-mass-2kg", sel: ProductType.DRY_FOOD },
-        { label: "Creamy treats", labelAr: "مكافآت كريمية", quantity: 1, unit: "pack", product: "cat-treats-pack", sel: ProductType.TREATS },
-      ],
-    },
-    {
-      tier: PlanTier.STANDARD, slug: "standard", nameEn: "Standard", nameAr: "القياسية",
-      basePrice: 349, cogs: 150.75,
-      contents: [
-        { label: "Premium wet cans", labelAr: "معلبات رطبة فاخرة", quantity: 15, unit: "can", product: "wet-pouch-premium-85g", sel: ProductType.WET_FOOD },
-        { label: "Dry food 2kg", labelAr: "طعام جاف ٢كجم", quantity: 1, unit: "bag", product: "dry-food-mass-2kg", sel: ProductType.DRY_FOOD },
+        { label: "Kitten dry food 2kg", labelAr: "طعام جاف للصغار ٢كجم", quantity: 1, unit: "bag", product: "dry-food-mass-2kg", sel: ProductType.DRY_FOOD },
+        { label: "Kitten wet pouches", labelAr: "أكياس طعام رطب للصغار", quantity: 15, unit: "pouch", product: "wet-pouch-mass-85g", sel: ProductType.WET_FOOD },
         { label: "Clumping litter 10L", labelAr: "رمل متكتل ١٠ لتر", quantity: 1, unit: "bag", product: "clumping-litter-10kg", sel: ProductType.LITTER },
-        { label: "Calming treats", labelAr: "مكافآت مهدّئة", quantity: 1, unit: "pack", product: "cat-treats-pack", sel: ProductType.TREATS },
       ],
     },
     {
-      tier: PlanTier.PREMIUM, slug: "premium", nameEn: "Premium", nameAr: "المميّزة",
-      basePrice: 529, cogs: 245.25,
+      tier: PlanTier.STARTER, slug: "starter", nameEn: "Essentials", nameAr: "الأساسيات",
+      basePrice: 219, modulePrice: 180, deliverySar: 32,
+      invariants: { minMarketSaving: -0.1 },
+      accepted: { CONTRIBUTION_POST_VAT: PRE_NEGOTIATION } as Partial<Record<string, string>>,
       contents: [
-        { label: "Premium wet pouches", labelAr: "أكياس رطبة فاخرة", quantity: 24, unit: "pouch", product: "wet-pouch-premium-85g", sel: ProductType.WET_FOOD },
-        { label: "Dry food 2kg", labelAr: "طعام جاف ٢كجم", quantity: 1, unit: "bag", product: "dry-food-premium-2kg", sel: ProductType.DRY_FOOD },
-        { label: "Premium litter 10L", labelAr: "رمل فاخر ١٠ لتر", quantity: 1, unit: "bag", product: "premium-litter-10kg", sel: ProductType.LITTER },
-        { label: "Grooming wipes", labelAr: "مناديل عناية مبلّلة", quantity: 1, unit: "pack", product: "monthly-supplement" },
+        { label: "Dry food 2kg", labelAr: "طعام جاف ٢كجم", quantity: 1, unit: "bag", product: "dry-food-mass-2kg", sel: ProductType.DRY_FOOD },
+        { label: "Wet food pouches", labelAr: "أكياس طعام رطب", quantity: 15, unit: "pouch", product: "wet-pouch-mass-85g", sel: ProductType.WET_FOOD },
+        { label: "Clumping litter 10L", labelAr: "رمل متكتل ١٠ لتر", quantity: 1, unit: "bag", product: "clumping-litter-10kg", sel: ProductType.LITTER },
+      ],
+    },
+    {
+      tier: PlanTier.STANDARD, slug: "standard", nameEn: "Complete", nameAr: "العناية الكاملة",
+      basePrice: 329, modulePrice: 280, deliverySar: 35,
+      invariants: { minMarketSaving: 0.03 },
+      accepted: { CONTRIBUTION_POST_VAT: PRE_NEGOTIATION } as Partial<Record<string, string>>,
+      contents: [
+        { label: "Dry food 2kg", labelAr: "طعام جاف ٢كجم", quantity: 1, unit: "bag", product: "dry-food-mass-2kg", sel: ProductType.DRY_FOOD },
+        { label: "Wet food pouches — a full month", labelAr: "أكياس طعام رطب — شهر كامل", quantity: 30, unit: "pouch", product: "wet-pouch-mass-85g", sel: ProductType.WET_FOOD },
+        { label: "Clumping litter 10L", labelAr: "رمل متكتل ١٠ لتر", quantity: 1, unit: "bag", product: "clumping-litter-10kg", sel: ProductType.LITTER },
         { label: "Creamy treats", labelAr: "مكافآت كريمية", quantity: 1, unit: "pack", product: "cat-treats-pack", sel: ProductType.TREATS },
+        { label: "Play toy", labelAr: "لعبة", quantity: 1, unit: "each", product: "enrichment-toy" },
+        { label: "Grooming wipes", labelAr: "مناديل عناية مبلّلة", quantity: 1, unit: "pack", product: "monthly-supplement", perCat: false },
+      ],
+    },
+    {
+      tier: PlanTier.PREMIUM, slug: "premium", nameEn: "Signature", nameAr: "التوقيع",
+      basePrice: 479, modulePrice: 400, deliverySar: 35,
+      invariants: { minMarketSaving: 0.08 },
+      accepted: {} as Partial<Record<string, string>>,
+      contents: [
+        { label: "Dry food 2kg", labelAr: "طعام جاف ٢كجم", quantity: 1, unit: "bag", product: "dry-food-mass-2kg", sel: ProductType.DRY_FOOD },
+        { label: "Wet food pouches — a full month", labelAr: "أكياس طعام رطب — شهر كامل", quantity: 30, unit: "pouch", product: "wet-pouch-mass-85g", sel: ProductType.WET_FOOD },
+        { label: "Premium wet rotation", labelAr: "تشكيلة رطب فاخرة", quantity: 9, unit: "pouch", product: "wet-pouch-premium-85g", sel: ProductType.WET_FOOD },
+        { label: "Advanced litter 10L", labelAr: "رمل متقدم ١٠ لتر", quantity: 1, unit: "bag", product: "premium-litter-10kg", sel: ProductType.LITTER },
+        { label: "Creamy treats", labelAr: "مكافآت كريمية", quantity: 1, unit: "pack", product: "cat-treats-pack", sel: ProductType.TREATS },
+        { label: "Premium toy", labelAr: "لعبة فاخرة", quantity: 1, unit: "each", product: "enrichment-toy" },
+        { label: "Grooming wipes", labelAr: "مناديل عناية مبلّلة", quantity: 1, unit: "pack", product: "monthly-supplement", perCat: false },
+        { label: "Monthly supplement course", labelAr: "كورس مكملات شهري", quantity: 1, unit: "pack", product: "dental-care-item", perCat: false },
       ],
     },
   ];
@@ -152,41 +181,54 @@ async function main() {
   // enforces. Previously the hard-coded COGS did not even match these products,
   // and every dev plan cost far MORE than buying its own contents — a fixture
   // that contradicts the product rule cannot catch a regression in it.
-  const priceBySlug = new Map(productData.map((d) => [d.slug, { cost: d.costPrice, retail: d.price }]));
+  const priceBySlug = new Map(
+    productData.map((d) => [d.slug, { cost: d.costPrice, retail: d.price, market: d.marketPrice }])
+  );
   const planViolations: string[] = [];
 
   for (const [i, p] of plans.entries()) {
     const recipe = p.contents.map((c) => {
       const pr = priceBySlug.get(c.product);
       if (!pr) throw new Error(`seed: plan ${p.slug} references unknown product ${c.product}`);
-      return { sku: c.product, quantity: c.quantity, unitCost: pr.cost, unitRetail: pr.retail };
+      return {
+        sku: c.product,
+        quantity: c.quantity,
+        unitCost: pr.cost,
+        unitRetail: pr.retail,
+        unitMarket: pr.market,
+      };
     });
-    const econ = computeBoxEconomics({ recipe, boxPrice: p.basePrice, costModel: BOX_COST_MODEL });
-    const violations = checkBoxInvariants(econ);
-    if (violations.length) {
+    const costModel = { ...BOX_COST_MODEL, deliverySar: p.deliverySar ?? BOX_COST_MODEL.deliverySar };
+    const inv = { ...DEFAULT_INVARIANTS, ...p.invariants };
+    const econ = computeBoxEconomics({ recipe, boxPrice: p.basePrice, costModel });
+    const violations = checkBoxInvariants(econ, inv);
+    const fatal = violations.filter((v) => !p.accepted[v.invariant]);
+    for (const v of violations.filter((x) => p.accepted[x.invariant])) {
+      console.warn(`  ⚠ WAIVED [${v.invariant}] on ${p.nameEn}: ${p.accepted[v.invariant]}`);
+    }
+    if (fatal.length) {
       planViolations.push(
-        `${p.nameEn} (${p.basePrice} SAR): ` + violations.map((v) => v.message).join(" | ")
+        `${p.nameEn} (${p.basePrice} SAR): ` + fatal.map((v) => v.message).join(" | ")
       );
     }
     const derivedCogs = Math.round(econ.goodsCost * 100) / 100;
 
+    const planData = {
+      basePrice: p.basePrice, cogs: derivedCogs, retailValue: econ.retailValue,
+      marketValue: econ.marketValue, modulePriceSar: p.modulePrice,
+      minTermMonths: 1, isActive: true, sortOrder: i,
+    };
     const plan = await prisma.plan.upsert({
       where: { tier: p.tier },
-      update: {
-        basePrice: p.basePrice, cogs: derivedCogs, retailValue: econ.retailValue,
-        minTermMonths: 1, isActive: true, sortOrder: i,
-      },
-      create: {
-        tier: p.tier, slug: p.slug, nameEn: p.nameEn, nameAr: p.nameAr,
-        basePrice: p.basePrice, cogs: derivedCogs, retailValue: econ.retailValue,
-        sortOrder: i, minTermMonths: 1,
-      },
+      update: { slug: p.slug, nameEn: p.nameEn, nameAr: p.nameAr, ...planData },
+      create: { tier: p.tier, slug: p.slug, nameEn: p.nameEn, nameAr: p.nameAr, ...planData },
     });
     await prisma.planContent.deleteMany({ where: { planId: plan.id } });
     await prisma.planContent.createMany({
       data: p.contents.map((c) => ({
         planId: plan.id, label: c.label, labelAr: c.labelAr, quantity: c.quantity, unit: c.unit,
         unitAr: UNIT_AR[c.unit] ?? c.unit,
+        perCat: !("perCat" in c) || c.perCat !== false,
         productId: products[c.product],
         selectableType: "sel" in c ? c.sel : null,
       })),
@@ -208,7 +250,7 @@ async function main() {
     where: { tier: { in: [PlanTier.ESSENTIAL, PlanTier.COMPLETE_CARE, PlanTier.MULTI_CAT] } },
     data: { isActive: false },
   });
-  console.log(`  ✓ plans: ${plans.length} official (Starter/Standard/Premium), legacy deactivated`);
+  console.log(`  ✓ plans: ${plans.length} official (Kitten/Essentials/Complete/Signature), legacy deactivated`);
 
   // Popular KSA brands/flavors as choosable box options (TO_SOURCE) so the box
   // builder is rich even on the minimal dev seed.

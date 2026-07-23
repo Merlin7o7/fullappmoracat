@@ -1,23 +1,31 @@
 /**
- * CENTRALIZED PRICING ENGINE — the single place operational costs, margin, and
- * VAT live. Pricing is always *generated* from this model, never hand-entered,
- * and always lands on a profitable price. INTERNAL ONLY: the cost breakdown must
- * never be shown to customers (they see the final price and value, nothing else).
+ * PRICING ENGINE (legacy) — operational costs, margin, and VAT in one place.
+ * INTERNAL ONLY: the cost breakdown must never be shown to customers (they see
+ * the final price and value, nothing else).
  *
- * To retune the business, change these numbers in ONE place. VAT is 0 until
- * Moracat registers — flip NEXT_PUBLIC_VAT_RATE=0.15 to enable everywhere.
+ * NOTE (2026-07-23): the AUTHORITATIVE economics model is now
+ * `@moraqat/core` `pricing/box-economics.ts` (market-basket invariants,
+ * VAT-registered stress, household modules — MRC-FIN-002). This module has no
+ * importers today; its constants are kept reconciled with MRC-FIN-002 §2/§7.1
+ * so it can never mislead if picked back up. Prefer the core engine.
+ *
+ * VAT is 0 until Moracat registers — flip NEXT_PUBLIC_VAT_RATE=0.15 to enable.
  */
 
 export const PRICING_CONFIG = {
-  /** Packaging per box: shipping box, tissue, sticker, inserts, Cat ID/QR card.
-   *  Spec range 8–10 SAR — midpoint. */
-  packagingSar: 9,
-  /** Local Saudi last-mile per shipment. Spec range 10–15 SAR — midpoint. */
-  deliverySar: 12,
-  /** Per-box fulfilment labour + handling. */
-  fulfilmentSar: 6,
-  /** Target contribution margin the engine prices toward. */
-  targetMargin: 0.28,
+  /** Packaging per box: 5-ply mailer (litter weight), tissue, sticker, inserts,
+   *  Cat ID/QR card. MRC-FIN-002 §2 planning figure. */
+  packagingSar: 12,
+  /** Local Saudi last-mile per shipment (Riyadh ≤15kg — a box is ~13–14kg).
+   *  MRC-FIN-002 §2; multi-cat ≥3 cats ships extra parcels at +30 each. */
+  deliverySar: 32,
+  /** Per-box fulfilment labour + handling (MRC-FIN-002 §2). */
+  fulfilmentSar: 8,
+  /** Payment processing as a fraction of gross — mada blended (MRC-FIN-002 §2). */
+  pspRate: 0.025,
+  /** Target pre-VAT contribution margin the engine prices toward — the §7.1
+   *  ladder lands at 24.5–27.1% contribution at 0% VAT. */
+  targetMargin: 0.25,
   /** VAT as a fraction (0 = not registered). One flip enables VAT app-wide. */
   vatRate: Number(process.env.NEXT_PUBLIC_VAT_RATE ?? 0),
 } as const;
@@ -27,6 +35,7 @@ export interface BoxEconomics {
   packaging: number;
   delivery: number;
   fulfilment: number;
+  paymentFee: number;
   totalCost: number;
   price: number;
   contribution: number;
@@ -41,11 +50,12 @@ export function operationalCost(cfg = PRICING_CONFIG): number {
 
 /**
  * Generate a profitable monthly price from a box's real product COGS. Always
- * covers operational cost + target margin, rounded to a clean ".x9" price point.
+ * covers operational cost + PSP fee + target margin, rounded to a clean ".x9"
+ * price point (charm-on-hundreds per MRC-FIN-002 R10 for the real ladder).
  */
 export function recommendedPrice(productCogs: number, cfg = PRICING_CONFIG): number {
   const cost = productCogs + operationalCost(cfg);
-  const raw = cost / (1 - cfg.targetMargin);
+  const raw = cost / (1 - cfg.targetMargin - cfg.pspRate);
   return Math.max(1, Math.round(raw / 10) * 10 - 1);
 }
 
@@ -54,13 +64,15 @@ export function boxEconomics(price: number, productCogs: number, cfg = PRICING_C
   const packaging = cfg.packagingSar;
   const delivery = cfg.deliverySar;
   const fulfilment = cfg.fulfilmentSar;
-  const totalCost = productCogs + packaging + delivery + fulfilment;
+  const paymentFee = Math.round(price * cfg.pspRate * 100) / 100;
+  const totalCost = productCogs + packaging + delivery + fulfilment + paymentFee;
   const contribution = price - totalCost;
   return {
     productCogs,
     packaging,
     delivery,
     fulfilment,
+    paymentFee,
     totalCost,
     price,
     contribution,

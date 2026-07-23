@@ -44,13 +44,14 @@ import { formatSAR, formatMoneyDate } from "@/lib/money";
 import { friendlyError } from "@/lib/errors";
 import { ApiError } from "@/lib/http";
 import { type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
+import { TERM_DISCOUNTS, termTotal } from "@/lib/plans";
 import { AddressForm, useCities, type SavedAddress } from "@/components/address-form";
 import { BoxBuilder, type BoxSelections } from "@/components/box-builder";
 import { QueryError } from "@/components/query-error";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloPaw } from "@/components/illustrations";
 
-const TIERS: PlanTier[] = ["STARTER", "STANDARD", "PREMIUM"];
+const TIERS: PlanTier[] = ["KITTEN", "STARTER", "STANDARD", "PREMIUM"];
 
 /** Committed term options (months). 1 is the low-commitment entry point; 3 is
  *  the recommended default. Members pay price × term upfront. */
@@ -319,6 +320,19 @@ function CheckoutInner() {
 
   const canPay = !!addressId && targetCats.length > 0 && !activate.isPending;
 
+  // ── The money math — MUST mirror the API's activate() exactly (R021) ──────
+  // Household monthly = base (first cat) + module × each additional cat
+  // (MRC-FIN-002 §5); upfront total = monthly × months × (1 − term discount)
+  // via the shared termTotal() helper. The number shown here IS the charge.
+  const catCount = targetCats.length;
+  const extraCats = Math.max(0, catCount - 1);
+  const modulePrice = plan.modulePriceSar ?? 0;
+  const monthly = Math.round((plan.price + modulePrice * extraCats) * 100) / 100;
+  const discount = TERM_DISCOUNTS[termMonths] ?? 0;
+  const discountPct = Math.round(discount * 100);
+  const upfrontTotal = termTotal(monthly, termMonths);
+  const undiscounted = Math.round(monthly * termMonths * 100) / 100;
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 pb-24 sm:pb-0">
       <div>
@@ -340,12 +354,31 @@ function CheckoutInner() {
               {isAr ? `لـ ${catLine}` : `For ${catLine}`}
             </p>
           </div>
-          <p className="font-display text-xl font-bold">
-            <span className="tabular" dir="ltr">{plan.price} SAR</span>
-            <span className="ms-1 text-xs font-normal text-muted-foreground">
-              {isAr ? "/ شهرياً" : "/ month"}
-            </span>
-          </p>
+          <div className="text-end">
+            <p className="font-display text-xl font-bold">
+              <span className="tabular" dir="ltr">{monthly} SAR</span>
+              <span className="ms-1 text-xs font-normal text-muted-foreground">
+                {isAr ? "/ شهرياً" : "/ month"}
+              </span>
+            </p>
+            {/* Per-cat breakdown, visible before any payment (R021): the base
+                covers the first cat; every extra cat adds their module (§5). */}
+            {catCount > 1 && (
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {isAr ? (
+                  <>
+                    <span dir="ltr" className="tabular">{formatSAR(plan.price, true)}</span> للقط الأول +{" "}
+                    <span dir="ltr" className="tabular">{formatSAR(modulePrice, true)}</span> × {extraCats.toLocaleString("ar-SA")} لكل قط إضافي
+                  </>
+                ) : (
+                  <>
+                    <span dir="ltr" className="tabular">{formatSAR(plan.price, false)}</span> first cat +{" "}
+                    <span dir="ltr" className="tabular">{formatSAR(modulePrice, false)}</span> × {extraCats} per extra cat
+                  </>
+                )}
+              </p>
+            )}
+          </div>
         </div>
         <ul className="mt-4 grid gap-1 border-t border-border pt-4 text-sm text-muted-foreground sm:grid-cols-2">
           {plan.contents.map((c) => (
@@ -472,11 +505,13 @@ function CheckoutInner() {
           {isAr ? "مدة الاشتراك" : "Subscription length"}
         </h2>
         <div role="radiogroup" aria-label={isAr ? "مدة الاشتراك" : "Subscription length"} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {/* No fabricated "Best value" — every term costs exactly price × months.
-              The only honest label is flexibility on the shortest term (R006/R025). */}
+          {/* No fabricated "Best value" — the only claims here are the real
+              prepay discounts the API applies (6-mo −5%, 12-mo −8%) and
+              flexibility on the shortest term (R006/R021/R025). */}
           {TERM_OPTIONS.filter((t) => t >= minTerm).map((t) => {
             const selected = t === termMonths;
             const flexible = t === 1;
+            const termPct = Math.round((TERM_DISCOUNTS[t] ?? 0) * 100);
             return (
               <button
                 key={t}
@@ -496,6 +531,11 @@ function CheckoutInner() {
                 )}
                 <span className="block font-display text-lg font-bold tabular" dir="ltr">{t}</span>
                 <span className="block text-xs text-muted-foreground">{monthUnit(t, uiLocale)}</span>
+                {termPct > 0 && (
+                  <span className="block text-[10px] font-semibold text-success">
+                    {isAr ? `خصم ${termPct.toLocaleString("ar-SA")}٪` : `−${termPct}%`}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -534,16 +574,53 @@ function CheckoutInner() {
         {/* The commitment block (R021): the exact upfront total, when it ends,
             and the honest promise — no automatic renewal, ever (R025). */}
         <div className="space-y-1.5 rounded-xl bg-muted/50 p-4 text-center">
+          {/* Per-cat breakdown restated at the point of commitment (R021). */}
+          {catCount > 1 && (
+            <p className="text-xs text-muted-foreground">
+              {isAr ? (
+                <>
+                  {catCount.toLocaleString("ar-SA")} قطط: <span dir="ltr" className="tabular">{formatSAR(plan.price, true)}</span> للقط الأول +{" "}
+                  <span dir="ltr" className="tabular">{formatSAR(modulePrice, true)}</span> × {extraCats.toLocaleString("ar-SA")} إضافي ={" "}
+                  <span dir="ltr" className="tabular">{formatSAR(monthly, true)}</span> شهرياً
+                </>
+              ) : (
+                <>
+                  {catCount} cats: <span dir="ltr" className="tabular">{formatSAR(plan.price, false)}</span> first cat +{" "}
+                  <span dir="ltr" className="tabular">{formatSAR(modulePrice, false)}</span> × {extraCats} extra ={" "}
+                  <span dir="ltr" className="tabular">{formatSAR(monthly, false)}</span> / month
+                </>
+              )}
+            </p>
+          )}
+          {/* The prepay discount, named as a line of its own when it exists —
+              and never invented when it doesn't (6-mo −5%, 12-mo −8%). */}
+          {discountPct > 0 && (
+            <p className="text-xs font-medium text-success">
+              {isAr ? (
+                <>
+                  خصم {discountPct.toLocaleString("ar-SA")}٪ على الدفع المقدّم — بدل{" "}
+                  <span dir="ltr" className="tabular line-through opacity-70">{formatSAR(undiscounted, true)}</span>
+                </>
+              ) : (
+                <>
+                  {discountPct}% prepay discount — instead of{" "}
+                  <span dir="ltr" className="tabular line-through opacity-70">{formatSAR(undiscounted, false)}</span>
+                </>
+              )}
+            </p>
+          )}
           <p className="text-sm font-medium">
             {isAr ? (
               <>
-                <span dir="ltr" className="tabular">{formatSAR(plan.price, true)}</span> × {monthsLabel(termMonths, "ar")} ={" "}
-                <span dir="ltr" className="tabular font-bold">{formatSAR(plan.price * termMonths, true)}</span> تُدفع اليوم
+                <span dir="ltr" className="tabular">{formatSAR(monthly, true)}</span> × {monthsLabel(termMonths, "ar")}
+                {discountPct > 0 ? ` − ${discountPct.toLocaleString("ar-SA")}٪` : ""} ={" "}
+                <span dir="ltr" className="tabular font-bold">{formatSAR(upfrontTotal, true)}</span> تُدفع اليوم
               </>
             ) : (
               <>
-                <span dir="ltr" className="tabular">{formatSAR(plan.price, false)}</span> × {monthsLabel(termMonths, "en")} ={" "}
-                <span dir="ltr" className="tabular font-bold">{formatSAR(plan.price * termMonths, false)}</span> paid today
+                <span dir="ltr" className="tabular">{formatSAR(monthly, false)}</span> × {monthsLabel(termMonths, "en")}
+                {discountPct > 0 ? ` − ${discountPct}%` : ""} ={" "}
+                <span dir="ltr" className="tabular font-bold">{formatSAR(upfrontTotal, false)}</span> paid today
               </>
             )}
           </p>
@@ -643,7 +720,7 @@ function CheckoutInner() {
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="min-w-0">
             <p className="font-display text-base font-bold leading-tight">
-              <span dir="ltr" className="tabular">{formatSAR(plan.price * termMonths, isAr)}</span>
+              <span dir="ltr" className="tabular">{formatSAR(upfrontTotal, isAr)}</span>
             </p>
             <p className="truncate text-[11px] text-muted-foreground">
               {isAr ? `${monthsLabel(termMonths, "ar")} — بدون تجديد تلقائي` : `${monthsLabel(termMonths, "en")} — no auto-renewal`}

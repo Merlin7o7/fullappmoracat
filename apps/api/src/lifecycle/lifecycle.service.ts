@@ -11,6 +11,7 @@ import {
 } from "../mail/mail.templates";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { commerceEnabled } from "../common/config/features";
+import { termTotal as termUpfrontTotal } from "../common/config/pricing";
 import {
   PAYMENT_PROVIDER_FACTORY,
   type IPaymentProviderFactory,
@@ -165,7 +166,9 @@ export class LifecycleService {
       const catName = cat?.name ?? "your cat";
       const loc = s.user.locale === "en" ? "en" : "ar";
       const endsStr = fmtDate(s.endsAt, loc);
-      const termTotal = Number(s.price) * (s.termMonths ?? 1);
+      // Same deterministic prepay-discount math as activation — the invited
+      // renewal quotes exactly what the charge will be (R021/R025).
+      const termTotal = termUpfrontTotal(Number(s.price), s.termMonths ?? 1);
       const renewUrl = `${SITE()}/portal/subscribe?cat=${cat?.id ?? ""}&renew=1`;
 
       await this.once(`term_end_${milestone}:${s.id}`, "term_ending", { userId: s.userId, subjectId: s.id, catId: cat?.id }, async () => {
@@ -269,7 +272,7 @@ export class LifecycleService {
         continue;
       }
 
-      const termTotal = Number(sub.price) * (sub.termMonths ?? 1);
+      const termTotal = termUpfrontTotal(Number(sub.price), sub.termMonths ?? 1);
       await this.once(
         `autorenew:${sub.id}:${sub.endsAt?.toISOString() ?? ""}`,
         "autorenew",

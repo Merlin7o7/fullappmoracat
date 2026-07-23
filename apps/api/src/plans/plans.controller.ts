@@ -9,7 +9,7 @@ import { Commercial } from "../common/decorators/commercial.decorator";
 export class PlansController {
   constructor(private readonly plans: PlansService) {}
 
-  // These are anonymous price lists — 249/349/529, retailValue, savings, and the
+  // These are anonymous price lists — 199/219/329/479, market value, savings, and the
   // supplier catalog behind the box. Publishing a price for something nobody can
   // buy claims the product does something it doesn't (R040), and a shelf that
   // says "soon" is honest where a live price tag is not (R006).

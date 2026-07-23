@@ -159,11 +159,25 @@ console.log("━━ wallet pass (R034) ━━");
 
 console.log("━━ storefront + checkout (direct capture) ━━");
 const plans = (await call("/plans")).json;
-ok(plans.length === 3 && plans.every((p) => p.nameAr), "3 official plans with Arabic names");
-// The box must be a genuine saving against our own shelf prices — it previously
-// cost 19–35% MORE than buying the same items à-la-carte.
-ok(plans.every((p) => p.retailValue > p.price), "every plan undercuts its own à-la-carte value");
-ok(plans.every((p) => p.savingsPct >= 15), `every plan saves >=15% (${plans.map((p) => p.savingsPct + "%").join(", ")})`);
+ok(plans.length === 4 && plans.every((p) => p.nameAr), "4 official plans with Arabic names");
+// Pricing Model v2 (MRC-FIN-002): the four-tier ladder with its display names.
+ok(
+  ["KITTEN", "STARTER", "STANDARD", "PREMIUM"].every((t) => plans.some((p) => p.tier === t)),
+  "tiers are KITTEN/STARTER/STANDARD/PREMIUM"
+);
+ok(
+  ["Kitten", "Essentials", "Complete", "Signature"].every((n) => plans.some((p) => p.nameEn === n)),
+  "names are Kitten/Essentials/Complete/Signature"
+);
+// Savings claims are judged against the MARKET basket, never our own shelf
+// (MRC-FIN-002 §7.5, R006). Every plan carries a market value; a savings figure
+// exists ONLY where the market basket genuinely costs more (Essentials/Kitten
+// serialise null and claim nothing).
+ok(plans.every((p) => p.marketValue > 0), "every plan carries a market-benchmark value");
+ok(
+  plans.filter((p) => p.marketSavings != null).every((p) => p.marketValue > p.price),
+  "a savings claim only exists where the market basket really costs more"
+);
 // Arabic box contents must exist, or the Arabic checkout renders English.
 ok(plans.every((p) => p.contents.every((c) => c.labelAr && c.unitAr)), "box contents carry Arabic label + unit");
 // Admin login early: the storefront test buys an admin-created product, since the
@@ -331,12 +345,17 @@ console.log("━━ membership activation (plan builder → checkout) ━━");
 const cities = (await call("/cities")).json;
 const addr = (await call("/addresses", "POST", { recipient: "Smoke Tester", phone: "+966500000001", cityId: cities[0].id, street: "Smoke St 1" }, C)).json;
 ok(!!addr.id, "delivery address saved");
-const term = 3; // minimum committed term; member pays monthly × term upfront
+// Prepaid-term discounts (MRC-FIN-002 §6) — must mirror the API's TERM_DISCOUNTS.
+const TERM_DISCOUNTS = { 1: 0, 3: 0, 6: 0.05, 12: 0.08 };
+const term = 3; // member pays monthly × term × (1 − discount) upfront; 3-mo carries no discount
 // Tamara is the only accepted provider; PAYMENTS_MODE=mock resolves it to the
 // mock adapter (direct capture) so the activation path is still exercised here.
 const sub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cat.id], addressId: addr.id, provider: "TAMARA", termMonths: term }, C)).json;
 ok(sub.status === "ACTIVE" && !!sub.nextBillingAt, `membership activated (${sub.orderNumber})`);
-ok(Math.abs(sub.grandTotal - plans[0].price * term) < 0.01, `upfront total = monthly × ${term} months`);
+ok(
+  Math.abs(sub.grandTotal - plans[0].price * term * (1 - TERM_DISCOUNTS[term])) < 0.01,
+  `upfront total = monthly × ${term} months × (1 − ${TERM_DISCOUNTS[term] * 100}% discount)`
+);
 ok(Math.abs(sub.taxTotal) < 0.01, "membership 0% VAT (not VAT-registered)");
 const billAt = new Date(sub.nextBillingAt);
 const expectBill = new Date(); expectBill.setMonth(expectBill.getMonth() + term);
@@ -379,6 +398,18 @@ const sub1 = (await call("/subscriptions/activate", "POST", { planId: plans[0].i
 ok(sub1.status === "ACTIVE" && Math.abs(sub1.grandTotal - plans[0].price) < 0.01, "1-month membership activates (price × 1 upfront)");
 const sub1full = (await call(`/subscriptions/${sub1.subscriptionId}`, "GET", undefined, C)).json;
 ok((sub1full.items ?? []).some((i) => i.productId === pickOpt.productId), "chosen brand/flavor saved on the box (flat price)");
+
+// ── Multi-cat household (MRC-FIN-002 §5): one subscription, base price covers
+// the first cat, every additional cat adds the tier's module price. Luna (cat2)
+// and Stand Cat are both uncovered members of this account.
+const hhPlan = plans.find((p) => p.tier === "STANDARD");
+ok(hhPlan?.modulePriceSar > 0 && hhPlan?.maxCats >= 2, `Complete carries a household module price (${hhPlan?.modulePriceSar}/extra cat, up to ${hhPlan?.maxCats})`);
+const hhSub = (await call("/subscriptions/activate", "POST", { planId: hhPlan.id, catIds: [cat2.id, standCat.id], addressId: addr.id, provider: "TAMARA", termMonths: 1 }, C)).json;
+ok(hhSub.status === "ACTIVE", `household membership activated for 2 cats (${hhSub.orderNumber})`);
+ok(
+  Math.abs(hhSub.grandTotal - (hhPlan.price + hhPlan.modulePriceSar)) < 0.01,
+  `household total = base + one module (${hhPlan.price} + ${hhPlan.modulePriceSar} = ${hhPlan.price + hhPlan.modulePriceSar})`
+);
 
 console.log("━━ refunds + RBAC ━━");
 ok((await call("/admin/dashboard", "GET", undefined, C)).status === 403, "customer blocked from admin (403)");

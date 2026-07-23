@@ -24,7 +24,15 @@ import {
   type PaymentProviderKey,
 } from "../payments/payment-provider.interface";
 import { commerceEnabled } from "../common/config/features";
-import { splitVat, MIN_TERM_MONTHS, TERM_OPTIONS } from "../common/config/pricing";
+import {
+  splitVat,
+  MIN_TERM_MONTHS,
+  TERM_OPTIONS,
+  MAX_CATS_PER_SUBSCRIPTION,
+  householdMonthlyPrice,
+  termDiscount,
+  termTotal as termUpfrontTotal,
+} from "../common/config/pricing";
 import type { ActivateSubscriptionDto } from "./dto/subscription.dto";
 
 const INTERVAL_DAYS: Record<string, number> = {
@@ -166,10 +174,27 @@ export class SubscriptionsService {
       select: { email: true, firstName: true, lastName: true, phone: true, locale: true },
     });
 
+    // Household pricing (MRC-FIN-002 §5): one subscription covers the whole
+    // household — base price includes the first cat, each additional cat adds
+    // the plan's module price. Plans without a module price are single-cat.
+    const catCount = dto.catIds.length;
+    if (catCount > MAX_CATS_PER_SUBSCRIPTION) {
+      throw new BadRequestException({
+        code: "TOO_MANY_CATS",
+        message: `A household plan covers up to ${MAX_CATS_PER_SUBSCRIPTION} cats.`,
+      });
+    }
+    const modulePrice = plan.modulePriceSar == null ? null : Number(plan.modulePriceSar);
+    if (catCount > 1 && modulePrice == null) {
+      throw new BadRequestException({
+        code: "SINGLE_CAT_PLAN",
+        message: `${plan.nameEn} covers one cat — choose a household plan for multiple cats.`,
+      });
+    }
+    const monthlyPrice = householdMonthlyPrice(round(Number(plan.basePrice)), modulePrice, catCount);
+
     // Term commitment: the member commits to a minimum of `minTerm` months and
-    // pays the FULL term upfront (Tamara collects; delivered monthly across the
-    // term). This is how recurring works without card tokenization.
-    const monthlyPrice = round(Number(plan.basePrice));
+    // pays the FULL term upfront (delivered monthly across the term).
     const minTerm = Math.max(MIN_TERM_MONTHS, plan.minTermMonths ?? MIN_TERM_MONTHS);
     const termMonths = dto.termMonths ?? minTerm;
     if (!(TERM_OPTIONS as readonly number[]).includes(termMonths) || termMonths < minTerm) {
@@ -178,9 +203,11 @@ export class SubscriptionsService {
         message: `Choose a term of ${TERM_OPTIONS.filter((t) => t >= minTerm).join(", ")} months (minimum ${minTerm}).`,
       });
     }
-    // The exact number the member pays now = monthly price × committed months.
+    // The exact number the member pays now = household monthly × committed
+    // months × (1 − prepay discount). The discount is deterministic from the
+    // term (TERM_DISCOUNTS) so every surface derives the same figure (R021).
     // splitVat honours the VAT toggle (currently 0% → tax 0, net == gross).
-    const grandTotal = round(monthlyPrice * termMonths);
+    const grandTotal = termUpfrontTotal(monthlyPrice, termMonths);
     const { net: netSubtotal, tax: taxTotal } = splitVat(grandTotal);
     const orderNumber = makeNumber("MRQ");
 
@@ -253,7 +280,14 @@ export class SubscriptionsService {
           events: {
             create: {
               type: isPending ? "activation_pending" : "activated",
-              metadata: { orderNumber, provider: dto.provider, termMonths, grandTotal },
+              metadata: {
+                orderNumber,
+                provider: dto.provider,
+                termMonths,
+                grandTotal,
+                catCount,
+                termDiscountPct: termDiscount(termMonths),
+              },
             },
           },
         },
@@ -1003,7 +1037,9 @@ export class SubscriptionsService {
       price: Number(sub.price), // monthly rate
       termMonths,
       endsAt: sub.endsAt,
-      termTotal: Number(sub.price) * termMonths,
+      // Same deterministic prepay-discount math as activation (R021: the shown
+      // total is exactly what was/will be charged).
+      termTotal: termUpfrontTotal(Number(sub.price), termMonths),
       // Term economics the manage page must show truthfully (fire, R021 post-purchase).
       boxesRemaining,
       monthsElapsed,

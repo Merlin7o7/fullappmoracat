@@ -45,7 +45,7 @@ const C = reg.accessToken;
 ok(!!C, "member can still register an account while commerce is off");
 
 console.log("━━ pricing surfaces are unreachable ━━");
-ok(await blocked("/plans"), "GET /plans blocked (the 249/349/529 pricing oracle)");
+ok(await blocked("/plans"), "GET /plans blocked (the 199/219/329/479 pricing oracle)");
 ok(await blocked("/plans/any-id/box"), "GET /plans/:id/box blocked (supplier catalog + stock)");
 ok(await blocked("/products"), "GET /products blocked (per-product prices)");
 ok(await blocked("/products/any-slug"), "GET /products/:slug blocked");
@@ -77,7 +77,7 @@ const openPaths = ["/census", "/content/faqs", "/content/announcements", "/conte
 for (const p of openPaths) {
   const r = await call(p);
   const body = JSON.stringify(r.json ?? "");
-  const leak = /\b(249|349|529)\b/.test(body) || /"price"|"grandTotal"|"termTotal"|"compareAtPrice"/.test(body);
+  const leak = /\b(199|219|329|479)\b/.test(body) || /"price"|"grandTotal"|"termTotal"|"compareAtPrice"/.test(body);
   ok(!leak, `no price leaks from ${p}`);
 }
 

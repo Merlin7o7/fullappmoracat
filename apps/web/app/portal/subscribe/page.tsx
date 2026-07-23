@@ -50,7 +50,7 @@ import { QueryError } from "@/components/query-error";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
 
-type Interest = "STARTER" | "STANDARD" | "PREMIUM" | "unsure";
+type Interest = "KITTEN" | "STARTER" | "STANDARD" | "PREMIUM" | "unsure";
 
 export default function SubscribePage() {
   return (
@@ -117,7 +117,8 @@ function PlanBuilderInner() {
   const quizKey = `moraqat.planquiz.${catId ?? "household"}`;
   const restored = React.useRef(false);
   React.useEffect(() => {
-    if (restored.current || typeof window === "undefined") return;
+    // Wait for the cats before restoring — the kitten rule reads birthdays.
+    if (restored.current || typeof window === "undefined" || catsLoading) return;
     restored.current = true;
     try {
       const raw = window.sessionStorage.getItem(quizKey);
@@ -132,7 +133,7 @@ function PlanBuilderInner() {
       if (saved.treats) setTreats(saved.treats);
       const complete = !!(saved.wet && saved.dry && saved.litter && saved.treats);
       if (saved.step === "result" && complete) {
-        setRec(recommendFromConsumption({ wet: saved.wet!, dry: saved.dry!, litter: saved.litter!, treats: saved.treats! }));
+        setRec(recommendFromConsumption({ wet: saved.wet!, dry: saved.dry!, litter: saved.litter!, treats: saved.treats! }, targetCats));
         setStep("result");
       } else if (saved.step === "questions") {
         setStep("questions");
@@ -141,7 +142,7 @@ function PlanBuilderInner() {
       /* a broken saved quiz never blocks a fresh one */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quizKey]);
+  }, [quizKey, catsLoading]);
   React.useEffect(() => {
     if (!restored.current || typeof window === "undefined") return;
     try {
@@ -165,7 +166,7 @@ function PlanBuilderInner() {
   };
   const submitAnswers = () => {
     if (!answered) return;
-    setRec(recommendFromConsumption({ wet, dry, litter, treats }));
+    setRec(recommendFromConsumption({ wet, dry, litter, treats }, targetCats));
     setChosenTier(null);
     goto("result");
   };
@@ -361,6 +362,20 @@ function PlanBuilderInner() {
                   ? "تُدفع المدة مقدّماً — من شهر واحد، وبدون أي تجديد تلقائي"
                   : "Paid upfront per term — from 1 month, never auto-renewed"}
               </p>
+              {/* A savings claim ONLY where the API's market basket proves one
+                  (R006). Essentials/Kitten serialise null — they get the honest
+                  "market price, delivered" framing instead, never a وفر line. */}
+              {selectedPlan.marketSavingsPct != null ? (
+                <p className="mt-1 text-xs font-semibold text-success">
+                  {isAr
+                    ? `أوفر بنسبة ${selectedPlan.marketSavingsPct.toLocaleString("ar-SA")}٪ من نفس السلة بأسعار السوق`
+                    : `${selectedPlan.marketSavingsPct}% below the same basket at market prices`}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {isAr ? "بسعر السوق — يوصلك بابك" : "Market price — delivered to your door"}
+                </p>
+              )}
             </div>
 
             {/* Transparent reasons, straight from the member's own answers (R006). */}
@@ -447,8 +462,18 @@ function PlanBuilderInner() {
                             {p.contents.map((c) => `${c.label} ${c.quantity}${c.unit}`).join(" · ")}
                           </span>
                         </span>
-                        <span className="shrink-0 font-display text-sm font-bold tabular" dir="ltr">
-                          {p.price} <span className="text-xs font-normal">SAR</span>
+                        <span className="shrink-0 text-end">
+                          <span className="block font-display text-sm font-bold tabular" dir="ltr">
+                            {p.price} <span className="text-xs font-normal">SAR</span>
+                          </span>
+                          {/* Savings badge only from the API's market data (R006). */}
+                          {p.marketSavingsPct != null && (
+                            <span className="block text-[10px] font-medium text-success">
+                              {isAr
+                                ? `أوفر ${p.marketSavingsPct.toLocaleString("ar-SA")}٪ من السوق`
+                                : `${p.marketSavingsPct}% below market`}
+                            </span>
+                          )}
                         </span>
                       </button>
                     );
@@ -730,9 +755,10 @@ function ComingSoonInner() {
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  ["STARTER", isAr ? "المبتدئة" : "Starter"],
-                  ["STANDARD", isAr ? "القياسية" : "Standard"],
-                  ["PREMIUM", isAr ? "المميّزة" : "Premium"],
+                  ["KITTEN", isAr ? "قطتي الصغيرة" : "Kitten"],
+                  ["STARTER", isAr ? "الأساسيات" : "Essentials"],
+                  ["STANDARD", isAr ? "العناية الكاملة" : "Complete"],
+                  ["PREMIUM", isAr ? "التوقيع" : "Signature"],
                   ["unsure", isAr ? "لست متأكد" : "Not sure yet"],
                 ] as [Interest, string][]
               ).map(([v, l]) => (

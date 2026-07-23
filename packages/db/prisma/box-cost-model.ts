@@ -3,21 +3,21 @@ import { DEFAULT_COST_MODEL, type BoxCostModel } from "@moraqat/core";
 /**
  * Operational cost assumptions used to validate plan economics.
  *
- * Defaults come from the project's own financial model
- * (apps/web/lib/pricing-engine.ts), not from invention. Every one is an
- * environment override because these are commercial facts that change with a
- * carrier contract or a PSP rate — not constants to bake into code.
+ * Defaults are the MRC-FIN-002 (2026-07-23) planning figures: packaging 12
+ * (5-ply mailer — boxes carry an ~8kg litter bag), delivery 32 (Riyadh courier
+ * estimate for a ≤15kg parcel — replace with a real quote after the hand-pack),
+ * fulfilment 8, PSP 2.5% (mada-default rail; BNPL is an option, not the door).
+ * Every one is an environment override because these are commercial facts that
+ * change with a carrier contract or a PSP rate — not constants to bake in.
  *
- * `deliverySar` is the single most sensitive input: it decides whether the
- * current 249/349/529 price points clear the margin floor at all. It needs a
- * real 3PL quote for a ~12kg box (the Standard box carries a 10L litter bag),
- * and note the storefront currently charges customers 25 SAR for shipping,
- * which is a materially different number from the 12 assumed here.
+ * `deliverySar` remains the most sensitive input: it decides whether the
+ * 199/219/329/479 price points clear their floors. The previous defaults
+ * (9/12/6) were the old optimistic model and understated cost by ~25 SAR/box.
  */
 export const BOX_COST_MODEL: BoxCostModel = {
-  packagingSar: num("BOX_PACKAGING_SAR", 9),
-  deliverySar: num("BOX_DELIVERY_SAR", 12),
-  fulfilmentSar: num("BOX_FULFILMENT_SAR", 6),
+  packagingSar: num("BOX_PACKAGING_SAR", DEFAULT_COST_MODEL.packagingSar),
+  deliverySar: num("BOX_DELIVERY_SAR", DEFAULT_COST_MODEL.deliverySar),
+  fulfilmentSar: num("BOX_FULFILMENT_SAR", DEFAULT_COST_MODEL.fulfilmentSar),
   pspRate: num("BOX_PSP_RATE", DEFAULT_COST_MODEL.pspRate),
   shrinkRate: num("BOX_SHRINK_RATE", DEFAULT_COST_MODEL.shrinkRate),
 };

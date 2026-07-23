@@ -53,7 +53,7 @@ export const dict = {
         "سعر الأعضاء عند شركائنا المؤسسين",
         "مجتمع أهل القطط — وقطك نجمه",
       ],
-      billingNote: "تُدفع المدة مقدماً — أوقف أو ألغِ متى شئت، ولا تجديد تلقائي أبداً.",
+      billingNote: "شهراً بشهر أو مدة مدفوعة مقدماً — خصم على مدتَي ٦ و١٢ شهراً. أوقف أو ألغِ متى شئت، ولا تجديد بدون علمك.",
       vatNote: "أسعار نهائية — لا رسوم خفية · التوصيل لكل مدن السعودية",
     },
     /**
@@ -153,7 +153,7 @@ export const dict = {
         "Member rates at our founding partners",
         "A community of cat people — starring your cat",
       ],
-      billingNote: "Paid upfront per term — pause or cancel anytime, and never an automatic renewal.",
+      billingNote: "Month to month, or prepay a term — 6 and 12-month terms carry a discount. Pause or cancel anytime; nothing ever renews without you knowing.",
       vatNote: "Final prices — no hidden fees · Delivery across Saudi Arabia",
     },
     census: {

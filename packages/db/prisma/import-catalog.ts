@@ -13,15 +13,26 @@
  *    storefront launches.
  *  - Supplier screenshots are NOT customer images: we store only the filename
  *    reference (supplierImageRef) so official manufacturer images can replace it.
- *  - Retail price = cost × markup (config), rounded — prepared but not exposed.
+ *  - Retail price = cost × category markup (MRC-FIN-001 §3.3: market-aligned
+ *    per-category multiples, NOT a blanket multiple), rounded.
+ *  - Market benchmark prices (MRC-FIN-001 five-store sweep) are stored on the
+ *    product when supplied — the honest comparison basis for box savings.
  *
- * Usage:  importCatalog(prisma, psvText, { markup: 1.8 })
+ * Usage:  importCatalog(prisma, psvText, { markupByCategory: {...}, marketPrices: {...} })
  */
 import type { PrismaClient, ProductType } from "@prisma/client";
 
 export interface ImportOptions {
-  /** Retail markup multiple over supplier cost (default 1.8×). */
+  /**
+   * Retail markup per supplier PSV category (e.g. "Dry Food" → 1.7). Falls back
+   * to `markup` for categories not in the map. Market-aligned values live in
+   * seed-catalog.ts (CATEGORY_MARKUPS).
+   */
+  markupByCategory?: Record<string, number>;
+  /** Fallback retail markup multiple over supplier cost (default 2.0×). */
   markup?: number;
+  /** KSA market benchmark price per SKU (verified sweep); stored as Product.marketPrice. */
+  marketPrices?: Record<string, number>;
   /** Round retail up to end in this value, e.g. 0.9 → 44.9 (default: whole SAR). */
   priceEnding?: number;
 }
@@ -100,7 +111,7 @@ export async function importCatalog(
   psv: string,
   opts: ImportOptions = {}
 ): Promise<ImportResult> {
-  const markup = opts.markup ?? 1.8;
+  const fallbackMarkup = opts.markup ?? 2.0;
   const lines = psv.split(/\r?\n/).filter((l) => l.trim());
   const header = lines.shift(); // discard header row
   if (!header) return { brands: 0, categories: 0, products: 0, skipped: [] };
@@ -172,7 +183,9 @@ export async function importCatalog(
     // Placeholder Arabic name: "<category-ar> · <brand> <variant>". Flagged for a
     // native review pass (searchKeywords carries needs-ar so admin can filter).
     const nameAr = `${map.ar}${brand && brand !== "Unknown" ? ` · ${brand}` : ""}`;
+    const markup = opts.markupByCategory?.[category ?? ""] ?? fallbackMarkup;
     const retail = roundPrettyPrice(cost * markup, opts.priceEnding);
+    const marketPrice = opts.marketPrices?.[sku] ?? null;
     const weightGrams = parseWeightGrams(size || "");
     const keywords = [product, variant, brand, category, map.ar, "needs-ar", sku]
       .filter((s) => s && s !== "Unknown")
@@ -186,6 +199,7 @@ export async function importCatalog(
         nameEn,
         price: retail,
         costPrice: cost,
+        marketPrice,
         weightGrams: weightGrams ?? undefined,
         brandId,
         type: map.type,
@@ -206,6 +220,7 @@ export async function importCatalog(
         nameAr,
         price: retail,
         costPrice: cost,
+        marketPrice,
         currency: "SAR",
         weightGrams: weightGrams ?? undefined,
         isActive: true,

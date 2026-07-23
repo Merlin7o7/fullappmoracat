@@ -31,7 +31,7 @@ export function formatSAR(amount: number, isAr: boolean, opts?: { isolate?: bool
   return opts?.isolate ? `⁨${s}⁩` : s;
 }
 
-/** "249 SAR / month" / "٢٤٩ ر.س / شهرياً". */
+/** "329 SAR / month" / "٣٢٩ ر.س / شهرياً". */
 export function formatSARMonthly(amount: number, isAr: boolean): string {
   return isAr ? `${formatSAR(amount, true)} / شهرياً` : `${formatSAR(amount, false)} / month`;
 }

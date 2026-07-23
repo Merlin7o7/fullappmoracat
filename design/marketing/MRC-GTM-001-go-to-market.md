@@ -1,5 +1,12 @@
 # MRC-GTM-001 — Moracat Go-To-Market Strategy
 
+> ⚠️ **Pricing superseded (2026-07-23):** every plan price, margin, LTV and
+> break-even figure in this document reflects the retired 249/349/529 model.
+> The committed model is **MRC-FIN-002** (Kitten 199 / Essentials 219 /
+> Complete 329 / Signature 479, household multi-cat modules, break-even ~750
+> households) — use its numbers for any campaign math. Strategy and channel
+> guidance below remain valid.
+
 > **The 12-month launch playbook for Saudi Arabia.** Companion to `design/DESIGN-AUTHORITY.md`
 > (MRC-UX-001) and `design/moracat-vet-portal-dossier.html` (MRC-VET-001).
 > Every campaign in this document must survive the design authority's review checklist:

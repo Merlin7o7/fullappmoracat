@@ -92,10 +92,16 @@ enum LifeStage {
 }
 
 enum PlanTier {
-  // Current official tiers (2026-07). STARTER/STANDARD/PREMIUM are the live plans.
+  // Current official tiers (MRC-FIN-002, 2026-07-23). The enum keys are stable
+  // internal identifiers; display names/prices live on the Plan row:
+  //   STARTER  → "Essentials / الأساسيات" 219   (necessities only)
+  //   STANDARD → "Complete / العناية الكاملة" 329 (the 60–70% tier)
+  //   PREMIUM  → "Signature / التوقيع" 479      (anchor)
+  //   KITTEN   → "Kitten / قطتي الصغيرة" 199    (acquisition tier)
   STARTER
   STANDARD
   PREMIUM
+  KITTEN
   // Legacy tiers — retained so pre-existing plan rows/subscriptions stay valid.
   // Deactivated (isActive=false); never offered to new subscribers. Do not reuse.
   ESSENTIAL
@@ -1059,6 +1065,9 @@ model Product {
   price          Decimal     @db.Decimal(10, 2)
   compareAtPrice Decimal?    @db.Decimal(10, 2)
   costPrice      Decimal?    @db.Decimal(10, 2)
+  /// KSA market benchmark price (quarterly five-store sweep, MRC-FIN-001).
+  /// The member's real alternative; null = no benchmark yet, fall back to price.
+  marketPrice    Decimal?    @db.Decimal(10, 2)
   currency       String      @default("SAR")
   weightGrams    Int?
   ratingAvg      Float       @default(0)
@@ -1319,6 +1328,13 @@ model Plan {
   /// marketing claim — the UI previously had no honest number to show and
   /// displayed "0 SAR saved" forever.
   retailValue   Decimal? @db.Decimal(10, 2)
+  /// What the same contents cost at the KSA market benchmark (quarterly
+  /// five-store sweep, MRC-FIN-001). The honest, advertisable comparison —
+  /// members price-check the market, not our shelf.
+  marketValue   Decimal? @db.Decimal(10, 2)
+  /// Price of each ADDITIONAL cat added to this household plan (MRC-FIN-002 §5).
+  /// Total = basePrice + modulePriceSar × (catCount − 1). Null = single-cat only.
+  modulePriceSar Decimal? @db.Decimal(10, 2)
   currency      String   @default("SAR")
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
@@ -1344,6 +1360,10 @@ model PlanContent {
   quantity  Float
   unit      String // kg, pouch, pack, each
   unitAr    String?
+  /// True = this line ships once PER CAT in the household (food, litter);
+  /// false = shared per household (wipes, calming, supplement course). Drives
+  /// multi-cat module contents and pricing (MRC-FIN-002 §5).
+  perCat    Boolean @default(true)
   /// When set, this box line is CHOOSABLE: the member picks any subscribable
   /// product of this type (brand + flavor) in the box builder, and `productId`
   /// is the recommended default. Null = fixed line (no choice offered).

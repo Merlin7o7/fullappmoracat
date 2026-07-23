@@ -4,10 +4,12 @@
 //  Product Introduction — "what Moracat actually is", shown right after the
 //  Cat ID is issued and BEFORE the plan questionnaire.
 //
-//  Reframes the product: Moracat is first a PREMIUM MONTHLY SUBSCRIPTION for a
+//  Reframes the product: Moracat is first a MONTHLY MEMBERSHIP BOX for a
 //  cat's everyday essentials; the Cat ID is one valuable benefit included with
-//  it — never the product itself. Messaging hierarchy (owner-set):
-//    1) Premium monthly essentials, delivered.
+//  it — never the product itself. ("Premium" is retired from generic copy —
+//  it now names nothing; the tiers are Kitten/Essentials/Complete/Signature,
+//  MRC-FIN-002.) Messaging hierarchy (owner-set):
+//    1) Monthly essentials, delivered.
 //    2) Personalized to your cat's needs.
 //    3) Free physical + digital Cat ID included.
 //    4) Member rates at partner vets & pet stores.

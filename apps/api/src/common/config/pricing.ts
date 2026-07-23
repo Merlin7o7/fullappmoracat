@@ -45,3 +45,39 @@ export const MIN_TERM_MONTHS: number = (() => {
  * default (pre-selected at checkout); 1 is the low-commitment entry point. */
 export const TERM_OPTIONS = [1, 3, 6, 12] as const;
 export type TermMonths = (typeof TERM_OPTIONS)[number];
+
+/**
+ * Prepaid-term discounts (MRC-FIN-002 §6). Deliberately shallow: at food-heavy
+ * contribution margins, the market-standard −15/−25% would make long terms
+ * lose money post-VAT — commitment is rewarded with gated gifts instead
+ * (BarkBox pattern), and the ladder deepens after the Phase-2 COGS work.
+ * Deterministic from termMonths so every surface (checkout, serializer,
+ * invoice) derives the same number and nothing needs to be stored.
+ */
+export const TERM_DISCOUNTS: Record<TermMonths, number> = { 1: 0, 3: 0, 6: 0.05, 12: 0.08 };
+
+/** Discount fraction for a term; unknown terms get 0 (defensive). */
+export function termDiscount(termMonths: number): number {
+  return TERM_DISCOUNTS[termMonths as TermMonths] ?? 0;
+}
+
+/** The exact upfront total for a term: monthly × months × (1 − discount), rounded. */
+export function termTotal(monthlyPrice: number, termMonths: number): number {
+  return Math.round(monthlyPrice * termMonths * (1 - termDiscount(termMonths)) * 100) / 100;
+}
+
+/** Maximum cats per household subscription (MRC-FIN-002 §5). */
+export const MAX_CATS_PER_SUBSCRIPTION = 6;
+
+/**
+ * Monthly price for a household: base + module × (extra cats). Plans without a
+ * module price are single-cat only (callers must reject catCount > 1).
+ */
+export function householdMonthlyPrice(
+  basePrice: number,
+  modulePrice: number | null,
+  catCount: number
+): number {
+  const extras = Math.max(0, catCount - 1);
+  return Math.round((basePrice + (modulePrice ?? 0) * extras) * 100) / 100;
+}

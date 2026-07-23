@@ -21,7 +21,10 @@ import { localizeName } from "./translit"; // relative so the unit tests resolve
 
 /* ── Contracts ─────────────────────────────────────────────────────────────── */
 
-export type PlanTier = "STARTER" | "STANDARD" | "PREMIUM";
+/** Tier enums → display names (MRC-FIN-002): KITTEN "Kitten/قطتي الصغيرة" ·
+ *  STARTER "Essentials/الأساسيات" · STANDARD "Complete/العناية الكاملة" ·
+ *  PREMIUM "Signature/التوقيع". */
+export type PlanTier = "KITTEN" | "STARTER" | "STANDARD" | "PREMIUM";
 
 /** GET /plans response shape (shared by subscribe + checkout). */
 export interface ApiPlan {
@@ -29,9 +32,28 @@ export interface ApiPlan {
   tier: PlanTier;
   nameEn: string;
   nameAr: string;
-  price: number; // monthly price (SAR); customer pays price × termMonths upfront
+  price: number; // monthly price (SAR), first cat included
+  /** SAR / month for each ADDITIONAL cat in the household (MRC-FIN-002 §5);
+   *  null = single-cat plan. */
+  modulePriceSar?: number | null;
+  maxCats?: number;
+  /** The MARKET benchmark basket (five-store sweep) — the only honest basis
+   *  for a savings claim (R006). */
+  marketValue?: number | null;
+  /** null when there is NO genuine saving (Essentials/Kitten) — those tiers
+   *  are framed "market price, delivered", never with a وفر/savings claim. */
+  marketSavings?: number | null;
+  marketSavingsPct?: number | null;
   minTermMonths?: number;
-  contents: { label: string; quantity: number; unit: string }[];
+  contents: {
+    label: string;
+    labelAr?: string | null;
+    quantity: number;
+    unit: string;
+    unitAr?: string | null;
+    /** Ships once per cat (household modules) vs once per household. */
+    perCat?: boolean;
+  }[];
 }
 
 /** The cat fields the engine reads — PortalCat satisfies this structurally. */
@@ -140,6 +162,7 @@ export function recommendPlan(
   let anySenior = false;
   let anyHealth = false;
   let dailyCaloriesTotal = 0;
+  let maxDailyCalories = 0; // the hungriest cat sets the shared household tier
   const totals = {
     dryFoodKgPerMonth: 0,
     wetPouchesPerMonth: 0,
@@ -156,6 +179,7 @@ export function recommendPlan(
     totals.litterKgPerMonth += rec.litterKgPerMonth;
     totals.treatsPacksPerMonth += rec.treatsPacksPerMonth;
     dailyCaloriesTotal += rec.dailyCalories;
+    maxDailyCalories = Math.max(maxDailyCalories, rec.dailyCalories);
     confidence = Math.min(confidence, rec.confidence);
 
     if (rec.rationale.lifeStage === "SENIOR") anySenior = true;
@@ -191,15 +215,15 @@ export function recommendPlan(
       });
     } else if (rec.rationale.lifeStage === "SENIOR") {
       reasons.push({
-        ar: `${nameAr} كبير بالعمر — سعرات أهدأ وعناية إضافية ضمن الباقة المميّزة`,
-        en: `${nameEn} is a senior — gentler calories plus extra care under the Premium box`,
+        ar: `${nameAr} كبير بالعمر — سعرات أهدأ وعناية إضافية ضمن باقة التوقيع`,
+        en: `${nameEn} is a senior — gentler calories plus extra care under the Signature box`,
       });
     }
 
     if (input.hasHealthConditions) {
       reasons.push({
-        ar: `ملف ${nameAr} الصحي يستدعي الباقة المميّزة`,
-        en: `${nameEn}'s health record calls for the Premium box`,
+        ar: `ملف ${nameAr} الصحي يستدعي باقة التوقيع`,
+        en: `${nameEn}'s health record calls for the Signature box`,
       });
     }
   }
@@ -214,53 +238,85 @@ export function recommendPlan(
     en: `Monthly need: ${fmtEn(totals.dryFoodKgPerMonth)} kg dry food, ${fmtEn(totals.wetPouchesPerMonth)} wet pouches, ${fmtEn(totals.litterKgPerMonth)} kg litter`,
   });
 
-  // ── Tier mapping (3 official boxes: Starter / Standard / Premium) ─────────
-  // Sized to the cat, never upsold (R006). Multi-cat, senior, or health needs
-  // map to Premium (the fullest box); otherwise Starter if its food energy
-  // covers the monthly need, else Standard.
+  // ── Tier mapping (4 official boxes: Kitten / Essentials / Complete / Signature)
+  // Sized to the cat, never upsold (R006). The kitten rule comes FIRST
+  // (MRC-FIN-002 §4 — stage-aware, not a shrunken adult box). Senior or health
+  // needs map to Signature; otherwise Essentials if its food energy covers the
+  // hungriest cat's month, else Complete. A multi-cat household keeps the SAME
+  // tier — one subscription, each cat with their own module (§5) — never a
+  // forced upgrade to the top box.
+  const kittenAges = cats.map((c) => ageMonths(c.birthDate));
+  const kittenCount = kittenAges.filter((m) => m !== undefined && m < 9).length;
+  const allKittens = kittenCount === cats.length && cats.length > 0;
+
   let tier: PlanTier;
-  if (cats.length >= 2) {
-    tier = "PREMIUM";
+  if (allKittens) {
+    tier = "KITTEN";
     reasons.push({
-      ar: `عندكم ${fmtAr(cats.length)} قطط — الباقة المميّزة تغطي احتياجهم بصندوق واحد`,
-      en: `You have ${fmtEn(cats.length)} cats — the Premium box covers the household in one delivery`,
+      ar:
+        cats.length === 1
+          ? "عمره أقل من ٩ أشهر — باقة قطتي الصغيرة مصممة لمرحلته، وتنتقل لخطة البالغين لما يكبر"
+          : "كلهم أصغر من ٩ أشهر — باقة قطتي الصغيرة مصممة لمرحلتهم، وتنتقل لخطة البالغين لما يكبرون",
+      en:
+        cats.length === 1
+          ? "Under 9 months old — the Kitten box is built for this stage, and graduates to an adult plan as they grow"
+          : "All under 9 months old — the Kitten box is built for this stage, and graduates to an adult plan as they grow",
     });
   } else if (anySenior || anyHealth) {
     tier = "PREMIUM";
   } else {
-    const monthlyKcalNeed = dailyCaloriesTotal * DAYS_PER_MONTH;
-    const starter = plans.find((p) => p.tier === "STARTER");
-    // Fallback mirrors the Starter box (2 kg dry + 15 pouches).
-    const starterKcal = starter ? planMonthlyKcal(starter) : 2 * 1000 * DRY_FOOD_KCAL_PER_G + 15 * WET_POUCH_KCAL;
-    const fitsStarter = starterKcal >= monthlyKcalNeed;
-    tier = fitsStarter ? "STARTER" : "STANDARD";
+    const monthlyKcalNeed = maxDailyCalories * DAYS_PER_MONTH;
+    const essentials = plans.find((p) => p.tier === "STARTER");
+    // Fallback mirrors the Essentials box (2 kg dry + 15 pouches).
+    const essentialsKcal = essentials
+      ? planMonthlyKcal(essentials)
+      : 2 * 1000 * DRY_FOOD_KCAL_PER_G + 15 * WET_POUCH_KCAL;
+    const fitsEssentials = essentialsKcal >= monthlyKcalNeed;
+    tier = fitsEssentials ? "STARTER" : "STANDARD";
     reasons.push(
-      fitsStarter
+      fitsEssentials
         ? {
-            ar: "كمية الباقة المبتدئة تغطي احتياجهم الشهري كاملاً — بلا زيادة ولا نقص",
-            en: "The Starter box fully covers the monthly need — nothing more, nothing less",
+            ar: "كمية باقة الأساسيات تغطي احتياجهم الشهري كاملاً — بلا زيادة ولا نقص",
+            en: "The Essentials box fully covers the monthly need — nothing more, nothing less",
           }
         : {
-            ar: "احتياجهم الشهري أكبر من الباقة المبتدئة، فالقياسية هي المقاس الصحيح",
-            en: "The monthly need outgrows the Starter box, so Standard is the right size",
+            ar: "احتياجهم الشهري أكبر من باقة الأساسيات، فالعناية الكاملة هي المقاس الصحيح",
+            en: "The monthly need outgrows the Essentials box, so Complete is the right size",
           }
     );
   }
 
+  // Household modules (MRC-FIN-002 §5): the tier stays the same; each extra cat
+  // adds their own module inside one shared box — said plainly, no upsell.
+  if (cats.length >= 2) {
+    reasons.push({
+      ar: `عندكم ${fmtAr(cats.length)} قطط — اشتراك عائلي واحد يغطيهم كلهم: صندوق مشترك ولكل قط حصته الخاصة`,
+      en: `You have ${fmtEn(cats.length)} cats — one household subscription covers them all: a shared box with each cat's own share`,
+    });
+    if (kittenCount > 0 && !allKittens) {
+      reasons.push({
+        ar: "وفيهم قط صغير — حصته تجي بمنتجات الصغار المناسبة لعمره",
+        en: "One of them is a kitten — their share arrives as stage-right kitten products",
+      });
+    }
+  }
+
   // ── The headline: a personal "why this one" category (conversion + clarity) ──
   let headline: BilingualReason;
-  if (cats.length >= 2) {
-    headline = { ar: "الأنسب لبيت متعدد القطط", en: "Best for a multi-cat home" };
+  if (allKittens) {
+    headline = { ar: "عناية مرحلية لقطك الصغير", en: "Stage-aware kitten care" };
   } else if (anyHealth) {
     headline = { ar: "الأفضل للعناية الصحية", en: "Best for health & care" };
   } else if (anySenior) {
     headline = { ar: "عناية ألطف لقط كبير", en: "Gentle care for a senior cat" };
+  } else if (cats.length >= 2) {
+    headline = { ar: "الأنسب لبيت متعدد القطط", en: "Best for a multi-cat home" };
   } else if (tier === "PREMIUM") {
-    headline = { ar: "عناية فاخرة متكاملة", en: "Premium, complete care" };
+    headline = { ar: "التوقيع — طقس العناية الكامل", en: "Signature — the full care ritual" };
   } else if (tier === "STANDARD") {
-    headline = { ar: "تغذية متوازنة كل يوم", en: "Balanced everyday nutrition" };
+    headline = { ar: "شهر كامل فعلاً من العناية", en: "A true month of care" };
   } else {
-    headline = { ar: "أفضل قيمة — على مقاسه تماماً", en: "Best value — sized exactly to them" };
+    headline = { ar: "الضروريات — على مقاسه تماماً", en: "The necessities — sized exactly to them" };
   }
 
   return { tier, headline, reasons, confidence, totals };

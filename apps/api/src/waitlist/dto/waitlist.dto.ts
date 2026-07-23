@@ -1,9 +1,14 @@
 import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 import { SOURCE_CODE_MAX } from "@moraqat/core";
 
+// Current tiers (MRC-FIN-002) + legacy values kept so old client builds and
+// previously-stored interests remain valid (the column is a free String).
 const PLAN_INTERESTS = [
-  "ESSENTIAL",
+  "KITTEN",
+  "STARTER",
+  "STANDARD",
   "PREMIUM",
+  "ESSENTIAL",
   "COMPLETE_CARE",
   "MULTI_CAT",
   "unsure",

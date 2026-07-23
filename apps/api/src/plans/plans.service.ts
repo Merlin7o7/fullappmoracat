@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { ProductType } from "@moraqat/db";
 import { PrismaService } from "../prisma/prisma.service";
+import { MAX_CATS_PER_SUBSCRIPTION } from "../common/config/pricing";
 
 @Injectable()
 export class PlansService {
@@ -23,25 +24,32 @@ export class PlansService {
       nameAr: p.nameAr,
       descriptionEn: p.descriptionEn,
       descriptionAr: p.descriptionAr,
-      price: Number(p.basePrice), // monthly price
+      price: Number(p.basePrice), // monthly price, first cat included
+      // Each ADDITIONAL cat in the household (MRC-FIN-002 §5); null = single-cat.
+      modulePriceSar: p.modulePriceSar == null ? null : Number(p.modulePriceSar),
+      maxCats: p.modulePriceSar == null ? 1 : MAX_CATS_PER_SUBSCRIPTION,
       minTermMonths: p.minTermMonths,
       // cogs is an internal margin figure — never serialised to the public plans
       // endpoint. Exposing it lets anyone compute our per-box margin (R006).
       currency: p.currency,
-      // Honest, computed saving vs buying the same items à-la-carte from our own
-      // store. retailValue is derived at seed time from real shelf prices and
-      // gated by the box-economics invariants, so this can never become a
-      // marketing claim the catalogue does not support (R006/R041).
+      // Our own shelf value (in-app ledger, R041)…
       retailValue: p.retailValue == null ? null : Number(p.retailValue),
-      savings:
-        p.retailValue == null
+      // …and the MARKET benchmark basket — the honest, advertisable comparison
+      // (MRC-FIN-002 §7.5): verified five-store sweep prices, seeded per SKU
+      // and gated by the box-economics invariants, so a savings claim can never
+      // outrun what the market data supports (R006). Negative marketSavings is
+      // serialised as null — a necessity tier priced at/above market makes no
+      // claim rather than an inverted one.
+      marketValue: p.marketValue == null ? null : Number(p.marketValue),
+      marketSavings:
+        p.marketValue == null || Number(p.marketValue) <= Number(p.basePrice)
           ? null
-          : Math.round((Number(p.retailValue) - Number(p.basePrice)) * 100) / 100,
-      savingsPct:
-        p.retailValue == null || Number(p.retailValue) <= 0
+          : Math.round((Number(p.marketValue) - Number(p.basePrice)) * 100) / 100,
+      marketSavingsPct:
+        p.marketValue == null || Number(p.marketValue) <= Number(p.basePrice)
           ? null
           : Math.round(
-              ((Number(p.retailValue) - Number(p.basePrice)) / Number(p.retailValue)) * 100
+              ((Number(p.marketValue) - Number(p.basePrice)) / Number(p.marketValue)) * 100
             ),
       contents: p.contents.map((c) => ({
         id: c.id,
@@ -52,6 +60,8 @@ export class PlansService {
         quantity: c.quantity,
         unit: c.unit,
         unitAr: c.unitAr,
+        // Ships once per cat vs once per household (multi-cat modules).
+        perCat: c.perCat,
         // Whether this line can be customised (brand + flavor) in the box builder.
         selectable: !!c.selectableType,
       })),
