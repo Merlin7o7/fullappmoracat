@@ -9,6 +9,14 @@ import { dict, type Locale } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { CookieConsent } from "@/components/cookie-consent";
 import { type CalendarPref, CALENDAR_STORAGE_KEY, setCurrentCalendar } from "@/lib/datetime";
+import { installVetDemo } from "@/lib/vet-demo/install";
+import { VetDemoRibbon } from "@/components/vet-demo-ribbon";
+
+// Self-contained vet demo (NEXT_PUBLIC_VET_DEMO=1): patch fetch and seed a demo
+// session at MODULE scope — before AuthProvider's mount effect reads storage —
+// so the portal opens straight into a working clinic with no backend. A normal
+// build inlines this to a no-op and eliminates it.
+installVetDemo();
 
 type Dictionary = (typeof dict)[Locale];
 type LocaleCtx = {
@@ -110,6 +118,7 @@ export function Providers({
               <LocaleContext.Provider value={value}>
                 {children}
                 <CookieConsent />
+                <VetDemoRibbon />
               </LocaleContext.Provider>
             </ToastProvider>
           </AuthProvider>
