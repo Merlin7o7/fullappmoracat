@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Moracat Packaging Dossier — The Physical Membership (MRC-PKG-001)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4EFE4; --paper-2:#ECE4D3; --paper-3:#E4DAC4;
+  --ink:#17130E; --ink-soft:#3B332A; --ink-mute:#6C6153;
+  --brass:#A97C36; --brass-2:#8A6529; --brass-tint:#EBDDBE;
+  --pine:#1E4A43; --pine-2:#2C6B60; --pine-tint:#D8E4DF;
+  --amber:#D19A2E; --amber-tint:#F5E6C2;
+  --rust:#9E4326; --rust-tint:#EDD6CB;
+  --line:#D8CDB6; --line-soft:#E4DBC8;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:"Fraunces",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --maxread:70ch; --rail:300px;
+  --shadow:0 1px 0 rgba(23,19,14,.04), 0 18px 40px -28px rgba(23,19,14,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:17px; line-height:1.68; font-weight:400;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(169,124,54,.05), transparent 42%),
+    radial-gradient(circle at 88% 78%, rgba(30,74,67,.05), transparent 46%);
+  background-attachment:fixed;
+}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");}
+::selection{background:var(--amber-tint);color:var(--ink)}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:120;
+  background:linear-gradient(90deg,var(--brass),var(--amber));transition:width .12s linear}
+.wrap{display:grid;grid-template-columns:var(--rail) 1fr;min-height:100vh;position:relative;z-index:1}
+.rail{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+  border-right:1px solid var(--line);background:linear-gradient(180deg,#F6F1E7,#F0E9DA);
+  padding:30px 22px 40px;scrollbar-width:thin}
+.rail::-webkit-scrollbar{width:7px}.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.brandmark{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.seal{width:44px;height:44px;flex:0 0 44px}
+.brand-t{font-family:var(--serif);font-weight:600;font-size:20px;letter-spacing:.01em;line-height:1;color:var(--ink)}
+.brand-s{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass-2);margin-top:5px}
+.rail-file{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-mute);
+  border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin:20px 0 18px;background:rgba(255,255,255,.35)}
+.rail-file b{color:var(--pine-2)}
+.toc-label{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 10px}
+.toc{list-style:none;margin:0;padding:0}
+.toc li{margin:1px 0}
+.toc a{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:baseline;
+  text-decoration:none;color:var(--ink-soft);padding:6px 8px;border-radius:7px;
+  font-size:13.5px;line-height:1.3;transition:background .15s,color .15s;border:1px solid transparent}
+.toc a .n{font-family:var(--mono);font-size:11px;color:var(--brass-2);font-weight:500}
+.toc a:hover{background:rgba(169,124,54,.09);color:var(--ink)}
+.toc a.active{background:#fff;border-color:var(--line);color:var(--ink);box-shadow:0 1px 0 rgba(23,19,14,.03)}
+.toc a.active .n{color:var(--pine)}
+.toc .grp{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-mute);padding:14px 8px 5px;border-top:1px solid var(--line-soft);margin-top:8px}
+.rail-foot{margin-top:26px;font-size:11px;color:var(--ink-mute);line-height:1.5}
+.topbar{display:none;position:sticky;top:0;z-index:100;background:rgba(244,239,228,.92);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 16px;
+  align-items:center;justify-content:space-between}
+.topbar .brand-t{font-size:17px}
+.menu-btn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:8px;
+  width:42px;height:42px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.menu-btn svg{width:20px;height:20px}
+.scrim{display:none;position:fixed;inset:0;background:rgba(23,19,14,.5);z-index:99}
+.main{min-width:0;padding:0 clamp(20px,5vw,84px)}
+.doc{max-width:960px;margin:0 auto;padding-bottom:120px}
+.cover{padding:clamp(56px,10vh,120px) 0 64px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass-2);margin:0 0 22px;display:flex;gap:12px;align-items:center}
+.eyebrow::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--brass),transparent)}
+h1.cover-t{font-family:var(--serif);font-weight:600;font-size:clamp(40px,7vw,78px);line-height:.98;
+  letter-spacing:-.02em;margin:0 0 8px;color:var(--ink);font-optical-sizing:auto}
+h1.cover-t em{font-style:italic;font-weight:500;color:var(--pine)}
+.cover-sub{font-family:var(--serif);font-style:italic;font-weight:400;font-size:clamp(19px,2.6vw,27px);color:var(--ink-soft);margin:14px 0 0;max-width:34ch;line-height:1.3}
+.cover-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:36px}
+.chipmeta{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-soft);border:1px solid var(--line);border-radius:100px;padding:8px 14px;background:rgba(255,255,255,.4)}
+.cover-lede{font-size:clamp(18px,2.2vw,21px);line-height:1.6;color:var(--ink-soft);max-width:62ch;margin:40px 0 0}
+.cover-lede strong{color:var(--ink);font-weight:600}
+.section{padding:76px 0 8px;scroll-margin-top:24px}
+.sec-head{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start;margin-bottom:8px}
+.sec-num{font-family:var(--serif);font-weight:600;font-size:clamp(40px,6vw,68px);line-height:.9;
+  color:transparent;-webkit-text-stroke:1.4px var(--brass);letter-spacing:-.02em;padding-top:4px}
+.sec-eye{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--pine-2);margin:2px 0 8px}
+h2.sec-t{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4.2vw,44px);line-height:1.04;
+  letter-spacing:-.015em;margin:0;color:var(--ink)}
+.sec-lede{font-size:clamp(17px,2vw,20px);line-height:1.58;color:var(--ink-soft);max-width:var(--maxread);margin:18px 0 0}
+.sec-lede strong{color:var(--ink);font-weight:600}
+.prose{max-width:var(--maxread)}
+.prose p{margin:18px 0}
+.prose h3{font-family:var(--serif);font-weight:600;font-size:23px;letter-spacing:-.01em;margin:40px 0 6px;color:var(--ink)}
+.prose h4{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass-2);margin:30px 0 4px}
+.prose strong{font-weight:600;color:var(--ink)}
+.prose em{font-style:italic}
+.prose ul,.prose ol{margin:16px 0;padding-left:24px}
+.prose li{margin:7px 0}
+.callout{border:1px solid var(--line);border-left:4px solid var(--pine);border-radius:10px;
+  background:rgba(255,255,255,.5);padding:18px 22px;margin:26px 0;max-width:var(--maxread)}
+.callout.brass{border-left-color:var(--brass)}
+.callout.rust{border-left-color:var(--rust)}
+.callout .co-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--pine-2);margin:0 0 8px}
+.callout.brass .co-label{color:var(--brass-2)}
+.callout.rust .co-label{color:var(--rust)}
+.callout p{margin:8px 0}
+.rule-tag{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+  color:var(--pine-2);background:var(--pine-tint);border-radius:5px;padding:1px 7px;margin:0 2px;white-space:nowrap}
+.tbl-wrap{overflow-x:auto;margin:26px 0;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.55);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px;line-height:1.5}
+thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--brass-2);text-align:left;padding:12px 14px;border-bottom:1.5px solid var(--line);background:rgba(235,221,190,.35);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;color:var(--ink-soft)}
+tbody tr:last-child td{border-bottom:none}
+tbody td b,tbody td strong{color:var(--ink);font-weight:600}
+td.num{font-family:var(--mono);font-size:13px;white-space:nowrap}
+tr.verdict td{background:var(--pine-tint);color:var(--ink);font-weight:500}
+.figure{margin:30px 0;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,#FBF8F1,#F3EDDF);
+  padding:26px 22px 16px;box-shadow:var(--shadow)}
+.figure svg{width:100%;height:auto;display:block}
+.figcap{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-mute);margin:14px 4px 2px;text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:26px 0}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:26px 0}
+.card{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.5);padding:18px 20px}
+.card h5{font-family:var(--serif);font-weight:600;font-size:17px;margin:0 0 6px;color:var(--ink)}
+.card .k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass-2);margin:0 0 8px}
+.card p{font-size:14.5px;line-height:1.55;margin:6px 0;color:var(--ink-soft)}
+.steps{counter-reset:step;list-style:none;margin:26px 0;padding:0;max-width:var(--maxread)}
+.steps>li{counter-increment:step;position:relative;padding:0 0 26px 58px;border-left:1px solid var(--line);margin-left:20px}
+.steps>li:last-child{border-left-color:transparent;padding-bottom:4px}
+.steps>li::before{content:counter(step,decimal-leading-zero);position:absolute;left:-21px;top:-2px;
+  width:42px;height:42px;border-radius:50%;background:#fff;border:1.5px solid var(--brass);
+  display:grid;place-items:center;font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--brass-2)}
+.steps h4{font-family:var(--serif);font-size:18.5px;font-weight:600;margin:2px 0 4px;color:var(--ink)}
+.steps .t{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--pine-2)}
+.steps p{margin:6px 0;font-size:15.5px;color:var(--ink-soft)}
+.ar{font-size:1.06em}
+.footer{border-top:1px solid var(--line);margin-top:90px;padding:34px 0 20px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute)}
+@media (max-width:980px){
+  .wrap{grid-template-columns:1fr}
+  .rail{position:fixed;left:0;top:0;bottom:0;width:min(84vw,330px);z-index:110;transform:translateX(-102%);transition:transform .25s ease;box-shadow:0 0 60px rgba(23,19,14,.25)}
+  .rail.open{transform:none}
+  .topbar{display:flex}
+  .scrim.show{display:block}
+  .grid2,.grid3{grid-template-columns:1fr}
+}
+@media print{
+  .rail,.topbar,#progress{display:none}
+  .wrap{display:block}
+  body{background:#fff}
+  .section{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<div class="topbar">
+  <span class="brand-t">Moracat · MRC-PKG-001</span>
+  <button class="menu-btn" id="menuBtn" aria-label="Open contents">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+</div>
+<div class="scrim" id="scrim"></div>
+
+<div class="wrap">
+
+<!-- ══════════ RAIL ══════════ -->
+<aside class="rail" id="rail">
+  <div class="brandmark">
+    <svg class="seal" viewBox="0 0 44 44" aria-hidden="true">
+      <circle cx="22" cy="22" r="20.5" fill="none" stroke="#1E4A43" stroke-width="1.6"/>
+      <circle cx="22" cy="22" r="16.5" fill="none" stroke="#A97C36" stroke-width=".9" stroke-dasharray="2.5 3"/>
+      <path d="M14 27c0-6 3.4-11 8-11s8 5 8 11" fill="none" stroke="#1E4A43" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M16.5 17.5 15 13.5l4 1.8M27.5 17.5l1.5-4-4 1.8" fill="none" stroke="#1E4A43" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <div class="brand-t">Moracat</div>
+      <div class="brand-s">Packaging Dossier</div>
+    </div>
+  </div>
+  <div class="rail-file">FILE <b>MRC-PKG-001</b> · REV A<br>PHYSICAL EXPERIENCE STRATEGY<br>CLASSIFICATION: INTERNAL</div>
+  <p class="toc-label">Contents</p>
+  <ul class="toc" id="toc">
+    <li><a href="#s00"><span class="n">00</span>Executive summary</a></li>
+    <li class="grp">Research</li>
+    <li><a href="#s01"><span class="n">01</span>Benchmarking the masters</a></li>
+    <li><a href="#s02"><span class="n">02</span>The Moracat frame</a></li>
+    <li class="grp">The system</li>
+    <li><a href="#s03"><span class="n">03</span>Packaging architecture</a></li>
+    <li><a href="#s04"><span class="n">04</span>Inserts &amp; protection</a></li>
+    <li><a href="#s05"><span class="n">05</span>The opening sequence</a></li>
+    <li><a href="#s06"><span class="n">06</span>Premium finish spec</a></li>
+    <li><a href="#s07"><span class="n">07</span>What's inside, per tier</a></li>
+    <li><a href="#s08"><span class="n">08</span>Design language</a></li>
+    <li><a href="#s09"><span class="n">09</span>Sustainability</a></li>
+    <li class="grp">Making it real</li>
+    <li><a href="#s10"><span class="n">10</span>Manufacturing &amp; suppliers</a></li>
+    <li><a href="#s11"><span class="n">11</span>Financial analysis</a></li>
+    <li><a href="#s12"><span class="n">12</span>Prototype roadmap</a></li>
+    <li><a href="#s13"><span class="n">13</span>Timeline</a></li>
+    <li><a href="#s14"><span class="n">14</span>Final recommendation</a></li>
+    <li><a href="#s15"><span class="n">15</span>Authority review</a></li>
+  </ul>
+  <p class="rail-foot">Companion to MRC-UX-001 (Membership Dossier) and <code>design/DESIGN-AUTHORITY.md</code>. The authority wins every conflict.</p>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<main class="main">
+<div class="doc">
+
+<!-- ─────────── COVER ─────────── -->
+<header class="cover">
+  <p class="eyebrow">MRC-PKG-001 · Physical Experience Strategy · 2026-07</p>
+  <h1 class="cover-t">The box is the <em>membership card</em> you can hold.</h1>
+  <p class="cover-sub">A complete packaging system for Moracat — from courier truck to the cat sleeping in the empty box.</p>
+  <div class="cover-meta">
+    <span class="chipmeta">Structural engineering</span>
+    <span class="chipmeta">Unboxing choreography</span>
+    <span class="chipmeta">Supplier matrix · KSA / GCC / CN / TR</span>
+    <span class="chipmeta">Unit economics · SAR</span>
+    <span class="chipmeta">Arabic-first · RTL</span>
+  </div>
+  <p class="cover-lede">
+    Moracat's revenue engine is a monthly care plan; its moat is a membership identity.
+    The shipment is the <strong>only moment the membership becomes physical</strong> — the one time a
+    month Moracat is standing in the member's hallway. This dossier designs that moment as a system:
+    a shipping structure honest enough to carry twelve kilograms of litter and food across the Kingdom,
+    a presentation layer worthy of the Cat ID ceremony, and an economic model that survives the
+    <em>9 SAR average packaging budget</em> the business already runs on
+    (<code>packages/db/prisma/box-cost-model.ts</code>). Everything here obeys one reframe:
+    <strong>the cat is the hero — and the cat, famously, loves the box.</strong>
+  </p>
+</header>
+
+<!-- ─────────── 00 EXECUTIVE SUMMARY ─────────── -->
+<section class="section" id="s00">
+  <div class="sec-head">
+    <div class="sec-num">00</div>
+    <div>
+      <p class="sec-eye">Read this if you read nothing else</p>
+      <h2 class="sec-t">Executive summary</h2>
+    </div>
+  </div>
+  <div class="prose">
+    <p><strong>The verdict in one paragraph.</strong> Moracat should not ship a luxury rigid box every month —
+    it should ship a <em>beautifully engineered kraft system</em> every month and reserve rigid luxury for the
+    two moments that deserve it: the first shipment (the Cat ID ceremony arrives in a keepsake
+    <em>Welcome Folio</em>) and Tier 4's quarterly keepsake (<em>the Den Box</em>). A 12&nbsp;kg monthly box
+    containing a 10&nbsp;L litter bag physically cannot be a magnetic-closure rigid box, and pretending
+    otherwise would cost 25–40 SAR per shipment and read as waste, not luxury. Apple's own lesson applies:
+    premium is <em>precision, pacing and restraint</em> — not expensive board.</p>
+    <ul>
+      <li><strong>Architecture — "Stage over Cellar":</strong> one double-wall kraft shipper printed in
+      one colour (the brand's deep green), internally split into a heavy <em>cellar</em> (litter, dry food,
+      cans) and a light <em>stage tray</em> on top carrying tissue, the monthly card, and the discovery items.
+      The lid opens onto ceremony; the weight hides below. Packaging cost 7.6–17&nbsp;SAR by tier at 5k/mo —
+      inside the current model's envelope.</li>
+      <li><strong>The box's second life:</strong> every shipper carries a die-cut punch-out door and a printed
+      interior so the empty box converts into a cat den. Sustainability, social sharing and the
+      "cat is the hero" principle in one move — no extra material, ~0.15 SAR of die-cutting.</li>
+      <li><strong>Four tiers, one system:</strong> the same shipper family in three sizes serves Essentials
+      through Full Membership; tiers differ by <em>contents, insert count and finishing accents</em>, not by
+      structure. Kitten boxes use a lighter single-wall mailer. Multi-cat ships per-cat kraft bands, each
+      printed with the cat's name.</li>
+      <li><strong>Suppliers:</strong> prototype locally (Printhub Riyadh / MMC Jeddah), scale corrugate with
+      UCIC (Jeddah — 265k-tonne capacity), source the two rigid keepsake pieces factory-direct from
+      China or Turkey (MOQ 500–1,000). Full matrix in §10.</li>
+      <li><strong>Economics:</strong> at 5,000 boxes/month the blended packaging cost is ≈ 9.8 SAR — within
+      ±1 SAR of the modelled 9 SAR — while the unboxing experience moves from "e-commerce carton" to
+      benchmark. Verified against <code>computeBoxEconomics</code> invariants in §11.</li>
+    </ul>
+    <div class="callout">
+      <p class="co-label">The one-sentence brief</p>
+      <p>Design the shipment so the member feels <em>"my cat's care has arrived"</em> — never
+      <em>"my order has shipped"</em> — and so the cat ends the day asleep inside the packaging.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 01 BENCHMARKING ─────────── -->
+<section class="section" id="s01">
+  <div class="sec-head">
+    <div class="sec-num">01</div>
+    <div>
+      <p class="sec-eye">Phase 1 · Research</p>
+      <h2 class="sec-t">Benchmarking the masters</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Fifteen reference brands, studied for materials, structure, psychology, tactility,
+  opening sequence, sustainability, manufacturability and delight. For each: what makes it memorable,
+  what Moracat borrows, and what it must <strong>refuse</strong> to copy.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Brand</th><th>What makes it memorable</th><th>Borrow</th><th>Do NOT copy</th></tr></thead>
+      <tbody>
+        <tr><td><b>Apple</b></td>
+          <td>Air-friction lid drop (a lid engineered to descend in ~3 seconds); zero-slack moulded-pulp beds; the product faces you first; films with pull-tabs; opening is paced like film editing.</td>
+          <td><b>Pacing as engineering.</b> Friction-fit stage tray, tab-pulls, product-first reveal, moulded-pulp precision for the Cat ID folio.</td>
+          <td>Clinical white minimalism. Moracat is warm paper, not laboratory. Plastic films are out entirely.</td></tr>
+        <tr><td><b>Aesop</b></td>
+          <td>Utilitarian luxury: pharmacy kraft, cotton drawstring bags, copy that reads like literature. The bag is kept and reused.</td>
+          <td>Material honesty (kraft worn proudly); copy-as-interface on the pack itself; a keepable cotton element at Tier 4.</td>
+          <td>Apothecary severity and monochrome brown — too austere for a brand whose emotional core is warmth.</td></tr>
+        <tr><td><b>Hermès</b></td>
+          <td>One box colour owned outright (orange + brown ribbon since 1942); boxes hoarded and displayed for decades; understated typography.</td>
+          <td><b>Colour equity discipline:</b> Moracat deep green <code>#045b46</code> becomes "the green box" of Saudi cat owners. Keepsake rigidity at gift moments only.</td>
+          <td>Ribbon on every shipment; gold; logo repetition. Hermès earns scarcity — a monthly subscription must earn <em>ritual</em> instead.</td></tr>
+        <tr><td><b>Tiffany</b></td>
+          <td>A patented colour + white satin ribbon = the packaging <em>is</em> the proposal. Strict rule: the box leaves the store only with product inside.</td>
+          <td>The rule-bound reverence: the Welcome Folio is only ever issued with a Cat ID — never sold, never empty. Membership artefacts have protocol.</td>
+          <td>Precious-metal cues, satin, jewellery pomposity. A litter shipment wearing satin is comedy.</td></tr>
+        <tr><td><b>BarkBox</b></td>
+          <td>Monthly narrative themes; the box designed to be destroyed by the dog; genuinely funny copy; ~$5 landed packaging cost discipline.</td>
+          <td>Monthly cadence with a light narrative thread (a seasonal card, not a themed circus); packaging that expects animal contact.</td>
+          <td>Loud cartoon maximalism and gag themes — the authority forbids the cutesy toy register (<span class="rule-tag">Brand personality</span>).</td></tr>
+        <tr><td><b>Meowbox</b></td>
+          <td>The cat's name on the card; social wall of cats-in-boxes; understands the box is the cat's toy.</td>
+          <td><b>Name-first personalisation</b> (<span class="rule-tag">R001</span> <span class="rule-tag">R082</span>) and embracing cat-in-box photography as the brand's organic growth loop.</td>
+          <td>Kawaii visual language, paw-print wallpaper, saturated purples. Charm must come from restraint, not decoration.</td></tr>
+        <tr><td><b>Litter-Robot</b></td>
+          <td>Heavy-goods engineering done with dignity: double-wall, moulded cradles, carry cut-outs, setup literature that respects the buyer.</td>
+          <td>Structural honesty for weight: hand-holds, dense-bottom loading, torn-edge-free die cuts. The 10&nbsp;L litter bag is our Litter-Robot problem.</td>
+          <td>Appliance blandness — engineering without warmth.</td></tr>
+        <tr><td><b>Notion merch</b></td>
+          <td>Editorial monochrome wit; typography carries everything; merch feels like an in-joke for members.</td>
+          <td>Type-led surfaces; the interior lid as a one-line editorial moment. Membership in-jokes (the Cat ID number as a design element).</td>
+          <td>Pure black-and-white — Moracat's palette is warm and must stay so.</td></tr>
+        <tr><td><b>Glossier</b></td>
+          <td>The pink bubble pouch became a social icon; sticker sheets let members personalise; unboxing designed for camera.</td>
+          <td><b>One ownable reusable component</b> (our punch-out cat door) + sticker sheet at Tier 3+ — the brand already has a "flat sticker" illustration system to draw from.</td>
+          <td>The plastic pouch itself (single-use plastic, off-authority) and influencer-first design that photographs better than it functions.</td></tr>
+        <tr><td><b>Away</b></td>
+          <td>Rigid drawer presentation; instructional elegance; unboxing steps QC'd like product features.</td>
+          <td>Treating the unboxing sequence as a spec'd, testable product (§05 is written as a test script).</td>
+          <td>Drawer-box-for-everything; their product is 2&nbsp;kg and arrives once. Ours is 12&nbsp;kg and arrives monthly.</td></tr>
+        <tr><td><b>Ritual</b></td>
+          <td>Radical transparency — sourcing map printed on pack; one ownable yellow; the bottle on a pedestal insert.</td>
+          <td>Provenance printing for food trust (<span class="rule-tag">R006</span>): "filled in Riyadh · batch · best-before" stated plainly. Pedestal presentation for the Cat ID folio.</td>
+          <td>Science-clinical tone. Moracat explains like a good vet, not a lab.</td></tr>
+        <tr><td><b>Athletic Greens (AG1)</b></td>
+          <td>The forever canister + monthly refill pouch: waste down, ritual up, counter presence permanent.</td>
+          <td><b>The refill pattern:</b> a keepable treat tin and litter scoop arrive once (Tier 3/4 welcome), refills arrive monthly. Permanent shelf presence in the member's home.</td>
+          <td>Supplement-culture urgency and metallic gold-on-green. </td></tr>
+        <tr><td><b>Monocle</b></td>
+          <td>Print quality as identity; kraft envelope + one sticker feels more premium than gloss.</td>
+          <td>The monthly card treated as a small piece of print journalism — real paper, real editorial standards (§06 stock spec).</td>
+          <td>Anglo-clubby aesthetic codes; Moracat's references are Saudi and Japanese, not Marylebone.</td></tr>
+        <tr><td><b>Japanese packaging craft</b> (tsutsumi · Muji)</td>
+          <td>Wrapping as respect for the receiver; asymmetric folds; the unwrapping <em>is</em> the gift; Muji's "this is enough" restraint.</td>
+          <td><b>Fold-wrap ritual</b> for Tier 3+ discovery items (kraft band + single fold, no adhesive); the philosophy that one perfect fold beats three finishes.</td>
+          <td>Literal washi/origami motifs — borrowing the philosophy, not the costume (§08).</td></tr>
+        <tr><td><b>Premium Korean unboxing</b></td>
+          <td>Choreographed layer order; message cards as collectibles; foam-free precision; scent as a signature cue.</td>
+          <td>Layer choreography discipline (every layer answers "what do I see, touch, read next?"). Collectible monthly card numbering.</td>
+          <td><b>Applied fragrance.</b> Cats' olfactory sense is 40× ours and the box carries food. Scent is a hard NO — see §06 verdict.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout brass">
+    <p class="co-label">Synthesis — the five laws the benchmarks teach</p>
+    <p><b>1.</b> Luxury is pacing, not board grade. <b>2.</b> Own one colour and never dilute it.
+    <b>3.</b> Design the keepable component deliberately; let everything else be honestly disposable.
+    <b>4.</b> Heavy goods demand structural honesty — dignity comes from engineering, not decoration.
+    <b>5.</b> The best subscription packaging creates a <em>ritual</em> the member would miss.</p>
+  </div>
+</section>
+
+<!-- ─────────── 02 THE MORACAT FRAME ─────────── -->
+<section class="section" id="s02">
+  <div class="sec-head">
+    <div class="sec-num">02</div>
+    <div>
+      <p class="sec-eye">Phase 2 · Understanding the business</p>
+      <h2 class="sec-t">The Moracat frame</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Packaging decisions inherit the constitution: <strong>belonging is the product, savings are
+  proof, the cat is the hero</strong>. And they inherit the ledger: a cost model already committed to code.</p>
+
+  <div class="prose">
+    <h3>What the design authority dictates physically</h3>
+    <ul>
+      <li><span class="rule-tag">R001</span> <b>Recognition first</b> → the member's cat is named on the monthly card, never "Dear customer."</li>
+      <li><span class="rule-tag">R009</span> <b>The cat is the hero</b> → the box is designed for the cat's use after unboxing; photography features cats in boxes, not boxes alone.</li>
+      <li><span class="rule-tag">Amendment 2026-07-10</span> → the box is never sold <em>as a box</em>: it is "your cat's care, handled." Copy on pack must say care, not commerce.</li>
+      <li><span class="rule-tag">R031</span> <b>Ceremony on issue</b> → the first shipment carries the Cat ID reveal and is over-invested (the Welcome Folio, §03).</li>
+      <li><span class="rule-tag">R006</span> <b>Honest by default</b> → no fake wax seals, no "limited edition" theatre, provenance printed plainly.</li>
+      <li><span class="rule-tag">R101–R110</span> <b>Arabic-first</b> → Arabic reads first on every surface; the box opens correctly for an RTL reader (§08).</li>
+      <li><b>Premium is subtraction</b> → one colour, one seal, one message per surface. No gold (<span class="rule-tag">Brand personality</span>).</li>
+    </ul>
+
+    <h3>The subscription hierarchy this system serves</h3>
+    <p>The packaging is designed against the four-tier care hierarchy (with the three live plans —
+    Starter 249 / Standard 349 / Premium 529 SAR — mapping onto it during migration). Per the
+    2026-07-10 amendment, members never pick from a tier table; the plan is computed from the cat's
+    profile. The tiers below are therefore <em>operational groupings for packaging</em>, not marketing SKUs.</p>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Tier</th><th>Contents philosophy</th><th>Approx. weight</th><th>Packaging posture</th><th>Working price*</th></tr></thead>
+      <tbody>
+        <tr><td><b>1 · Essentials</b></td><td>Necessities only: dry food, wet food, litter. No treats, no toys, no extras — and the packaging must not pretend otherwise.</td><td class="num">10–12 kg</td><td>Quietest execution: shipper + folded stage pad. Dignified, zero theatre.</td><td class="num">299 SAR</td></tr>
+        <tr><td><b>2 · Care</b></td><td>+ premium food options, hygiene, health essentials.</td><td class="num">11–13 kg</td><td>Full stage tray; hygiene grouped in the kraft "clean pouch."</td><td class="num">399 SAR</td></tr>
+        <tr><td><b>3 · Enrichment</b></td><td>+ treats, enrichment, grooming.</td><td class="num">12–14 kg</td><td>Stage tray + fold-wrapped discovery items + sticker sheet.</td><td class="num">529 SAR</td></tr>
+        <tr><td><b>4 · Full membership</b></td><td>+ toys, seasonal gifts, accessories, exclusives, partner gifts.</td><td class="num">12–15 kg</td><td>Stage tray + cotton-tape closure + quarterly Den Box keepsake.</td><td class="num">749 SAR</td></tr>
+        <tr><td><b>Kitten</b></td><td>Kitten food, training litter, starter guidance — lighter and cheaper by design.</td><td class="num">3–5 kg</td><td>Single-wall mailer, own smaller insert set; growth-chart card.</td><td class="num">199 SAR</td></tr>
+        <tr><td><b>Multi-cat</b></td><td>Any tier × N cats.</td><td class="num">to 20 kg cap</td><td>One shipper per ~15 kg; per-cat kraft bands, each printed with that cat's name.</td><td class="num">per plan</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout rust">
+    <p class="co-label">Pricing is provisional until it clears the invariants</p>
+    <p>The working prices above are packaging-design inputs, <b>not</b> approved prices. Before any goes live it
+    must clear <code>checkBoxInvariants</code>: ≥15% member saving vs à-la-carte, ≥25% contribution, and
+    survival of 15% VAT registration (<code>packages/core/src/pricing/box-economics.ts</code>). Two content
+    conflicts with the live catalog need product-team resolution: live Starter includes treats (Tier 1 forbids
+    them) and excludes litter (Tier 1 requires it). Use <code>minimumViablePrice()</code> when retuning.</p>
+  </div>
+
+  <div class="prose">
+    <h3>The hard physical facts</h3>
+    <ul>
+      <li>A 10&nbsp;L litter bag weighs ≈ 8&nbsp;kg and dominates every structural decision. The Standard box is ~12&nbsp;kg gross (noted in <code>box-cost-model.ts</code>).</li>
+      <li>The committed cost model: packaging 9 SAR · delivery 12 SAR · fulfilment 6 SAR per box, PSP 5%, shrink 2%. Delivery is flagged as the most sensitive input and needs a real 3PL quote for ~12&nbsp;kg.</li>
+      <li>Riyadh summer couriers reach 45&nbsp;°C+: no chocolate-adjacent coatings, no low-melt adhesives, wet food must sit away from sun-facing panels; vans are assumed unrefrigerated.</li>
+      <li>Prices are VAT-inclusive SAR; invoices break out 15% — the packaging cannot promise what the P&amp;L can't keep.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────── 03 ARCHITECTURE ─────────── -->
+<section class="section" id="s03">
+  <div class="sec-head">
+    <div class="sec-num">03</div>
+    <div>
+      <p class="sec-eye">Phase 3 · Structural design</p>
+      <h2 class="sec-t">Packaging architecture</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Not one box — an ecosystem of seven components, engineered around one honest fact:
+  <strong>every month we ship a small warehouse, and once we ship a ceremony.</strong></p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 340" role="img" aria-label="Moracat packaging ecosystem map">
+      <defs>
+        <style>
+          .bx{fill:#fff;stroke:#D8CDB6;rx:10}
+          .bt{font:600 14px "IBM Plex Sans",sans-serif;fill:#17130E}
+          .bs{font:11px "IBM Plex Mono",monospace;fill:#6C6153}
+          .cat{font:600 11px "IBM Plex Mono",monospace;fill:#2C6B60;letter-spacing:.1em}
+          .ln{stroke:#A97C36;stroke-width:1.2;fill:none;stroke-dasharray:3 4}
+        </style>
+      </defs>
+      <text x="20" y="28" class="cat">EVERY MONTH</text>
+      <rect x="20" y="42" width="200" height="76" class="bx" rx="10"/>
+      <text x="36" y="70" class="bt">M-Shipper (3 sizes)</text>
+      <text x="36" y="90" class="bs">double-wall kraft · 1C green</text>
+      <text x="36" y="106" class="bs">punch-out cat door</text>
+      <rect x="20" y="130" width="200" height="62" class="bx" rx="10"/>
+      <text x="36" y="156" class="bt">Stage tray / pad</text>
+      <text x="36" y="176" class="bs">E-flute · printed interior</text>
+      <rect x="20" y="204" width="200" height="62" class="bx" rx="10"/>
+      <text x="36" y="230" class="bt">Cellar divider set</text>
+      <text x="36" y="250" class="bs">B-flute cells · litter cradle</text>
+      <rect x="20" y="278" width="200" height="50" class="bx" rx="10"/>
+      <text x="36" y="300" class="bt">Consumable dressing</text>
+      <text x="36" y="318" class="bs">tissue · seal · tape · card</text>
+
+      <text x="340" y="28" class="cat">ONCE — FIRST BOX</text>
+      <rect x="340" y="42" width="220" height="90" class="bx" rx="10" style="stroke:#1E4A43;stroke-width:1.6"/>
+      <text x="356" y="72" class="bt">Welcome Folio</text>
+      <text x="356" y="92" class="bs">rigid folio · foil Cat ID no.</text>
+      <text x="356" y="108" class="bs">card + collar tag + pass QR</text>
+      <rect x="340" y="150" width="220" height="70" class="bx" rx="10"/>
+      <text x="356" y="178" class="bt">Kitten K-Mailer</text>
+      <text x="356" y="198" class="bs">single-wall · own inserts</text>
+      <rect x="340" y="236" width="220" height="70" class="bx" rx="10"/>
+      <text x="356" y="264" class="bt">Per-cat name bands</text>
+      <text x="356" y="284" class="bs">multi-cat households · kraft</text>
+
+      <text x="660" y="28" class="cat">QUARTERLY — TIER 4</text>
+      <rect x="660" y="42" width="220" height="90" class="bx" rx="10" style="stroke:#A97C36;stroke-width:1.6"/>
+      <text x="676" y="72" class="bt">The Den Box</text>
+      <text x="676" y="92" class="bs">rigid drawer · keepsake</text>
+      <text x="676" y="108" class="bs">seasonal gift + partner items</text>
+      <rect x="660" y="150" width="220" height="70" class="bx" rx="10"/>
+      <text x="676" y="178" class="bt">Forever pieces</text>
+      <text x="676" y="198" class="bs">treat tin · scoop · cotton bag</text>
+      <rect x="660" y="236" width="220" height="70" class="bx" rx="10"/>
+      <text x="676" y="264" class="bt">Gift wrap kit</text>
+      <text x="676" y="284" class="bs">referrals &amp; gifting (R-ceremony)</text>
+      <path class="ln" d="M220 80 H340"/>
+      <path class="ln" d="M560 87 H660"/>
+    </svg>
+    <p class="figcap">Fig 3.0 — The ecosystem: monthly kraft system · one-time ceremony pieces · quarterly keepsake.</p>
+  </div>
+
+  <div class="prose">
+    <h3>3.1 The shipping box — "M-Shipper"</h3>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Spec</th><th>M-1 (Kitten)</th><th>M-2 (Tiers 1–3)</th><th>M-3 (Tier 4 / heavy months)</th></tr></thead>
+      <tbody>
+        <tr><td><b>Internal dimensions</b></td><td class="num">350 × 260 × 140 mm</td><td class="num">450 × 330 × 200 mm</td><td class="num">500 × 360 × 220 mm</td></tr>
+        <tr><td><b>Style</b></td><td>FEFCO 0427 roll-end front-tuck mailer</td><td>FEFCO 0201 RSC, taped</td><td>FEFCO 0201 RSC, taped</td></tr>
+        <tr><td><b>Board</b></td><td>Single-wall B-flute, 125K/112T/125K kraft liners</td><td>Double-wall BC-flute, 175K/112T/112T/175K</td><td>Double-wall BC-flute, 200K/112T/112T/200K</td></tr>
+        <tr><td><b>Wall thickness</b></td><td class="num">~3 mm</td><td class="num">~6.5 mm</td><td class="num">~7 mm</td></tr>
+        <tr><td><b>Edge crush (ECT)</b></td><td class="num">≥ 5.5 kN/m</td><td class="num">≥ 9.5 kN/m</td><td class="num">≥ 10.5 kN/m</td></tr>
+        <tr><td><b>Payload rating</b></td><td class="num">≤ 6 kg</td><td class="num">≤ 16 kg</td><td class="num">≤ 20 kg</td></tr>
+        <tr><td><b>Box weight (empty)</b></td><td class="num">~260 g</td><td class="num">~640 g</td><td class="num">~780 g</td></tr>
+        <tr><td><b>Stacking</b></td><td class="num">6 high</td><td class="num">4 high loaded (BCT ≥ 320 kg fresh)</td><td class="num">4 high loaded</td></tr>
+        <tr><td><b>Carry</b></td><td>—</td><td colspan="2">Die-cut hand-holds on short panels, folded-flap reinforced (no raw edge on fingers)</td></tr>
+        <tr><td><b>Courier durability</b></td><td colspan="3">Survives ISTA-3A profile: 9 drops at 46–61 cm, compression, vibration; humidity-cycled for Jeddah coastal air (kraft liners, not white-top, for moisture tolerance)</td></tr>
+        <tr><td><b>Second life</b></td><td>—</td><td colspan="2">Perforated punch-out door (Ø140 mm) on one long panel + interior pattern print → converts to cat den</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>3.2 The inner presentation — every option compared</h3>
+    <p>The question "should there be a rigid box / magnetic closure / drawer?" is answered by weight,
+    frequency and honesty. The full comparison, scored 1–5 against Moracat's actual constraints:</p>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Option</th><th>Luxury feel</th><th>12 kg payload</th><th>Monthly cost</th><th>Sustainability</th><th>Flat-pack / storage</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><b>Full rigid box (set-up box)</b></td><td class="num">5</td><td class="num">1 — board delaminates under litter weight</td><td class="num">1 (25–40 SAR)</td><td class="num">2</td><td class="num">1 — ships assembled, 6× freight &amp; storage</td><td>Rejected for monthly. <b>Adopted for Welcome Folio + Den Box only.</b></td></tr>
+        <tr><td><b>Magnetic closure box</b></td><td class="num">5</td><td class="num">1</td><td class="num">1 (30–45 SAR)</td><td class="num">1 — magnets contaminate paper recycling</td><td class="num">2 (collapsible variants exist at cost)</td><td>Rejected — also a swallow hazard if a magnet detaches near a pet.</td></tr>
+        <tr><td><b>Drawer / slide box</b></td><td class="num">4</td><td class="num">1</td><td class="num">2</td><td class="num">3</td><td class="num">2</td><td>Rejected monthly; <b>chosen form for the quarterly Den Box</b> (the slide-open is a ceremony gesture).</td></tr>
+        <tr><td><b>Corrugated mailer (0427)</b></td><td class="num">3</td><td class="num">2 — hinge fails ≥ 8 kg repeated</td><td class="num">4 (4–7 SAR)</td><td class="num">5</td><td class="num">5</td><td>Rejected as the main box; <b>adopted for Kitten (≤ 5 kg)</b> where its one-piece elegance shines.</td></tr>
+        <tr><td><b>Lift-off lid corrugated (0330)</b></td><td class="num">4</td><td class="num">3</td><td class="num">3 (8–12 SAR)</td><td class="num">4</td><td class="num">3 — two pieces to stock</td><td>Strong runner-up. Loses on tape-free transit security for courier networks and on cost.</td></tr>
+        <tr><td><b>Folding presentation carton inside shipper</b></td><td class="num">4</td><td class="num">2 — duplicates mass</td><td class="num">2 — pays for two boxes</td><td class="num">2</td><td class="num">3</td><td>Rejected — "box in a box" reads as waste to exactly the customer we want (R006 honesty).</td></tr>
+        <tr class="verdict"><td><b>RSC + internal stage tray ("Stage over Cellar")</b></td><td class="num">4.5 — the reveal is choreographed, not bought</td><td class="num">5</td><td class="num">5 (7.6–12 SAR all-in)</td><td class="num">5 — mono-material kraft</td><td class="num">5 — all flat-pack</td><td><b>RECOMMENDED.</b> One structure serves T1–T4; luxury delivered by pacing, print and paper.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <p><strong>Why "Stage over Cellar" wins.</strong> It is the only option where all five constraints
+    agree: the double-wall RSC honestly carries the litter; the E-flute stage tray gives an Apple-grade
+    first reveal at one-tenth rigid cost; everything flat-packs (a rigid box program at 10k/mo would need
+    ~6× the warehouse cube); it is mono-material recyclable; and the lid-open moment can be paced —
+    tissue, card, discovery items — exactly like a luxury reveal, because the member's eye never meets
+    the litter bag first. Luxury here is <em>sequence</em>, and sequence is free.</p>
+  </div>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 430" role="img" aria-label="Cross-section of the Stage over Cellar box">
+      <defs><style>
+        .k{fill:#E8DCC3;stroke:#8A6529;stroke-width:2}
+        .k2{fill:#F5EDD9;stroke:#A97C36;stroke-width:1.5}
+        .lbl{font:600 13px "IBM Plex Sans",sans-serif;fill:#17130E}
+        .sub{font:11px "IBM Plex Mono",monospace;fill:#6C6153}
+        .dim{stroke:#2C6B60;stroke-width:1;fill:none}
+        .dimt{font:11px "IBM Plex Mono",monospace;fill:#2C6B60}
+        .item{fill:#fff;stroke:#3B332A;stroke-width:1.2;rx:6}
+      </style></defs>
+      <!-- outer box -->
+      <rect x="120" y="60" width="520" height="310" class="k" rx="4"/>
+      <!-- cellar items -->
+      <rect x="140" y="215" width="200" height="135" class="item" rx="8"/>
+      <text x="160" y="280" class="lbl">Litter 10 L</text><text x="160" y="298" class="sub">~8 kg · bag on edge</text>
+      <rect x="356" y="215" width="130" height="135" class="item" rx="8"/>
+      <text x="370" y="280" class="lbl">Dry 2 kg</text><text x="370" y="298" class="sub">gusset up</text>
+      <rect x="502" y="215" width="118" height="135" class="item" rx="8"/>
+      <text x="514" y="272" class="lbl">Wet food</text><text x="514" y="290" class="sub">cans/pouches</text><text x="514" y="306" class="sub">in B-flute cells</text>
+      <!-- stage tray -->
+      <rect x="134" y="118" width="492" height="82" class="k2" rx="6"/>
+      <rect x="150" y="134" width="180" height="50" class="item" rx="6"/>
+      <text x="162" y="156" class="lbl" style="font-size:12px">Monthly card</text><text x="162" y="172" class="sub">on tissue bed</text>
+      <rect x="346" y="134" width="130" height="50" class="item" rx="6"/>
+      <text x="356" y="156" class="lbl" style="font-size:12px">Discovery</text><text x="356" y="172" class="sub">fold-wrapped</text>
+      <rect x="492" y="134" width="118" height="50" class="item" rx="6"/>
+      <text x="502" y="156" class="lbl" style="font-size:12px">Treats/hygiene</text><text x="502" y="172" class="sub">by tier</text>
+      <!-- labels -->
+      <text x="660" y="150" class="lbl">THE STAGE</text>
+      <text x="660" y="168" class="sub">E-flute tray · printed interior</text>
+      <text x="660" y="184" class="sub">cotton ribbon lift-loops</text>
+      <text x="660" y="270" class="lbl">THE CELLAR</text>
+      <text x="660" y="288" class="sub">B-flute divider set</text>
+      <text x="660" y="304" class="sub">heavy goods · zero movement</text>
+      <!-- lid note -->
+      <path class="dim" d="M120 48 H640"/>
+      <text x="250" y="40" class="dimt">Lid interior printed: أهلاً بعودتك — "Welcome home."</text>
+      <!-- punch-out door -->
+      <circle cx="120" cy="290" r="34" fill="none" stroke="#9E4326" stroke-width="1.6" stroke-dasharray="4 4"/>
+      <text x="30" y="250" class="dimt" style="fill:#9E4326">punch-out</text>
+      <text x="30" y="266" class="dimt" style="fill:#9E4326">cat door Ø140</text>
+      <!-- dims -->
+      <path class="dim" d="M120 390 H640 M120 384 v12 M640 384 v12"/>
+      <text x="350" y="412" class="dimt">450 mm internal</text>
+      <path class="dim" d="M100 60 V370 M94 60 h12 M94 370 h12"/>
+      <text x="30" y="220" class="dimt">200 mm</text>
+    </svg>
+    <p class="figcap">Fig 3.1 — M-2 cross-section: stage tray (light, ceremonial) over cellar (heavy, silent). The litter is never the first thing seen.</p>
+  </div>
+
+  <div class="prose">
+    <h3>3.3 The ceremony pieces</h3>
+    <p><strong>The Welcome Folio (first box, every tier).</strong> A 2&nbsp;mm greyboard folio,
+    230 × 160 × 18&nbsp;mm, wrapped in uncoated deep-green paper, opening like a passport wallet:
+    left leaf holds the printed Cat ID card in a die-cut cradle and the collar tag on a cotton loop;
+    right leaf prints the cat's name, the human-readable ID number in brass foil, and a QR that adds the
+    wallet pass. This is Stage 4's physical body (<span class="rule-tag">R031</span>
+    <span class="rule-tag">R032</span> <span class="rule-tag">R034</span>) — the single object a member keeps
+    for years, and the only place monthly economics permit foil. Cost ≈ 11–14 SAR, paid once per member,
+    booked as acquisition cost, not monthly packaging.</p>
+    <p><strong>The Den Box (Tier 4, quarterly).</strong> A rigid drawer box, 280 × 200 × 90&nbsp;mm,
+    1.5&nbsp;mm board, kraft-lined drawer, cotton pull-tab, blind-debossed seal. Carries the seasonal
+    gift, partner gifts and exclusives. Slide-open is the gesture cats and members both investigate.
+    Amortised ≈ 4.5 SAR/month within Tier 4's packaging budget.</p>
+  </div>
+</section>
+
+<!-- ─────────── 04 INSERTS ─────────── -->
+<section class="section" id="s04">
+  <div class="sec-head">
+    <div class="sec-num">04</div>
+    <div>
+      <p class="sec-eye">Phase 3 · continued</p>
+      <h2 class="sec-t">Inserts &amp; protection</h2>
+    </div>
+  </div>
+  <p class="sec-lede">The spec is binary: <strong>nothing moves, and nothing that touches the box can hurt a cat.</strong></p>
+
+  <div class="prose">
+    <h3>The insert kit, piece by piece</h3>
+    <ul>
+      <li><b>Cellar divider set</b> — one die-cut B-flute piece, self-locking (no glue, no staples — staples are a claw hazard), forming three cells: litter cradle (bag on edge, arch support so the bag cannot slump), dry-food cell (gusset up, brand face out), wet-food cells (cans in a 3×5 honeycomb; pouches in a fence-slot comb; 30&nbsp;g E-flute pad between can layers). Assembly &lt; 10 s trained.</li>
+      <li><b>Stage tray</b> — E-flute, four-corner self-lock, sits on the divider's shoulder 60&nbsp;mm below the lid so lid flaps never crush contents. Interior printed 1C green pattern. Two 15&nbsp;mm cotton twill loops for lifting out.</li>
+      <li><b>Stage pad (Tier 1)</b> — a single scored E-flute pad replaces the tray: folds over the cellar carrying card + tissue. Ceremony kept, cost halved.</li>
+      <li><b>Moulded pulp cradle</b> — reserved for the Welcome Folio (holds folio + tag with Apple-grade fit) and for glass/ceramic partner gifts in the Den Box. Tooling ~USD 1–3k once; unit ~USD 0.10–0.35 at 3k+ (§10 sourcing).</li>
+      <li><b>Void control</b> — crinkle kraft shred only (never plastic air pillows, never foam peanuts — instant ingestion hazard and off-brand). Target: zero void by design; shred is the tolerance eater, ≤ 15 g/box.</li>
+    </ul>
+    <h3>Cat-safety spec (non-negotiable)</h3>
+    <ul>
+      <li>Water/soy-based inks throughout; no mineral-oil offset inks on food-adjacent surfaces (mineral-oil migration is a food-contact risk).</li>
+      <li>No loose magnets, staples, curling ribbon, elastic loops, or glitter — all documented feline ingestion hazards. Cotton twill tape ≥ 15 mm wide only.</li>
+      <li>No applied fragrance anywhere; no essential oils (many are feline-toxic).</li>
+      <li>All die-cut edges on member-facing pieces are folded or hemmed; the punch-out door perforation is designed to leave a clean rounded rim.</li>
+      <li>Adhesives: starch-based or hot-melt rated food-adjacent; tissue is unbuffered, dye-fast (cats will sit on it — that's the point).</li>
+    </ul>
+    <h3>Transit validation</h3>
+    <p>Every structural revision passes: ISTA-3A drop/vibration with full Tier 2 load; 40&nbsp;°C/90%&nbsp;RH
+    24&nbsp;h conditioning then repeat drops; litter-bag survival (no burst, no dust leak) after 10-drop abuse;
+    can-dent count ≤ 1 minor dent per 15 cans. Field check: photo-audit the first 100 live deliveries per city
+    (Riyadh, Jeddah, Dammam differ in handling roughness and humidity).</p>
+  </div>
+</section>
+
+<!-- ─────────── 05 OPENING SEQUENCE ─────────── -->
+<section class="section" id="s05">
+  <div class="sec-head">
+    <div class="sec-num">05</div>
+    <div>
+      <p class="sec-eye">Phase 3 · the choreography</p>
+      <h2 class="sec-t">The opening sequence</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Written as a test script — every beat has an owner, a feeling, and a failure mode.
+  Total runtime: <strong>about 90 seconds of designed experience</strong>, then a lifetime of the cat using the box.</p>
+
+  <ol class="steps">
+    <li>
+      <span class="t">0:00 — The door</span>
+      <h4>Arrival</h4>
+      <p>The courier hands over a clean kraft box, deep-green seal visible on top. No plastic overwrap, no
+      third-party branding except the shipping label in its printed frame (a label placed crooked on a
+      designed frame still looks intentional). The Arabic wordmark reads first; the weight is honest in the
+      hands via the die-cut handles. <em>Feeling: "this is for us," before a single word is read.</em></p>
+    </li>
+    <li>
+      <span class="t">0:10 — First touch</span>
+      <h4>Texture</h4>
+      <p>Unbleached kraft, visible flute at the edges, matte green ink you can feel sink into the fibre.
+      Nothing glossy. The top panel prints one line beside the seal: <span class="ar">لِحياة قطّك كلّها</span> ·
+      "For your cat's whole life." <em>Failure mode guarded: scuffed print — kraft + matte ink hides courier
+      abuse that would ruin a white gloss box.</em></p>
+    </li>
+    <li>
+      <span class="t">0:20 — The seal</span>
+      <h4>Opening the tape</h4>
+      <p>Reinforced water-activated kraft tape, printed with the brand's thin "thread" line and a small
+      printed phrase at the cut point: <span class="ar">افتح بهدوء — أحدهم يراقب</span> · "Open gently —
+      someone is watching." One knife pass along a printed guide line that keeps the blade away from
+      contents and keeps the punch-out door intact. <em>The first smile happens here, and it cost 0.4 SAR.</em></p>
+    </li>
+    <li>
+      <span class="t">0:30 — The lid</span>
+      <h4>The reveal</h4>
+      <p>Flaps open to the lid interior printed edge-to-edge in green with one cream line:
+      <span class="ar">أهلاً بعودتك</span> · "Welcome home." Below: the stage tray, dressed in cream tissue
+      sealed with one sticker from the illustration set. The litter is invisible. <em>Feeling: hotel
+      turndown, not warehouse pick.</em></p>
+    </li>
+    <li>
+      <span class="t">0:40 — The card</span>
+      <h4>Recognition</h4>
+      <p>On top of the tissue: the monthly card, addressed to the cat by name —
+      <span class="ar">لِلوز، تموين شهر أغسطس</span> · "For Louz — August's provisions." Inside: this month's
+      contents list (Arabic first), the member-rate saving for this box stated plainly
+      (<span class="rule-tag">R041</span> <span class="rule-tag">R085</span>), one seasonal care note written
+      like a good vet's advice, and the QR. <em>First box only: the Welcome Folio sits here instead, in its
+      pulp cradle — the Cat ID ceremony in the hand.</em></p>
+    </li>
+    <li>
+      <span class="t">0:55 — The tissue</span>
+      <h4>Discovery</h4>
+      <p>Sticker lifted, tissue parts to the tier's discovery items — treats fold-wrapped in kraft bands
+      (Tier 3+), the hygiene pouch (Tier 2+), the toy or seasonal gift (Tier 4). Each band prints what the
+      item is and why it was chosen for this cat. <em>Nothing inside the stage requires scissors.</em></p>
+    </li>
+    <li>
+      <span class="t">1:10 — The cellar</span>
+      <h4>The provisions</h4>
+      <p>Cotton loops lift the stage tray out; below, the month's staples stand in their cells like a
+      well-packed pantry: litter cradled, dry food face-up, cans in their comb. No shred storm, no chaos.
+      <em>Feeling: competence. "They handled it." (Ease/relief — emotion #4.)</em></p>
+    </li>
+    <li>
+      <span class="t">1:25 — The scan</span>
+      <h4>The bridge to the app</h4>
+      <p>The card's QR opens the app's box moment: delivery confirmed, this month's saving added to the
+      running tally (<span class="rule-tag">R042</span>), pantry updated, and one line of guidance
+      ("Louz's next weigh-in is due"). Physical and digital membership close the loop in one gesture.</p>
+    </li>
+    <li>
+      <span class="t">1:40 — The second life</span>
+      <h4>The cat takes over</h4>
+      <p>The card's last panel shows the punch-out door: press, fold, and the empty shipper becomes
+      <span class="ar">بيت اللوز</span> — "Louz's den." The tissue goes in as bedding; the cat moves in;
+      the member photographs it; the brand's most honest advertising posts itself.
+      <em>The box is never garbage on day one.</em></p>
+    </li>
+  </ol>
+
+  <div class="callout">
+    <p class="co-label">Design guardrails for the sequence</p>
+    <p>One clear action per beat (<span class="rule-tag">R-principle 5</span>); no beat depends on reading
+    English; a member who rips everything open in 10 seconds loses nothing functional — pacing is offered,
+    never enforced (calm over clever, <span class="rule-tag">R-principle 7</span>).</p>
+  </div>
+</section>
+
+<!-- ─────────── 06 FINISH SPEC ─────────── -->
+<section class="section" id="s06">
+  <div class="sec-head">
+    <div class="sec-num">06</div>
+    <div>
+      <p class="sec-eye">Phase 4 · Premium feel</p>
+      <h2 class="sec-t">Premium finish specification</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Every finish earns its place or is cut. The discipline: <strong>spend on what fingers touch
+  and eyes read; refuse what merely shouts.</strong></p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Element</th><th>Specification</th><th>Why / why not</th></tr></thead>
+      <tbody>
+        <tr><td><b>Shipper print</b></td><td>1-colour flexo, deep green (match #045b46), water-based ink on unbleached kraft; interior lid flood + pattern via pre-print liner at scale</td><td>One colour on kraft is the Hermès discipline at corrugate cost; hides transit scuffs; recyclable unchanged.</td></tr>
+        <tr><td><b>Monthly card</b></td><td>A5 folded, 350 gsm FSC uncoated (Munken/Arena class), 4/4 digital print, cat's name variable-data</td><td>The one paper every member touches monthly — this is where GSM is felt. Uncoated takes handwriting (vet notes).</td></tr>
+        <tr><td><b>Welcome Folio</b></td><td>2 mm greyboard, 120 gsm uncoated deep-green wrap, brass foil for the Cat ID number only, blind deboss seal</td><td>Foil appears exactly once in the system, on the number that is the member's identity (<span class="rule-tag">R032</span>) — scarcity keeps it sacred.</td></tr>
+        <tr><td><b>Den Box (T4)</b></td><td>1.5 mm board drawer, kraft-lined, blind deboss seal, cotton pull-tab; soft-touch lamination <b>rejected</b></td><td>Soft-touch films block recycling and fingerprint in 45 °C vans; deboss on heavy stock gives the tactile signal honestly.</td></tr>
+        <tr><td><b>Embossing / deboss</b></td><td>Blind deboss only (seal + wordmark), on folio, Den Box, and card masthead</td><td>Deboss reads as craft under the thumb; emboss on shipping surfaces crushes in transit.</td></tr>
+        <tr><td><b>Spot UV</b></td><td>Rejected system-wide</td><td>Gloss accents contradict the matte, warm-paper brand; scuffs badly; adds a coating layer to recycling.</td></tr>
+        <tr><td><b>Tissue</b></td><td>17 gsm FSC, cream base, 1-colour sparse sticker-motif print (~10% coverage), unscented, dye-fast</td><td>The softness cue of the whole unboxing at ~0.45 SAR; sparse print keeps it calm.</td></tr>
+        <tr><td><b>Seal sticker</b></td><td>Ø 60 mm, uncoated paper stock, water-based adhesive; rotates monthly through the flat-sticker illustration set</td><td>The collectible cadence signal (Korean unboxing lesson) — members notice the month changing.</td></tr>
+        <tr><td><b>Custom tape</b></td><td>70 mm reinforced water-activated kraft tape, 1C green thread-line print + cut-here phrase</td><td>WAT bonds to kraft permanently (tamper-evident), recycles with the box, and is the security a courier network demands.</td></tr>
+        <tr><td><b>Ribbon</b></td><td>15 mm natural cotton twill, green; stage-tray lift loops (all tiers), Den Box pull, gift kit bow. Satin/curling ribbon banned</td><td>Cotton is the only ribbon that is compostable, cat-safe, and on-brand; curling ribbon is a documented ingestion hazard.</td></tr>
+        <tr><td><b>Thank-you / milestone cards</b></td><td>A6, 350 gsm, letterpress-style 1C for milestones (first anniversary, 1,000 SAR saved)</td><td>Gratitude is rationed to moments that are true (<span class="rule-tag">R006</span> <span class="rule-tag">R065</span>).</td></tr>
+        <tr><td><b>Brand scent</b></td><td><b>Rejected.</b></td><td>Feline olfaction is ~40× human; the box carries food; scented packaging is a welfare and trust error dressed as luxury. The brand smells of clean kraft — which is, to a cat owner, the smell of a good day.</td></tr>
+        <tr><td><b>QR experience</b></td><td>One QR, on the card (never printed large on the box exterior); deep-links to the box moment; offline-tolerant (works as plain URL)</td><td>One bridge, placed at the moment of attention (<span class="rule-tag">R-principle 5</span>); a QR on the outside of a box is logistics, not membership.</td></tr>
+        <tr><td><b>Exterior personalisation</b></td><td>None — no cat/owner name outside</td><td>PDPL-aligned privacy (<span class="rule-tag">R106</span>): the hallway should not announce who lives here. Recognition happens inside.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─────────── 07 WHAT'S INSIDE ─────────── -->
+<section class="section" id="s07">
+  <div class="sec-head">
+    <div class="sec-num">07</div>
+    <div>
+      <p class="sec-eye">Phase 5 · Contents engineering</p>
+      <h2 class="sec-t">What's inside, per tier</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Contents mapped to the live catalog where possible (SKUs from
+  <code>seed-catalog.ts</code>), with dimensions, weights, positions and the discovery order the member
+  actually experiences.</p>
+
+  <div class="prose"><h3>Tier 1 — Essentials · M-2 shipper · ≈ 11.6 kg gross</h3></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Item</th><th>Approx. dims</th><th>Weight</th><th>Position</th><th>Protection</th><th>Discovery order</th></tr></thead>
+      <tbody>
+        <tr><td><b>Clumping litter 10 L</b> (cf. P12700032)</td><td class="num">440 × 300 × 95 mm bag</td><td class="num">~8.0 kg</td><td>Cellar left, on edge, arch cradle</td><td>B-flute cradle + base pad</td><td class="num">5 (last, strongest)</td></tr>
+        <tr><td><b>Dry food 2 kg</b> (P12500091)</td><td class="num">350 × 230 × 90 mm gusset bag</td><td class="num">2.1 kg</td><td>Cellar centre, face up</td><td>Own cell, no compression from lid</td><td class="num">4</td></tr>
+        <tr><td><b>Wet pouches × 15</b> (cf. P12600201)</td><td class="num">each 130 × 105 × 12 mm</td><td class="num">1.4 kg</td><td>Cellar right, fence-slot comb, 2 rows</td><td>E-flute comb; no pouch-on-pouch abrasion</td><td class="num">3</td></tr>
+        <tr><td><b>Monthly card + tissue</b></td><td class="num">A5 folded</td><td class="num">40 g</td><td>Stage pad, centred</td><td>—</td><td class="num">1–2</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose"><p>Essentials keeps full ceremony-of-sequence (seal → lid message → card → pantry) but
+  zero extras — the restraint <em>is</em> the message: "only what {cat} needs, handled." No treats, no toys,
+  and the card never upsells; it states this month's saving and stops (<span class="rule-tag">R085</span>).</p></div>
+
+  <div class="prose"><h3>Tier 2 — Care · M-2 shipper · ≈ 12.4 kg gross</h3>
+  <p>Everything in Tier 1 (wet food upgraded to premium cans/pouches), plus the <b>clean pouch</b>: a kraft
+  drawstring pouch on the stage tray grouping hygiene — grooming wipes (P12600185, 200 × 110 × 60 mm, 350 g),
+  litter deodoriser (Ø 80 × 160 mm, 450 g), dental care item (180 × 60 × 30 mm, 120 g). Grouping hygiene in
+  one named pouch turns "products" into "care routine" — discovered as one object, third in sequence.</p></div>
+
+  <div class="prose"><h3>Tier 3 — Enrichment · M-2 shipper · ≈ 13.1 kg gross</h3>
+  <p>Tier 2 plus, on the stage tray: creamy treats (P15901880, 160 × 80 × 35 mm, 120 g) and calming treats
+  (P10500016) each fold-wrapped in a printed kraft band; one enrichment item monthly (puzzle feeder ≈ Ø 180 × 40 mm,
+  250 g — in its own E-flute sleeve); grooming tool on rotation (brush 200 × 60 × 40 mm, 90 g); the monthly
+  sticker sheet. Discovery order: card → treats band → enrichment → grooming → cellar.</p></div>
+
+  <div class="prose"><h3>Tier 4 — Full membership · M-3 shipper · ≈ 13.9 kg gross (+ Den Box quarterly)</h3>
+  <p>Tier 3 plus: toy of the month (soft kicker ≈ 220 × 70 × 50 mm, 80 g), seasonal/partner gift
+  (variable ≤ 200 × 150 × 80 mm — moulded pulp cradle if fragile), accessory on rotation (collar, bowl,
+  blanket quarter). The stage tray closes with cotton tape in a single fold-knot. In Den Box months the
+  drawer box sits centred on the stage as the first-discovered object, band-wrapped
+  <span class="ar">هدية الموسم</span> · "the season's gift."</p></div>
+
+  <div class="prose"><h3>Kitten package · K-Mailer (M-1) · ≈ 4.2 kg gross</h3>
+  <p>Kitten dry 1.5 kg (300 × 200 × 80 mm), kitten wet × 12 pouches, training litter 5 L (~3 kg... capped:
+  kitten litter 2.5 kg option), and the <b>growth card</b> — a monthly weigh-in chart the member keeps.
+  Single-wall mailer opens book-style; one scored insert holds all cells; stage pad only. Packaging cost
+  ≈ 4.9 SAR — the cheaper kitten package the structure demands. First kitten box still carries the full
+  Welcome Folio: a kitten's Cat ID ceremony is the strongest bonding moment the brand will ever get.</p></div>
+
+  <div class="prose"><h3>Multi-cat households</h3>
+  <p>One shipper per ~15 kg cap; contents grouped per cat with a printed kraft band around each cat's
+  bundle — <span class="ar">حصّة سمسم</span> · "Simsim's share" — so distribution in a two-cat home is
+  pre-solved (<span class="rule-tag">R109</span>). One monthly card lists all cats by name; one shared
+  cellar for staples; per-cat treats never mixed (diet integrity). At 3+ cats, ship two M-2 rather than
+  one overweight M-3: courier damage rises non-linearly past 16 kg.</p></div>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 520" role="img" aria-label="Exploded layout diagram of Tier 3 box">
+      <defs><style>
+        .ex-k{fill:#E8DCC3;stroke:#8A6529;stroke-width:1.8}
+        .ex-k2{fill:#F5EDD9;stroke:#A97C36;stroke-width:1.4}
+        .ex-i{fill:#fff;stroke:#3B332A;stroke-width:1.1}
+        .ex-l{font:600 12.5px "IBM Plex Sans",sans-serif;fill:#17130E}
+        .ex-s{font:10.5px "IBM Plex Mono",monospace;fill:#6C6153}
+        .ex-g{stroke:#2C6B60;stroke-width:1;stroke-dasharray:3 4;fill:none}
+      </style></defs>
+      <!-- lid layer -->
+      <g transform="translate(250,10)">
+        <rect width="400" height="70" rx="6" class="ex-k"/>
+        <text x="16" y="30" class="ex-l">1 · Lid flaps</text>
+        <text x="16" y="48" class="ex-s">interior print: أهلاً بعودتك · welcome home</text>
+      </g>
+      <path class="ex-g" d="M450 80 v18"/>
+      <!-- tissue/card layer -->
+      <g transform="translate(230,98)">
+        <rect width="440" height="86" rx="6" class="ex-k2"/>
+        <rect x="150" y="18" width="140" height="50" rx="5" class="ex-i"/>
+        <text x="166" y="40" class="ex-l" style="font-size:11.5px">Monthly card</text>
+        <text x="166" y="56" class="ex-s">للوز · for Louz</text>
+        <text x="16" y="36" class="ex-l">2 · Tissue bed</text>
+        <text x="16" y="54" class="ex-s">cream 17 gsm + seal sticker</text>
+      </g>
+      <path class="ex-g" d="M450 184 v18"/>
+      <!-- stage tray layer -->
+      <g transform="translate(210,202)">
+        <rect width="480" height="110" rx="6" class="ex-k2"/>
+        <text x="16" y="30" class="ex-l">3 · Stage tray</text>
+        <text x="16" y="48" class="ex-s">E-flute · cotton lift loops</text>
+        <rect x="170" y="20" width="90" height="70" rx="5" class="ex-i"/>
+        <text x="180" y="50" class="ex-s">treats ×2</text><text x="180" y="64" class="ex-s">kraft bands</text>
+        <rect x="272" y="20" width="90" height="70" rx="5" class="ex-i"/>
+        <text x="282" y="50" class="ex-s">enrichment</text><text x="282" y="64" class="ex-s">sleeve</text>
+        <rect x="374" y="20" width="90" height="70" rx="5" class="ex-i"/>
+        <text x="384" y="50" class="ex-s">grooming +</text><text x="384" y="64" class="ex-s">stickers</text>
+      </g>
+      <path class="ex-g" d="M450 312 v18"/>
+      <!-- cellar layer -->
+      <g transform="translate(190,330)">
+        <rect width="520" height="120" rx="6" class="ex-k"/>
+        <text x="16" y="32" class="ex-l">4 · Cellar + divider</text>
+        <text x="16" y="50" class="ex-s">self-locking B-flute</text>
+        <rect x="170" y="18" width="170" height="86" rx="5" class="ex-i"/>
+        <text x="184" y="56" class="ex-s">litter 10 L · cradle</text>
+        <rect x="352" y="18" width="70" height="86" rx="5" class="ex-i"/>
+        <text x="360" y="56" class="ex-s">dry 2 kg</text>
+        <rect x="434" y="18" width="70" height="86" rx="5" class="ex-i"/>
+        <text x="442" y="50" class="ex-s">wet comb</text><text x="442" y="64" class="ex-s">×15</text>
+      </g>
+      <path class="ex-g" d="M450 450 v18"/>
+      <!-- base -->
+      <g transform="translate(250,468)">
+        <rect width="400" height="44" rx="6" class="ex-k"/>
+        <text x="16" y="28" class="ex-l">5 · Base + punch-out den door on long panel</text>
+      </g>
+    </svg>
+    <p class="figcap">Fig 7.0 — Tier 3 exploded stack, top layer first: what the member meets is the order they are drawn.</p>
+  </div>
+</section>
+
+<!-- ─────────── 08 DESIGN LANGUAGE ─────────── -->
+<section class="section" id="s08">
+  <div class="sec-head">
+    <div class="sec-num">08</div>
+    <div>
+      <p class="sec-eye">Phase 6 · Visual system</p>
+      <h2 class="sec-t">Design language</h2>
+    </div>
+  </div>
+  <p class="sec-lede">The digital system already exists — <em>"warm paper, flat stickers, editorial
+  confidence"</em> (<code>packages/ui/src/styles/globals.css</code>). The physical system is the same voice
+  in fibre and ink: <strong>Apple's restraint, Hermès' colour conviction, Muji's honesty — with a Najdi
+  warmth none of them have.</strong></p>
+
+  <div class="grid3">
+    <div class="card"><p class="k">Palette · exterior</p><h5>Kraft + one green</h5>
+      <p>Unbleached kraft ground; deep green #045b46 as the only exterior ink. The green box becomes the brand's silhouette on every doorstep — colour equity built monthly.</p></div>
+    <div class="card"><p class="k">Palette · interior</p><h5>The warm reveal</h5>
+      <p>Cream tissue (#f7dec9 family), warm-paper card stock, sticker accents — tangerine #f86c2f, blush, sage, butter — used like enamel pins: one or two per box, never a confetti of them.</p></div>
+    <div class="card"><p class="k">Typography</p><h5>Arabic leads</h5>
+      <p>Premium Arabic display (Lyon Arabic Display class) set first and largest (<span class="rule-tag">R101</span> <span class="rule-tag">R103</span>); Fraunces for English display; IBM Plex Sans for utility; the Cat ID number in IBM Plex Mono — the "engineering truth" voice.</p></div>
+    <div class="card"><p class="k">Illustration</p><h5>Flat stickers, rationed</h5>
+      <p>The existing flat-sticker set (cat, sprig, heart, paw in blue-grey/butter/peach) appears as the seal sticker, the tissue motif, and the monthly sticker sheet — and nowhere else. <b>The paw is a rare guest, never wallpaper.</b></p></div>
+    <div class="card"><p class="k">Layout</p><h5>Editorial confidence</h5>
+      <p>One message per surface. Generous margins. The lid interior is a title page, the card is an article, the bands are captions. Minimalism where structure speaks; expression only in the sticker moments.</p></div>
+    <div class="card"><p class="k">RTL-native</p><h5>Built right-to-left</h5>
+      <p>Panels compose for an RTL reading arc: Arabic top-right anchor, English lower-left echo (<span class="rule-tag">R104</span>). The card opens right-to-left. English is the translation, visibly.</p></div>
+  </div>
+
+  <div class="prose">
+    <h3>The three influences, held in tension</h3>
+    <ul>
+      <li><b>Saudi luxury</b> — not ornament but <em>hospitality</em>: the box as a host. Generosity of space, the majlis instinct of presenting the best first, dates-box gifting culture informing the Den Box. Sadu-derived geometry may appear as a single thin woven line on the tape — never as pastiche.</li>
+      <li><b>Modern Japanese</b> — the fold as respect: kraft bands with one fold instead of adhesive; the stage/cellar concept itself is a bento logic; "enough" as a design position.</li>
+      <li><b>Premium Scandinavian</b> — functional warmth: self-locking structures shown honestly, flute edges visible, instructions that read like furniture assembly done right.</li>
+    </ul>
+    <h3>What is banned</h3>
+    <p>Paw-print patterns, fish-bone icons, cartoon whiskers, "meow" puns in display type, gold foil floods,
+    glossy lamination, mascot eyes on the box. The register is a fine grocer who knows your cat's name —
+    never a toy store (<span class="rule-tag">Brand personality</span>).</p>
+  </div>
+</section>
+
+<!-- ─────────── 09 SUSTAINABILITY ─────────── -->
+<section class="section" id="s09">
+  <div class="sec-head">
+    <div class="sec-num">09</div>
+    <div>
+      <p class="sec-eye">Phase 7 · Responsibility as value</p>
+      <h2 class="sec-t">Sustainability</h2>
+    </div>
+  </div>
+  <p class="sec-lede">The system is designed so the greenest choice and the most premium choice are the
+  <strong>same choice</strong> — and the cat is the recycling program.</p>
+
+  <div class="prose">
+    <ul>
+      <li><b>Mono-material by design:</b> shipper, trays, dividers, bands, cards — all paper fibre, all one recycling stream. FSC-certified liners and stocks throughout; water/soy-based inks; starch adhesives; water-activated paper tape. No plastic film, foam, bubble, or magnet anywhere in the monthly flow.</li>
+      <li><b>The punch-out den is the sustainability program:</b> a shipper that becomes furniture isn't waste diverted — it's waste that never happened. Reuse-by-design beats recycle-by-instruction, and it is the single most on-brand move available (<span class="rule-tag">R009</span>).</li>
+      <li><b>Forever pieces, refill logic (AG1 lesson):</b> treat tin, scoop, cotton pouch arrive once; refills arrive flat/light thereafter. Waste per month falls while shelf presence — perceived value — becomes permanent.</li>
+      <li><b>Right-sizing:</b> three shipper sizes + computed plans mean air is never shipped; void shred ≤ 15 g. Double-wall board is itself ≥ 70% recycled content (standard for KSA corrugate mills).</li>
+      <li><b>Local production = shipped-emissions honesty:</b> corrugate from Jeddah/Riyadh mills (§10) cuts inbound freight to near zero versus importing finished boxes; only the two rigid ceremony pieces travel far, and they travel flat-ish and rarely.</li>
+      <li><b>Say it plainly, once:</b> one line on the base panel — "This box is 100% paper. The door on the side is for {the cat}." No green badges, no eco-theatre (<span class="rule-tag">R006</span>).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────── 10 SUPPLIERS ─────────── -->
+<section class="section" id="s10">
+  <div class="sec-head">
+    <div class="sec-num">10</div>
+    <div>
+      <p class="sec-eye">Phase 8 · Manufacturing</p>
+      <h2 class="sec-t">Manufacturing &amp; suppliers</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Strategy: <strong>prototype local, scale corrugate local, import only the ceremony.</strong>
+  Verified suppliers below, priority-ordered KSA → GCC → China → Turkey (India added — Kumar Printers was
+  specified for investigation and proves out as a strong rigid-box source).</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Supplier</th><th>Country</th><th>Makes for us</th><th>MOQ</th><th>Lead time</th><th>Samples</th><th>Print/finish capability</th><th>Est. pricing</th><th>Pros</th><th>Cons</th><th>10k+/mo?</th></tr></thead>
+      <tbody>
+        <tr><td><b>UCIC</b> — United Carton Industries · ucic.com.sa</td><td>KSA (2× Jeddah, 1× Riyadh)</td><td>M-Shipper family, divider sets, stage trays</td><td class="num">~3–5k/SKU</td><td class="num">2–4 wks</td><td>Yes, structural</td><td>Flexo to 4C, die-cut, litho-lam possible</td><td class="num">M-2 ≈ 4.8–7.5 SAR by volume</td><td>265k-tonne capacity; both launch cities; days-not-weeks replenishment</td><td>Not a luxury finisher; MOQ high for pilots</td><td><b>Yes, easily</b></td></tr>
+        <tr><td><b>Napco National</b> · napconational.com</td><td>KSA (Dammam, Jeddah)</td><td>Shipper second-source; tissue; kraft paper goods</td><td class="num">~5k</td><td class="num">3–4 wks</td><td>Yes</td><td>Flexo, converting breadth (paper + corrugated)</td><td class="num">comparable to UCIC</td><td>Multi-material giant; supply-chain resilience as second source</td><td>Less boutique attention at our early volumes</td><td><b>Yes</b></td></tr>
+        <tr><td><b>Obeikan Investment Group</b> (packaging division)</td><td>KSA (Riyadh)</td><td>Folding cartons, printed paperboard (cards at scale, clean-pouch cartons)</td><td class="num">~10k folding cartons</td><td class="num">3–5 wks</td><td>Yes</td><td>High-grade offset, coatings, windowing</td><td class="num">cards ≈ 0.4–0.9 SAR at scale</td><td>Best offset quality in-Kingdom; food-grade capability</td><td>Overkill until volumes justify; corporate onboarding</td><td><b>Yes</b></td></tr>
+        <tr><td><b>Printhub</b> · Riyadh (printhub.sa)</td><td>KSA</td><td>Prototypes + pilot runs: mailers, cards, stickers, bands</td><td class="num">low (digital, from ~50–100)</td><td class="num">3–10 days</td><td>Instant (online proofing)</td><td>Digital CMYK, die-cut, small-format</td><td class="num">M-2 pilot ≈ 12–16 SAR</td><td>Founded 2021 for exactly this: low-MOQ fast custom; Arabic-native workflow</td><td>Unit cost 2–3× scale pricing; limited board grades</td><td>No — pilot partner</td></tr>
+        <tr><td><b>MMC Print n Gift</b> · Jeddah (mmcprintngift.com)</td><td>KSA</td><td>Welcome Folio pilot, foil/deboss cards, kitting &amp; fulfilment overflow</td><td class="num">~100–500</td><td class="num">1–3 wks</td><td>Yes</td><td>Offset + HP Indigo + UV, hot foil, deboss, laser engraving, personalisation</td><td class="num">folio pilot ≈ 18–25 SAR</td><td>Luxury finishing in-Kingdom; does kitting/fulfilment — can assemble ceremony kits</td><td>Not a box plant; scale pricing beats it abroad</td><td>Partially (finishing/kitting)</td></tr>
+        <tr><td><b>Silver Corner Packaging</b></td><td>KSA</td><td>Rigid gift boxes (Den Box local option) — dates/perfume box heritage</td><td class="num">~500–1k</td><td class="num">3–5 wks</td><td>Yes</td><td>Rigid set-up, wraps, foil</td><td class="num">Den ≈ 14–20 SAR</td><td>Local rigid capability; gifting-culture fluency</td><td>Costs above Asia at volume</td><td>Uncertain</td></tr>
+        <tr><td><b>Kumar Printers</b> · IMT Manesar, India (kumarprinters.com)</td><td>India</td><td>Welcome Folio + Den Box at scale; premium inserts</td><td class="num">~1–3k</td><td class="num">4–6 wks + 2–3 wks sea to Jeddah</td><td>Yes, paid</td><td>Full luxury: hot foil, emboss/deboss, soft-touch, UV; 60+ yrs; global certifications; 12k-tonne conversion</td><td class="num">Folio ≈ 6.5–9 SAR; Den ≈ 8–12 SAR</td><td>Serves P&amp;G/Adidas-class brands; India–GCC freight short; strong QA</td><td>MOQ ties cash; needs freight planning</td><td><b>Yes</b></td></tr>
+        <tr><td><b>Paksis Packaging</b> · Istanbul (paksis.com.tr)</td><td>Turkey</td><td>Rigid pieces alternative; runs 1k–200k units</td><td class="num">~1k</td><td class="num">3–5 wks + 1–2 wks freight</td><td>Yes</td><td>Luxury rigid specialist since 2005, 3,000 m² plant, 50% export share</td><td class="num">Den ≈ 9–14 SAR</td><td>EU-grade quality; GCC-friendly logistics; strong at mid-volume</td><td>Above-China pricing</td><td><b>Yes</b></td></tr>
+        <tr><td><b>KBC Packaging</b> · Turkey (kbcpackaging.com)</td><td>Turkey</td><td>Rigid + textile-wrapped boxes, low-MOQ luxury</td><td class="num">500–1k</td><td class="num">3–4 wks + freight</td><td>Yes</td><td>Rigid, wrapped, foil; claims 30–60% better value than EU makers</td><td class="num">Den ≈ 8–13 SAR</td><td>Lowest luxury MOQ near-shore; good for V2 iterations</td><td>Smaller plant; single-source risk</td><td>Likely</td></tr>
+        <tr><td><b>Alya Packaging</b> · Istanbul (alyapackaging.com)</td><td>Turkey</td><td>Rigid at high volume (500k boxes/mo capacity)</td><td class="num">~2k</td><td class="num">3–5 wks + freight</td><td>Yes</td><td>Rigid, 8,000 m², exports to 40+ countries</td><td class="num">competitive at 10k+</td><td>Scale insurance for ceremony pieces</td><td>Less boutique for small runs</td><td><b>Yes</b></td></tr>
+        <tr><td><b>LuxoPack / Jialan-class factory-direct</b> (luxopack.com, jialanpackage.com)</td><td>China (Guangdong)</td><td>Rigid folio/drawer at best unit cost; magnetic variants (not used)</td><td class="num">100–500 (digital) / 500–1k (offset)</td><td class="num">25–35 days + 3–4 wks sea</td><td>Yes, fast</td><td>Everything: foil, deboss, soft touch, ribbon, thermoform alternatives</td><td class="num">Folio ≈ 5–8 SAR; Den ≈ USD 2.5–6 (≈ 9–22 SAR) by spec</td><td>Best price at scale; deepest structural library</td><td>Longest pipeline; QC needs third-party inspection; sea-freight buffer stock</td><td><b>Yes</b></td></tr>
+        <tr><td><b>HS Pack / Lian-class moulded pulp</b> (hspackfactory.com)</td><td>China</td><td>Moulded pulp cradles (folio + fragile gifts)</td><td class="num">~3k (some 500)</td><td class="num">4–6 wks incl. tooling</td><td>Yes, from tool</td><td>Wet-press fine pulp (Apple-grade surface)</td><td class="num">USD 0.10–0.35/unit; tooling USD 1–3k once</td><td>The precision-fit feel nothing else gives</td><td>Tooling lock-in per geometry; order with rigid pieces to share containers</td><td><b>Yes</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout rust">
+    <p class="co-label">Note on "Papr"</p>
+    <p>The brief named <b>Papr</b> as a Saudi candidate; research could not verify a packaging company
+    operating under that exact name/domain. The closest verified equivalent — a Riyadh-founded (2021)
+    low-MOQ online custom-packaging platform — is <b>Printhub</b>, included above. If Papr is a known local
+    contact, add it to the matrix after a capability call; the pilot-partner slot it would occupy is
+    currently Printhub's. (Honesty over invented detail — <span class="rule-tag">R006</span>.)</p>
+  </div>
+
+  <div class="prose">
+    <h3>Sourcing architecture</h3>
+    <p><b>Dual-track:</b> KSA plants own everything monthly (UCIC primary, Napco second-source — corrugate
+    is too heavy and too frequent to import sensibly); Asia/Turkey own the two rigid ceremony pieces
+    (Kumar or LuxoPack primary by landed-cost quote, Paksis/KBC as near-shore hedge), ordered quarterly
+    with 6-week buffer stock. MMC Jeddah handles luxury finishing emergencies and gift-kit assembly
+    in-Kingdom. Third-party pre-shipment inspection (AQL 2.5) on every import lot.</p>
+  </div>
+</section>
+
+<!-- ─────────── 11 FINANCIALS ─────────── -->
+<section class="section" id="s11">
+  <div class="sec-head">
+    <div class="sec-num">11</div>
+    <div>
+      <p class="sec-eye">Phase 9 · Unit economics</p>
+      <h2 class="sec-t">Financial analysis</h2>
+    </div>
+  </div>
+  <p class="sec-lede">Every number below must reconcile with <code>BOX_COST_MODEL</code> (packaging 9 SAR ·
+  delivery 12 SAR · fulfilment 6 SAR) and survive <code>checkBoxInvariants</code>. Estimates are supplier-quote
+  class (±20%) until V1 quotes land; all SAR.</p>
+
+  <div class="prose"><h3>Component cost by monthly volume (M-2 system)</h3></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Component</th><th>100 u</th><th>500 u</th><th>1,000 u</th><th>5,000 u</th><th>10,000 u</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td><b>M-2 shipper, DW, 1C flexo + die-cuts</b></td><td class="num">14.00</td><td class="num">9.50</td><td class="num">7.20</td><td class="num">5.60</td><td class="num">4.80</td><td>Printhub → UCIC</td></tr>
+        <tr><td><b>Cellar divider set (B-flute)</b></td><td class="num">3.20</td><td class="num">2.10</td><td class="num">1.50</td><td class="num">1.00</td><td class="num">0.85</td><td>UCIC</td></tr>
+        <tr><td><b>Stage tray, E-flute, 1C interior</b></td><td class="num">4.50</td><td class="num">3.20</td><td class="num">2.60</td><td class="num">1.90</td><td class="num">1.60</td><td>UCIC</td></tr>
+        <tr><td><b>Stage pad (T1 alternative)</b></td><td class="num">2.10</td><td class="num">1.40</td><td class="num">1.10</td><td class="num">0.80</td><td class="num">0.65</td><td>UCIC</td></tr>
+        <tr><td><b>Tissue ×2 + seal sticker</b></td><td class="num">1.60</td><td class="num">1.10</td><td class="num">0.80</td><td class="num">0.55</td><td class="num">0.45</td><td>Napco / local</td></tr>
+        <tr><td><b>Printed WAT tape (~1.2 m)</b></td><td class="num">0.90</td><td class="num">0.65</td><td class="num">0.50</td><td class="num">0.38</td><td class="num">0.32</td><td>import roll stock</td></tr>
+        <tr><td><b>Monthly card (350 gsm, VDP name)</b></td><td class="num">2.20</td><td class="num">1.40</td><td class="num">1.00</td><td class="num">0.65</td><td class="num">0.50</td><td>MMC → Obeikan</td></tr>
+        <tr><td><b>Kraft bands / clean pouch / stickersheet (T2–T4 adders)</b></td><td class="num">3.00</td><td class="num">2.20</td><td class="num">1.70</td><td class="num">1.25</td><td class="num">1.05</td><td>mixed</td></tr>
+        <tr><td><b>Cotton tape closure (T4)</b></td><td class="num">1.10</td><td class="num">0.85</td><td class="num">0.70</td><td class="num">0.55</td><td class="num">0.50</td><td>import</td></tr>
+        <tr><td><b>Den Box amortised /mo (T4, quarterly ÷3)</b></td><td class="num">6.60</td><td class="num">5.00</td><td class="num">4.30</td><td class="num">3.60</td><td class="num">3.20</td><td>Kumar / LuxoPack</td></tr>
+        <tr><td><b>Welcome Folio (once, per new member)</b></td><td class="num">22.00</td><td class="num">16.00</td><td class="num">13.00</td><td class="num">11.00</td><td class="num">9.50</td><td>MMC pilot → Kumar</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose"><h3>Packaging cost per box, per tier (assembled system)</h3></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Tier (recipe)</th><th>100 u</th><th>500 u</th><th>1,000 u</th><th>5,000 u</th><th>10,000 u</th><th>vs 9 SAR model</th></tr></thead>
+      <tbody>
+        <tr><td><b>T1 Essentials</b> (shipper + divider + pad + tissue + tape + card)</td><td class="num">24.00</td><td class="num">16.15</td><td class="num">12.10</td><td class="num"><b>8.98</b></td><td class="num">7.57</td><td>Clears budget at 5k</td></tr>
+        <tr><td><b>T2 Care</b> (+ tray for pad, + pouch adder ~60%)</td><td class="num">28.20</td><td class="num">19.25</td><td class="num">14.62</td><td class="num"><b>10.83</b></td><td class="num">9.15</td><td>+1.8 over model — priced into T2</td></tr>
+        <tr><td><b>T3 Enrichment</b> (+ full adder set)</td><td class="num">29.40</td><td class="num">20.15</td><td class="num">15.30</td><td class="num"><b>11.33</b></td><td class="num">9.57</td><td>+2.3 — priced into T3</td></tr>
+        <tr><td><b>T4 Full</b> (M-3, + cotton tape + Den amortised)</td><td class="num">38.90</td><td class="num">27.60</td><td class="num">21.90</td><td class="num"><b>16.98</b></td><td class="num">14.77</td><td>Premium tier carries premium pack — margin holds at 749</td></tr>
+        <tr><td><b>Kitten</b> (K-mailer + insert + pad + dressing)</td><td class="num">13.10</td><td class="num">8.70</td><td class="num">6.60</td><td class="num"><b>4.90</b></td><td class="num">4.10</td><td>Under model — the "cheaper kitten packaging" requirement, met structurally</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>What the volume curve buys (savings vs 100-unit pilot cost)</h3>
+    <p>T1: −33% at 500 → −50% at 1k → −63% at 5k → −68% at 10k. The curve's knee is at ~5,000/mo — the
+    point where UCIC tooling amortises and the blended average across a realistic tier mix
+    (40% T1 · 30% T2 · 20% T3 · 10% T4, kitten ≈ 8% of base) lands at <b>≈ 9.8 SAR/box</b>: within one
+    riyal of the committed model. Below 1k/mo, packaging runs 3–7 SAR hot — an accepted, temporary
+    pilot cost, not a pricing input.</p>
+    <h3>Adjacent costs the packaging decision moves</h3>
+    <ul>
+      <li><b>Assembly:</b> all-flat-pack keeps pack-out at ~3.5 min/box (within the 6 SAR fulfilment line at KSA labour rates); a rigid monthly box would have added ~1.5 min + assembled-storage handling.</li>
+      <li><b>Storage:</b> flat corrugate for 10k boxes ≈ 2 pallet positions/day of production; assembled rigid would need ~6×. Ceremony pieces (small, dense) add one position per quarter.</li>
+      <li><b>Shipping:</b> dimensional weight is unchanged by this design (contents dominate); the 12 SAR delivery line item stays the sensitive one flagged in <code>box-cost-model.ts</code> — negotiate against the ~12 kg reality, and note the storefront's 25 SAR customer-facing shipping fee needs reconciliation.</li>
+      <li><b>Damage/shrink:</b> ISTA-validated structure should hold transit damage under the modelled 2% shrink; every 0.5% saved ≈ 0.6–1.2 SAR/box at tier COGS — the divider set pays for itself in dented cans alone.</li>
+    </ul>
+    <div class="callout">
+      <p class="co-label">Invariant check — the go/no-go gate</p>
+      <p>Before launch, each tier recipe runs through <code>computeBoxEconomics</code> with the V1-quoted
+      packaging figures substituted for <code>packagingSar</code> (per-tier env overrides:
+      <code>BOX_PACKAGING_SAR</code>). Gate: ≥15% member saving, ≥25% contribution, post-VAT survival.
+      The Welcome Folio is excluded from the per-box model and booked to acquisition; the Den Box is
+      inside Tier 4's recipe cost. <b>No tier ships until its row is green.</b></p>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 12 PROTOTYPES ─────────── -->
+<section class="section" id="s12">
+  <div class="sec-head">
+    <div class="sec-num">12</div>
+    <div>
+      <p class="sec-eye">Phase 10 · Iteration plan</p>
+      <h2 class="sec-t">Prototype roadmap</h2>
+    </div>
+  </div>
+
+  <ol class="steps">
+    <li>
+      <span class="t">Weeks 1–4 · ~100 units · Printhub + MMC</span>
+      <h4>Prototype V1 — "Prove the choreography"</h4>
+      <p><b>Build:</b> digital-printed M-2 + hand-cut divider + stage tray; MMC-made Welcome Folio (foil, deboss);
+      full dressing kit. <b>Test:</b> ISTA-3A drops with real litter; 10 member households filmed unboxing
+      (Arabic-first participants); pack-out timing; 45 °C van simulation.
+      <b>Learn:</b> does the stage/cellar reveal land emotionally? Does the punch-out door survive transit
+      intact? Is the divider one-piece fold actually &lt;10 s?</p>
+    </li>
+    <li>
+      <span class="t">Weeks 5–12 · ~1,000 units · UCIC tooling + near-shore rigid</span>
+      <h4>Prototype V2 — "Prove the economics"</h4>
+      <p><b>Change &amp; why:</b> flexo plates + die tooling at UCIC (unit cost −45%, print consistency up);
+      divider revised from V1 drop data (targeted material trim −10% board); folio moved to Kumar/KBC sample
+      lots for landed-cost comparison; tissue coverage reduced if V1 film review shows it reads busy
+      (restraint check); punch-out door perforation gauge tuned to open clean but never in transit.
+      <b>Test:</b> live cohort shipping in Riyadh + Jeddah; damage telemetry vs 2% shrink line;
+      first NPS-of-unboxing measure; recycling/reuse survey ("where is the box now?").</p>
+    </li>
+    <li>
+      <span class="t">Months 4–6 · 5,000+/mo capability · dual-sourced</span>
+      <h4>Prototype V3 — "Prove the machine"</h4>
+      <p><b>Change &amp; why:</b> pre-print interior liner replaces post-print at volume (lid interior cost −30%,
+      registration tighter); Napco onboarded as shipper second source (resilience); moulded-pulp folio cradle
+      tooled in China alongside Den Box production (container-sharing); M-3 and K-mailer dies cut;
+      per-cat band VDP automated into the pick line. <b>Test:</b> full ISTA re-validation on every SKU;
+      cost audit vs §11 tables; Tier 4 quarterly Den cadence dry-run; 10k/mo line-rate simulation at 3PL.
+      <b>Exit criteria:</b> blended packaging ≤ 10 SAR, damage &lt; 1%, unboxing NPS ≥ 70, every tier green
+      on invariants.</p>
+    </li>
+  </ol>
+  <div class="prose"><p>Each iteration improves all six mandated axes — durability (drop data → structure),
+  luxury (film review → pacing edits), unboxing (member observation → beat timing), sustainability
+  (material trims, reuse telemetry), cost (tooling amortisation), manufacturing efficiency (line-rate
+  tests) — and the reason for every change is written down before the change is made.</p></div>
+</section>
+
+<!-- ─────────── 13 TIMELINE ─────────── -->
+<section class="section" id="s13">
+  <div class="sec-head">
+    <div class="sec-num">13</div>
+    <div>
+      <p class="sec-eye">Deliverables schedule</p>
+      <h2 class="sec-t">Packaging timeline</h2>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>When</th><th>Milestone</th><th>Owner / partner</th></tr></thead>
+      <tbody>
+        <tr><td class="num">Wk 1–2</td><td>Dielines for M-1/M-2/M-3, divider, tray, folio; finish spec frozen (§06); artwork from existing brand system</td><td>Design + structural engineer</td></tr>
+        <tr><td class="num">Wk 2–4</td><td>V1 pilot build (100 u), ISTA testing, 10-household filmed study</td><td>Printhub, MMC, CX</td></tr>
+        <tr><td class="num">Wk 5–8</td><td>UCIC tooling; rigid-piece RFQs to Kumar / LuxoPack / Paksis / KBC with identical spec pack; sample rounds</td><td>Ops + procurement</td></tr>
+        <tr><td class="num">Wk 9–12</td><td>V2 1,000-unit live cohort; invariant re-check with real quotes; supplier selection for ceremony pieces</td><td>Ops + finance (box-economics gate)</td></tr>
+        <tr><td class="num">Mo 4</td><td>Pre-shipment inspection framework; buffer-stock policy (6 wks rigid, 2 wks corrugate); Napco second-source qualified</td><td>Procurement</td></tr>
+        <tr><td class="num">Mo 5–6</td><td>V3 scale validation at 3PL; K-mailer + M-3 launch; Den Box Q1 cadence begins</td><td>Ops</td></tr>
+        <tr><td class="num">Ongoing</td><td>Monthly: sticker/card rotation. Quarterly: Den theme, damage + reuse telemetry review. Yearly: full spec re-tender</td><td>Brand + ops</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─────────── 14 FINAL RECOMMENDATION ─────────── -->
+<section class="section" id="s14">
+  <div class="sec-head">
+    <div class="sec-num">14</div>
+    <div>
+      <p class="sec-eye">The decision</p>
+      <h2 class="sec-t">Final recommendation</h2>
+    </div>
+  </div>
+  <div class="prose">
+    <p><strong>Adopt the Green Box system:</strong> the kraft "Stage over Cellar" M-Shipper family
+    (UCIC-manufactured, deep-green one-colour, punch-out cat door), dressed with tissue, seal sticker,
+    printed WAT tape and a name-personalised monthly card; the rigid <strong>Welcome Folio</strong> once per
+    member carrying the Cat ID ceremony; the rigid <strong>Den Box</strong> quarterly for Tier 4; the
+    <strong>K-Mailer</strong> for kittens; per-cat name bands for multi-cat homes.</p>
+    <p>It is the only candidate that wins on all five axes simultaneously:</p>
+    <ul>
+      <li><b>Luxury</b> — delivered through pacing, paper, print and recognition (the choreography of §05), with true rigid luxury reserved for the moments that carry identity, exactly as the authority's ceremony rules demand.</li>
+      <li><b>Customer delight</b> — the lid message, the cat's name, the monthly sticker, and a box the cat keeps. The delight compounds monthly instead of peaking once.</li>
+      <li><b>Operational efficiency</b> — 100% flat-pack monthly flow, one structure across tiers, in-Kingdom replenishment measured in days, 3.5-minute pack-out.</li>
+      <li><b>Scalability</b> — UCIC/Napco carry 10,000+/month without strain; ceremony pieces batch quarterly from proven exporters with second sources named.</li>
+      <li><b>Profitability</b> — blended ≈ 9.8 SAR at 5k/mo against the modelled 9 SAR, with every tier gated by <code>checkBoxInvariants</code> before launch, and the folio booked honestly to acquisition.</li>
+    </ul>
+    <p>This is how Moracat becomes the unboxing benchmark for the Kingdom and the GCC: not by shipping the
+    most expensive box in the category, but by shipping the most <em>considered</em> one — the box that
+    knows the cat's name on the way in, and belongs to the cat afterwards. <strong>The carton is temporary;
+    the membership it performs is not.</strong></p>
+  </div>
+</section>
+
+<!-- ─────────── 15 AUTHORITY REVIEW ─────────── -->
+<section class="section" id="s15">
+  <div class="sec-head">
+    <div class="sec-num">15</div>
+    <div>
+      <p class="sec-eye">Design-authority checklist</p>
+      <h2 class="sec-t">Authority review</h2>
+    </div>
+  </div>
+  <div class="prose">
+    <ul>
+      <li><b>Emotions produced, in order?</b> Belonging (green box on the doorstep, the cat's name), trust (honest structure, plain provenance, no theatre), pride (Cat ID folio, den photos), ease (handles, pantry order), rationed delight (one sticker, one lid line), smart value (saving stated on the card). ✓</li>
+      <li><b>Rules satisfied?</b> R001/R082 (name-first), R006 (honesty: no scent, no fake luxury, Papr flagged not invented), R009 (cat is hero — the den), R031/R032/R034 (ceremony, human-readable number, wallet pass QR), R041/R042/R085 (savings as recognition on the card), R062–R069 untouched (nothing in-pack guilt-trips), R085 (member rate honoured, no coupon voice), R101–R106 (Arabic-first surfaces, PDPL privacy on exterior), R109 (multi-cat bands), R111 (even Tier 1's "empty" is a welcome). ✓</li>
+      <li><b>Rules at risk, watched:</b> R-principle 7 (calm over clever) — the punch-out door and tape phrase are the two "clever" allowances; V1 film review kills either if it reads as gimmick. Delight budget: max one novelty per box.</li>
+      <li><b>One clear action per moment?</b> Each beat of §05 has exactly one. ✓</li>
+      <li><b>Premium through restraint?</b> One exterior colour, one foil location in the entire system, zero gloss. ✓</li>
+      <li><b>Unhappy paths?</b> Crushed box → double-wall + ISTA; wrong-item → per-cat bands; member rips everything at once → nothing breaks; box in the sun → matte kraft, heat-safe adhesives; damage claims → photo-audit loop. ✓</li>
+      <li><b>Open items for product team:</b> (1) reconcile Tier 1 contents vs live Starter recipe (treats/litter conflict, §02); (2) confirm working prices through <code>minimumViablePrice</code>; (3) real 3PL quote for 12 kg to replace the 12 SAR assumption; (4) verify "Papr" contact if it exists.</li>
+    </ul>
+  </div>
+
+  <footer class="footer">
+    <span>MRC-PKG-001 · REV A · 2026-07</span>
+    <span>Companion: MRC-UX-001 · design/DESIGN-AUTHORITY.md</span>
+    <span>The authority wins every conflict</span>
+  </footer>
+</section>
+
+</div>
+</main>
+</div>
+
+<script>
+(function(){
+  var prog=document.getElementById('progress');
+  addEventListener('scroll',function(){
+    var h=document.documentElement, max=h.scrollHeight-h.clientHeight;
+    prog.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';
+  },{passive:true});
+  var links=[].slice.call(document.querySelectorAll('.toc a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))});
+  var obs=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id)});
+      }
+    });
+  },{rootMargin:'-20% 0px -70% 0px'});
+  secs.forEach(function(s){if(s)obs.observe(s)});
+  var rail=document.getElementById('rail'),btn=document.getElementById('menuBtn'),scrim=document.getElementById('scrim');
+  function close(){rail.classList.remove('open');scrim.classList.remove('show')}
+  if(btn){btn.addEventListener('click',function(){rail.classList.add('open');scrim.classList.add('show')});}
+  scrim.addEventListener('click',close);
+  links.forEach(function(a){a.addEventListener('click',close)});
+})();
+</script>
+</body>
+</html>
