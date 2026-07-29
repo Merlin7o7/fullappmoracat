@@ -6,6 +6,13 @@
 > Companion to `design/moracat-packaging-dossier.html` (full illustrated edition),
 > `design/DESIGN-AUTHORITY.md` and MRC-UX-001. **The design authority wins every
 > conflict.** Rev A · 2026-07 · All money in SAR, VAT-inclusive.
+>
+> ⚠ **Cost sections superseded:** the structural tray spec (§03), finish costs (§06),
+> sourcing mix (§10) and cost tables (§11) are superseded by
+> **`moracat-packaging-lean-luxury.md` (MRC-PKG-002, Rev B)** — a Jeddah-first
+> revision that cuts blended packaging ≈ 22% without reducing the member-facing
+> experience. Experience goals, choreography, safety spec and design language here
+> remain in force.
 
 ---
 
