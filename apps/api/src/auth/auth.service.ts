@@ -148,7 +148,13 @@ export class AuthService {
     // the e2e harness) can retrieve the code without email.
     let devEmailCode: string | undefined;
     if (IS_PROD) {
-      void this.sendEmailOtp(user.id);
+      // Fire-and-forget MUST catch: an unhandled rejection here (a Neon blip,
+      // a rate-limit throw) kills the whole process with exit 1 — this exact
+      // line was the prime suspect in the Render "Exited with status 1"
+      // crashes. The member can always re-request the code from the portal.
+      void this.sendEmailOtp(user.id).catch((e) => {
+        this.logger.error(`post-signup verification email failed for ${user.id}: ${String(e)}`);
+      });
     } else {
       const res = await this.sendEmailOtp(user.id);
       devEmailCode = (res as { devCode?: string }).devCode;

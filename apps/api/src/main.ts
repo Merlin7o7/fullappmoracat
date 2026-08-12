@@ -1,6 +1,28 @@
 // Must be first: initializes Sentry before the app is built (no-op without DSN).
 import "./instrument";
+import * as Sentry from "@sentry/node";
+import { sentryEnabled } from "./instrument";
 import "reflect-metadata";
+
+// ── Process-level safety net ────────────────────────────────────────────────
+// Node's DEFAULT for an unhandled promise rejection is process exit(1) — on
+// Render that is a "Server failure: Exited with status 1" and a cold restart.
+// A long-running API must never die because one floating promise (a mail send,
+// a Neon blip) rejected: log the stack loudly, report when Sentry is on, and
+// keep serving. True corruption still exits below via uncaughtException.
+process.on("unhandledRejection", (reason) => {
+  const detail = reason instanceof Error ? (reason.stack ?? reason.message) : String(reason);
+  console.error(`[unhandledRejection] ${detail}`);
+  if (sentryEnabled) Sentry.captureException(reason);
+});
+process.on("uncaughtException", (err) => {
+  // After a truly uncaught throw the process state can't be trusted — exit and
+  // let Render restart, but with the evidence in the logs first (the crashes
+  // this replaces died silently, leaving nothing to diagnose).
+  console.error(`[uncaughtException] ${err.stack ?? err.message}`);
+  if (sentryEnabled) Sentry.captureException(err);
+  process.exit(1);
+});
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -106,4 +128,9 @@ async function bootstrap() {
   app.get(PinoLogger).log(`🚀 Moraqat API on http://localhost:${port}`);
 }
 
-void bootstrap();
+// A failed boot must exit loudly (never linger as a zombie that isn't
+// listening) — and never be swallowed by the unhandledRejection net above.
+bootstrap().catch((err) => {
+  console.error(`[bootstrap failed] ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
+  process.exit(1);
+});
