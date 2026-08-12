@@ -50,9 +50,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.3,
   }));
 
+  // The community API paginates at 24/page and its DTO rejects unknown params —
+  // the old `?limit=200` earned a 400 that the best-effort fetch swallowed, so
+  // cat profiles silently never reached the production sitemap. Walk pages.
+  const catPages = async (): Promise<string[]> => {
+    const out: string[] = [];
+    for (let page = 1; page <= 9; page++) {
+      const items = await slugs(`/community/cats?page=${page}`, (j) => {
+        const body = j as { items?: { slug?: string }[]; meta?: { hasMore?: boolean } };
+        return (body.items ?? []).map((c) => c.slug).filter((s): s is string => !!s);
+      });
+      out.push(...items);
+      if (items.length < 24) break;
+    }
+    return out;
+  };
+
   const [blogSlugs, catSlugs] = await Promise.all([
     slugs("/content/blog", (j) => ((j as { items?: { slug: string }[] }).items ?? []).map((p) => p.slug)),
-    slugs("/community/cats?limit=200", (j) => ((j as { items?: { slug?: string }[] }).items ?? []).map((c) => c.slug).filter((s): s is string => !!s)),
+    catPages(),
   ]);
 
   const blogRoutes = blogSlugs.map((slug) => ({
