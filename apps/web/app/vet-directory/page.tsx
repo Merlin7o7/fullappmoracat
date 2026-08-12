@@ -5,8 +5,10 @@ import { MapPin, Phone, Search, ShieldCheck, Siren, ExternalLink } from "lucide-
 import { Card, Badge, Button } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { Breadcrumbs, breadcrumbJsonLd } from "@/components/breadcrumbs";
 import { IlloCat, IlloPaw } from "@/components/illustrations";
 import { fetchWithTimeout, httpError } from "@/lib/http";
+import { jsonLdProps } from "@/lib/json-ld";
 import { normalizeDirectory, type DirectoryClinic } from "@/lib/vet-directory";
 
 /**
@@ -74,10 +76,52 @@ export default async function VetDirectoryPage({
 
   const name = (c: DirectoryClinic) => (isAr ? c.nameAr : c.nameEn) || c.nameEn || c.nameAr;
 
+  const crumbs = [
+    { href: "/", label: isAr ? "الرئيسية" : "Home" },
+    { label: isAr ? "دليل العيادات الموثّقة" : "Verified clinics" },
+  ];
+
+  // ItemList of the verified clinics — only on the canonical (unfiltered) view,
+  // and only from fields the page actually renders: no hours, no ratings, no
+  // invented coordinates (R006). A down API or empty roster emits nothing.
+  const clinicListJsonLd =
+    !city && !emergency && clinics && clinics.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: isAr ? "عيادات بيطرية موثّقة من مرقط" : "Veterinary clinics verified by Moracat",
+          numberOfItems: clinics.length,
+          itemListElement: clinics.map((c, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            item: {
+              "@type": "VeterinaryCare",
+              name: name(c),
+              ...(c.addressLine || c.city
+                ? {
+                    address: {
+                      "@type": "PostalAddress",
+                      ...(c.addressLine ? { streetAddress: c.addressLine } : {}),
+                      ...(c.city ? { addressLocality: c.city } : {}),
+                      addressCountry: "SA",
+                    },
+                  }
+                : {}),
+              ...(c.phone ? { telephone: c.phone } : {}),
+              ...(c.mapsUrl ? { hasMap: c.mapsUrl } : {}),
+              ...(c.photos?.[0] ? { image: c.photos[0] } : {}),
+            },
+          })),
+        }
+      : null;
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
+      <script {...jsonLdProps(breadcrumbJsonLd(crumbs, SITE))} />
+      {clinicListJsonLd && <script {...jsonLdProps(clinicListJsonLd)} />}
       <main id="main" tabIndex={-1} className="container max-w-5xl py-12 outline-none sm:py-16">
+        <Breadcrumbs items={crumbs} isAr={isAr} className="mb-4" />
         <header className="max-w-2xl">
           <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
             {isAr ? "عيادات موثّقة" : "Verified clinics"}
@@ -195,12 +239,20 @@ export default async function VetDirectoryPage({
                   ? "راجعنا ترخيص العيادة وسجلها التجاري وتواصلنا مع فريقها قبل إدراجها. ولا تفتح أي عيادة سجل قطك الطبي إلا بإذنك أنت — وكل مرة تفتحه، تجدها مكتوبة في سجل الاطلاع داخل حسابك."
                   : "We reviewed the clinic's licence and commercial registration and spoke with its team before listing it. And no clinic opens your cat's medical record without your permission — every time one does, you'll find it written in the access ledger inside your account."}
               </p>
-              <Link
-                href="/portal/health-access"
-                className="inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {isAr ? "اطّلع على أذوناتك" : "See your permissions"}
-              </Link>
+              <div className="flex flex-wrap gap-x-6">
+                <Link
+                  href="/portal/health-access"
+                  className="inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {isAr ? "اطّلع على أذوناتك" : "See your permissions"}
+                </Link>
+                <Link
+                  href="/vet/apply"
+                  className="inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {isAr ? "عندك عيادة؟ قدّم للتوثيق" : "Run a clinic? Apply to be verified"}
+                </Link>
+              </div>
             </div>
           </div>
         </section>

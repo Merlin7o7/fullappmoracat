@@ -2,6 +2,7 @@
 
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
 import type { LegalDoc } from "@/lib/legal";
@@ -16,6 +17,11 @@ export function LegalView({ doc }: { doc: LegalDoc }) {
     <div className="min-h-screen">
       <SiteHeader />
       <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-4 py-12 outline-none sm:py-16">
+        <Breadcrumbs
+          className="mb-4"
+          isAr={isAr}
+          items={[{ href: "/", label: isAr ? "الرئيسية" : "Home" }, { label: doc.title[l] }]}
+        />
         <header className="mb-8 border-b border-border pb-6">
           <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{doc.title[l]}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{doc.intro[l]}</p>

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { Breadcrumbs, breadcrumbJsonLd } from "@/components/breadcrumbs";
 import { CommunityProfileView } from "@/components/community-profile-view";
 import type { CommunityProfile } from "@/lib/api";
 import { jsonLdProps } from "@/lib/json-ld";
@@ -62,10 +64,22 @@ export default async function CommunityProfilePage({ params }: { params: { slug:
     },
   };
 
+  const isAr = cookies().get("locale")?.value !== "en";
+  const crumbs = [
+    { href: "/", label: isAr ? "الرئيسية" : "Home" },
+    { href: "/community", label: isAr ? "المجتمع" : "Community" },
+    { label: cat.name },
+  ];
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
       <script {...jsonLdProps(jsonLd)} />
+      <script {...jsonLdProps(breadcrumbJsonLd(crumbs, SITE))} />
+      {/* Same width as the profile view below, so the trail aligns with it. */}
+      <div className="mx-auto max-w-3xl px-4 pt-6">
+        <Breadcrumbs items={crumbs} isAr={isAr} />
+      </div>
       <CommunityProfileView cat={cat} slug={params.slug} />
       <SiteFooter />
     </div>

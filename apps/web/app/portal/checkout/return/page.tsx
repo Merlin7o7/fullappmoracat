@@ -25,6 +25,7 @@ import { useCats } from "@/lib/cat-context";
 import { commerceEnabled } from "@/lib/features";
 import { localizeName } from "@/lib/translit";
 import { formatMoneyDate } from "@/lib/money";
+import { track } from "@/lib/track";
 import { CatIdCard } from "@/components/cat-id-card";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloPaw } from "@/components/illustrations";
@@ -111,6 +112,8 @@ function ReturnInner() {
       void qc.invalidateQueries({ queryKey: ["cats"] });
       void qc.invalidateQueries({ queryKey: ["subscriptions"] });
       void qc.invalidateQueries({ queryKey: ["overview"] });
+      // Paid activation confirmed — the commerce conversion (lib/track.ts).
+      track("membership_activated");
     }
   }, [data?.state, qc]);
 

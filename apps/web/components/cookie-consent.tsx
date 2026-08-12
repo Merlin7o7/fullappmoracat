@@ -7,6 +7,18 @@ import { Button } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 
 const KEY = "moraqat.cookieConsent";
+/** Fired on accept so other fixed-bottom UI (the mobile register bar) can
+ *  wait its turn instead of stacking on the banner. */
+export const COOKIE_CONSENT_EVENT = "moraqat:cookie-consent";
+
+/** True once the visitor has dismissed the notice (safe on the server). */
+export function hasCookieConsent(): boolean {
+  try {
+    return typeof window !== "undefined" && !!localStorage.getItem(KEY);
+  } catch {
+    return false;
+  }
+}
 
 /** Minimal, honest cookie notice — we only use essential storage (see policy). */
 export function CookieConsent() {
@@ -23,6 +35,7 @@ export function CookieConsent() {
   function accept() {
     localStorage.setItem(KEY, "1");
     setShow(false);
+    window.dispatchEvent(new Event(COOKIE_CONSENT_EVENT));
   }
 
   return (

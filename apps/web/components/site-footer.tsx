@@ -40,6 +40,7 @@ export function SiteFooter() {
         ...(commerce ? [{ href: "/products", label: t.nav.products }] : []),
         { href: "/tools/feeding", label: t.nav.tools },
         { href: "/blog", label: t.nav.blog },
+        { href: "/vet-directory", label: isAr ? "دليل العيادات الموثّقة" : "Verified clinics" },
       ],
     },
     {
@@ -48,6 +49,8 @@ export function SiteFooter() {
         { href: "/login", label: t.nav.login },
         { href: "/portal", label: isAr ? "بوابة الأعضاء" : "Member portal" },
         { href: "/contact", label: isAr ? "تواصل معنا" : "Contact us" },
+        // The clinics' door — quiet, but no longer orphaned from the public site.
+        { href: "/vet/apply", label: isAr ? "للعيادات: انضموا إلينا" : "For clinics" },
       ],
     },
   ];

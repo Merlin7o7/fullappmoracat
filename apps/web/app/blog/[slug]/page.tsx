@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
-import { ArrowLeft } from "lucide-react";
 import { Button } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { Breadcrumbs, breadcrumbJsonLd } from "@/components/breadcrumbs";
 import { IlloCat, IlloFish, IlloSprig, Sticker } from "@/components/illustrations";
 import { formatDate } from "@/lib/datetime";
 import { BRAND } from "@/lib/org";
@@ -133,16 +133,21 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     mainEntityOfPage: `${SITE}/blog/${params.slug}`,
   };
 
+  // The trail is the way back (Home → Journal) — it replaces the old back
+  // button rather than sitting beside it (premium is subtraction).
+  const crumbs = [
+    { href: "/", label: isAr ? "الرئيسية" : "Home" },
+    { href: "/blog", label: isAr ? "المدونة" : "Journal" },
+    { label: title },
+  ];
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
       <script {...jsonLdProps(jsonLd)} />
+      <script {...jsonLdProps(breadcrumbJsonLd(crumbs, SITE))} />
       <article className="container max-w-3xl py-12">
-        <Link href="/blog">
-          <Button variant="ghost" size="sm" className="mb-8">
-            <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "كل المقالات" : "All articles"}
-          </Button>
-        </Link>
+        <Breadcrumbs items={crumbs} isAr={isAr} className="mb-6" />
 
         {post.category && (
           <span className="mb-5 inline-block rounded-full bg-butter/60 px-3.5 py-1 text-xs font-semibold text-foreground/80 dark:bg-butter/25 dark:text-foreground">
@@ -183,6 +188,13 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           </p>
           <Link href="/register"><Button size="lg" className="mt-5">{isAr ? "سوِّ هوية قطك" : "Create your cat's ID"}</Button></Link>
         </div>
+
+        {/* One quiet sibling path — the reading led here, the tool carries on. */}
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          <Link href="/tools/feeding" className="font-medium text-primary underline-offset-4 hover:underline">
+            {isAr ? "جرّب حاسبة التغذية — كم يحتاج قطك يومياً؟" : "Try the feeding calculator — how much does your cat need daily?"}
+          </Link>
+        </p>
       </article>
 
       <SiteFooter />

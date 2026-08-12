@@ -13,9 +13,14 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
-      // Private surfaces should never be crawled.
-      disallow: ["/portal", "/admin", "/reset-password", "/verify-email", ...commerceDisallow],
+      // The vet app surface is chrome for clinic staff — only the application
+      // door is a public landing page. Most-specific path wins, so /vet/apply
+      // stays crawlable while /vet, /vet/login, /vet/scan… do not.
+      allow: ["/", "/vet/apply"],
+      // Private and app-chrome surfaces should never be crawled. The public
+      // auth doors additionally carry meta-robots noindex on their layouts —
+      // belt and braces, since Disallow alone can't unlist a linked URL (R040).
+      disallow: ["/portal", "/admin", "/login", "/reset-password", "/verify-email", "/vet", ...commerceDisallow],
     },
     sitemap: `${SITE}/sitemap.xml`,
     host: SITE,

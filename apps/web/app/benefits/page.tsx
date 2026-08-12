@@ -151,6 +151,16 @@ export default function BenefitsPage() {
               </p>
             </div>
           )}
+
+          {/* The verified-clinic directory exists today — a real, adjacent path
+              for the reader who came here thinking about vet care (R006). */}
+          <p className="mt-6 text-sm text-muted-foreground">
+            <Stethoscope aria-hidden className="me-1.5 inline size-4 align-[-2px]" />
+            {isAr ? "تبحث عن عيادة الآن؟ " : "Looking for a clinic today? "}
+            <Link href="/vet-directory" className="font-medium text-primary underline-offset-4 hover:underline">
+              {isAr ? "تصفّح دليل العيادات الموثّقة" : "Browse the verified clinic directory"}
+            </Link>
+          </p>
         </section>
 
         {/* Public CTA. */}

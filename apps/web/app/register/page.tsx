@@ -15,6 +15,7 @@ import { OtpBoxes } from "@/components/otp-boxes";
 import { ApiError } from "@/lib/http";
 import { friendlyError } from "@/lib/errors";
 import { useCaptureSource } from "@/lib/source";
+import { track } from "@/lib/track";
 
 // Draft persistence (R117 — never lose entered data). Name, phone and email
 // only — NEVER the password, never the terms tick.
@@ -122,6 +123,7 @@ export default function RegisterPage() {
     });
     // Account created — the draft has done its job.
     clearSignupDraft();
+    track("registration_completed");
     // Straight to the Cat ID (north star: holding it in under two minutes).
     // Email verification runs in parallel — a quiet portal banner invites it;
     // it gates only the community-publish action, never the ID itself.
@@ -170,6 +172,7 @@ export default function RegisterPage() {
     try {
       await loginWithGoogle(idToken);
       clearSignupDraft();
+      track("registration_completed", { google: true });
       router.push(pendingCat ? "/portal/cats/new" : "/portal");
     } catch (err) {
       setError(friendlyError(err, isAr).message);

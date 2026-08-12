@@ -33,6 +33,19 @@ export default function NotFound() {
             <Home className="size-4" /> العودة للرئيسية · Back home
           </Button>
         </Link>
+        {/* Quiet secondary paths — home stays the one primary action (R005),
+            but a lost visitor shouldn't leave empty-handed (R111/R112). */}
+        <nav aria-label="More places to go · وجهات أخرى" className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
+          <Link href="/register" className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline">
+            سجّل قطك مجاناً · Register your cat — free
+          </Link>
+          <Link href="/community" className="inline-flex min-h-11 items-center text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            المجتمع · Community
+          </Link>
+          <Link href="/tools/feeding" className="inline-flex min-h-11 items-center text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            حاسبة التغذية · Feeding calculator
+          </Link>
+        </nav>
       </div>
     </div>
   );

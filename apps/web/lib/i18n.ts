@@ -99,8 +99,20 @@ export const dict = {
       items: [
         { q: "هل هوية القط مجانية؟", a: "نعم — مجانية اليوم ودايم. الهوية والسجل الصحي والمجتمع لك بلا مقابل، وما نطلب بطاقة." },
         { q: "وش تبيعون الحين؟", a: "ولا شي. إحنا في مرحلة التعداد — نسجّل القطط بس. الاشتراك الشهري للعناية يفتح بعدين، ونبلّغ المسجّلين أول ما يصير." },
+        { q: "لما تفتح العضويات، لازم أدفع عشان أحتفظ بالهوية؟", a: "لا. حسابك وهوية قطك وسجله والمجتمع تظل مجانية — هذا مكتوب في شروطنا. الاشتراك الشهري للعناية شي اختياري منفصل، وتسجيلك اليوم يحجز مكانك في قائمة الانتظار بس." },
         { q: "وش يعني «عضو مؤسِّس»؟", a: "أول ١٠٠٠ قط يتسجّل. الصفة تجي من رقم قطك المتسلسل نفسه — مو شي نعطيه أو نسحبه، ورقمه يظل رقمه." },
+        { q: "من يقدر يشوف سجل قطك الصحي؟", a: "أنت بس — إلا إذا منحت عيادة موثّقة إذن الاطلاع وقت الزيارة، وتقدر تسحبه بعدها بضغطة. كل مرة يُفتح فيها السجل تجدها مكتوبة في سجل الاطلاع داخل حسابك." },
         { q: "وش تسوون ببياناتي؟", a: "نحفظها داخل السعودية ونستخدمها لهوية قطك وسجله. ما نرسل لك إيميل تسويقي إلا بموافقتك، وتقدر توقفها أو تحذف بياناتك متى ما تبي." },
+      ],
+      /**
+       * Rendered ONLY when commerceEnabled() — in the visible FAQ and in the
+       * FAQPage JSON-LD alike. During the Census nothing is for sale, and no
+       * markup may reveal the paid product before launch (R040/R006).
+       */
+      commerceItems: [
+        { q: "كيف يشتغل اشتراك العناية؟", a: "خطة شهرية تُحسب من ملف قطك نفسه — وزنه وعمره وبيته — مو جدول فئات تختار منه. شهراً بشهر أو مدة مدفوعة مقدماً، مع خصم على مدتَي ٦ و١٢ شهراً." },
+        { q: "أقدر ألغي أو أوقف الاشتراك؟", a: "متى ما تبي، وبضغطة — إيقاف مؤقت أو إلغاء كامل. ولا تجديد بدون علمك: نذكّرك قبل أي خصم." },
+        { q: "وين توصّلون؟", a: "التوصيل لكل مدن السعودية، والأسعار نهائية بلا رسوم خفية." },
       ],
     },
     closing: {
@@ -189,8 +201,20 @@ export const dict = {
       items: [
         { q: "Is the Cat ID free?", a: "Yes — free today and always. The ID, the health record and the community cost nothing, and we never ask for a card." },
         { q: "What are you selling right now?", a: "Nothing. We're in the census phase — we're only registering cats. The monthly care subscription opens later, and registered cats hear first." },
+        { q: "When memberships open, do I have to pay to keep the ID?", a: "No. Your account, your cat's ID, their record and the community stay free — it's written in our terms. The monthly care subscription is a separate, optional thing; registering today only holds your place on the waitlist." },
         { q: "What does “Founding Member” mean?", a: "The first 1,000 cats registered. The status comes from your cat's sequential number itself — it isn't something we hand out or take away, and their number stays theirs." },
+        { q: "Who can see my cat's health record?", a: "Only you — unless you grant a verified clinic access at the time of a visit, and you can take it back in one tap afterwards. Every time the record is opened, you'll find it written in the access ledger inside your account." },
         { q: "What do you do with my data?", a: "We store it inside Saudi Arabia and use it for your cat's ID and record. We don't send marketing email without your consent, and you can withdraw it or delete your data at any time." },
+      ],
+      /**
+       * Rendered ONLY when commerceEnabled() — in the visible FAQ and in the
+       * FAQPage JSON-LD alike. During the Census nothing is for sale, and no
+       * markup may reveal the paid product before launch (R040/R006).
+       */
+      commerceItems: [
+        { q: "How does the care subscription work?", a: "A monthly plan computed from your cat's own profile — their weight, age and household — never picked from a tier table. Month to month, or prepay a term; 6 and 12-month terms carry a discount." },
+        { q: "Can I cancel or pause?", a: "Anytime, in one tap — pause for a while or cancel outright. And nothing ever renews without you knowing: we remind you before any charge." },
+        { q: "Where do you deliver?", a: "Every city in Saudi Arabia — and prices are final, with no hidden fees." },
       ],
     },
     closing: {

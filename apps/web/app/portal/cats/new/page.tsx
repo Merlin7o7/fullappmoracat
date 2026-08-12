@@ -17,6 +17,7 @@ import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { friendlyMessage } from "@/lib/errors";
 import { consumeSource } from "@/lib/source";
+import { track } from "@/lib/track";
 import { SAUDI_CITIES } from "@moraqat/core";
 
 /**
@@ -389,6 +390,8 @@ function IssueIdFlow() {
       qc.invalidateQueries({ queryKey: ["cats"] });
       qc.invalidateQueries({ queryKey: ["overview"] });
       setFirstIssue(Boolean(cat.firstCatIdIssued));
+      // The census conversion moment — no PII, just the fact (lib/track.ts).
+      track("cat_id_issued", { first: Boolean(cat.firstCatIdIssued) });
       setCeremonyCat(cat); // the reveal — then the welcome (first time) or the cats page
     },
     onError: (e) => toast({ title: isAr ? "تعذّر إصدار الهوية" : "Couldn't issue the Cat ID", description: friendlyMessage(e, isAr), variant: "error" }),
