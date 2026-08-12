@@ -40,14 +40,26 @@ if [ ! -x node_modules/.bin/prisma ]; then
 fi
 
 echo "▶ Applying database migrations (migrate deploy)…"
-if ! DATABASE_URL="$MIGRATE_URL" node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma; then
-  echo "" >&2
-  echo "FATAL: migrate deploy failed — refusing to boot against an unknown schema." >&2
-  echo "  • If the error mentions prepared statements or DDL, DATABASE_URL is pooled:" >&2
-  echo "    set DIRECT_DATABASE_URL to the non-pooled Neon URL." >&2
-  echo "  • The previous revision keeps serving; nothing was half-deployed." >&2
-  exit 1
-fi
+# Retry with backoff: on the free tiers BOTH sides sleep — Render spins the
+# container down on idle and Neon suspends its compute. The first visitor of
+# the day wakes them together, and a migrate attempt against a still-waking
+# Neon fails transiently. One failed attempt used to exit 1 (a Render "server
+# failure" email); three attempts ride out the wake. migrate deploy is
+# idempotent, so retrying is always safe.
+attempt=1
+until DATABASE_URL="$MIGRATE_URL" node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma; do
+  if [ "$attempt" -ge 3 ]; then
+    echo "" >&2
+    echo "FATAL: migrate deploy failed after ${attempt} attempts — refusing to boot against an unknown schema." >&2
+    echo "  • If the error mentions prepared statements or DDL, DATABASE_URL is pooled:" >&2
+    echo "    set DIRECT_DATABASE_URL to the non-pooled Neon URL." >&2
+    echo "  • The previous revision keeps serving; nothing was half-deployed." >&2
+    exit 1
+  fi
+  attempt=$((attempt + 1))
+  echo "⚠ migrate deploy failed (attempt $((attempt - 1))) — database may be waking; retrying in 5s…" >&2
+  sleep 5
+done
 echo "✓ Migrations applied."
 
 exec node dist/main.js
