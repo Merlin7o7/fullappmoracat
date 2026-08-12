@@ -30,11 +30,15 @@ export function useLocale() {
 export function Providers({
   children,
   initialLocale = "ar",
+  nonce,
 }: {
   children: React.ReactNode;
   /** Locale resolved server-side from the cookie so the first paint is correct —
    *  no flash of Arabic RTL for English members (R102). */
   initialLocale?: Locale;
+  /** CSP nonce (middleware's x-nonce) — next-themes' pre-paint theme script is
+   *  inline and needs it, or the CSP blocks it and dark mode flashes light. */
+  nonce?: string;
 }) {
   const [locale, setLocaleState] = React.useState<Locale>(initialLocale);
   // Calendar starts at "auto" (matches SSR); the persisted choice is applied on
@@ -103,7 +107,7 @@ export function Providers({
     // prefers-reduced-motion globally (R075) — including whileInView entrances
     // the CSS reduced-motion rule can't reach (transforms, not CSS animations).
     <MotionConfig reducedMotion="user">
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem nonce={nonce}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <ToastProvider>

@@ -71,7 +71,9 @@ function buildCsp(nonce: string): string {
     // strict-dynamic: trust is propagated from the nonced bootstrap to the
     // chunks it loads, so we never need 'unsafe-inline' or host allow-lists for
     // scripts. Older browsers ignore strict-dynamic and fall back to 'self'.
-    "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'"],
+    // Dev only: next dev's eval-based sourcemaps and react-refresh need
+    // unsafe-eval — without it hydration dies silently in `pnpm dev`. Never prod.
+    "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(IS_PROD ? [] : ["'unsafe-eval'"])],
     // Tailwind emits a stylesheet, but Next and framer-motion also set inline
     // style attributes. style-src-attr must stay permissive for those; the
     // stylesheet itself is same-origin. Inline styles cannot execute script.

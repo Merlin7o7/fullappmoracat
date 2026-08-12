@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import localFont from "next/font/local";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Providers } from "./providers";
 import type { Locale } from "@/lib/i18n";
+import { jsonLdProps } from "@/lib/json-ld";
 import { BRAND, LEGAL_ENTITY, CONTACT } from "@/lib/org";
 import "./globals.css";
 
@@ -108,6 +109,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const cookieLocale = cookies().get("locale")?.value;
   const locale: Locale = cookieLocale === "en" ? "en" : "ar";
   const dir = locale === "ar" ? "rtl" : "ltr";
+  // The middleware's per-request nonce — next-themes' inline pre-paint script
+  // must carry it or the strict CSP blocks it (dark mode would flash light).
+  const nonce = headers().get("x-nonce") ?? undefined;
 
   // Organization structured data — names the legal entity behind the brand so
   // search/knowledge surfaces attribute Moracat to its operating establishment.
@@ -139,10 +143,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={`${inter.variable} ${fraunces.variable} ${arabic.variable} ${plexMono.variable} font-sans`}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
-        />
+        <script {...jsonLdProps(orgJsonLd)} />
         {/* Skip link — keyboard users jump past the nav to content (R097). */}
         <a
           href="#main"
@@ -150,7 +151,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           {locale === "ar" ? "تخطَّ إلى المحتوى" : "Skip to content"}
         </a>
-        <Providers initialLocale={locale}>{children}</Providers>
+        <Providers initialLocale={locale} nonce={nonce}>{children}</Providers>
       </body>
     </html>
   );
