@@ -83,8 +83,8 @@ export class CensusService {
       // a fictional cat inside it is a false public claim (R006).
       this.prisma.cat.count({ where: { deletedAt: null, isDemo: false } }),
       this.prisma.cat.aggregate({ _max: { catNumber: true }, where: { isDemo: false } }),
-      // Only cats whose owner opted into the public community, and that a
-      // moderator hasn't hidden. Everything else is private by default.
+      // Only community-visible cats (shared by default at registration —
+      // opt-out, decision 2026-08-14), and that a moderator hasn't hidden.
       this.prisma.cat.findFirst({
         where: { deletedAt: null, isPublic: true, hiddenAt: null, isDemo: false },
         orderBy: { catNumber: "desc" },

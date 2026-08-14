@@ -29,16 +29,16 @@ import {
   CreateVetVisitDto,
 } from "./dto/cat-health.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
-import { RequireEmailVerified } from "../common/decorators/email-verified.decorator";
 
 @ApiTags("cats")
 @ApiBearerAuth()
-// Creating and tending your OWN private cat must not wait on email deliverability
-// — the Cat ID ceremony is first value and the <2-minute north star depends on
-// reaching it without an inbox round-trip (fire #7). Email verification gates
-// only the one action that publishes outward — making a cat public to the
-// community (see `updateVisibility`) — where throwaway-account UGC is the real
-// risk (R006). Everything else here is private to the member.
+// Creating and tending your cat must not wait on email deliverability — the
+// Cat ID ceremony is first value and the <2-minute north star depends on
+// reaching it without an inbox round-trip (fire #7). Nothing here gates on a
+// verified email: community visibility is opt-out at creation (decision
+// 2026-08-14), abuse is handled by report→hide moderation, and verification
+// still gates community *interactions* (likes/reports — see
+// community-likes.controller).
 @Controller("cats")
 export class CatsController {
   constructor(private readonly cats: CatsService) {}
@@ -241,11 +241,10 @@ export class CatsController {
   }
 
   @Patch(":id/visibility")
-  // Publishing a cat outward to the community is the one action that needs a
-  // verified email — no throwaway-account public UGC (R006). Private cat
-  // management above is deliberately ungated so first value isn't held hostage.
-  @RequireEmailVerified()
-  @ApiOperation({ summary: "Update sharing + per-field privacy (opt-in)" })
+  // Deliberately NOT email-gated: cats are published by default at creation
+  // (opt-out, decision 2026-08-14), so this route is above all the opt-out —
+  // and turning something OFF must never 403 on an unverified inbox.
+  @ApiOperation({ summary: "Update sharing + per-field privacy (opt-out + appearance)" })
   updateVisibility(
     @CurrentUser("id") userId: string,
     @Param("id") id: string,

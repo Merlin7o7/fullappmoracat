@@ -32,8 +32,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   // carry where they were headed, so login lands them right back (R117: a
   // "notify me" tap, a deep link, nothing gets lost on the way).
   // Email verification does NOT gate the portal: the Cat ID comes first, and
-  // verifying is a parallel task invited by the quiet banner below. Only the
-  // community-publish action requires it (enforced server-side).
+  // verifying is a parallel task invited by the quiet banner below. Only
+  // community interactions (likes/reports) require it server-side —
+  // visibility itself is opt-out at creation (decision 2026-08-14).
   React.useEffect(() => {
     if (!ready) return;
     if (!user) {
@@ -140,7 +141,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
  * returns next visit without ever blocking anything.
  */
 function VerifyEmailBanner({ isAr, pathname }: { isAr: boolean; pathname: string }) {
-  const { primaryCat } = useCats();
   const DISMISS_KEY = "moraqat.verifyBannerDismissed";
   const [dismissed, setDismissed] = React.useState(true); // SSR-safe: start hidden
   React.useEffect(() => {
@@ -148,14 +148,11 @@ function VerifyEmailBanner({ isAr, pathname }: { isAr: boolean; pathname: string
   }, []);
   if (dismissed) return null;
 
-  const catName = primaryCat ? localizeName(primaryCat.name, isAr ? "ar" : "en") : null;
-  const message = catName
-    ? isAr
-      ? `أكّد بريدك لتأمين حسابك ولمشاركة ${catName} مع المجتمع`
-      : `Confirm your email to secure your account and share ${catName} to the community`
-    : isAr
-      ? "أكّد بريدك لتأمين حسابك ولمشاركة قطك مع المجتمع"
-      : "Confirm your email to secure your account and share your cat to the community";
+  // Publishing no longer waits on verification (opt-out default) — the banner
+  // promises only what the email actually unlocks: account security (R040).
+  const message = isAr
+    ? "أكّد بريدك لتأمين حسابك"
+    : "Confirm your email to secure your account";
 
   return (
     <div role="status" className="flex items-center justify-between gap-2 border-b border-border bg-accent/[0.08] px-4 py-1.5 text-xs">

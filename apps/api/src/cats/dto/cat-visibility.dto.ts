@@ -1,9 +1,10 @@
 import { IsBoolean, IsOptional, IsString, MaxLength } from "class-validator";
 
 /**
- * Per-cat community visibility. Everything is opt-in and private by default —
- * a cat only appears publicly after the owner explicitly sets isPublic, and each
- * field (owner name, city, gallery, age, breed) is revealed only if toggled on.
+ * Per-cat community visibility. Cats are published by default at registration
+ * (opt-out, decision 2026-08-14) with an anonymous owner posture — this DTO is
+ * the ongoing opt-out plus the per-field privacy dials: each field (owner name,
+ * city, gallery, age, breed) is revealed only if toggled on.
  */
 export class UpdateVisibilityDto {
   @IsOptional() @IsBoolean() isPublic?: boolean;

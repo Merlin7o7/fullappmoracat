@@ -22,6 +22,7 @@
     "db:seed": "pnpm --filter @moraqat/db seed",
     "db:seed:community": "pnpm --filter @moraqat/db seed:community",
     "db:seed:catalog": "pnpm --filter @moraqat/db seed:catalog",
+    "db:backfill:community-share": "pnpm --filter @moraqat/db backfill:community-share",
     "db:migrate:deploy": "pnpm --filter @moraqat/db migrate:deploy",
     "db:studio": "pnpm --filter @moraqat/db studio",
     "docker:up": "docker compose up -d",

@@ -33,8 +33,9 @@ export interface ShareChoice {
   appearance?: ShareAppearance;
   /** The resolved display name (their nickname or first name), when one is revealed. */
   nickname?: string;
-  /** PDPL photo-consent attestation (R106) — always true when going public;
-   *  the server mints the timestamp itself. */
+  /** PDPL photo-consent attestation (R106) — sent when going public with a
+   *  photo whose consent wasn't already stamped at creation; the server mints
+   *  the timestamp itself. */
   consent?: boolean;
 }
 
@@ -79,19 +80,28 @@ export function CatIdCeremony({
   onShareChoice,
   variant = "full",
   ownerFirstName,
+  initiallyPublic = false,
+  consentDone = false,
 }: {
   cat: CeremonyCat;
   isAr: boolean;
   onClose: () => void;
-  /** If provided (full variant), the reveal offers "share with the community?"
-   *  after the pride actions and reports the choice — including how the owner
-   *  wants to appear (D6). Must THROW on failure so the ceremony can show an
-   *  honest retry (R115). */
+  /** If provided (full variant), the reveal reports visibility choices — the
+   *  opt-out ("keep private"), a later opt-in, and how the owner wants to
+   *  appear (D6). Must THROW on failure so the ceremony can show an honest
+   *  retry (R115). */
   onShareChoice?: (choice: ShareChoice) => Promise<void> | void;
   /** Full = stamping + reveal + pride + share fork. Mini = one card drop + continue. */
   variant?: "full" | "mini";
   /** The member's first name — offered as one of the share-appearance options. */
   ownerFirstName?: string | null;
+  /** The cat was published at creation (opt-out default, decision 2026-08-14) —
+   *  the reveal celebrates the fact and offers "customize" / "keep private"
+   *  instead of asking to share. */
+  initiallyPublic?: boolean;
+  /** The PDPL people-in-photo attestation was already stamped at creation
+   *  (photo uploaded with sharing on) — the appearance stage skips re-asking. */
+  consentDone?: boolean;
 }) {
   const titleId = React.useId();
   const reduced = useReducedMotion();
@@ -144,6 +154,8 @@ export function CatIdCeremony({
               onClose={onClose}
               onShareChoice={onShareChoice}
               ownerFirstName={ownerFirstName}
+              initiallyPublic={initiallyPublic}
+              consentDone={consentDone}
               // Watch again (R031): replay is pure theatre, so it only exists
               // where the theatre does — hidden under reduced motion (R075).
               onReplay={reduced ? undefined : () => setAct("stamping")}
@@ -272,6 +284,8 @@ function RevealAct({
   onClose,
   onShareChoice,
   ownerFirstName,
+  initiallyPublic,
+  consentDone,
   onReplay,
 }: {
   cat: CeremonyCat;
@@ -280,6 +294,8 @@ function RevealAct({
   onClose: () => void;
   onShareChoice?: (choice: ShareChoice) => Promise<void> | void;
   ownerFirstName?: string | null;
+  initiallyPublic?: boolean;
+  consentDone?: boolean;
   onReplay?: () => void;
 }) {
   const { toast } = useToast();
@@ -290,11 +306,16 @@ function RevealAct({
   // Pride first, ask second (D6, R004): the fork only opens if invited.
   const [stage, setStage] = React.useState<"pride" | "appearance">("pride");
   const [saving, setSaving] = React.useState<null | "public" | "private">(null);
-  const [appearance, setAppearance] = React.useState<ShareAppearance | null>(null);
+  // When the cat was published at creation (opt-out default), "anonymous" isn't
+  // a nudge — it's the true current state (showOwnerName is off), preselected
+  // so the appearance stage edits reality instead of asking from scratch.
+  const [appearance, setAppearance] = React.useState<ShareAppearance | null>(
+    initiallyPublic ? "anonymous" : null
+  );
   const [nickname, setNickname] = React.useState("");
   const [consented, setConsented] = React.useState(false);
   const [shareError, setShareError] = React.useState(false);
-  const [sharedDone, setSharedDone] = React.useState(false);
+  const [sharedDone, setSharedDone] = React.useState(Boolean(initiallyPublic));
   const [storyBusy, setStoryBusy] = React.useState(false);
 
   const firstName = (ownerFirstName ?? "").trim();
@@ -326,18 +347,32 @@ function RevealAct({
     }
   }
 
-  /** The single quiet exit (R005): one breathing beat, then the plan. */
-  async function finishToPlan() {
+  /** The single quiet exit (R005): one breathing beat, then the plan.
+   *  Deliberately state-neutral — leaving the ceremony never changes
+   *  visibility (the cat is public by default; "keep private" below is the
+   *  only thing that unpublishes). */
+  function finishToPlan() {
     if (saving) return;
-    if (!sharedDone) {
-      setSaving("private");
-      try {
-        await onShareChoice?.({ public: false });
-      } catch {
-        // Private is the default state — nothing was promised, nothing is lost.
-      }
-    }
     onClose();
+  }
+
+  /** The opt-out, right where the default was celebrated (decision 2026-08-14). */
+  async function keepPrivate() {
+    if (saving) return;
+    setSaving("private");
+    try {
+      await onShareChoice?.({ public: false });
+      setSharedDone(false);
+      setAppearance(null);
+    } catch {
+      // Honest failure (R115): the cat is still public — say so, don't pretend.
+      toast({
+        title: isAr ? `ما قدرنا نخفي ${cat.name} — جرّب مرة ثانية` : `Couldn't make ${cat.name} private — try again`,
+        variant: "error",
+      });
+    } finally {
+      setSaving(null);
+    }
   }
 
   const resolvedName =
@@ -345,8 +380,9 @@ function RevealAct({
   const canShare =
     appearance !== null &&
     (appearance === "anonymous" || resolvedName.length > 0) &&
-    // PDPL people-consent only applies when there is a photo to publish (R106).
-    (!hasPhoto || consented);
+    // PDPL people-consent only applies when there is a photo to publish (R106)
+    // and it wasn't already attested at upload time (consentDone).
+    (!hasPhoto || consented || Boolean(consentDone));
 
   async function sharePublic() {
     if (!canShare || saving) return;
@@ -357,7 +393,9 @@ function RevealAct({
         public: true,
         appearance: appearance!,
         ...(appearance !== "anonymous" && resolvedName ? { nickname: resolvedName } : {}),
-        ...(hasPhoto ? { consent: true } : {}),
+        // Attest only when it wasn't already stamped at creation — the server
+        // mints the timestamp on every `consent: true`, so don't re-stamp.
+        ...(hasPhoto && !consentDone ? { consent: true } : {}),
       });
       // Back to the pride screen — the celebration continues; the forward
       // link remains the one exit (R005, no hard cut).
@@ -486,9 +524,41 @@ function RevealAct({
 
               {onShareChoice && (
                 sharedDone ? (
-                  <p role="status" className="py-2 text-sm text-white/75">
-                    {isAr ? `صار ${cat.name} ظاهراً لمجتمع مرقط ✓` : `${cat.name} is now visible to the Moracat community ✓`}
-                  </p>
+                  /* Published by default (decision 2026-08-14): celebrate the
+                     fact, and keep both dials — appearance and the opt-out —
+                     one tap away, equal and unhidden (R040). */
+                  <div className="flex flex-col gap-2">
+                    <p role="status" className="pt-2 text-sm text-white/75">
+                      {appearance === "anonymous" || appearance === null
+                        ? isAr
+                          ? `${cat.name} ظاهر لمجتمع مرقط ✓ — بدون اسمك`
+                          : `${cat.name} is visible to the Moracat community ✓ — anonymously`
+                        : isAr
+                          ? `${cat.name} ظاهر لمجتمع مرقط ✓`
+                          : `${cat.name} is visible to the Moracat community ✓`}
+                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn("flex-1", SCRIM_BTN)}
+                        disabled={saving !== null || storyBusy}
+                        onClick={() => { setShareError(false); setStage("appearance"); }}
+                      >
+                        {isAr ? "خصّص ظهورك" : "Customize how you appear"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn("flex-1", SCRIM_BTN)}
+                        disabled={saving !== null || storyBusy}
+                        loading={saving === "private"}
+                        onClick={keepPrivate}
+                      >
+                        {isAr ? `خلّه خاص` : `Keep ${cat.name} private`}
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <Button
                     variant="ghost"
@@ -509,14 +579,8 @@ function RevealAct({
                 disabled={saving !== null}
                 className="mt-2 inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-full text-sm text-white/60 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:opacity-50"
               >
-                {saving === "private" ? (
-                  isAr ? "لحظة…" : "One moment…"
-                ) : (
-                  <>
-                    {isAr ? `التالي: خطة ${cat.name}` : `Next: ${cat.name}'s plan`}
-                    <span aria-hidden className="rtl:rotate-180">→</span>
-                  </>
-                )}
+                {isAr ? `التالي: خطة ${cat.name}` : `Next: ${cat.name}'s plan`}
+                <span aria-hidden className="rtl:rotate-180">→</span>
               </button>
             </motion.div>
           ) : (
@@ -528,7 +592,10 @@ function RevealAct({
               className="text-start"
             >
               {/* The identity fork (D6): three equal ways to stand beside the
-                  cat — no default, no nudging. The cat stays the hero (§09). */}
+                  cat. For an opted-out cat nothing is preselected; for a
+                  default-published cat "anonymous" arrives selected because it
+                  IS the current state (showOwnerName off), not a nudge. The
+                  cat stays the hero (§09). */}
               <p id="appearance-q" className="mb-3 text-center text-sm text-white/80">
                 {isAr ? "وتحب تظهر معه كيف؟" : "And how would you like to appear with them?"}
               </p>
@@ -572,8 +639,9 @@ function RevealAct({
               </div>
 
               {/* PDPL photo-consent attestation (R106) — only when there is a
-                  photo to publish; the promise matches the community panel. */}
-              {hasPhoto && (
+                  photo to publish AND it wasn't already attested at upload
+                  time; the promise matches the community panel. */}
+              {hasPhoto && !consentDone && (
                 <label className="mt-3 flex min-h-[44px] cursor-pointer items-start gap-3 rounded-xl bg-white/[0.06] p-3 text-xs leading-relaxed text-white/80 ring-1 ring-white/15">
                   <input
                     type="checkbox"
@@ -600,7 +668,9 @@ function RevealAct({
               <Button size="lg" className="mt-4 w-full" disabled={!canShare} loading={saving === "public"} onClick={sharePublic}>
                 {shareError
                   ? isAr ? "جرّب مرة ثانية" : "Try again"
-                  : isAr ? `شارك ${cat.name} مع المجتمع` : `Share ${cat.name} with the community`}
+                  : sharedDone
+                    ? isAr ? "احفظ الظهور" : "Save appearance"
+                    : isAr ? `شارك ${cat.name} مع المجتمع` : `Share ${cat.name} with the community`}
               </Button>
               {/* Clearly skippable (R010/R116): Later is a full peer button,
                   and it returns to the celebration, not to a pitch. */}

@@ -126,7 +126,8 @@ export default function RegisterPage() {
     track("registration_completed");
     // Straight to the Cat ID (north star: holding it in under two minutes).
     // Email verification runs in parallel — a quiet portal banner invites it;
-    // it gates only the community-publish action, never the ID itself.
+    // it gates only community interactions (likes/reports), never the ID or
+    // its visibility (opt-out at creation, decision 2026-08-14).
     router.push("/portal/cats/new");
   }
 

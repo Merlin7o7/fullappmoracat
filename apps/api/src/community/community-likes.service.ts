@@ -20,7 +20,17 @@ export class CommunityLikesService {
 
   private async publicCatBySlug(slug: string) {
     const cat = await this.prisma.cat.findFirst({
-      where: { publicSlug: slug, isPublic: true, hiddenAt: null, deletedAt: null, status: "ACTIVE" },
+      // Mirrors CommunityService.baseWhere (incl. the photo rule) — a cat you
+      // can't see in the feed is a cat you can't like or report either.
+      where: {
+        publicSlug: slug,
+        isPublic: true,
+        hiddenAt: null,
+        deletedAt: null,
+        status: "ACTIVE",
+        isDemo: false,
+        photoUrl: { not: null },
+      },
       select: { id: true, name: true, userId: true, publicSlug: true },
     });
     if (!cat) throw new NotFoundException("This cat isn't public");

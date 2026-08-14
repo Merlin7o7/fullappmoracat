@@ -18,6 +18,7 @@
     "push": "prisma db push",
     "seed": "tsx prisma/seed.ts",
     "seed:community": "tsx prisma/seed-community.ts",
+    "backfill:community-share": "tsx prisma/backfill-community-share.ts",
     "seed:catalog": "tsx prisma/seed-catalog.ts",
     "local": "node scripts/pg-local.mjs",
     "studio": "prisma studio",

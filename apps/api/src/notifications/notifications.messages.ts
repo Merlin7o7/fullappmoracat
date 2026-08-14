@@ -89,11 +89,11 @@ export function buildNotificationText(
       return {
         ar: {
           title: `${p(params, "name")} أصبح في المجتمع`,
-          body: "ملفه العام صار ظاهراً للجميع. شارك الرابط واجمع الإعجابات.",
+          body: "ملفه العام صار ظاهراً للجميع — بدون اسمك. تقدر تخفيه في أي وقت من إعدادات القط.",
         },
         en: {
           title: `${p(params, "name")} is live in the community`,
-          body: "Their public profile is now discoverable. Share the link and collect some love.",
+          body: "Their public profile is now discoverable — your name is not shown. You can turn this off anytime from the cat's settings.",
         },
       };
     case "cat_first_like":

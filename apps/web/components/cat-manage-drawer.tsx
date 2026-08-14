@@ -124,7 +124,9 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
         )}
 
         {/* Community sharing + privacy */}
-        {cat.status === "ACTIVE" && <CatCommunityPanel catId={cat.id} catName={cat.name} isAr={isAr} />}
+        {cat.status === "ACTIVE" && (
+          <CatCommunityPanel catId={cat.id} catName={cat.name} photoUrl={cat.photoUrl} isAr={isAr} />
+        )}
 
         {/* Health record */}
         <div>

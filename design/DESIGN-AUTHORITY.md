@@ -34,6 +34,32 @@ membership.
 
 Never trade trust for delight. Never trade ease for cleverness.
 
+### Amendment (2026-08-14) — community visibility is opt-out
+
+Founder decision: a registered cat **joins the public community by default**,
+superseding the earlier private-by-default posture. The guardrails that make an
+opt-out default honest rather than a dark pattern:
+
+- **The default is disclosed at the moment it applies** — the registration
+  wizard states it beside the issue button with the off switch right there
+  (never buried in a footer), the ceremony celebrates the fact with
+  "customize" / "keep private" as equal one-tap actions, and a publish receipt
+  lands in the notification feed naming the off switch.
+- **Anonymous owner posture stays the default** — `showOwnerName`/`showCity`
+  remain off; the *cat* is public, the person is not (principle #9).
+- **A cat never renders in the feed without a photo** — an empty frame is not
+  a profile; photo-less cats appear automatically once a photo lands.
+- **The PDPL people-in-photo attestation (R106) survives** as the affirmative
+  act of uploading (wording adjacent to the uploader) or the manage panel's
+  one-time dialog — never a pre-ticked checkbox (principle #6 still governs).
+- **Opting out never has preconditions** — the visibility route carries no
+  email-verification gate; "private" is always one tap, forever (principle #10).
+- **Abuse control is report→hide moderation** (explicitly chosen over an
+  email-verification publish gate).
+- The 2026-08-14 backfill published existing cats with `shareConsentAt = null`
+  (no attestation ever happened for those photos) — a founder-accepted PDPL
+  exposure, mitigated by the owner notification + one-tap opt-out.
+
 ## The ten experience principles (the constitution)
 
 1. **Recognition first** — greet member and cat by name from the second interaction.

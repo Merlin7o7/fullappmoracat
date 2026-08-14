@@ -752,20 +752,26 @@ model Cat {
   archivedAt       DateTime?
   deceasedAt       DateTime?
 
-  // ── Community & sharing (all opt-in; private by default) ────────────────
-  /// Whether this cat appears in the public community. Always false until the
-  /// owner explicitly chooses to share. Post-moderation: visible immediately,
-  /// admins can hide.
+  // ── Community & sharing (shared by default at registration — opt-out,
+  //    decision 2026-08-14; per-field privacy stays conservative) ──────────
+  /// Whether this cat appears in the public community. CatsService.create()
+  /// sets this true at registration unless the owner opts out; the schema
+  /// default stays FALSE on purpose — private is the safe failure mode for any
+  /// other code path (seeds, imports, vet flows) that creates a Cat row and
+  /// forgets the flag. The community feed additionally requires a photo.
+  /// Post-moderation: visible immediately, admins can hide.
   isPublic       Boolean   @default(false)
   /// Stable, human-friendly handle for the public share URL (/community/:slug).
   publicSlug     String?   @unique
   bio            String?
   coverUrl       String?
   sharedAt       DateTime?
-  /// PDPL photo-consent attestation (R106): stamped server-side the first time
-  /// the owner confirms that any people visible in the cat's photos agreed to
-  /// their publication. Null = never attested → the web asks once, before the
-  /// profile first goes public. Never written from a client-supplied timestamp.
+  /// PDPL photo-consent attestation (R106): stamped server-side when the owner
+  /// confirms that any people visible in the cat's photos agreed to their
+  /// publication — at registration (uploading with sharing on is the
+  /// affirmative act) or via the manage panel's one-time dialog when toggling
+  /// a never-attested cat public. Null = never attested. Never written from a
+  /// client-supplied timestamp.
   shareConsentAt DateTime?
   viewCount      Int       @default(0)
   /// Denormalized like tally — kept in lock-step with the CatLike rows via an

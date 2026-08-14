@@ -45,6 +45,26 @@ export class CreateCatDto {
   @IsString()
   photoUrl?: string;
 
+  /**
+   * Community visibility is opt-out (decision 2026-08-14): absent or true means
+   * the cat is published to the community at creation; false is the wizard's
+   * opt-out toggle. The manage panel remains the ongoing switch.
+   */
+  @ApiPropertyOptional({ description: "Publish to the community (default true; false = opt out)" })
+  @IsOptional()
+  @IsBoolean()
+  sharePublicly?: boolean;
+
+  /**
+   * PDPL people-in-photo attestation (R106), sent only when a photo was uploaded
+   * with sharing on. The client only ever says "confirmed" — the server mints
+   * `shareConsentAt`, and only alongside an actual `photoUrl`.
+   */
+  @ApiPropertyOptional({ description: "Owner confirmed anyone visible in the photo agreed to share it" })
+  @IsOptional()
+  @IsBoolean()
+  shareConsent?: boolean;
+
   @ApiPropertyOptional({ description: "Breed id" })
   @IsOptional()
   @IsString()

@@ -39,6 +39,10 @@ export interface PortalCat {
   qrToken: string | null;
   idIssuedAt: string | null;
   photoUrl: string | null;
+  /** Community visibility (opt-out at registration) — lets the ceremony reflect
+   *  the default-share outcome without a second fetch. */
+  isPublic?: boolean;
+  publicSlug?: string | null;
   gender: string;
   birthDate: string | null;
   vaccinationStatus?: string | null;

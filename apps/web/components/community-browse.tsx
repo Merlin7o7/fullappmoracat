@@ -280,8 +280,8 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
             {isAr
-              ? "تصفّح قطط المجتمع التي شاركها أصحابها — كل واحدة بهويتها الخاصة."
-              : "Meet the community's cats, shared by their people — each with a Cat ID of their own."}
+              ? "تصفّح قطط مجتمع مرقط — كل واحدة بهويتها الخاصة."
+              : "Meet the community's cats — each with a Cat ID of their own."}
           </p>
           {/* Quiet trust link — the house rules are one tap away (trust precedes ask). */}
           <Link

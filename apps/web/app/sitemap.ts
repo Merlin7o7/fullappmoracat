@@ -55,7 +55,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // cat profiles silently never reached the production sitemap. Walk pages.
   const catPages = async (): Promise<string[]> => {
     const out: string[] = [];
-    for (let page = 1; page <= 9; page++) {
+    // 50 pages × 24 ≈ 1,200 cats — sized for the opt-out community default
+    // (decision 2026-08-14) + the founding-thousand target, still a bounded
+    // walk so a runaway feed can't stall sitemap generation.
+    for (let page = 1; page <= 50; page++) {
       const items = await slugs(`/community/cats?page=${page}`, (j) => {
         const body = j as { items?: { slug?: string }[]; meta?: { hasMore?: boolean } };
         return (body.items ?? []).map((c) => c.slug).filter((s): s is string => !!s);

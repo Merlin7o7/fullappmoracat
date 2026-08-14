@@ -61,6 +61,8 @@ type CatRow = {
   idIssuedAt: Date | null;
   photoUrl: string | null;
   coverUrl: string | null;
+  isPublic: boolean;
+  publicSlug: string | null;
   gender: string;
   birthDate: Date | null;
   vaccinationStatus: string | null;
@@ -278,9 +280,26 @@ export class CatsService implements OnModuleInit {
   }
 
   async create(userId: string, dto: CreateCatDto) {
+    // Community visibility is opt-out (decision 2026-08-14): a new cat joins the
+    // community feed by default, anonymously (showOwnerName/showCity stay false),
+    // and only renders once it has a photo (community.service baseWhere). The
+    // wizard's ShareNotice toggle is the opt-out; the manage panel remains the
+    // ongoing switch either way.
+    const share = dto.sharePublicly !== false;
     const cat = await this.prisma.cat.create({
       data: {
         userId,
+        ...(share
+          ? {
+              isPublic: true,
+              sharedAt: new Date(),
+              publicSlug: await this.makePublicSlug(dto.name),
+              // PDPL people-in-photo attestation (R106): the upload act is the
+              // consent signal; the client only ever says "confirmed" and only
+              // alongside an actual photo — the timestamp is minted here.
+              ...(dto.shareConsent === true && dto.photoUrl ? { shareConsentAt: new Date() } : {}),
+            }
+          : {}),
         // The Cat ID + its QR token are issued the moment the cat joins — instantly,
         // so the reveal ceremony (R031) has something real to celebrate. Membership
         // stays INACTIVE (schema default) until a subscription activates it (#9).
@@ -344,6 +363,17 @@ export class CatsService implements OnModuleInit {
         );
         void this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
       }
+    }
+
+    // The publish receipt (R024 spirit): sharing happened by default, so the
+    // disclosure must be explicit — the note names the off switch.
+    if (share) {
+      this.notifications.emit(userId, {
+        category: "COMMUNITY",
+        type: "cat_made_public",
+        params: { name: cat.name },
+        data: { kind: "cat_made_public", slug: cat.publicSlug },
+      });
     }
 
     return { ...this.serialize(cat as CatRow, user?.primaryCatId ?? cat.id), firstCatIdIssued };
@@ -881,6 +911,10 @@ export class CatsService implements OnModuleInit {
       idIssuedAt: cat.idIssuedAt,
       photoUrl: cat.photoUrl,
       coverUrl: cat.coverUrl,
+      // Community visibility state — the wizard/ceremony reflect the default-share
+      // outcome (and link to /community/:slug) without a second fetch.
+      isPublic: cat.isPublic,
+      publicSlug: cat.publicSlug,
       gender: cat.gender,
       birthDate: cat.birthDate,
       // On-card health signal (§05 job 2) — the ID shows vaccination standing.

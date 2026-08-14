@@ -19,11 +19,13 @@ const VIEW_DEDUPE_TTL_MS = 60 * 60 * 1000;
 const VIEW_DEDUPE_MAX = 50_000;
 
 /**
- * Public community read model. PRIVACY IS LOAD-BEARING HERE: only cats the owner
- * explicitly made public (isPublic) and that aren't hidden by moderation are
- * ever returned, and each optional field (owner name, city, breed, age, gallery)
- * is included only when its per-cat flag is on. Nothing else — no email, phone,
- * address, userId, or the private QR token — is exposed.
+ * Public community read model. PRIVACY IS LOAD-BEARING HERE: cats are shared by
+ * default at registration (opt-out, decision 2026-08-14), so this filter is the
+ * whole contract — only non-hidden, photo-bearing, active cats of active owners
+ * whose isPublic flag is still on are ever returned, and each optional field
+ * (owner name, city, breed, age, gallery) is included only when its per-cat
+ * flag is on. Nothing else — no email, phone, address, userId, or the private
+ * QR token — is exposed.
  */
 @Injectable()
 export class CommunityService {
@@ -44,6 +46,10 @@ export class CommunityService {
       // Demo cats are fictional and exist only to show the vet portal to
       // prospective partners. They must never appear to a real member.
       isDemo: false,
+      // A card without a photo is an empty frame — cats join the feed the moment
+      // a photo lands, automatically, with zero event plumbing (the opt-out
+      // default publishes photo-less cats too; this keeps them invisible).
+      photoUrl: { not: null },
     };
   }
 
@@ -222,6 +228,8 @@ export class CommunityService {
                     hiddenAt: null,
                     deletedAt: null,
                     status: "ACTIVE",
+                    isDemo: false,
+                    photoUrl: { not: null },
                     showCity: true,
                   },
                 },

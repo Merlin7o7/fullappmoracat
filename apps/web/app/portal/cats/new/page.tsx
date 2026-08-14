@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ArrowLeft, Loader2, Pencil, ShieldCheck, Cat as CatIcon } from "lucide-react";
+import { ArrowRight, ArrowLeft, Globe, Lock, Loader2, Pencil, ShieldCheck, Cat as CatIcon } from "lucide-react";
 import { Card, Button, Dialog, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -195,6 +195,59 @@ function WaitlistConsent({
   );
 }
 
+/* ══ Community share notice ═══════════════════════════════════════════════
+ * Community visibility is opt-out (decision 2026-08-14): the cat joins the
+ * community feed by default, anonymously, and only once it has a photo. That
+ * default is stated HERE, before the issue button, with the off switch beside
+ * it — a default someone can see and flip is a choice, a default in a footer
+ * is a trap (R040 honesty, R106 say-so-plainly). This also covers 2nd+ cats,
+ * whose mini ceremony has no share stage.
+ */
+function ShareNotice({
+  isAr,
+  catName,
+  on,
+  onChange,
+}: {
+  isAr: boolean;
+  catName: string;
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  const name = catName || (isAr ? "قطك" : "your cat");
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-border p-3">
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        <span className="font-medium text-foreground">
+          {isAr ? "الظهور في مجتمع مرقط" : "Appearing in the Moracat community"}
+        </span>
+        <br />
+        {on
+          ? isAr
+            ? `${name} بيظهر في مجتمع مرقط مع أول صورة له — بدون اسمك، وتقدر توقف الظهور في أي وقت.`
+            : `${name} will appear in the Moracat community once they have a photo — without your name, and you can turn this off anytime.`
+          : isAr
+            ? `${name} بيبقى خاص. تقدر تشاركه مع المجتمع في أي وقت من صفحته.`
+            : `${name} stays private. You can share them with the community anytime from their page.`}
+      </p>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={isAr ? "الظهور في المجتمع" : "Appear in the community"}
+        onClick={() => onChange(!on)}
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition-colors",
+          on ? "bg-primary/10 text-primary ring-primary/30" : "bg-muted text-muted-foreground ring-border"
+        )}
+      >
+        {on ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
+        {on ? (isAr ? "عام" : "Public") : (isAr ? "خاص" : "Private")}
+      </button>
+    </div>
+  );
+}
+
 /* ══ The issue flow · name → contact → ceremony ═══════════════════════════ */
 
 function IssueIdFlow() {
@@ -236,6 +289,11 @@ function IssueIdFlow() {
     // Never pre-ticked. Consent that arrives switched on isn't consent (R106),
     // and the Cat ID is issued whether or not this is checked.
     waitlistConsent: false,
+    // Community visibility is opt-out (decision 2026-08-14): sharing is the
+    // stated default — disclosed by ShareNotice right above the issue button,
+    // never buried. The PDPL people-in-photo attestation is separate: it rides
+    // on the affirmative act of uploading a photo (see the uploader helper).
+    sharePublicly: true,
   });
   const set = (patch: Partial<typeof f>) => setF((s) => ({ ...s, ...patch }));
   // When the account already carries a name + number, the contact step
@@ -364,6 +422,12 @@ function IssueIdFlow() {
           weightKg: typeof carried.weightKg === "number" ? carried.weightKg : undefined,
           birthDate,
           ...(sourceCode ? { sourceCode } : {}),
+          // Community visibility is opt-out — the ShareNotice above the button
+          // is where this value comes from. The PDPL attestation travels only
+          // when a photo was actually uploaded with sharing on: the upload act
+          // is the consent signal; the server mints the timestamp (R106).
+          sharePublicly: f.sharePublicly,
+          ...(f.sharePublicly && f.photoUrl.trim() ? { shareConsent: true } : {}),
         }),
       });
       try { sessionStorage.removeItem("moraqat.pendingCatProfile"); } catch { /* ignore */ }
@@ -503,16 +567,25 @@ function IssueIdFlow() {
                 months={f.ageMonths}
                 onChange={(years, months) => set({ ageYears: years, ageMonths: months })}
               />
-              <PhotoUploader
-                endpoint="/uploads/image"
-                aspect={1}
-                rounded
-                maxEdge={800}
-                currentUrl={f.photoUrl || null}
-                isAr={isAr}
-                label={isAr ? "صورته (اختياري — تطلع على الهوية)" : "Photo (optional — it goes on the ID)"}
-                onUploaded={(res) => set({ photoUrl: (res.url as string) ?? "" })}
-              />
+              <div>
+                <PhotoUploader
+                  endpoint="/uploads/image"
+                  aspect={1}
+                  rounded
+                  maxEdge={800}
+                  currentUrl={f.photoUrl || null}
+                  isAr={isAr}
+                  label={isAr ? "صورته (اختياري — تطلع على الهوية)" : "Photo (optional — it goes on the ID)"}
+                  onUploaded={(res) => set({ photoUrl: (res.url as string) ?? "" })}
+                />
+                {/* PDPL people-in-photo attestation (R106): the upload itself is
+                    the affirmative act — stated at the act, never pre-ticked. */}
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  {isAr
+                    ? "برفعك الصورة تؤكد أن أي شخص يظهر فيها موافق على نشرها."
+                    : "By uploading, you confirm anyone visible in the photo agreed to share it."}
+                </p>
+              </div>
 
               {/* Recognition, not a form (R001): we already know who's behind
                   this cat — one quiet line, editable in place. */}
@@ -567,6 +640,13 @@ function IssueIdFlow() {
                 onChange={(v) => set({ waitlistConsent: v })}
               />
 
+              <ShareNotice
+                isAr={isAr}
+                catName={catName}
+                on={f.sharePublicly}
+                onChange={(v) => set({ sharePublicly: v })}
+              />
+
               {missingLabel && (
                 <p className="text-xs leading-relaxed text-muted-foreground" aria-live="polite">
                   {isAr ? `باقي: ${missingLabel}` : `Still needed: ${missingLabel}`}
@@ -618,16 +698,25 @@ function IssueIdFlow() {
                 months={f.ageMonths}
                 onChange={(years, months) => set({ ageYears: years, ageMonths: months })}
               />
-              <PhotoUploader
-                endpoint="/uploads/image"
-                aspect={1}
-                rounded
-                maxEdge={800}
-                currentUrl={f.photoUrl || null}
-                isAr={isAr}
-                label={isAr ? "صورته (اختياري — تطلع على الهوية)" : "Photo (optional — it goes on the ID)"}
-                onUploaded={(res) => set({ photoUrl: (res.url as string) ?? "" })}
-              />
+              <div>
+                <PhotoUploader
+                  endpoint="/uploads/image"
+                  aspect={1}
+                  rounded
+                  maxEdge={800}
+                  currentUrl={f.photoUrl || null}
+                  isAr={isAr}
+                  label={isAr ? "صورته (اختياري — تطلع على الهوية)" : "Photo (optional — it goes on the ID)"}
+                  onUploaded={(res) => set({ photoUrl: (res.url as string) ?? "" })}
+                />
+                {/* PDPL people-in-photo attestation (R106): the upload itself is
+                    the affirmative act — stated at the act, never pre-ticked. */}
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  {isAr
+                    ? "برفعك الصورة تؤكد أن أي شخص يظهر فيها موافق على نشرها."
+                    : "By uploading, you confirm anyone visible in the photo agreed to share it."}
+                </p>
+              </div>
               {missingLabel && (
                 <p className="text-xs leading-relaxed text-muted-foreground" aria-live="polite">
                   {isAr ? `باقي: ${missingLabel}` : `Still needed: ${missingLabel}`}
@@ -681,6 +770,12 @@ function IssueIdFlow() {
                 isAr={isAr}
                 checked={f.waitlistConsent}
                 onChange={(v) => set({ waitlistConsent: v })}
+              />
+              <ShareNotice
+                isAr={isAr}
+                catName={catName}
+                on={f.sharePublicly}
+                onChange={(v) => set({ sharePublicly: v })}
               />
               {missingLabel && (
                 <p className="text-xs leading-relaxed text-muted-foreground" aria-live="polite">
@@ -752,14 +847,20 @@ function IssueIdFlow() {
           // member gets the warm, familiar mini welcome (R031/R009).
           variant={firstIssue ? "full" : "mini"}
           ownerFirstName={ownerFirstName || null}
+          // The cat was (usually) published at creation — the ceremony
+          // celebrates the fact and offers customize/keep-private (opt-out
+          // default, decision 2026-08-14).
+          initiallyPublic={Boolean(ceremonyCat.isPublic)}
+          consentDone={Boolean(ceremonyCat.isPublic && ceremonyCat.photoUrl)}
           onShareChoice={
             firstIssue
               ? async (choice: ShareChoice) => {
                   const body: Record<string, unknown> = { isPublic: choice.public };
                   if (choice.public) {
-                    // PDPL attestation gathered inside the ceremony (R106);
-                    // the server stamps shareConsentAt itself.
-                    body.consent = true;
+                    // PDPL attestation (R106): sent only when the ceremony
+                    // actually gathered it (not when it was already stamped at
+                    // creation); the server mints shareConsentAt itself.
+                    if (choice.consent) body.consent = true;
                     body.showOwnerName = choice.appearance != null && choice.appearance !== "anonymous";
                     if (choice.nickname) body.ownerNickname = choice.nickname;
                   }

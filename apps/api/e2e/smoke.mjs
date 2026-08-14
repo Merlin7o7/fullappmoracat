@@ -36,11 +36,21 @@ ok((await call("/auth/refresh", "POST", { refreshToken: reg.refreshToken })).sta
 
 console.log("━━ email OTP + community + uploads ━━");
 ok((await call("/auth/email/otp/verify", "POST", { code: "000000" }, C)).status === 400, "wrong email OTP rejected (400)");
-// The gate moved (fire #7 / <2-min north star): creating your OWN private cat
-// no longer waits on email deliverability — only the action that publishes
-// outward (community visibility) requires a verified email. The guard runs
-// before the route handler, so it 403s even for a nonexistent cat id.
-ok((await call("/cats/not-a-real-cat/visibility", "PATCH", { isPublic: true }, C)).status === 403, "community publish blocked before email verified (403)");
+// Community visibility is opt-out (decision 2026-08-14): cats are published at
+// creation and turning sharing OFF must never wait on an inbox — so the
+// visibility route carries NO email gate anymore. Ownership still guards it:
+// an unknown cat id is a plain 404. A 403 here would mean an email gate crept
+// back in front of the ownership check.
+ok((await call("/cats/not-a-real-cat/visibility", "PATCH", { isPublic: true }, C)).status === 404, "visibility route is owner-gated, not email-gated (404)");
+// Opt-out has no preconditions: a NEVER-verified account registers a cat
+// (published by default) and can turn sharing off, all without an inbox.
+{
+  const anon = (await call("/auth/register", "POST", { email: `anon+${rnd()}@e.com`, password: "S3cure!pass", acceptTerms: true })).json;
+  const anonCat = (await call("/cats", "POST", { name: "Ghost", activityLevel: "LOW", isIndoor: true, gender: "FEMALE", birthDate: "2022-02-02", cityCode: "riyadh", photoUrl: "https://cdn.example.com/ghost.jpg" }, anon.accessToken)).json;
+  ok(anonCat.isPublic === true && !!anonCat.publicSlug, "new cat is published by default with a slug (opt-out model)");
+  const off = (await call(`/cats/${anonCat.id}/visibility`, "PATCH", { isPublic: false }, anon.accessToken)).json;
+  ok(off.isPublic === false, "opt-out works without email verification");
+}
 ok(!!reg.devEmailCode, "dev email code returned in non-prod");
 ok((await call("/auth/email/otp/verify", "POST", { code: reg.devEmailCode }, C)).json?.verified === true, "email verified with correct code");
 const community = await call("/community/cats");
@@ -48,13 +58,21 @@ ok(community.status === 200 && typeof community.json?.pagination?.total === "num
 ok((await call("/uploads/image", "POST", {})).status === 401, "image upload requires auth (401)");
 
 console.log("━━ cats + Cat ID + feeding ━━");
-const cat = (await call("/cats", "POST", { name: "Smokey", weightKg: 4.5, activityLevel: "MODERATE", isIndoor: true, gender: "MALE", birthDate: "2022-05-01", cityCode: "jeddah" }, C)).json;
+const cat = (await call("/cats", "POST", { name: "Smokey", weightKg: 4.5, activityLevel: "MODERATE", isIndoor: true, gender: "MALE", birthDate: "2022-05-01", cityCode: "jeddah", photoUrl: "https://cdn.example.com/smokey.jpg", shareConsent: true }, C)).json;
 ok(!!cat.id, "cat created");
 // The Cat ID (Dossier §05): unique, human-readable, issued instantly (R032).
 ok(/^MRC-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/.test(cat.catIdNumber ?? ""), `Cat ID issued: ${cat.catIdNumber}`);
 ok(!!cat.idIssuedAt, "issue date stamped");
-const cat2 = (await call("/cats", "POST", { name: "Luna", activityLevel: "LOW", isIndoor: true, gender: "FEMALE", birthDate: "2023-01-10", cityCode: "riyadh" }, C)).json;
+ok(cat.isPublic === true && !!cat.publicSlug, "published by default at creation (opt-out, 2026-08-14)");
+// Luna deliberately has NO photo: she is published by default but must stay out
+// of the feed until a photo lands (the photo rule) — asserted in the community
+// section below. Unique per run: the local dev DB persists across runs, and a
+// leftover photo-bearing Luna from an earlier run would break the
+// absent-from-feed assertion.
+const lunaName = `Luna${rnd()}`;
+const cat2 = (await call("/cats", "POST", { name: lunaName, activityLevel: "LOW", isIndoor: true, gender: "FEMALE", birthDate: "2023-01-10", cityCode: "riyadh" }, C)).json;
 ok(cat2.catIdNumber !== cat.catIdNumber, "Cat IDs are unique per cat");
+ok(cat2.isPublic === true && !!cat2.publicSlug, "photo-less cat is still published (feed hides it until a photo lands)");
 
 // ── The Census (MRC-GTM-001 §1) — the ordinal is the whole campaign ──────
 // Founding Member is DERIVED from this number, so if the sequence ever stops
@@ -439,9 +457,25 @@ console.log("━━ community: onboarding · likes · notifications ━━");
 // First Cat ID routes the member through the one-time welcome; later cats don't.
 ok(cat.firstCatIdIssued === true, "first Cat ID sets firstCatIdIssued (welcome trigger)");
 ok(cat2.firstCatIdIssued === false, "second Cat ID does NOT re-trigger the welcome");
-// Share Smokey publicly, then a second member likes them.
+
+// The opt-out at creation: sharePublicly:false must yield a genuinely private cat.
+const hermit = (await call("/cats", "POST", { name: "Hermit", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2022-08-08", cityCode: "riyadh", photoUrl: "https://cdn.example.com/hermit.jpg", sharePublicly: false }, C)).json;
+ok(hermit.isPublic === false && !hermit.publicSlug, "sharePublicly:false opts out at creation (no slug minted)");
+
+// The photo rule: Luna is public but photo-less → invisible everywhere in the
+// community read model, then appears the moment a photo lands. Zero events —
+// the read filter IS the mechanism.
+const lunaBefore = (await call(`/community/cats?search=${lunaName}`)).json;
+ok(lunaBefore.pagination.total === 0, "photo-less public cat is absent from the feed");
+ok((await call(`/community/cats/${cat2.publicSlug}`)).status === 404, "photo-less public cat's detail 404s");
+await call(`/cats/${cat2.id}`, "PATCH", { photoUrl: "https://cdn.example.com/luna.jpg" }, C);
+const lunaAfter = (await call(`/community/cats?search=${lunaName}`)).json;
+ok(lunaAfter.pagination.total >= 1, "cat appears in the feed the moment a photo lands");
+
+// The visibility PATCH is now a re-assertion (already public since creation) —
+// the slug minted at create must survive it unchanged (stable share URLs).
 const shared = (await call(`/cats/${cat.id}/visibility`, "PATCH", { isPublic: true, showBreed: true }, C)).json;
-ok(shared.isPublic === true && !!shared.publicSlug, "cat made public with a slug");
+ok(shared.isPublic === true && shared.publicSlug === cat.publicSlug, "re-publishing keeps the slug minted at creation");
 const slug = shared.publicSlug;
 const liker = (await call("/auth/register", "POST", { email: `liker-${rnd()}@smoke.test`, password: "Passw0rd!23", fullName: "Liker Smoke", acceptTerms: true })).json;
 const L = liker.accessToken;
@@ -472,6 +506,9 @@ ok(audit.items?.some((e) => e.action === "community.report.dismiss"), "audit log
 const feed = (await call("/notifications", "GET", undefined, C)).json;
 ok(Array.isArray(feed.items) && typeof feed.unread === "number", "notifications read API returns items + unread");
 ok(feed.items.some((n) => n.category === "COMMUNITY"), "community notifications emitted to owner");
+// The publish receipt: a default-published cat's owner is TOLD (the disclosure
+// that makes an opt-out default honest — decision 2026-08-14).
+ok(feed.items.some((n) => n.data?.kind === "cat_made_public"), "auto-publish leaves a cat_made_public receipt in the feed");
 const uc = (await call("/notifications/unread-count", "GET", undefined, C)).json;
 ok(typeof uc.unread === "number", "unread-count endpoint works");
 const readAll = (await call("/notifications/read-all", "PATCH", undefined, C)).json;
@@ -487,8 +524,9 @@ ok(Array.isArray(prefs) && prefs.some((p) => p.category === "COMMUNITY"), "notif
 const ovc = (await call("/account/overview", "GET", undefined, C)).json;
 ok(ovc.primaryCat?.completion && typeof ovc.primaryCat.completion.percent === "number", "profile completion computed on overview");
 // Arabic search normalization: a diacritic-free query finds a diacritic name.
-const arCat = (await call("/cats", "POST", { name: "مِشْمِش", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2021-09-01", cityCode: "dammam" }, C)).json;
-await call(`/cats/${arCat.id}/visibility`, "PATCH", { isPublic: true }, C);
+// No explicit publish PATCH anymore — the default-publish at creation is
+// exactly what puts this cat in the feed (photo included, per the photo rule).
+const arCat = (await call("/cats", "POST", { name: "مِشْمِش", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2021-09-01", cityCode: "dammam", photoUrl: "https://cdn.example.com/mishmish.jpg" }, C)).json;
 const arSearch = (await call(`/community/cats?search=${encodeURIComponent("مشمش")}`)).json;
 ok(arSearch.pagination.total >= 1, "Arabic search matches across diacritics/tatweel");
 

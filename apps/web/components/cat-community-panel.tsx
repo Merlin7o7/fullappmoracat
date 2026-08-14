@@ -23,11 +23,25 @@ interface Visibility {
 }
 
 /**
- * Community sharing + per-field privacy. Private by default. Turning "share"
- * on reveals granular controls — the owner decides exactly what a public visitor
- * sees. Nothing is public until they opt in (R: privacy is robust).
+ * Community sharing + per-field privacy. Cats are shared by default at
+ * registration (opt-out, decision 2026-08-14) with an anonymous owner posture —
+ * this panel is the permanent opt-out switch plus the granular dials: the owner
+ * decides exactly what a public visitor sees, and "private" is always one tap
+ * away (the "choice is always yours" promise).
  */
-export function CatCommunityPanel({ catId, catName, isAr }: { catId: string; catName: string; isAr: boolean }) {
+export function CatCommunityPanel({
+  catId,
+  catName,
+  photoUrl,
+  isAr,
+}: {
+  catId: string;
+  catName: string;
+  /** The cat's primary photo — a public cat without one never renders in the
+   *  feed (the photo rule), so the panel says so instead of showing a dead link. */
+  photoUrl?: string | null;
+  isAr: boolean;
+}) {
   const { authedFetch } = useAuth();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -92,8 +106,8 @@ export function CatCommunityPanel({ catId, catName, isAr }: { catId: string; cat
                 ? "هوية قطك ظاهرة للعامة."
                 : "Your cat's profile is public."
               : isAr
-                ? `شارك ${catName} مع مجتمع مرقط؟ يبقى خاصاً حتى تختار.`
-                : `Share ${catName} with the Moracat community? Private until you choose.`}
+                ? `${catName} خاص — فعّل المشاركة عشان يظهر مع قطط المجتمع.`
+                : `${catName} is private — turn this on to appear with the community's cats.`}
           </p>
         </div>
         <Switch
@@ -162,8 +176,19 @@ export function CatCommunityPanel({ catId, catName, isAr }: { catId: string; cat
 
       {v.isPublic && (
         <div className="mt-4 space-y-4 border-t border-border pt-4">
-          {/* Public link */}
-          {publicUrl && (
+          {/* The photo rule, said plainly (R040): a public cat without a photo
+              never renders in the feed — without this line the link below
+              would 404 with no explanation. */}
+          {!photoUrl && (
+            <p className="rounded-xl bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
+              {isAr
+                ? `${catName} بيظهر في المجتمع أول ما تنضاف له صورة.`
+                : `${catName} will appear in the community once they have a photo.`}
+            </p>
+          )}
+
+          {/* Public link — only while it actually resolves (the photo rule). */}
+          {publicUrl && photoUrl && (
             <div className="flex items-center gap-2 rounded-xl bg-muted/50 p-2">
               <span dir="ltr" className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted-foreground">
                 {publicUrl}
