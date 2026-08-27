@@ -32,6 +32,7 @@
  */
 import { PrismaClient, PartnerStaffRole, ClinicalEntryType } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { deriveVaccinationStatus } from "@moraqat/core";
 
 const prisma = new PrismaClient();
 
@@ -263,11 +264,51 @@ async function main() {
     }
   }
 
+  // ── Refresh: wipe the demo clinic's own history, then rebuild it ────────
+  //
+  // This used to be `if (entryCount === 0)`, which made the seed a one-shot:
+  // every date below is relative to the moment it ran, so a month later the
+  // "open visit" that exists to keep the day-book alive had been waiting 34
+  // days (the day-book defaults to TODAY, so it showed nothing at all) and the
+  // "recent" weights were a season old. The demo decayed into exactly the
+  // empty-clinic impression it was written to prevent.
+  //
+  // So it now resets and rebuilds on every run. Re-run it before a demo and
+  // the history is always freshly aged.
+  //
+  // The deletes are scoped two ways and BOTH are asserted, because a mistake
+  // here deletes a real cat's medical record from an append-only store:
+  //   · org-scoped tables → only this demo org's rows
+  //   · cat-scoped tables → only cats we just verified carry isDemo
+  const demoCats = await prisma.cat.findMany({
+    where: { id: { in: catIds } },
+    select: { id: true, isDemo: true, name: true },
+  });
+  const notDemo = demoCats.filter((c) => !c.isDemo);
+  if (notDemo.length > 0 || demoCats.length !== catIds.length) {
+    throw new Error(
+      `Refusing to reset: expected ${catIds.length} demo cats, resolved ${demoCats.length}` +
+        (notDemo.length ? `, and ${notDemo.map((c) => c.name).join(", ")} are NOT flagged isDemo.` : ".") +
+        `\n  This seed only ever deletes data it created. Aborting rather than guessing.`
+    );
+  }
+  if (!org.isDemo) {
+    throw new Error(`Refusing to reset: PartnerOrg ${ORG_SLUG} is not flagged isDemo.`);
+  }
+
+  // Order matters: weights and vaccinations reference entries, entries
+  // reference visits.
+  await prisma.recordAccessLog.deleteMany({ where: { orgId: org.id } });
+  await prisma.catWeightRecord.deleteMany({ where: { catId: { in: catIds } } });
+  await prisma.catVaccination.deleteMany({ where: { catId: { in: catIds } } });
+  await prisma.prescription.deleteMany({ where: { orgId: org.id } });
+  await prisma.clinicalEntry.deleteMany({ where: { orgId: org.id } });
+  await prisma.visit.deleteMany({ where: { orgId: org.id } });
+
   // ── The flagship patient's real clinical history ────────────────────────
   // A vet judges this product on ONE screen: a patient with actual history.
   // An empty timeline demos as an empty product.
-  const already = await prisma.clinicalEntry.count({ where: { catId: flagshipCatId } });
-  if (already === 0) {
+  {
     const pastVisit = await prisma.visit.create({
       data: {
         catId: flagshipCatId,
@@ -316,22 +357,70 @@ async function main() {
       plan: "Booster today. Trial hypoallergenic diet 8 weeks. Recheck if worsening.",
     }, 210, drSenior, pastVisit.id);
 
-    await entry("VACCINATION", {
-      vaccine: "Feline Tricat (FVRCP)", batchNo: "TRC-2451-B", manufacturer: "MSD",
-      site: "Left shoulder", route: "Subcutaneous", dueAt: ahead(155).toISOString(),
-    }, 210, drSenior, pastVisit.id, "Annual booster. No immediate reaction observed over 15 min.");
+    // ── The thesis join ───────────────────────────────────────────────────
+    // A VACCINATION entry is only half the story. In the real API
+    // (VetRecordsService.writeVaccination) a finalised vaccination ALSO writes
+    // a `CatVaccination` row, and `CatVaccination.dueAt` is the exact field
+    // the lifecycle engine watches to remind the owner at home. The seed wrote
+    // only the clinical entry, so the profile's care summary showed zero
+    // vaccinations and the one claim the whole partnership rests on — "one
+    // clinical act becomes care at home" — was the one thing you could not
+    // demonstrate. This mirrors the service, including the derived status.
+    const VACCINES: Array<{ vaccine: string; batchNo: string; manufacturer: string; site: string }> = [
+      { vaccine: "Feline Tricat (FVRCP)", batchNo: "TRC-2451-B", manufacturer: "MSD", site: "Left shoulder" },
+      { vaccine: "Rabies", batchNo: "RAB-8890-C", manufacturer: "Boehringer", site: "Right hind limb" },
+    ];
+    for (const [i, v] of VACCINES.entries()) {
+      const dueAt = ahead(155);
+      const created = await entry(
+        "VACCINATION",
+        { ...v, route: "Subcutaneous", dueAt: dueAt.toISOString() },
+        210,
+        drSenior,
+        pastVisit.id,
+        i === 0 ? "Annual booster. No immediate reaction observed over 15 min." : undefined
+      );
+      await prisma.catVaccination.create({
+        data: {
+          catId: flagshipCatId,
+          name: v.vaccine,
+          administeredAt: ago(210),
+          dueAt,
+          vetName: "Dr. Faisal Al-Qahtani",
+          clinic: "Al-Noor Veterinary Clinic (DEMO)",
+          batchNo: v.batchNo,
+          notes: `Recorded from clinical entry ${created.id}`,
+        },
+      });
+    }
 
-    await entry("VACCINATION", {
-      vaccine: "Rabies", batchNo: "RAB-8890-C", manufacturer: "Boehringer",
-      site: "Right hind limb", route: "Subcutaneous", dueAt: ahead(155).toISOString(),
-    }, 210, drSenior, pastVisit.id);
+    // The badge is DERIVED from the doses on file, never asserted — same rule
+    // the service follows, so the demo can't show a status the records don't
+    // support.
+    const allDoses = await prisma.catVaccination.findMany({
+      where: { catId: flagshipCatId },
+      select: { administeredAt: true, dueAt: true },
+    });
+    await prisma.cat.update({
+      where: { id: flagshipCatId },
+      data: { vaccinationStatus: deriveVaccinationStatus(allDoses).standing },
+    });
 
     // A weight series that actually trends — the chart is meaningless with one point.
     const weights: Array<[number, number]> = [[210, 4.6], [150, 4.8], [90, 5.0], [30, 5.1]];
     for (const [d, kg] of weights) {
-      await entry("WEIGHT", { weightKg: kg, bcs: 5 }, d, tech);
+      const weightEntry = await entry("WEIGHT", { weightKg: kg, bcs: 5 }, d, tech);
       await prisma.catWeightRecord.create({
-        data: { catId: flagshipCatId, weightKg: kg, bcs: 5, measuredAt: ago(d), source: "clinic" },
+        // Linked to the entry that produced it, as the service does — an
+        // orphaned weight row can't be corrected when the entry is amended.
+        data: {
+          catId: flagshipCatId,
+          entryId: weightEntry.id,
+          weightKg: kg,
+          bcs: 5,
+          measuredAt: ago(d),
+          source: "clinic",
+        },
       });
     }
 
@@ -384,16 +473,15 @@ async function main() {
   }
 
   // ── Access ledger: prove the owner can see who looked ───────────────────
-  const ledger = await prisma.recordAccessLog.count({ where: { orgId: org.id } });
-  if (ledger === 0) {
-    for (const [i, surface] of ["profile", "timeline", "entry"].entries()) {
-      await prisma.recordAccessLog.create({
-        data: {
-          catId: flagshipCatId, orgId: org.id, staffId: drSenior,
-          tier: "T2", surface, emergency: false, at: ago(210 - i),
-        },
-      });
-    }
+  // Rebuilt with the rest (the reset above cleared it), so the owner-facing
+  // ledger ages alongside the history it refers to.
+  for (const [i, surface] of ["profile", "timeline", "entry"].entries()) {
+    await prisma.recordAccessLog.create({
+      data: {
+        catId: flagshipCatId, orgId: org.id, staffId: drSenior,
+        tier: "T2", surface, emergency: false, at: ago(210 - i),
+      },
+    });
   }
 
   console.log("✅ Demo clinic ready.\n");
@@ -411,7 +499,9 @@ async function main() {
   console.log("     لوزة  / Loza      chip 968000011122234  — T1 this clinic's records only");
   console.log("     سمسم  / Simsim    chip 968000011122235  — T1");
   console.log("     بسبس  / Basbas    chip 968000011122236  — T0 NO consent (shows the boundary)");
-  console.log("\n   One visit is already OPEN for Mishmish, so Today has something waiting.\n");
+  console.log("\n   One visit is OPEN for Mishmish right now, so Today has something waiting.");
+  console.log("   This seed RESETS and rebuilds its own history each run — re-run it before");
+  console.log("   a demo so nothing on screen has quietly aged into last season.\n");
 }
 
 main()

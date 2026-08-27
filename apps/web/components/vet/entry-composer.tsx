@@ -32,6 +32,7 @@ import { AlertOctagon, Check, Info } from "lucide-react";
 import { Button, Input, Badge, cn, useToast } from "@moraqat/ui";
 import { requiresCoSign } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
+import { VET_ENTRY_KIND_LABELS } from "@/lib/vet-wire";
 import {
   useVetActor,
   useVetApi,
@@ -121,27 +122,10 @@ export const TRANSPORT_KIND: Record<ClinicalEntryType, EntryType> = {
 
 /** Bilingual label for a stored entry kind, for read surfaces. */
 export function entryKindLabel(kind: EntryType, isAr: boolean): string {
-  const map: Record<EntryType, { ar: string; en: string }> = {
-    EXAM: { ar: "فحص", en: "Examination" },
-    DIAGNOSIS: { ar: "تشخيص", en: "Diagnosis" },
-    VACCINATION: { ar: "تحصين", en: "Vaccination" },
-    TREATMENT: { ar: "علاج", en: "Treatment" },
-    PRESCRIPTION: { ar: "وصفة", en: "Prescription" },
-    LAB: { ar: "مختبر", en: "Lab" },
-    IMAGING: { ar: "أشعة", en: "Imaging" },
-    SURGERY: { ar: "عملية جراحية", en: "Surgery" },
-    DENTAL: { ar: "أسنان", en: "Dental" },
-    HOSPITALIZATION: { ar: "تنويم", en: "Hospitalisation" },
-    WEIGHT: { ar: "وزن", en: "Weight" },
-    NUTRITION: { ar: "تغذية", en: "Nutrition" },
-    SUPPLEMENT: { ar: "مكمّل غذائي", en: "Supplement" },
-    NOTE: { ar: "ملاحظة", en: "Note" },
-    // display-only timeline markers
-    VISIT: { ar: "زيارة", en: "Visit" },
-    ATTACHMENT: { ar: "مرفق", en: "Attachment" },
-    CONSENT: { ar: "موافقة", en: "Consent" },
-  };
-  const e = map[kind];
+  // Single source: the timeline adapter derives entry titles from the same map,
+  // so a kind can never be worded one way in the composer and another in the
+  // record it produces.
+  const e = VET_ENTRY_KIND_LABELS[kind];
   return e ? (isAr ? e.ar : e.en) : kind;
 }
 

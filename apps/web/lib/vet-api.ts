@@ -35,6 +35,20 @@ import {
 import { useAuth } from "@/lib/auth";
 import { ApiError, fetchWithTimeout, httpError } from "@/lib/http";
 import { friendlyError, type FriendlyError } from "@/lib/errors";
+import {
+  adaptEmergencyPayload,
+  adaptPatientProfile,
+  adaptPrescription,
+  adaptSearchResponse,
+  adaptTimelineEntry,
+  adaptWeightSeries,
+  type VetWireEmergencyPayload,
+  type VetWirePatientProfile,
+  type VetWirePrescription,
+  type VetWireSearchResponse,
+  type VetWireTimelineEntry,
+  type VetWireWeightSeries,
+} from "@/lib/vet-wire";
 
 export type { VetCapability, VetRole };
 
@@ -151,8 +165,15 @@ export interface VetSearchResult {
   lastVisitAt?: string | null;
   /** True when this clinic has treated the cat before — the consented relationship. */
   isOwnPatient: boolean;
+  /** Set when this cat is mid-visit here, so the row can resume it. */
+  openVisitId?: string | null;
 }
 
+/**
+ * VIEW MODEL — produced by `adaptSearchResponse`, not the wire shape.
+ * The server sends `{query:{detectedAs}, scope:{scopedToClinic, notice}, …}`
+ * and each row nests owner/relationship. See lib/vet-wire.ts.
+ */
 export interface VetSearchResponse {
   results: VetSearchResult[];
   /**
@@ -160,7 +181,11 @@ export interface VetSearchResponse {
    * the privacy boundary (dossier §05). The UI must say so out loud.
    */
   scoped: boolean;
+  /** The server's own words for the boundary — preferred over local copy. */
+  scopeNotice?: { ar: string; en: string } | null;
   detectedType: VetDetectedType;
+  total?: number;
+  empty?: { ar: string; en: string } | null;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -209,7 +234,12 @@ export interface VetTier0Alerts {
       clinic?: { id: string; ar: string; en: string; logoUrl: string | null; isYours: boolean };
     }>;
   };
-  handlingNotes: Array<{ id?: string; note?: string } | string>;
+  /**
+   * The server sends `{id, text, at, clinic}`. `note` was the only key read
+   * here, so every handling note — "hates carriers", "bites when scruffed" —
+   * was silently dropped from the safety band. Both keys are accepted now.
+   */
+  handlingNotes: Array<{ id?: string; note?: string; text?: string; at?: string | null } | string>;
   emergencyNotes: string | null;
   vaccinationStatus: string | null;
   /** True when anything in here is life-threatening. Drives the solid-fill band. */
@@ -266,9 +296,18 @@ export function flattenTier0Alerts(
   }
 
   for (const [i, h] of (alerts.handlingNotes ?? []).entries()) {
-    const label = typeof h === "string" ? h : (h.note ?? "");
+    // `text` is what the server actually sends; `note` is kept so an older
+    // shape (or a future rename back) cannot silence a handling warning.
+    const label = typeof h === "string" ? h : (h.text ?? h.note ?? "");
     if (!label) continue;
-    out.push({ id: (typeof h === "string" ? undefined : h.id) ?? `handling-${i}`, kind: "BEHAVIOUR", labelEn: label, labelAr: label, severity: "INFO" });
+    out.push({
+      id: (typeof h === "string" ? undefined : h.id) ?? `handling-${i}`,
+      kind: "BEHAVIOUR",
+      labelEn: label,
+      labelAr: label,
+      severity: "INFO",
+      notedAt: typeof h === "string" ? null : (h.at ?? null),
+    });
   }
 
   if (alerts.emergencyNotes) {
@@ -286,25 +325,33 @@ export function flattenTier0Alerts(
 
 export type VetMembershipState = "ACTIVE" | "EXPIRED" | "SUSPENDED" | "PENDING" | "NONE";
 
-/** The five-second answer: does this membership stand, and what rate is honoured? */
+/**
+ * The five-second answer: does this membership stand?
+ *
+ * `memberSince`, `benefitLabel*`, `discountPercent`, `verifiedAt` and `offline`
+ * used to be declared here. The patient endpoint has never sent any of them —
+ * the Hero rendered a benefit badge and a "member since" line from four fields
+ * that were permanently `undefined`. They are gone rather than faked: the
+ * profile API carries standing, not entitlements.
+ */
 export interface VetMembershipStanding {
   state: VetMembershipState;
-  memberSince?: string | null;
-  /** Benefit copy exactly as the member reads it — one source, no drift. */
-  benefitLabelEn?: string | null;
-  benefitLabelAr?: string | null;
-  discountPercent?: number | null;
-  /** ISO timestamp of this verification. */
-  verifiedAt?: string | null;
-  /** True when answered from a signed offline card rather than the network. */
-  offline?: boolean;
+  /** The server's bilingual wording. Status is never colour alone (R093). */
+  label: { ar: string; en: string };
+  /** Safety never expires: a lapsed membership changes the price, not the care. */
+  careContinues: boolean;
+  /** What to say at the counter when standing is anything but ordinary. */
+  counterScript?: { ar: string; en: string } | null;
 }
 
 export interface VetOwnerContact {
-  firstName: string;
+  /** Server-composed display name. `null` until the tier reveals owner identity. */
+  firstName: string | null;
   /** Masked by default; the full number is a deliberate, logged reveal. */
   maskedPhone: string;
   phone?: string | null;
+  locale?: string;
+  /** Lifted from the profile's `emergencyContacts[]` — the primary one. */
   emergencyContactName?: string | null;
   emergencyContactPhone?: string | null;
 }
@@ -326,6 +373,22 @@ export interface VetWeightPoint {
   source: "CLINIC" | "OWNER";
 }
 
+/**
+ * VIEW MODEL — produced by `adaptPatientProfile` (lib/vet-wire.ts), never the
+ * raw response. The server nests identity under `cardOf`, care under `care`,
+ * consent under `access` and the relationship under `clinicRelationship`.
+ *
+ * The important field here is `vaccinations`, and its important value is
+ * `null`:
+ *
+ *   null  → the owner's consent tier WITHHOLDS the care summary. Unknown.
+ *   []    → the clinic can see the record and there is nothing on file.
+ *   [...] → doses on file.
+ *
+ * Those first two must never collapse together. When they did, a cat whose
+ * record this clinic may not read still showed a green "Vaccinations current"
+ * badge — a clinical claim the data does not support (R040, principle 6).
+ */
 export interface VetPatientProfile {
   catId: string;
   name: string;
@@ -334,24 +397,46 @@ export interface VetPatientProfile {
   breedEn?: string | null;
   breedAr?: string | null;
   sex: VetSex;
+  /** Part of the care summary — `null` when withheld, as well as when unknown. */
   sterilised: boolean | null;
   birthDate?: string | null;
   ageMonths?: number | null;
+  /** The server's pre-composed bilingual age ("3 yr 11 mo"). */
+  ageLabel?: { ar: string; en: string } | null;
   weightKg?: number | null;
   microchip?: string | null;
   membership: VetMembershipStanding;
   owner: VetOwnerContact;
+  emergencyContacts: Array<{
+    id: string;
+    kind?: string | null;
+    name: string;
+    phone: string | null;
+    relation?: string | null;
+    isPrimary: boolean;
+  }>;
   /** GROUPED, not a flat array — flatten with flattenTier0Alerts() to display. */
   alerts: VetTier0Alerts;
   /** The tier this clinic currently holds for this cat. */
   consentTier: VetConsentTier;
-  /** True when the owner narrowed the default — say so, never render a silent void. */
+  /** The sections the server says are withheld, in its own bilingual words. */
+  hiddenSections: Array<{
+    section: string;
+    reason: { code: string; ar: string; en: string };
+    remedy?: unknown;
+  }>;
+  /** True when anything at all is withheld — say so, never render a silent void. */
   restrictedByOwner: boolean;
+  /** "This view was recorded in the owner's access ledger." */
+  ledgerNotice?: { ar: string; en: string } | null;
   isOwnPatient: boolean;
+  visitCountHere: number;
   lastVisitAt?: string | null;
-  insuranceFlag?: boolean;
-  vaccinations?: VetVaccination[];
-  weights?: VetWeightPoint[];
+  /** `null` means WITHHELD. `[]` means none on file. See the note above. */
+  vaccinations: VetVaccination[] | null;
+  weights: VetWeightPoint[] | null;
+  /** True when consent withheld the whole care summary (tier 0). */
+  careWithheld: boolean;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -604,27 +689,70 @@ export interface VetAccessLogRow {
  * Break-glass. An unconscious cat arrives with no owner: tier-0 safety data is
  * released against a stated reason, and the owner is told it happened.
  */
+/**
+ * VIEW MODEL — produced by `adaptEmergencyPayload` (lib/vet-wire.ts).
+ *
+ * The server nests the animal under `cat`, the safety data under
+ * `criticalAlerts`, and the accountability trail under `audit`. This screen
+ * read `payload.name`, `payload.alerts` and `payload.accessId` — none of which
+ * exist on the wire — so break-glass rendered a blank cat.
+ *
+ * `alerts` here is ALREADY FLAT, unlike the profile's grouped `VetTier0Alerts`:
+ * emergency allergies arrive as bare strings with no id, so they are lifted in
+ * the adapter rather than pushed through flattenTier0Alerts, which would have
+ * emitted `labelEn: undefined` for every one of them.
+ */
 export interface VetEmergencyPayload {
   catId: string;
   name: string;
   catIdNumber: string;
   photoUrl: string | null;
   sex: VetSex;
+  birthDate?: string | null;
   ageMonths?: number | null;
   weightKg?: number | null;
   microchip?: string | null;
-  /** GROUPED, not a flat array — flatten with flattenTier0Alerts() to display. */
-  alerts: VetTier0Alerts;
+  breedEn?: string | null;
+  breedAr?: string | null;
+  /** FLAT and display-ready. See the note above. */
+  alerts: VetMedicalAlert[];
+  hasCritical: boolean;
+  /**
+   * "No allergies on file — that is not the same as none."
+   * Sent whenever the allergy list is empty. In an emergency an empty list
+   * must never read as a clearance, so this is not optional chrome.
+   */
+  disclaimer: { ar: string; en: string } | null;
   owner: VetOwnerContact;
+  emergencyContacts: Array<{ id: string; name: string; phone: string | null; relation?: string | null; isPrimary: boolean }>;
+  primaryClinic: {
+    id: string;
+    ar: string;
+    en: string;
+    branch: { ar: string; en: string; phone: string | null } | null;
+    lastSeenAt: string | null;
+  } | null;
   /** Recorded against the actor; the owner is notified. */
-  accessId: string;
-  accessedAt: string;
-  reason: string;
+  accessId: string | null;
+  accessedAt: string | null;
+  reason: string | null;
+  ownerNotified: boolean;
+  auditNotice: { ar: string; en: string } | null;
+  nextStep: { action: string; ar: string; en: string } | null;
 }
 
 export interface VetEmergencyRequest {
-  /** Any exact identifier: Cat ID number, microchip, or QR token. */
-  identifier: string;
+  /**
+   * The cat's internal id — break-glass is reached FROM a resolved patient, so
+   * the cat is already identified by the time this is called.
+   *
+   * This was declared as a free-text `identifier` ("Cat ID number, microchip,
+   * or QR token") and posted to `POST /vet/emergency` as `{identifier, reason}`.
+   * The route is `POST /vet/emergency/:catId` taking `{reason}` — so every
+   * break-glass attempt 404'd. Resolving an unknown identifier is the scan
+   * screen's job; by here it is done.
+   */
+  catId: string;
   reason: string;
 }
 
@@ -1314,7 +1442,7 @@ export interface VetApi {
     rows: VetAccessLogRow[];
     nextCursor?: string | null;
   }>;
-  /** POST /vet/emergency — break-glass, always against a stated reason. */
+  /** POST /vet/emergency/:catId — break-glass, always against a stated reason. */
   emergencyLookup: (input: VetEmergencyRequest) => Promise<VetEmergencyPayload>;
 
   // ── Clinical authorship ───────────────────────────────────────────────
@@ -1376,35 +1504,70 @@ export function useVetApi(): VetApi {
 
       counterLock: () => vetFetch<void>("/vet/auth/counter/lock", { method: "POST", body: "{}" }),
 
-      searchPatients: (q, opts) =>
-        vetFetch<VetSearchResponse>(`/vet/patients/search?q=${encodeURIComponent(q)}`, {
-          signal: opts?.signal,
-        }),
+      // ── The wire crossing ────────────────────────────────────────────────
+      // These four responses are nested on the server and flat on screen. The
+      // adapters in lib/vet-wire.ts are the ONLY place that bridges the two;
+      // every previous attempt to let a screen read the response directly has
+      // ended in a blank page or an error boundary. See that file's header.
+      searchPatients: async (q, opts) =>
+        adaptSearchResponse(
+          assertShape<VetWireSearchResponse>(
+            await vetFetch(`/vet/patients/search?q=${encodeURIComponent(q)}`, { signal: opts?.signal }),
+            ["query", "scope", "results"],
+            "GET /vet/patients/search",
+          ),
+        ),
 
-      getPatient: (catId) => vetFetch<VetPatientProfile>(`/vet/patients/${encodeURIComponent(catId)}`),
+      getPatient: async (catId) =>
+        adaptPatientProfile(
+          assertShape<VetWirePatientProfile>(
+            await vetFetch(`/vet/patients/${encodeURIComponent(catId)}`),
+            ["catId", "alerts", "access", "clinicRelationship"],
+            "GET /vet/patients/:catId",
+          ),
+        ),
 
       // Each of these validates the envelope it is about to read. The previous
       // bare casts are why a contract mismatch rendered a blank screen instead
       // of an error: the data was wrong and nothing ever threw.
-      getPatientTimeline: async (catId) =>
-        assertShape<VetTimelineResponse>(
+      // Timeline entries carry no title, body or author name on the wire —
+      // just `type` + raw `payload`. The adapter renders them; without it the
+      // timeline drew one "Invalid Date" row per entry.
+      getPatientTimeline: async (catId) => {
+        const raw = assertShape<{ items: unknown[] } & Record<string, unknown>>(
           await vetFetch(`/vet/patients/${encodeURIComponent(catId)}/timeline`),
           ["items", "access", "pagination"],
           "GET /vet/patients/:catId/timeline",
-        ),
+        );
+        return {
+          ...raw,
+          items: (raw.items ?? []).map((e) => adaptTimelineEntry(e as VetWireTimelineEntry)),
+        } as unknown as VetTimelineResponse;
+      },
 
-      getPatientPrescriptions: async (catId) =>
-        assertShape<VetPrescriptionResponse>(
+      getPatientPrescriptions: async (catId) => {
+        const raw = assertShape<{ items: unknown[] } & Record<string, unknown>>(
           await vetFetch(`/vet/patients/${encodeURIComponent(catId)}/prescriptions`),
           ["items", "access", "pagination"],
           "GET /vet/patients/:catId/prescriptions",
-        ),
+        );
+        return {
+          ...raw,
+          items: (raw.items ?? []).map((p) => adaptPrescription(p as VetWirePrescription)),
+        } as unknown as VetPrescriptionResponse;
+      },
 
+      // The chart read `p.at`/`p.kg` against rows keyed `measuredAt`/`weightKg`
+      // and plotted NaN for every point — an empty chart, never an error. The
+      // envelope assert passed the whole time, because only the top-level keys
+      // were ever checked.
       getPatientWeights: async (catId) =>
-        assertShape<VetWeightSeriesResponse>(
-          await vetFetch(`/vet/patients/${encodeURIComponent(catId)}/weights`),
-          ["series", "trend"],
-          "GET /vet/patients/:catId/weights",
+        adaptWeightSeries(
+          assertShape<VetWireWeightSeries>(
+            await vetFetch(`/vet/patients/${encodeURIComponent(catId)}/weights`),
+            ["series", "trend"],
+            "GET /vet/patients/:catId/weights",
+          ),
         ),
 
       listPatients: (params) => {
@@ -1473,11 +1636,17 @@ export function useVetApi(): VetApi {
         return vetFetch(`/vet/access-log${suffix ? `?${suffix}` : ""}`);
       },
 
-      emergencyLookup: (input) =>
-        vetFetch<VetEmergencyPayload>("/vet/emergency", {
-          method: "POST",
-          body: JSON.stringify(input),
-        }),
+      emergencyLookup: async ({ catId, reason }) =>
+        adaptEmergencyPayload(
+          assertShape<VetWireEmergencyPayload>(
+            await vetFetch(`/vet/emergency/${encodeURIComponent(catId)}`, {
+              method: "POST",
+              body: JSON.stringify({ reason }),
+            }),
+            ["cat", "criticalAlerts", "audit"],
+            "POST /vet/emergency/:catId",
+          ),
+        ),
 
       // ── Clinical authorship (append-only; no update, no delete) ─────────
       createRecord: (input) =>

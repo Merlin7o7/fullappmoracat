@@ -44,9 +44,70 @@ export interface MissingVaccination {
 
 const DAY = 86_400_000;
 
+/**
+ * What we are actually entitled to SAY about this cat's vaccinations.
+ *
+ * Four states, because the data has four states and flattening them is how a
+ * clinical screen starts lying:
+ *
+ *   WITHHELD      the consent tier hides the care summary — we do not know
+ *   NO_RECORD     we can see the record and nothing is written in it
+ *   GAPS          doses are overdue or due soon
+ *   CURRENT       doses on file, none outstanding
+ *
+ * The profile Hero used to render `missing.length === 0` as a green
+ * "Vaccinations current" badge, which meant a tier-0 patient — whose record
+ * this clinic is not permitted to read at all — was reported as vaccinated.
+ * That is the sentence rule 3 above exists to forbid, rendered in green, on
+ * the screen a vet decides from (R006, R040).
+ *
+ * `null` means withheld; `[]` means genuinely empty. The caller must keep
+ * them apart, which is why `adaptPatientProfile` preserves the distinction.
+ */
+export type VaccinationStanding = "WITHHELD" | "NO_RECORD" | "GAPS" | "CURRENT";
+
+export function vaccinationStanding(
+  vaccinations: Vaccination[] | null | undefined,
+  missing: MissingVaccination[]
+): VaccinationStanding {
+  if (vaccinations == null) return "WITHHELD";
+  if (missing.length > 0) return "GAPS";
+  if (vaccinations.length === 0) return "NO_RECORD";
+  return "CURRENT";
+}
+
+/** The badge's words and tone for each standing. Never colour alone (R093). */
+export function vaccinationStandingLabel(
+  standing: VaccinationStanding,
+  missingCount: number,
+  isAr: boolean
+): { text: string; variant: "success" | "warning" | "outline" } {
+  switch (standing) {
+    case "WITHHELD":
+      return {
+        text: isAr ? "التحصينات محجوبة" : "Vaccinations withheld",
+        variant: "outline",
+      };
+    case "NO_RECORD":
+      return {
+        text: isAr ? "لا سجل تحصين" : "No vaccination record",
+        variant: "warning",
+      };
+    case "GAPS":
+      return {
+        text: isAr
+          ? `${missingCount} تحصين ناقص`
+          : `${missingCount} vaccination gap${missingCount === 1 ? "" : "s"}`,
+        variant: "warning",
+      };
+    default:
+      return { text: isAr ? "التحصينات سارية" : "Vaccinations current", variant: "success" };
+  }
+}
+
 /** Derive the tier-0 vaccination gaps from the profile's vaccination list. */
 export function deriveMissingVaccinations(
-  vaccinations: Vaccination[] | undefined,
+  vaccinations: Vaccination[] | null | undefined,
   isAr: boolean
 ): MissingVaccination[] {
   const now = Date.now();

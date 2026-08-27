@@ -57,13 +57,17 @@ import { VET_ROLE_LABELS } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
 import { QueryError } from "@/components/query-error";
-import { AlertsBand, deriveMissingVaccinations } from "@/components/vet/alerts-band";
+import {
+  AlertsBand,
+  deriveMissingVaccinations,
+  vaccinationStanding,
+  vaccinationStandingLabel,
+} from "@/components/vet/alerts-band";
 import {
   formatCatAge,
   useVetActor,
   useVetApi,
   vetFriendlyError,
-  vetMembershipStateLabel,
   type ConsentTier,
   type PatientProfile,
   flattenTier0Alerts,
@@ -132,7 +136,7 @@ export default function PatientProfilePage({ params }: { params: { catId: string
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-3 pb-24 sm:p-5">
-      <Hero profile={profile} missingCount={missing.length} />
+      <Hero profile={profile} missing={missing} />
 
       {/* ── The safety floor. Above everything. Always. ─────────────────── */}
       <AlertsBand alerts={flattenTier0Alerts(profile.alerts)} missingVaccinations={missing} catName={profile.name} />
@@ -203,7 +207,7 @@ export default function PatientProfilePage({ params }: { params: { catId: string
                     {t.key === "records" && (
                       <RecordsPanel
                         catId={catId}
-                        vaccinations={profile.vaccinations}
+                        vaccinations={profile.vaccinations ?? undefined}
                         alerts={flattenTier0Alerts(profile.alerts)}
                       />
                     )}
@@ -245,12 +249,23 @@ export default function PatientProfilePage({ params }: { params: { catId: string
 
 // ── hero ─────────────────────────────────────────────────────────────────
 
-function Hero({ profile, missingCount }: { profile: PatientProfile; missingCount: number }) {
+function Hero({
+  profile,
+  missing,
+}: {
+  profile: PatientProfile;
+  missing: ReturnType<typeof deriveMissingVaccinations>;
+}) {
   const { locale } = useLocale();
   const isAr = locale === "ar";
   const [revealPhone, setRevealPhone] = React.useState(false);
 
   const { membership, owner } = profile;
+  const vaccines = vaccinationStandingLabel(
+    vaccinationStanding(profile.vaccinations, missing),
+    missing.length,
+    isAr
+  );
   const statusVariant: Record<string, "success" | "warning" | "secondary" | "destructive" | "outline"> = {
     ACTIVE: "success",
     PENDING: "warning",
@@ -275,15 +290,15 @@ function Hero({ profile, missingCount }: { profile: PatientProfile; missingCount
   const facts = [
     (isAr ? profile.breedAr : profile.breedEn) ?? "",
     genderWord,
-    formatCatAge(profile.ageMonths, isAr) ?? "",
+    // The server composes the age bilingually; fall back to the local
+    // formatter only when it didn't send one.
+    (isAr ? profile.ageLabel?.ar : profile.ageLabel?.en) ?? formatCatAge(profile.ageMonths, isAr) ?? "",
     profile.birthDate
       ? isAr
         ? `مواليد ${formatDate(profile.birthDate, locale)}`
         : `b. ${formatDate(profile.birthDate, locale)}`
       : "",
   ].filter(Boolean);
-
-  const benefit = isAr ? membership.benefitLabelAr : membership.benefitLabelEn;
 
   return (
     <Card className="overflow-hidden">
@@ -319,11 +334,17 @@ function Hero({ profile, missingCount }: { profile: PatientProfile; missingCount
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
+            {/* The words come from the server beside the status, so a state we
+                don't have a colour for is still named correctly (R093). */}
             <Badge variant={statusVariant[membership.state] ?? "outline"}>
               <BadgeCheck className="size-3" aria-hidden />
-              {vetMembershipStateLabel(membership.state, isAr)}
+              {(isAr ? membership.label?.ar : membership.label?.en) || membership.state}
             </Badge>
-            {benefit && <Badge variant="accent">{benefit}</Badge>}
+            {/* Safety never expires — worth saying out loud exactly when the
+                membership doesn't stand, because that's when a clinic wonders. */}
+            {membership.state !== "ACTIVE" && membership.careContinues && (
+              <Badge variant="accent">{isAr ? "الرعاية مستمرة" : "Care continues"}</Badge>
+            )}
             {typeof profile.weightKg === "number" && (
               <Badge variant="secondary">
                 <Weight className="size-3" aria-hidden />
@@ -342,19 +363,12 @@ function Hero({ profile, missingCount }: { profile: PatientProfile; missingCount
                     : "Not sterilised"}
               </Badge>
             )}
-            <Badge variant={missingCount ? "warning" : "success"}>
+            {/* Four states, not two — "withheld" and "nothing on file" are
+                both reported as themselves rather than as "current" (R040). */}
+            <Badge variant={vaccines.variant}>
               <Syringe className="size-3" aria-hidden />
-              {missingCount
-                ? isAr
-                  ? `${missingCount} تحصين ناقص`
-                  : `${missingCount} vaccination gap${missingCount === 1 ? "" : "s"}`
-                : isAr
-                  ? "التحصينات سارية"
-                  : "Vaccinations current"}
+              {vaccines.text}
             </Badge>
-            {profile.insuranceFlag && (
-              <Badge variant="info">{isAr ? "مؤمَّن" : "Insured"}</Badge>
-            )}
           </div>
 
           <p className="mt-2 text-sm text-muted-foreground">{facts.join(" · ")}</p>
@@ -371,7 +385,11 @@ function Hero({ profile, missingCount }: { profile: PatientProfile; missingCount
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <span className="text-muted-foreground">
               {isAr ? "المالك" : "Owner"}:{" "}
-              <span className="font-medium text-foreground">{owner.firstName}</span>
+              <span className="font-medium text-foreground">
+                {/* Identity is tier 1. Below it the server sends null, and the
+                    honest word is "withheld", not a blank space. */}
+                {owner.firstName ?? (isAr ? "محجوب" : "Withheld")}
+              </span>
             </span>
             {revealPhone && owner.phone ? (
               <a
@@ -434,9 +452,11 @@ function Hero({ profile, missingCount }: { profile: PatientProfile; missingCount
                 </span>
               </span>
             )}
-            {membership.memberSince && (
+            {profile.visitCountHere > 0 && (
               <span>
-                {isAr ? "عضو منذ" : "Member since"} {formatDate(membership.memberSince, locale)}
+                {isAr
+                  ? `${profile.visitCountHere} زيارة عندكم`
+                  : `${profile.visitCountHere} visit${profile.visitCountHere === 1 ? "" : "s"} here`}
               </span>
             )}
           </div>
@@ -483,7 +503,11 @@ function ConsentBanner({ profile, catId }: { profile: PatientProfile; catId: str
   const { toast } = useToast();
   const isAr = locale === "ar";
   const api = useVetApi();
-  const tier = profile.consentTier;
+  // Default to the MOST restrictive tier, never the most permissive: if we
+  // cannot tell what this clinic is allowed to see, "identity and alerts only"
+  // is the answer that cannot leak. (This lookup returning undefined is what
+  // took the whole screen to the error boundary — `TIER_COPY[undefined]`.)
+  const tier: ConsentTier = profile.consentTier ?? "T0";
   const nextTier: ConsentTier | null = tier === "T0" ? "T1" : tier === "T1" ? "T2" : null;
   const [requested, setRequested] = React.useState(false);
 
@@ -505,9 +529,16 @@ function ConsentBanner({ profile, catId }: { profile: PatientProfile; catId: str
     },
   });
 
-  const copy = TIER_COPY[tier];
+  const copy = TIER_COPY[tier] ?? TIER_COPY.T0;
   const hidden = isAr ? copy.hiddenAr : copy.hiddenEn;
   const full = tier === "T2";
+  // The server names what it withheld, in its own bilingual words. Prefer that
+  // over our static list wherever it speaks — it knows the actual grant.
+  const serverReasons = Array.from(
+    new Map(
+      (profile.hiddenSections ?? []).map((h) => [h.reason?.code ?? h.section, h.reason])
+    ).values()
+  ).filter(Boolean);
 
   return (
     <Card
@@ -550,15 +581,19 @@ function ConsentBanner({ profile, catId }: { profile: PatientProfile; catId: str
                   </li>
                 ))}
               </ul>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                {profile.restrictedByOwner
-                  ? isAr
-                    ? "المالك ضيّق الاطلاع لهذه العيادة تحديداً."
-                    : "The owner has narrowed access for this clinic specifically."
-                  : isAr
+              {serverReasons.length > 0 ? (
+                serverReasons.map((r) => (
+                  <p key={r.code} className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                    {isAr ? r.ar : r.en}
+                  </p>
+                ))
+              ) : (
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  {isAr
                     ? "المالك لم يمنح هذه العيادة الاطلاع على هذا الجزء بعد."
                     : "The owner hasn't granted this clinic access to that part yet."}
-              </p>
+                </p>
+              )}
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                 {isAr
                   ? "هذا الجزء موجود — لكنه غير مرئي لكم. ما تشوفونه هنا ليس السجل الكامل."

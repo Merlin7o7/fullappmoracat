@@ -56,7 +56,6 @@ import {
   useVetApi,
   vetFriendlyError,
   type EmergencyPayload,
-  flattenTier0Alerts,
 } from "@/lib/vet-api";
 
 const PRESETS: { value: string; ar: string; en: string }[] = [
@@ -84,7 +83,7 @@ export default function EmergencyAccessPage({ params }: { params: { catId: strin
   const [error, setError] = React.useState("");
 
   const open = useMutation({
-    mutationFn: (reason: string) => api.emergencyLookup({ identifier: catId, reason }),
+    mutationFn: (reason: string) => api.emergencyLookup({ catId, reason }),
     onSuccess: (data) => setPayload(data),
     onError: (err) => {
       const f = vetFriendlyError(err, isAr);
@@ -258,7 +257,7 @@ function BreakGlassView({ payload }: { payload: EmergencyPayload }) {
   const contacts = [
     owner.phone
       ? {
-          name: owner.firstName,
+          name: owner.firstName || (isAr ? "المالك" : "Owner"),
           phone: owner.phone,
           relation: isAr ? "المالك" : "Owner",
         }
@@ -282,16 +281,22 @@ function BreakGlassView({ payload }: { payload: EmergencyPayload }) {
         <ShieldCheck className="size-5 shrink-0 text-primary" aria-hidden />
         <p className="text-sm font-medium text-foreground">
           {isAr ? "تم تسجيل هذا الوصول" : "This access has been logged"}
-          <span className="ms-1.5 font-mono tabular-nums text-muted-foreground">
-            {formatDateTime(payload.accessedAt, locale)}
-          </span>
+          {payload.accessedAt && (
+            <span className="ms-1.5 font-mono tabular-nums text-muted-foreground">
+              {formatDateTime(payload.accessedAt, locale)}
+            </span>
+          )}
         </p>
-        <p className="text-sm text-muted-foreground">
-          {isAr ? "· أُشعِر المالك باسم عيادتكم." : "· The owner was notified, naming your clinic."}
-        </p>
-        <p className="w-full font-mono text-xs text-muted-foreground">
-          {isAr ? "رقم السجل" : "Access record"}: {payload.accessId}
-        </p>
+        {payload.ownerNotified && (
+          <p className="text-sm text-muted-foreground">
+            {isAr ? "· أُشعِر المالك باسم عيادتكم." : "· The owner was notified, naming your clinic."}
+          </p>
+        )}
+        {payload.accessId && (
+          <p className="w-full font-mono text-xs text-muted-foreground">
+            {isAr ? "رقم السجل" : "Access record"}: {payload.accessId}
+          </p>
+        )}
       </div>
 
       <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
@@ -344,8 +349,24 @@ function BreakGlassView({ payload }: { payload: EmergencyPayload }) {
         </div>
       </div>
 
-      {/* The alerts, in display posture — the reason this screen exists. */}
-      <AlertsBand alerts={flattenTier0Alerts(payload.alerts)} posture="display" catName={payload.name} />
+      {/* The alerts, in display posture — the reason this screen exists.
+          Already flat: emergency allergies arrive as bare strings and are
+          lifted into alert objects by adaptEmergencyPayload. */}
+      <AlertsBand alerts={payload.alerts} posture="display" catName={payload.name} />
+
+      {/* The server sends this whenever the allergy list is empty, and the
+          client used to drop it. An empty list in an emergency must never be
+          read as a clearance — absence of a record is not absence of allergy. */}
+      {payload.disclaimer && (
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <p
+            role="note"
+            className="rounded-2xl border-2 border-warning/50 bg-warning/10 px-4 py-3 text-base font-medium leading-relaxed text-foreground"
+          >
+            {isAr ? payload.disclaimer.ar : payload.disclaimer.en}
+          </p>
+        </div>
+      )}
 
       <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
         <h2 className="text-lg font-semibold text-foreground">{isAr ? "اتصل الآن" : "Call now"}</h2>
@@ -388,9 +409,13 @@ function BreakGlassView({ payload }: { payload: EmergencyPayload }) {
         {/* Paperwork after the cat is safe — one calm exit, never a trap. */}
         <div className="mt-6 border-t border-border pt-4">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {isAr
-              ? `سبب الفتح المسجّل: «${payload.reason}». الورق بعد ما يستقر القط — سجّل ما حدث متى ما قدرت.`
-              : `Recorded reason: “${payload.reason}”. Paperwork after the cat is stable — record what happened whenever you can.`}
+            {payload.reason
+              ? isAr
+                ? `سبب الفتح المسجّل: «${payload.reason}». الورق بعد ما يستقر القط — سجّل ما حدث متى ما قدرت.`
+                : `Recorded reason: “${payload.reason}”. Paperwork after the cat is stable — record what happened whenever you can.`
+              : isAr
+                ? "الورق بعد ما يستقر القط — سجّل ما حدث متى ما قدرت."
+                : "Paperwork after the cat is stable — record what happened whenever you can."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
