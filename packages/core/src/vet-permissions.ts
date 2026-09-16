@@ -153,18 +153,43 @@ export interface VetActorContext {
   role: VetRole;
   /** True when the session was unlocked by PIN on a registered counter device. */
   counterMode?: boolean;
+  /**
+   * The clinic's lifecycle status. Anything other than LIVE is the SETUP
+   * SANDBOX (MRC-VET-002 phase 5): an approved clinic can prepare its counter
+   * and run the test scan, but holds no clinical capability over real members
+   * until Moracat switches it live. Omitted = LIVE (existing callers).
+   */
+  orgStatus?: string | null;
+}
+
+/**
+ * What a not-yet-live clinic may do: set itself up and prove the counter works
+ * by finding a demo cat. Search only — no profile reads, no records, no visits.
+ */
+export const SETUP_SANDBOX_CAPABILITIES: ReadonlySet<VetCapability> = new Set<VetCapability>([
+  "patient.search",
+  "staff.manage",
+  "branch.manage",
+  "settings.manage",
+  "device.manage",
+]);
+
+function inSandbox(ctx: VetActorContext): boolean {
+  return !!ctx.orgStatus && ctx.orgStatus !== "LIVE";
 }
 
 /** Every capability this actor holds, in this context. */
 export function capabilitiesFor(ctx: VetActorContext): VetCapability[] {
-  const base = MATRIX[ctx.role] ?? [];
-  if (!ctx.counterMode) return [...base];
-  return base.filter((c) => !COUNTER_MODE_DENIED.has(c));
+  let caps = [...(MATRIX[ctx.role] ?? [])];
+  if (ctx.counterMode) caps = caps.filter((c) => !COUNTER_MODE_DENIED.has(c));
+  if (inSandbox(ctx)) caps = caps.filter((c) => SETUP_SANDBOX_CAPABILITIES.has(c));
+  return caps;
 }
 
 /** Authorisation check. The single predicate the API guard and the UI both use. */
 export function can(ctx: VetActorContext, capability: VetCapability): boolean {
   if (ctx.counterMode && COUNTER_MODE_DENIED.has(capability)) return false;
+  if (inSandbox(ctx) && !SETUP_SANDBOX_CAPABILITIES.has(capability)) return false;
   return (MATRIX[ctx.role] ?? []).includes(capability);
 }
 

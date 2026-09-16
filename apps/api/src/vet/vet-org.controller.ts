@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  GoneException,
   Delete,
   Get,
   HttpCode,
@@ -17,11 +18,10 @@ import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { VetOrgService } from "./vet-org.service";
 import { Public } from "../common/decorators/public.decorator";
-import { VetStaffGuard, VET_ORG_HEADER } from "./guards/vet-staff.guard";
+import { VetStaffGuard, VET_ORG_HEADER, vetError } from "./guards/vet-staff.guard";
 import { VetCapability } from "./decorators/vet-capability.decorator";
 import { VetActorParam, type VetActor } from "./decorators/vet-actor.decorator";
 import {
-  ApplyDto,
   CreateBranchDocumentDto,
   CreateBranchDto,
   DirectoryQueryDto,
@@ -46,13 +46,24 @@ function meta(req: Request) {
 export class VetPublicController {
   constructor(private readonly org: VetOrgService) {}
 
+  /**
+   * Retired 2026-09-16 (MRC-VET-002): the network is invitation-only, so the
+   * public door answers 410 Gone with a bilingual pointer instead of silently
+   * collecting applications nobody reviews. The body is not validated — an old
+   * cached form must get this answer, not a 400.
+   */
   @Public()
   @Throttle(APPLY_THROTTLE)
   @Post("apply")
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: "Apply to join the Moracat veterinary network (public)" })
-  apply(@Body() dto: ApplyDto, @Req() req: Request) {
-    return this.org.apply(dto, meta(req));
+  @HttpCode(HttpStatus.GONE)
+  @ApiOperation({ summary: "Retired — clinics join by Moracat invitation only (410)" })
+  apply() {
+    throw new GoneException(
+      vetError("VET_APPLY_RETIRED", "Moracat clinic partnerships are invitation-only. Contact partners@moracat.co.", {
+        message_ar: "شراكات عيادات مرقط بالدعوة فقط. تواصل معنا على partners@moracat.co.",
+        contact: "partners@moracat.co",
+      })
+    );
   }
 
   @Public()

@@ -13,12 +13,31 @@
  *   • Not signed in → the staff sign-in, carrying where they meant to go.
  *   • Signed in, but not clinic staff → an explanation and a way in, not a wall.
  *   • Clinic paused/suspended/not live → the real reason, in their language.
+ *
+ * MRC-VET-002 adds the registration pipeline: a clinic (and its staff accounts)
+ * can exist long before it is workable. APPROVED is the setup sandbox — inside
+ * the shell, under a persistent banner — and LIVE is the full portal. Every
+ * earlier status gets a calm, named screen with one next step (R005, R084,
+ * R111), never an error.
  */
 
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, ScanLine, WifiOff, Loader2, Building2, RefreshCw, MoreHorizontal } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  ClipboardCheck,
+  Clock,
+  Loader2,
+  LogOut,
+  Mail,
+  MoreHorizontal,
+  RefreshCw,
+  ScanLine,
+  ShieldOff,
+  WifiOff,
+} from "lucide-react";
 import { Button, Drawer, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -27,11 +46,14 @@ import { Logo } from "@/components/logo";
 import { LangToggle, ThemeToggle } from "@/components/toggles";
 import { Omnibox } from "@/components/vet/omnibox";
 import { CounterLock, EmptyState, OrgSwitcher, RoleBadge } from "@/components/vet/vet-shell-bits";
-import { VetActorProvider, useVetActor, vetFriendlyError } from "@/lib/vet-api";
+import { VetActorProvider, useVetActor, vetFriendlyError, type VetMembership } from "@/lib/vet-api";
 import { visibleVetNav, type VetNavItem } from "./nav";
 
 /** Routes inside /vet that must work before anyone has an account or a clinic. */
-const PUBLIC_ROUTES = ["/vet/login", "/vet/apply", "/vet/invite"];
+const PUBLIC_ROUTES = ["/vet/login", "/vet/apply", "/vet/invite", "/vet/register"];
+
+/** Clinic partnerships are invitation-only (MRC-VET-002) — this inbox is the door. */
+const PARTNERS_EMAIL = "partners@moracat.co";
 
 export default function VetLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -47,7 +69,7 @@ export default function VetLayout({ children }: { children: React.ReactNode }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/* Public chrome — sign-in, apply, invite                                     */
+/* Public chrome — sign-in, invitation page, staff invite, registration       */
 /* ────────────────────────────────────────────────────────────────────────── */
 
 function PublicChrome({ children }: { children: React.ReactNode }) {
@@ -101,7 +123,10 @@ function VetShell({ children }: { children: React.ReactNode }) {
   }, [logout, router]);
 
   // `g` then a key — Linear's go-to grammar, kept for the desk, not the counter.
-  const nav = React.useMemo<VetNavItem[]>(() => visibleVetNav(actor.can), [actor.can]);
+  const nav = React.useMemo<VetNavItem[]>(
+    () => visibleVetNav(actor.can, { counterMode: actor.counterMode }),
+    [actor.can, actor.counterMode],
+  );
   React.useEffect(() => {
     let armed = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -170,58 +195,32 @@ function VetShell({ children }: { children: React.ReactNode }) {
           title={isAr ? "هذا الحساب ليس ضمن فريق عيادة بعد" : "This account isn't on a clinic team yet"}
           body={
             isAr
-              ? "اطلب من مدير عيادتك دعوتك — تأخذ عشرين ثانية ويصلك الرابط على بريدك. أو قدّم طلب انضمام عيادتك إلى شبكة مرقط."
-              : "Ask your clinic manager to invite you — it takes twenty seconds and the link arrives by email. Or apply to bring your clinic into the Moracat network."
+              ? "اطلب من مدير عيادتك دعوتك — تأخذ عشرين ثانية ويصلك الرابط على بريدك. شراكات العيادات مع مرقط بالدعوة فقط؛ للاستفسار راسل فريق الشراكات."
+              : "Ask your clinic manager to invite you — it takes twenty seconds and the link arrives by email. Clinic partnerships with Moracat are by invitation; to ask about one, write to the partnerships team."
           }
-          action={
-            <Button size="sm" variant="outline" onClick={() => router.push("/vet/apply")}>
-              {isAr ? "قدّم طلب عيادة" : "Apply as a clinic"}
-            </Button>
-          }
+          action={<PartnersContact isAr={isAr} />}
         />
       </BlockedShell>
     );
   }
 
   // The clinic (or this person's seat in it) isn't serving a counter right now.
-  const membershipPaused = actor.org?.status && actor.org.status !== "ACTIVE";
-  const orgNotLive =
-    actor.org?.org.status &&
-    actor.org.org.status !== "LIVE" &&
-    actor.org.org.status !== "ONBOARDING";
-  if (membershipPaused || orgNotLive) {
-    const suspended = actor.org?.org.status === "SUSPENDED" || actor.org?.org.status === "OFFBOARDED";
+  // APPROVED (setup sandbox) and LIVE are the only statuses the API lets into
+  // the shell; every other status gets its own honest screen.
+  const blocked = actor.org ? blockedCopy(actor.org, isAr) : null;
+  if (blocked) {
     return (
       <BlockedShell isAr={isAr} onLogout={handleLogout}>
         <EmptyState
-          icon={Building2}
+          icon={blocked.icon}
           tone="boundary"
-          title={
-            membershipPaused
-              ? isAr
-                ? "حسابك في هذه العيادة موقوف"
-                : "Your access to this clinic is paused"
-              : suspended
-                ? isAr
-                  ? "وصول هذه العيادة متوقف"
-                  : "This clinic's access has stopped"
-                : isAr
-                  ? "العيادة لم تُفعَّل بعد"
-                  : "This clinic isn't live yet"
-          }
-          body={
-            membershipPaused
-              ? isAr
-                ? "مدير العيادة يستطيع إعادة تفعيله في ثوانٍ. لم يُحذف شيء من سجلك."
-                : "A clinic manager can restore it in seconds. Nothing in your record was deleted."
-              : isAr
-                ? "الكاونتر يعمل بعد اكتمال خطوات التجهيز. تواصل مع فريق شراكات مرقط — سجلات العيادة محفوظة كما هي."
-                : "The counter opens once setup is complete. Contact the Moracat partnerships team — the clinic's records are untouched."
-          }
+          title={blocked.title}
+          body={blocked.body}
           action={
-            actor.memberships.length > 1 ? (
-              <div className="pt-1">
-                <OrgSwitcher />
+            blocked.action || actor.memberships.length > 1 ? (
+              <div className="flex flex-col items-center gap-3 pt-1">
+                {blocked.action}
+                {actor.memberships.length > 1 && <OrgSwitcher />}
               </div>
             ) : null
           }
@@ -229,6 +228,7 @@ function VetShell({ children }: { children: React.ReactNode }) {
       </BlockedShell>
     );
   }
+  const inSetup = actor.org?.org.status === "APPROVED";
 
   const isActive = (item: VetNavItem) =>
     item.exact ? pathname === item.href : pathname.startsWith(item.href);
@@ -346,6 +346,29 @@ function VetShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
+        {/* Setup sandbox (MRC-VET-002 phase 5): say what's closed and why, once,
+            quietly, everywhere — so a 403 on a record is never a surprise (R084). */}
+        {inSetup && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 border-b border-info/25 bg-info/[0.07] px-4 py-1.5 text-center text-xs"
+          >
+            <ClipboardCheck className="size-3.5 shrink-0 text-info" aria-hidden />
+            <span className="font-medium">
+              {isAr ? "وضع التجهيز — سجلات الأعضاء تُفتح بعد التفعيل" : "Setup mode — member records open after go-live"}
+            </span>
+            {pathname !== "/vet" && (
+              <Link
+                href="/vet#go-live"
+                className="inline-flex min-h-[32px] items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                {isAr ? "قائمة التجهيز" : "Setup checklist"}
+                <ArrowRight className="size-3 rtl:rotate-180" aria-hidden />
+              </Link>
+            )}
+          </div>
+        )}
+
         <main id="main" tabIndex={-1} className="pb-nav flex-1 p-3 outline-none sm:p-4 lg:pb-6 lg:p-6">
           {children}
         </main>
@@ -430,6 +453,164 @@ function VetShell({ children }: { children: React.ReactNode }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
+
+type BlockedCopy = {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  body: string;
+  action?: React.ReactNode;
+};
+
+/**
+ * Why this membership can't open the shell right now — or null when it can.
+ * The clinic's lifecycle is checked before the person's seat, because "your
+ * clinic is under review" is the truer answer than "your access is paused".
+ */
+function blockedCopy(m: VetMembership, isAr: boolean): BlockedCopy | null {
+  const status = m.org.status;
+  const isOwner = m.role === "OWNER";
+
+  if (status === "SUSPENDED" || status === "PAUSED" || m.org.suspended) {
+    return {
+      icon: ShieldOff,
+      title: isAr ? "وصول هذه العيادة متوقف" : "This clinic's access has stopped",
+      body: isAr
+        ? "تواصل مع فريق شراكات مرقط لمعرفة السبب وإعادة التفعيل — سجلات العيادة محفوظة كما هي."
+        : "Contact the Moracat partnerships team to find out why and restore it — the clinic's records are untouched.",
+      action: <PartnersContact isAr={isAr} />,
+    };
+  }
+  if (status === "OFFBOARDED") {
+    return {
+      icon: ShieldOff,
+      title: isAr ? "انتهى وصول هذه العيادة" : "This clinic's access has ended",
+      body: isAr
+        ? "غادرت العيادة شبكة مرقط. للاستفسار عن السجلات أو العودة، راسل فريق الشراكات."
+        : "The clinic has left the Moracat network. For questions about its records, or to return, write to the partnerships team.",
+      action: <PartnersContact isAr={isAr} />,
+    };
+  }
+  if (status === "INVITED" || status === "REGISTERING" || status === "CHANGES_REQUESTED") {
+    const changes = status === "CHANGES_REQUESTED";
+    if (isOwner) {
+      return {
+        icon: ClipboardCheck,
+        title: changes
+          ? isAr
+            ? "طلبت مرقط بعض التعديلات"
+            : "Moracat asked for a few changes"
+          : isAr
+            ? "أكمل تسجيل عيادتك"
+            : "Finish your clinic registration",
+        body: changes
+          ? isAr
+            ? "اقرأ ملاحظة فريق المراجعة، وعدّل الأقسام المفتوحة، ثم أعد الإرسال. كل ما أدخلته محفوظ."
+            : "Read the review team's note, update the reopened sections, then submit again. Everything you entered is saved."
+          : isAr
+            ? "بياناتك محفوظة من حيث توقفت. بعد الإرسال تراجعها مرقط، ثم تُفتح البوابة لفريقك."
+            : "Everything is saved where you left off. Once you submit, Moracat reviews it — then the portal opens for your team.",
+        action: (
+          <Link href="/vet/register">
+            <Button size="sm">
+              {changes ? (isAr ? "راجع التعديلات" : "Review the changes") : isAr ? "تابع التسجيل" : "Continue registration"}
+              <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
+            </Button>
+          </Link>
+        ),
+      };
+    }
+    return {
+      icon: Clock,
+      title: isAr ? "العيادة تُكمل تسجيلها" : "Your clinic is finishing its registration",
+      body: isAr
+        ? "حسابك جاهز. سنرسل لك بريداً حين تفعّل مرقط العيادة — لا شيء مطلوب منك الآن."
+        : "Your account is ready. We'll email you when Moracat switches the clinic on — nothing is needed from you right now.",
+    };
+  }
+  if (status === "SUBMITTED" || status === "IN_REVIEW") {
+    return {
+      icon: Clock,
+      title: isAr ? "العيادة قيد المراجعة لدى مرقط" : "Under review by Moracat",
+      body: isOwner
+        ? isAr
+          ? "وصلنا طلبك ونراجع المستندات بأنفسنا. سنراسلك بالنتيجة، ويمكنك متابعة حالة الطلب في أي وقت."
+          : "We have your registration and are checking the documents ourselves. We'll email you the outcome, and you can follow its status any time."
+        : isAr
+          ? "حسابك جاهز. العيادة قيد المراجعة لدى مرقط، وسنرسل لك بريداً حين تُفعَّل."
+          : "Your account is ready. The clinic is under review by Moracat — we'll email you when it's live.",
+      action: isOwner ? (
+        <Link href="/vet/register">
+          <Button size="sm" variant="outline">
+            {isAr ? "تابع حالة الطلب" : "Track the registration"}
+          </Button>
+        </Link>
+      ) : undefined,
+    };
+  }
+  if (status === "REJECTED") {
+    return {
+      icon: ShieldOff,
+      title: isAr ? "لم يُعتمد تسجيل العيادة" : "The clinic's registration wasn't approved",
+      body: isOwner
+        ? isAr
+          ? "أرسلنا لك السبب على بريدك. إن كان لديك ما يوضّح الوضع، راسل فريق الشراكات."
+          : "We've emailed you the reason. If there's something we should know, write to the partnerships team."
+        : isAr
+          ? "لن تُفتح بوابة هذه العيادة. لأي استفسار تحدّث مع مالك العيادة."
+          : "This clinic's portal won't open. For questions, speak to the clinic owner.",
+      action: isOwner ? <PartnersContact isAr={isAr} /> : undefined,
+    };
+  }
+  if (status !== "APPROVED" && status !== "LIVE") {
+    // Legacy lifecycle values (APPLIED, SIGNED, ONBOARDING) — pre-registration
+    // clinics the partnerships team moves across by hand.
+    return {
+      icon: Building2,
+      title: isAr ? "العيادة لم تُفعَّل بعد" : "This clinic isn't live yet",
+      body: isAr
+        ? "فريق شراكات مرقط يُكمل تجهيز هذه العيادة. سجلات العيادة محفوظة كما هي."
+        : "The Moracat partnerships team is finishing this clinic's setup. The clinic's records are untouched.",
+      action: <PartnersContact isAr={isAr} />,
+    };
+  }
+
+  // The clinic is workable — now the person's own seat.
+  if (m.status === "INVITED") {
+    return {
+      icon: Mail,
+      title: isAr ? "بقي قبول الدعوة" : "Accept your invitation first",
+      body: isAr
+        ? "افتح رابط الدعوة من بريدك ووافق على تعهّد السرية — بعدها تدخل العيادة مباشرة. انتهت صلاحيته؟ اطلب من مدير العيادة إعادة إرساله."
+        : "Open the invitation link in your email and accept the confidentiality undertaking — then you're straight in. Expired? Ask a clinic manager to resend it.",
+    };
+  }
+  if (m.status !== "ACTIVE") {
+    return {
+      icon: Building2,
+      title: isAr ? "حسابك في هذه العيادة موقوف" : "Your access to this clinic is paused",
+      body: isAr
+        ? "مدير العيادة يستطيع إعادة تفعيله في ثوانٍ. لم يُحذف شيء من سجلك."
+        : "A clinic manager can restore it in seconds. Nothing in your record was deleted.",
+    };
+  }
+  return null;
+}
+
+/** Invitation-only: the partnerships inbox is the door, not a public form. */
+function PartnersContact({ isAr }: { isAr: boolean }) {
+  return (
+    <a
+      href={`mailto:${PARTNERS_EMAIL}`}
+      className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Mail className="size-4 shrink-0" aria-hidden />
+      <span>{isAr ? "راسل فريق الشراكات" : "Email partnerships"}</span>
+      <span dir="ltr" className="text-xs text-muted-foreground">
+        {PARTNERS_EMAIL}
+      </span>
+    </a>
+  );
+}
 
 /** Mirrors the real layout while memberships resolve — never a naked spinner. */
 function ShellSkeleton({ isAr }: { isAr: boolean }) {

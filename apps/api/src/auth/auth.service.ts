@@ -169,6 +169,77 @@ export class AuthService {
     };
   }
 
+  // ── Accounts created from an emailed invitation (vet clinics) ─────────────
+  /**
+   * Create — or finish — the account behind an emailed invitation, and sign it
+   * in. Used by clinic registration and staff invites (MRC-VET-002), where the
+   * token arrived at this exact address, so the email is verified by the act of
+   * following the link: no second OTP wall.
+   *
+   * Refuses an address that already has a working account (a password or a
+   * Google identity): that person signs in normally instead, so an invitation
+   * link can never be used to take over an existing account. A password-less
+   * PENDING shell (created by an older approval flow) is completed in place.
+   *
+   * The caller has already validated the invitation token and must pass the
+   * invited email — never an email from the request body.
+   */
+  async createInvitedAccount(
+    input: { email: string; password: string; firstName: string; lastName?: string | null; phone?: string | null },
+    meta: RequestMeta
+  ) {
+    const email = input.email.toLowerCase().trim();
+    this.assertStrongPassword(input.password);
+
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, passwordHash: true, status: true, deletedAt: true },
+    });
+    if (existing && (existing.passwordHash || existing.status !== "PENDING" || existing.deletedAt)) {
+      throw new ConflictException(
+        authError("EMAIL_TAKEN", "This email already has a Moracat account — sign in to continue.")
+      );
+    }
+
+    let phone: string | null = input.phone ? normalizePhone(input.phone) : null;
+    if (phone) {
+      const clash = await this.prisma.user.findFirst({
+        where: { phone, ...(existing ? { id: { not: existing.id } } : {}) },
+        select: { id: true },
+      });
+      // A number already on another account is simply not attached — the
+      // registration must not fail over a shared clinic landline.
+      if (clash) phone = null;
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, 12);
+    const now = new Date();
+    const data = {
+      passwordHash,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName?.trim() || null,
+      ...(phone ? { phone } : {}),
+      status: "ACTIVE" as const,
+      emailVerified: now,
+      termsAcceptedAt: now,
+    };
+
+    const user = existing
+      ? await this.prisma.user.update({ where: { id: existing.id }, data })
+      : await this.prisma.user.create({
+          data: {
+            email,
+            memberIdNumber: await this.ids.newMemberId(),
+            dialCode: "+966",
+            ...data,
+            wallet: { create: {} },
+            loyalty: { create: {} },
+          },
+        });
+
+    return this.completeLogin(user.id, user.email, user.isStaff, this.publicUser(user), false, meta);
+  }
+
   // ── Login (email + password) ──────────────────────────────────────────────
   async login(dto: LoginDto, meta: RequestMeta) {
     const user = await this.prisma.user.findFirst({

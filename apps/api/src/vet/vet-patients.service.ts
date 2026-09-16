@@ -603,6 +603,14 @@ export class VetPatientsService {
     // showing allergies is a medical read however fast it was.
     const soleHit = detected.isIdentifier && cats.length === 1 ? cats[0] : undefined;
     let alerts: Awaited<ReturnType<typeof this.loadAlerts>> | null = null;
+    if (soleHit && actor.orgStatus === "APPROVED") {
+      // The setup sandbox can only ever resolve demo cats (guard quarantine), so
+      // a sole exact hit here IS the go-live test scan (MRC-VET-002 phase 5).
+      await this.prisma.partnerOrg.updateMany({
+        where: { id: actor.orgId, status: "APPROVED", testScanAt: null },
+        data: { testScanAt: new Date() },
+      });
+    }
     if (soleHit) {
       const access = await this.resolveAccess(soleHit.id, actor.orgId);
       alerts = await this.loadAlerts(soleHit.id);

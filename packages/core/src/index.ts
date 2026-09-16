@@ -20,3 +20,6 @@ export * from "./census";
 // Where a cat lives, for the census — deliberately independent of the delivery
 // City table, which only knows the cities we can actually ship to.
 export * from "./saudi-cities";
+// Clinic registration (MRC-VET-002) — steps, Saudi field rules, the one
+// completeness check, the go-live checklist and the versioned terms text.
+export * from "./vet-registration";

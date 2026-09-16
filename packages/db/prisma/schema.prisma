@@ -2420,6 +2420,15 @@ model WaitlistEntry {
 
 enum PartnerOrgStatus {
   APPLIED
+  /// MRC-VET-002: Moracat invited the clinic; the owner hasn't opened the link.
+  INVITED
+  /// The owner is filling in the registration wizard.
+  REGISTERING
+  /// Wizard submitted with terms accepted — waiting for Moracat's review.
+  SUBMITTED
+  /// Moracat sent it back with a note; named steps are editable again.
+  CHANGES_REQUESTED
+  REJECTED
   IN_REVIEW
   APPROVED // approved, not yet switched on
   LIVE
@@ -2460,6 +2469,7 @@ enum BranchDocumentKind {
   MEWA_LICENCE
   CR
   VAT
+  PRACTITIONER_LICENCE
   INSURANCE
   OTHER
 }
@@ -2578,9 +2588,40 @@ model PartnerOrg {
   tier          String? // founding | standard
   suspendedAt   DateTime?
   suspendReason String?
+
+  // ── Registration (MRC-VET-002) ─────────────────────────────────────────────
+  /// Legal entity exactly as printed on the commercial registration.
+  legalNameAr   String?
+  legalNameEn   String?
+  /// Unified national number (700…) shown on the CR certificate.
+  unifiedNumber String?
+  crExpiresAt   DateTime?
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  invitedById   String?
+  /// Internal note from the Moracat reviewer who sent the invite.
+  inviteNote    String?
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  reviewedById  String?
+  /// Why it was sent back, and which wizard steps reopen.
+  changesRequestedNote  String?
+  changesRequestedSteps String[] @default([])
+  rejectedReason String?
+  /// The team the owner listed in the wizard, before invitations exist.
+  /// Shape: RegistrationTeamMember[] (see vet-registration.dto.ts).
+  registrationTeam Json?
+  /// Go-live checklist (MRC-VET-001 §01 stage 5).
+  branchesConfirmedAt DateTime?
+  testScanAt          DateTime?
+  goLiveRequestedAt   DateTime?
+
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  documents          OrgDocument[]
+  registrationInvites ClinicRegistrationInvite[]
   agreements    PartnerAgreement[]
   branches      Branch[]
   staff         PartnerStaff[]
@@ -2607,6 +2648,14 @@ model PartnerAgreement {
   docUrl       String?
   signedAt     DateTime?
   signedByName String?
+  // Click-accept evidence (MRC-VET-002): what exactly was shown, and who bound
+  // the clinic to it. contentHash is SHA-256 of the rendered bilingual text.
+  termsVersion     String?
+  contentHash      String?
+  signedByTitle    String?
+  acceptedByUserId String?
+  ipAddress        String?
+  userAgent        String?
   createdAt    DateTime  @default(now())
 
   org PartnerOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -2627,6 +2676,12 @@ model Branch {
   mapsUrl          String?
   phone            String?
   email            String?
+  district         String?
+  /// Census city code (packages/core saudi-cities) — the clinic can be anywhere
+  /// in the Kingdom, while cityId only knows DELIVERY cities.
+  cityCode         String?
+  /// Saudi National Address short code, e.g. RRRD2929.
+  nationalAddressCode String?
   /// Opening hours as [{day, open, close, closed}] — rendered, never parsed for
   /// logic beyond the "open now" badge.
   hours            Json?
@@ -2657,9 +2712,16 @@ model BranchDocument {
   id         String             @id @default(cuid())
   branchId   String
   kind       BranchDocumentKind
+  /// Registration uploads store a PRIVATE object key here ("private/…"), never
+  /// a public URL — clinic paperwork is read only through the authorised proxy.
   fileUrl    String
+  fileName   String?
+  mimeType   String?
+  sizeBytes  Int?
+  number     String?
   expiresAt  DateTime?
   verifiedAt DateTime?
+  verifiedById String?
   createdAt  DateTime           @default(now())
 
   branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -2698,6 +2760,10 @@ model PartnerStaff {
   status       PartnerStaffStatus @default(INVITED)
   title        String? // "Dr." / speciality line shown on records
   licenceNo    String? // practitioner licence
+  licenceExpiresAt DateTime?
+  /// Staff confidentiality acknowledgment (PDPL) — MRC-VET-002 phase 4.
+  confidentialityAcceptedAt DateTime?
+  confidentialityVersion    String?
   /// Counter-Mode PIN (bcrypt). Only meaningful on registered devices.
   pinHash      String?
   invitedById  String?
@@ -2724,6 +2790,51 @@ model PartnerStaff {
   @@map("partner_staff")
 }
 
+/// Org-level paperwork (CR, VAT). Branch-level licences stay on BranchDocument.
+model OrgDocument {
+  id           String             @id @default(cuid())
+  orgId        String
+  kind         BranchDocumentKind
+  /// Private object key — never a public URL.
+  fileKey      String
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  number       String?
+  expiresAt    DateTime?
+  verifiedAt   DateTime?
+  verifiedById String?
+  createdAt    DateTime           @default(now())
+
+  org PartnerOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([expiresAt])
+  @@map("partner_org_documents")
+}
+
+/// Moracat's invitation to a clinic OWNER to register (MRC-VET-002). Separate
+/// from PartnerInvite (staff) because it grants no role — only the right to
+/// create the owner account and fill in the registration.
+model ClinicRegistrationInvite {
+  id          String    @id @default(cuid())
+  orgId       String
+  email       String
+  tokenHash   String    @unique
+  invitedById String?
+  expiresAt   DateTime
+  claimedAt   DateTime?
+  claimedById String?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  org PartnerOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([email])
+  @@map("partner_registration_invites")
+}
+
 /// A pending staff invitation (token emailed). Separate from PartnerStaff so an
 /// unaccepted invite never counts as a member of the clinic.
 model PartnerInvite {
@@ -2731,6 +2842,14 @@ model PartnerInvite {
   orgId       String
   email       String
   role        PartnerStaffRole
+  /// Details captured in the registration wizard, applied to the membership on
+  /// acceptance so the owner never types them twice.
+  fullName    String?
+  phone       String?
+  title       String?
+  licenceNo   String?
+  licenceExpiresAt DateTime?
+  branchIds   String[]         @default([])
   tokenHash   String           @unique
   invitedById String?
   expiresAt   DateTime

@@ -17,11 +17,18 @@ import { NextResponse, type NextRequest } from "next/server";
  *    non-secret `mrc_auth` cookie; it carries no token.
  */
 
-// The vet portal is protected too, EXCEPT its three public doors: a clinic
-// applying to join, a staff member signing in, and an invited colleague
-// accepting their invitation. Everything behind those is patient data.
+// The vet portal is protected too, EXCEPT its public doors: the partnership
+// (invitation-only) page, a staff member signing in, an invited colleague
+// accepting their invitation, and a clinic owner following the emailed
+// registration link before they have an account (MRC-VET-002). Everything
+// behind those is patient data.
 const PROTECTED = [/^\/portal(\/|$)/, /^\/admin(\/|$)/, /^\/vet(\/|$)/];
-const PUBLIC_VET = [/^\/vet\/login(\/|$)/, /^\/vet\/apply(\/|$)/, /^\/vet\/invite(\/|$)/];
+const PUBLIC_VET = [
+  /^\/vet\/login(\/|$)/,
+  /^\/vet\/apply(\/|$)/,
+  /^\/vet\/invite(\/|$)/,
+  /^\/vet\/register(\/|$)/,
+];
 
 const IS_PROD = process.env.NODE_ENV === "production";
 

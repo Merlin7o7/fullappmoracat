@@ -49,8 +49,9 @@ export function SiteFooter() {
         { href: "/login", label: t.nav.login },
         { href: "/portal", label: isAr ? "بوابة الأعضاء" : "Member portal" },
         { href: "/contact", label: isAr ? "تواصل معنا" : "Contact us" },
-        // The clinics' door — quiet, but no longer orphaned from the public site.
-        { href: "/vet/apply", label: isAr ? "للعيادات: انضموا إلينا" : "For clinics" },
+        // The clinics' door — partnerships are by invitation (MRC-VET-002), so
+        // this explains how clinics join and who to write to, not a form.
+        { href: "/vet/apply", label: isAr ? "للعيادات" : "For clinics" },
       ],
     },
   ];

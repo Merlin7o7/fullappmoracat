@@ -25,6 +25,11 @@ export interface VetActor {
    * to every query instead of an extra lookup that someone will forget.
    */
   orgIsDemo: boolean;
+  /**
+   * PartnerOrg.status. Anything but LIVE puts the actor in the setup sandbox:
+   * search-only against demo cats, plus the setup capabilities (MRC-VET-002).
+   */
+  orgStatus: string;
   /** User.id — the human behind the membership. */
   userId: string;
   /** Clinic role driving the capability matrix. */

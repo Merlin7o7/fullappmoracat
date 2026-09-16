@@ -9,12 +9,13 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { createHash, randomUUID } from "node:crypto";
 import * as bcrypt from "bcryptjs";
-import { capabilitiesFor, VET_ROLE_LABELS } from "@moraqat/core";
+import { capabilitiesFor, VET_ROLE_LABELS, VET_STAFF_CONFIDENTIALITY_VERSION } from "@moraqat/core";
 import type { VetRole } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { resolveJwtSecret } from "../common/config/secrets";
+import { AuthService } from "../auth/auth.service";
 import { vetError, type CounterTokenPayload } from "./guards/vet-staff.guard";
-import type { CounterUnlockDto } from "./dto/vet-auth.dto";
+import type { AcceptInviteDto, ClaimInviteDto, CounterUnlockDto } from "./dto/vet-auth.dto";
 
 /**
  * A counter session lasts at most 12 hours — the dossier's rule that a shared
@@ -59,7 +60,8 @@ export class VetAuthService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwt: JwtService
+    private readonly jwt: JwtService,
+    private readonly accounts: AuthService
   ) {}
 
   // ── Org context ───────────────────────────────────────────────────────────
@@ -215,7 +217,8 @@ export class VetAuthService {
       },
       /** Empty = org-wide scope, matching the schema's convention. */
       branches: m.branches,
-      capabilities: capabilitiesFor({ role }),
+      // Same sandbox the guard applies — the portal renders exactly this.
+      capabilities: capabilitiesFor({ role, orgStatus: m.org.status }),
     };
   }
 
@@ -229,13 +232,24 @@ export class VetAuthService {
   async previewInvite(token: string) {
     const invite = await this.findLiveInvite(token);
     const role = invite.role as VetRole;
+    // Whether this address can sign in already decides the page's one question:
+    // "create your account" or "sign in". The token holder already knows the
+    // address, so this discloses nothing they don't have.
+    const account = await this.prisma.user.findUnique({
+      where: { email: invite.email },
+      select: { passwordHash: true, status: true },
+    });
     return {
       orgName: { en: invite.org.nameEn, ar: invite.org.nameAr },
       orgLogoUrl: invite.org.logoUrl,
+      orgStatus: invite.org.status,
       email: invite.email,
+      fullName: invite.fullName,
       role,
       roleLabel: VET_ROLE_LABELS[role],
       expiresAt: invite.expiresAt,
+      accountExists: !!account && (!!account.passwordHash || account.status !== "PENDING"),
+      confidentialityVersion: VET_STAFF_CONFIDENTIALITY_VERSION,
     };
   }
 
@@ -245,8 +259,22 @@ export class VetAuthService {
    * account's email must be the one that was invited, so a forwarded link can
    * never enrol a stranger.
    */
-  async acceptInvite(userId: string, userEmail: string, token: string) {
+  async acceptInvite(
+    userId: string,
+    userEmail: string,
+    token: string,
+    ack: Pick<AcceptInviteDto, "acceptConfidentiality" | "confidentialityVersion">
+  ) {
     const invite = await this.findLiveInvite(token);
+    if (!ack.acceptConfidentiality || ack.confidentialityVersion !== VET_STAFF_CONFIDENTIALITY_VERSION) {
+      throw new BadRequestException(
+        vetError(
+          "VET_CONFIDENTIALITY_REQUIRED",
+          "Accept the current confidentiality undertaking to join the clinic.",
+          { currentVersion: VET_STAFF_CONFIDENTIALITY_VERSION }
+        )
+      );
+    }
 
     if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {
       throw new ForbiddenException(
@@ -266,6 +294,23 @@ export class VetAuthService {
       // A membership row may already exist (INVITED) from the invite, or from a
       // prior offboarding — either way, accepting activates it rather than
       // creating a duplicate, because @@unique([orgId, userId]) is the truth.
+      // The details the owner typed in the registration wizard (title, licence,
+      // branch scope) land on the membership now — nobody types them twice.
+      const details = {
+        ...(invite.title ? { title: invite.title } : {}),
+        ...(invite.licenceNo ? { licenceNo: invite.licenceNo } : {}),
+        ...(invite.licenceExpiresAt ? { licenceExpiresAt: invite.licenceExpiresAt } : {}),
+        confidentialityAcceptedAt: now,
+        confidentialityVersion: ack.confidentialityVersion,
+      };
+      const branchIds = invite.branchIds.length
+        ? (
+            await tx.branch.findMany({
+              where: { id: { in: invite.branchIds }, orgId: invite.orgId },
+              select: { id: true },
+            })
+          ).map((b) => ({ id: b.id }))
+        : null;
       const membership = await tx.partnerStaff.upsert({
         where: { orgId_userId: { orgId: invite.orgId, userId } },
         update: {
@@ -273,6 +318,8 @@ export class VetAuthService {
           status: "ACTIVE",
           joinedAt: now,
           offboardedAt: null,
+          ...details,
+          ...(branchIds ? { branches: { set: branchIds } } : {}),
         },
         create: {
           orgId: invite.orgId,
@@ -281,6 +328,8 @@ export class VetAuthService {
           status: "ACTIVE",
           invitedById: invite.invitedById,
           joinedAt: now,
+          ...details,
+          ...(branchIds?.length ? { branches: { connect: branchIds } } : {}),
         },
         select: { id: true, role: true, orgId: true },
       });
@@ -296,7 +345,12 @@ export class VetAuthService {
           action: "vet.staff.invite.accept",
           entityType: "PartnerStaff",
           entityId: membership.id,
-          metadata: { orgId: invite.orgId, role: invite.role, inviteId: invite.id },
+          metadata: {
+            orgId: invite.orgId,
+            role: invite.role,
+            inviteId: invite.id,
+            confidentialityVersion: ack.confidentialityVersion,
+          },
         },
       });
 
@@ -309,9 +363,30 @@ export class VetAuthService {
       orgId: staff.orgId,
       role,
       roleLabel: VET_ROLE_LABELS[role],
-      capabilities: capabilitiesFor({ role }),
-      org: { nameEn: invite.org.nameEn, nameAr: invite.org.nameAr },
+      capabilities: capabilitiesFor({ role, orgStatus: invite.org.status }),
+      org: { nameEn: invite.org.nameEn, nameAr: invite.org.nameAr, status: invite.org.status },
     };
+  }
+
+  /**
+   * No account yet: create it from the invitation and accept in one step. The
+   * email is taken from the INVITE, never the body — the link was delivered to
+   * that inbox, which is what verifies it.
+   */
+  async claimInvite(dto: ClaimInviteDto, meta: RequestMeta) {
+    const invite = await this.findLiveInvite(dto.token);
+    const session = await this.accounts.createInvitedAccount(
+      {
+        email: invite.email,
+        password: dto.password,
+        firstName: dto.firstName,
+        lastName: dto.lastName ?? null,
+        phone: dto.phone ?? invite.phone ?? null,
+      },
+      meta
+    );
+    const accepted = await this.acceptInvite(session.user.id, invite.email, dto.token, dto);
+    return { ...session, accepted };
   }
 
   /** Resolve a live (unaccepted, unrevoked, unexpired) invite from its raw token. */
@@ -329,6 +404,12 @@ export class VetAuthService {
         expiresAt: true,
         acceptedAt: true,
         revokedAt: true,
+        fullName: true,
+        phone: true,
+        title: true,
+        licenceNo: true,
+        licenceExpiresAt: true,
+        branchIds: true,
         org: {
           select: { nameEn: true, nameAr: true, logoUrl: true, status: true, suspendedAt: true },
         },
@@ -372,7 +453,7 @@ export class VetAuthService {
         name: true,
         revokedAt: true,
         branchId: true,
-        branch: { select: { orgId: true, isActive: true } },
+        branch: { select: { orgId: true, isActive: true, org: { select: { status: true } } } },
       },
     });
     if (!device || device.revokedAt || !device.branch.isActive) {
@@ -500,7 +581,7 @@ export class VetAuthService {
         avatarUrl: staff.user.avatarUrl,
         counterMode: true,
         // Narrowed by counter mode — the UI renders exactly this and nothing more.
-        capabilities: capabilitiesFor({ role, counterMode: true }),
+        capabilities: capabilitiesFor({ role, counterMode: true, orgStatus: device.branch.org.status }),
       },
     };
   }

@@ -57,6 +57,14 @@ export default function VetLoginPage() {
   }, []);
 
   const resolveMemberships = React.useCallback(async () => {
+    // Registration and invitation flows establish the membership themselves —
+    // an owner mid-registration or an invitee with no seat yet must not be
+    // stopped at a clinic picker they can't pass (MRC-VET-002, R084).
+    const dest = destination();
+    if (/^\/vet\/(register|invite)(?:[/?#]|$)/.test(dest)) {
+      router.replace(dest);
+      return;
+    }
     setResolving(true);
     setError(null);
     try {
@@ -123,8 +131,8 @@ export default function VetLoginPage() {
             </h1>
             <p className="text-sm leading-relaxed text-muted-foreground">
               {isAr
-                ? "اطلب من مدير عيادتك دعوتك — تأخذ عشرين ثانية ويصلك رابط على بريدك. أو قدّم طلب انضمام عيادتك إلى شبكة مرقط."
-                : "Ask your clinic manager to invite you — it takes twenty seconds and a link arrives by email. Or apply to bring your clinic into the Moracat network."}
+                ? "اطلب من مدير عيادتك دعوتك — تأخذ عشرين ثانية ويصلك رابط على بريدك. أما انضمام العيادات إلى مرقط فبالدعوة فقط."
+                : "Ask your clinic manager to invite you — it takes twenty seconds and a link arrives by email. Clinics join Moracat by invitation only."}
             </p>
             {error && (
               <p role="alert" className="text-xs text-destructive">
@@ -132,8 +140,8 @@ export default function VetLoginPage() {
               </p>
             )}
             <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              <Button size="sm" onClick={() => router.push("/vet/apply")}>
-                {isAr ? "قدّم طلب عيادة" : "Apply as a clinic"}
+              <Button size="sm" variant="outline" onClick={() => router.push("/vet/apply")}>
+                {isAr ? "الشراكات بالدعوة" : "Partnerships are by invitation"}
               </Button>
               <Button
                 size="sm"
@@ -295,7 +303,7 @@ export default function VetLoginPage() {
           href="/vet/apply"
           className="inline-flex min-h-[44px] items-center font-medium text-primary underline-offset-4 hover:underline"
         >
-          {isAr ? "عيادتك ليست شريكة بعد؟" : "Clinic not a partner yet?"}
+          {isAr ? "عيادتك ليست شريكة؟ الشراكات بالدعوة" : "Not a partner? Partnerships are by invitation"}
         </Link>
       </div>
     </div>

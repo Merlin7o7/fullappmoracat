@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, Length, Matches, MaxLength } from "class-validator";
+import { Equals, IsBoolean, IsOptional, IsString, Length, Matches, MaxLength, MinLength } from "class-validator";
 
 /** A 4–6 digit counter PIN. Never printed, never set by anyone but its owner. */
 export const PIN_RE = /^\d{4,6}$/;
@@ -16,6 +16,43 @@ export class AcceptInviteDto {
   @IsString()
   @Length(20, 200)
   token!: string;
+
+  @ApiProperty({ description: "The invitee accepted the staff confidentiality undertaking (PDPL)." })
+  @IsBoolean()
+  @Equals(true, { message: "Accept the confidentiality undertaking to join the clinic" })
+  acceptConfidentiality!: boolean;
+
+  @ApiProperty({ description: "VET_STAFF_CONFIDENTIALITY_VERSION the invitee was shown." })
+  @IsString()
+  @MaxLength(40)
+  confidentialityVersion!: string;
+}
+
+/** Accept an invitation by creating the account in the same step (no account yet). */
+export class ClaimInviteDto extends AcceptInviteDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  firstName!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  lastName?: string;
+
+  @ApiPropertyOptional({ example: "0501234567" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  phone?: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  password!: string;
 }
 
 export class InvitePreviewDto {

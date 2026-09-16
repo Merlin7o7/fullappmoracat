@@ -3,9 +3,10 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { randomBytes } from "node:crypto";
-import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { mkdir, writeFile, unlink, readFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 
 /**
@@ -191,6 +192,82 @@ export class StorageService {
       return path.startsWith("cats/") || path.startsWith("users/") ? path : null;
     } catch {
       return null;
+    }
+  }
+
+  // ── Private documents (clinic paperwork — MRC-VET-002) ────────────────────
+  //
+  // Clinic CRs, licences and certificates must never be reachable by URL. They
+  // are written under a "private/" prefix — to S3_PRIVATE_BUCKET when one is
+  // configured, else to the main bucket with a 256-bit unguessable key — and
+  // are only ever READ BACK THROUGH THE API (getPrivate), after an
+  // authorisation check. No method here returns a public URL for them.
+
+  private get privateBucket(): string {
+    return process.env.S3_PRIVATE_BUCKET || this.bucket;
+  }
+
+  /** Content-sniff a document: PDF, JPEG or PNG only. Returns ext + mime, or null. */
+  sniffDocument(buffer: Buffer): { ext: string; mime: string } | null {
+    if (buffer.length >= 5 && buffer.toString("ascii", 0, 5) === "%PDF-") {
+      return { ext: "pdf", mime: "application/pdf" };
+    }
+    const img = this.sniffImageExt(buffer);
+    if (img === "jpg") return { ext: "jpg", mime: "image/jpeg" };
+    if (img === "png") return { ext: "png", mime: "image/png" };
+    return null;
+  }
+
+  /** An unguessable private key under a namespace, e.g. private/vet/<orgId>/…pdf */
+  buildPrivateKey(namespace: string, ext: string): string {
+    return `private/${namespace}/${randomBytes(32).toString("hex")}.${ext}`;
+  }
+
+  async putPrivate(key: string, body: Buffer, contentType: string): Promise<void> {
+    if (!key.startsWith("private/")) throw new Error("Private objects must live under private/");
+    if (this.isConfigured()) {
+      await this.s3().send(
+        new PutObjectCommand({
+          Bucket: this.privateBucket,
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+          CacheControl: "private, no-store",
+        })
+      );
+      return;
+    }
+    if (process.env.NODE_ENV === "production") {
+      this.logger.error("Private upload attempted but object storage (S3_*) is not configured.");
+      throw new ServiceUnavailableException("Document storage is not configured");
+    }
+    // Dev fallback in a directory the /uploads static route does NOT serve.
+    const abs = join(process.cwd(), ".private-uploads", key);
+    await mkdir(dirname(abs), { recursive: true });
+    await writeFile(abs, body);
+  }
+
+  async getPrivate(key: string): Promise<Buffer> {
+    if (!key.startsWith("private/")) throw new Error("Not a private object key");
+    if (this.isConfigured()) {
+      const out = await this.s3().send(new GetObjectCommand({ Bucket: this.privateBucket, Key: key }));
+      const bytes = await out.Body?.transformToByteArray();
+      if (!bytes) throw new ServiceUnavailableException("Document could not be read");
+      return Buffer.from(bytes);
+    }
+    return readFile(join(process.cwd(), ".private-uploads", key));
+  }
+
+  async removePrivate(key: string): Promise<void> {
+    if (!key.startsWith("private/")) return;
+    try {
+      if (this.isConfigured()) {
+        await this.s3().send(new DeleteObjectCommand({ Bucket: this.privateBucket, Key: key }));
+      } else {
+        await unlink(join(process.cwd(), ".private-uploads", key));
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to remove private object: ${(err as Error).message}`);
     }
   }
 

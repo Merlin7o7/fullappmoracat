@@ -68,6 +68,12 @@ const RECENTS_MAX = 10;
 /** Partner lifecycle (dossier §01). Only LIVE clinics serve a counter. */
 export type VetOrgStatus =
   | "APPLIED"
+  // MRC-VET-002 registration pipeline
+  | "INVITED"
+  | "REGISTERING"
+  | "SUBMITTED"
+  | "CHANGES_REQUESTED"
+  | "REJECTED"
   | "IN_REVIEW"
   | "APPROVED"
   | "SIGNED"
@@ -825,24 +831,6 @@ export interface VetDirectoryEntry {
   status: VetOrgStatus;
 }
 
-export interface VetApplicationInput {
-  clinicNameEn: string;
-  clinicNameAr: string;
-  crNumber: string;
-  city: string;
-  branchCount: number;
-  contactName: string;
-  phone: string;
-  email: string;
-  why?: string;
-}
-
-export interface VetApplicationResult {
-  applicationId: string;
-  /** Working days the clinic should expect to wait — never a fabricated promise. */
-  reviewDays?: number;
-}
-
 /**
  * Accepting an invite returns a FLAT orgId plus a name-only `org` — a different
  * shape from the auth context's membership, which nests the full clinic. Kept
@@ -870,6 +858,8 @@ export const VET_ERROR_CODES = [
   "VET_ORG_REQUIRED",
   "VET_FORBIDDEN",
   "VET_SEARCH_SCOPED",
+  "VET_INVITE_PENDING",
+  "VET_DEVICE_NOT_REGISTERED",
 ] as const;
 
 export type VetErrorCode = (typeof VET_ERROR_CODES)[number];
@@ -878,11 +868,11 @@ const VET_ERROR_COPY: Record<VetErrorCode, { ar: FriendlyError; en: FriendlyErro
   VET_NOT_STAFF: {
     ar: {
       title: "هذا الحساب ليس ضمن فريق عيادة",
-      message: "لا يوجد ارتباط بين هذا البريد وأي عيادة شريكة. اطلب من مدير العيادة دعوتك، أو قدّم طلب انضمام لعيادتك.",
+      message: "لا يوجد ارتباط بين هذا البريد وأي عيادة شريكة. اطلب من مدير العيادة دعوتك — شراكات العيادات بالدعوة فقط.",
     },
     en: {
       title: "This account isn't on a clinic team",
-      message: "This email isn't linked to a partner clinic yet. Ask your clinic manager to invite you, or apply to bring your clinic in.",
+      message: "This email isn't linked to a partner clinic yet. Ask your clinic manager to invite you — clinic partnerships are by invitation.",
     },
   },
   VET_ORG_SUSPENDED: {
@@ -895,14 +885,16 @@ const VET_ERROR_COPY: Record<VetErrorCode, { ar: FriendlyError; en: FriendlyErro
       message: "We've suspended this clinic's access for now. Contact Moracat partnerships to see why and restore it — your records are untouched.",
     },
   },
+  // MRC-VET-002: an APPROVED clinic works inside the setup sandbox — the refusal
+  // is about timing, not role, so it must never read as "you're not allowed" (R084).
   VET_ORG_NOT_LIVE: {
     ar: {
-      title: "العيادة لم تُفعَّل بعد",
-      message: "بقيت خطوات في تجهيز العيادة قبل أن يعمل الكاونتر. أكمل قائمة التجهيز أو تواصل مع فريق الشراكات.",
+      title: "العيادة في وضع التجهيز",
+      message: "سجلات الأعضاء تُفتح بعد أن تفعّل مرقط العيادة. حتى ذلك الحين يمكنك إكمال قائمة التجهيز وتجربة المسح.",
     },
     en: {
-      title: "This clinic isn't live yet",
-      message: "A few setup steps remain before the counter goes live. Finish the onboarding checklist, or reach the partnerships team.",
+      title: "The clinic is still setting up",
+      message: "Member records open after Moracat switches the clinic live. Until then, you can finish the setup checklist and run the test scan.",
     },
   },
   VET_STAFF_SUSPENDED: {
@@ -943,6 +935,26 @@ const VET_ERROR_COPY: Record<VetErrorCode, { ar: FriendlyError; en: FriendlyErro
     en: {
       title: "Name search covers your own patients",
       message: "Other members aren't browsable by name — that boundary protects them. If the member is with you, scan their card or enter their Cat ID or phone.",
+    },
+  },
+  VET_INVITE_PENDING: {
+    ar: {
+      title: "بقي قبول الدعوة",
+      message: "افتح رابط الدعوة من بريدك ووافق على تعهّد السرية — بعدها تدخل العيادة مباشرة.",
+    },
+    en: {
+      title: "Accept your invitation first",
+      message: "Open the invitation link in your email and accept the confidentiality undertaking — then you're straight in.",
+    },
+  },
+  VET_DEVICE_NOT_REGISTERED: {
+    ar: {
+      title: "هذا الجهاز غير مسجّل ككاونتر",
+      message: "وضع الكاونتر يعمل على جهاز سجّله مدير العيادة. سجّله من إعدادات العيادة ← أجهزة الكاونتر.",
+    },
+    en: {
+      title: "This device isn't a registered counter",
+      message: "Counter mode only runs on a device a clinic manager registered. Register it under Clinic settings → Counter devices.",
     },
   },
 };
@@ -1157,6 +1169,22 @@ export function getVetDeviceId(): string {
   }
 }
 
+/**
+ * Adopt the id the API issued when this browser was registered as a counter
+ * (POST /vet/org/branches/:branchId/devices). Counter unlock sends whatever
+ * `getVetDeviceId` returns, and the server only knows ids it issued — a random
+ * local UUID could never unlock anything. `null` forgets a revoked terminal.
+ */
+export function setVetDeviceId(id: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (id) localStorage.setItem(DEVICE_STORAGE_KEY, id);
+    else localStorage.removeItem(DEVICE_STORAGE_KEY);
+  } catch {
+    /* private mode — registration still exists server-side; re-register to adopt it */
+  }
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
  * Public (unauthenticated) endpoints
  * ──────────────────────────────────────────────────────────────────────────*/
@@ -1169,14 +1197,6 @@ async function publicJson<T>(path: string, init?: RequestInit): Promise<T> {
   const json = await res.json().catch(() => null);
   if (!res.ok) throw httpError(res.status, json);
   return json as T;
-}
-
-/** POST /vet/apply — a clinic asking to join the network. */
-export function submitVetApplication(input: VetApplicationInput): Promise<VetApplicationResult> {
-  return publicJson<VetApplicationResult>("/vet/apply", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
 }
 
 /** GET /vet/directory — the public list of live partner clinics. */
@@ -1329,8 +1349,10 @@ export function VetActorProvider({ children }: { children: React.ReactNode }) {
 
   const can = React.useCallback(
     (capability: VetCapability) =>
-      effectiveRole ? coreCan({ role: effectiveRole, counterMode }, capability) : false,
-    [effectiveRole, counterMode],
+      // orgStatus applies the same setup sandbox the API guard does (MRC-VET-002):
+      // a clinic that is not LIVE offers only setup + the test scan.
+      effectiveRole ? coreCan({ role: effectiveRole, counterMode, orgStatus: org?.org.status }, capability) : false,
+    [effectiveRole, counterMode, org?.org.status],
   );
 
   const branch = React.useMemo(
@@ -1404,8 +1426,6 @@ export function useVetFetch(): VetFetch {
 export interface VetApi {
   /** POST /vet/auth/context — every clinic this person belongs to. */
   authContext: () => Promise<VetAuthContext>;
-  /** POST /vet/auth/accept-invite */
-  acceptInvite: (token: string) => Promise<VetInviteResult>;
   /** POST /vet/auth/counter/unlock — PIN identity switch on a shared terminal. */
   counterUnlock: (input: VetCounterUnlockInput) => Promise<VetCounterSession>;
   /** POST /vet/auth/counter/lock */
@@ -1489,12 +1509,6 @@ export function useVetApi(): VetApi {
   return React.useMemo<VetApi>(
     () => ({
       authContext: () => vetFetch<VetAuthContext>("/vet/auth/context", { method: "POST", body: "{}" }),
-
-      acceptInvite: (token) =>
-        vetFetch<VetInviteResult>("/vet/auth/accept-invite", {
-          method: "POST",
-          body: JSON.stringify({ token }),
-        }),
 
       counterUnlock: (input) =>
         vetFetch<VetCounterSession>("/vet/auth/counter/unlock", {

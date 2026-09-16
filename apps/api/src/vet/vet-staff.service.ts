@@ -142,6 +142,7 @@ export class VetStaffService {
         id: true,
         email: true,
         role: true,
+        fullName: true,
         expiresAt: true,
         createdAt: true,
         invitedBy: { select: { firstName: true, lastName: true } },
@@ -151,6 +152,7 @@ export class VetStaffService {
       items: invites.map((i) => ({
         id: i.id,
         email: i.email,
+        fullName: i.fullName,
         role: i.role as VetRole,
         roleLabel: VET_ROLE_LABELS[i.role as VetRole],
         expiresAt: i.expiresAt,
@@ -200,6 +202,11 @@ export class VetStaffService {
     invitedByUserId?: string | null;
     branchIds?: string[];
     title?: string;
+    /** Registration-wizard details, applied to the membership on acceptance. */
+    fullName?: string | null;
+    phone?: string | null;
+    licenceNo?: string | null;
+    licenceExpiresAt?: Date | null;
     /** Prisma transaction client, when the invite is part of a larger commit. */
     tx?: Prisma.TransactionClient;
   }) {
@@ -243,6 +250,12 @@ export class VetStaffService {
         tokenHash: hashToken(token),
         invitedById: params.invitedByUserId ?? null,
         expiresAt,
+        fullName: params.fullName ?? null,
+        phone: params.phone ?? null,
+        title: params.title ?? null,
+        licenceNo: params.licenceNo ?? null,
+        licenceExpiresAt: params.licenceExpiresAt ?? null,
+        branchIds: params.branchIds ?? [],
       },
       select: { id: true },
     });
@@ -278,7 +291,15 @@ export class VetStaffService {
 
     await this.sendInviteEmail({ email, token, role: params.role, org });
 
-    return { inviteId: invite.id, email, role: params.role, expiresAt };
+    return {
+      inviteId: invite.id,
+      email,
+      role: params.role,
+      expiresAt,
+      // Dev/test only, like auth's devEmailCode: lets the e2e suite follow the
+      // emailed link. Never present in production.
+      ...(process.env.NODE_ENV !== "production" ? { devToken: token } : {}),
+    };
   }
 
   async revokeInvite(actor: VetActor, inviteId: string, meta: RequestMeta) {
@@ -317,7 +338,19 @@ export class VetStaffService {
   async resendInvite(actor: VetActor, inviteId: string, meta: RequestMeta) {
     const invite = await this.prisma.partnerInvite.findFirst({
       where: { id: inviteId, orgId: actor.orgId },
-      select: { id: true, email: true, role: true, acceptedAt: true, revokedAt: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        acceptedAt: true,
+        revokedAt: true,
+        fullName: true,
+        phone: true,
+        title: true,
+        licenceNo: true,
+        licenceExpiresAt: true,
+        branchIds: true,
+      },
     });
     if (!invite || invite.revokedAt) {
       throw new NotFoundException(vetError("VET_INVITE_INVALID", "Invitation not found."));
@@ -336,6 +369,13 @@ export class VetStaffService {
       email: invite.email,
       role: invite.role as VetRole,
       invitedByUserId: actor.userId,
+      // Carry the wizard details forward — a resend must not forget the licence.
+      fullName: invite.fullName,
+      phone: invite.phone,
+      title: invite.title ?? undefined,
+      licenceNo: invite.licenceNo,
+      licenceExpiresAt: invite.licenceExpiresAt,
+      branchIds: invite.branchIds,
     });
 
     await this.audit(actor, "vet.staff.invite.resend", "PartnerInvite", result.inviteId, meta, {

@@ -250,7 +250,7 @@ export default async function VetDirectoryPage({
                   href="/vet/apply"
                   className="inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  {isAr ? "عندك عيادة؟ قدّم للتوثيق" : "Run a clinic? Apply to be verified"}
+                  {isAr ? "عندك عيادة؟ الشراكات بالدعوة" : "Run a clinic? Partnerships are by invitation"}
                 </Link>
               </div>
             </div>

@@ -65,7 +65,25 @@ export type VetErrorCode =
   | "VET_APPLICATION_NOT_PENDING"
   | "VET_ORG_NOT_FOUND"
   | "VET_ORG_SLUG_TAKEN"
-  | "VET_ORG_CR_TAKEN";
+  | "VET_ORG_CR_TAKEN"
+  | "VET_APPLY_RETIRED"
+  // ── Clinic registration (MRC-VET-002) ──
+  | "VET_CONFIDENTIALITY_REQUIRED"
+  | "VET_REG_PHONE_INVALID"
+  | "VET_REG_ALREADY_INVITED"
+  | "VET_REG_WRONG_STATUS"
+  | "VET_REG_LOCKED"
+  | "VET_REG_INCOMPLETE"
+  | "VET_REG_TERMS_OUTDATED"
+  | "VET_REG_DOCS_UNVERIFIED"
+  | "VET_REG_TEAM_DUPLICATE"
+  | "VET_REG_TEAM_OWNER"
+  | "VET_REG_OWNER_LICENCE"
+  | "VET_DOC_MISSING"
+  | "VET_DOC_TOO_LARGE"
+  | "VET_DOC_TYPE"
+  | "VET_DOC_NOT_FOUND"
+  | "VET_GO_LIVE_NOT_READY";
 
 export interface VetErrorBody {
   code: VetErrorCode;
@@ -154,8 +172,23 @@ export class VetStaffGuard implements CanActivate {
     ]);
     if (required?.length) {
       const missing = required.filter(
-        (capability) => !can({ role: actor.role, counterMode: actor.counterMode }, capability)
+        (capability) => !can({ role: actor.role, counterMode: actor.counterMode, orgStatus: actor.orgStatus }, capability)
       );
+      // Refused only because the clinic isn't live yet? Say that — "your role
+      // doesn't include this" would send a vet to argue with their manager.
+      if (
+        missing.length > 0 &&
+        actor.orgStatus !== "LIVE" &&
+        missing.every((capability) => can({ role: actor.role, counterMode: actor.counterMode }, capability))
+      ) {
+        throw new ForbiddenException(
+          vetError(
+            "VET_ORG_NOT_LIVE",
+            "This clinic is still setting up — patient records open once Moracat switches it live.",
+            { missing, status: actor.orgStatus, sandbox: true }
+          )
+        );
+      }
       if (missing.length > 0) {
         throw new ForbiddenException(
           vetError(
@@ -214,8 +247,11 @@ export class VetStaffGuard implements CanActivate {
     return this.buildActor({
       staffId: staff.id,
       orgId: staff.orgId,
-      // Two-way demo quarantine — see VetActor.orgIsDemo.
-      orgIsDemo: staff.org.isDemo,
+      // Two-way demo quarantine — see VetActor.orgIsDemo. A clinic that is not
+      // yet LIVE is quarantined the same way: its setup-sandbox test scan can
+      // only ever resolve demo cats, never a real member (MRC-VET-002).
+      orgIsDemo: staff.org.isDemo || staff.org.status !== "LIVE",
+      orgStatus: staff.org.status,
       userId: staff.userId,
       role: staff.role as VetRole,
       branchIds: staff.branches.map((b) => b.id),
@@ -300,8 +336,11 @@ export class VetStaffGuard implements CanActivate {
     return this.buildActor({
       staffId: staff.id,
       orgId: staff.orgId,
-      // Two-way demo quarantine — see VetActor.orgIsDemo.
-      orgIsDemo: staff.org.isDemo,
+      // Two-way demo quarantine — see VetActor.orgIsDemo. A clinic that is not
+      // yet LIVE is quarantined the same way: its setup-sandbox test scan can
+      // only ever resolve demo cats, never a real member (MRC-VET-002).
+      orgIsDemo: staff.org.isDemo || staff.org.status !== "LIVE",
+      orgStatus: staff.org.status,
       userId: staff.userId,
       role: staff.role as VetRole,
       branchIds: staff.branches.map((b) => b.id),
@@ -353,7 +392,11 @@ export class VetStaffGuard implements CanActivate {
   private buildActor(base: Omit<VetActor, "capabilities">): VetActor {
     return {
       ...base,
-      capabilities: capabilitiesFor({ role: base.role, counterMode: base.counterMode }),
+      capabilities: capabilitiesFor({
+        role: base.role,
+        counterMode: base.counterMode,
+        orgStatus: base.orgStatus,
+      }),
     };
   }
 }

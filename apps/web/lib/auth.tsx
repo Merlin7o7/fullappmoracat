@@ -60,6 +60,12 @@ interface AuthContextValue extends AuthState {
   loginWithPhone: (phone: string, otp: string, rememberMe?: boolean) => Promise<void>;
   loginWithGoogle: (idToken: string, rememberMe?: boolean) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
+  /**
+   * Adopt a session the API minted outside the login endpoints — e.g. an account
+   * created from a clinic invitation link (MRC-VET-002), which returns the same
+   * `{ user, accessToken, refreshToken }` envelope as /auth/login.
+   */
+  adoptSession: (session: { user: AuthUser; accessToken: string; refreshToken: string }) => void;
   requestOtp: (phone: string, purpose?: "LOGIN" | "REGISTER") => Promise<{ devCode?: string }>;
   forgotPassword: (email: string) => Promise<{ devToken?: string }>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
@@ -177,6 +183,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await apiPost<AuthResponse>("/auth/register", input);
       persist(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
     },
+    [persist]
+  );
+
+  const adoptSession = React.useCallback<AuthContextValue["adoptSession"]>(
+    (data) => persist(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken }),
     [persist]
   );
 
@@ -393,6 +404,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithPhone,
       loginWithGoogle,
       register,
+      adoptSession,
       requestOtp,
       forgotPassword,
       resetPassword,
@@ -403,7 +415,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authedUpload,
       uploadImage,
     }),
-    [state, login, loginWithPhone, loginWithGoogle, register, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedBlob, authedUpload, uploadImage]
+    [state, login, loginWithPhone, loginWithGoogle, register, adoptSession, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedBlob, authedUpload, uploadImage]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -8,6 +8,7 @@ import { CurrentUser, type AuthUser } from "../common/decorators/current-user.de
 import { VET_COUNTER_HEADER } from "./guards/vet-staff.guard";
 import {
   AcceptInviteDto,
+  ClaimInviteDto,
   CounterLockDto,
   CounterUnlockDto,
   InvitePreviewDto,
@@ -71,7 +72,18 @@ export class VetAuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Accept a staff invitation — activates the PartnerStaff membership" })
   acceptInvite(@CurrentUser() user: AuthUser, @Body() dto: AcceptInviteDto) {
-    return this.auth.acceptInvite(user.id, user.email, dto.token);
+    return this.auth.acceptInvite(user.id, user.email, dto.token, dto);
+  }
+
+  @Public()
+  @Throttle(INVITE_THROTTLE)
+  @Post("invite/claim")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Create the invitee's account and accept the invitation in one step (returns a session)",
+  })
+  claimInvite(@Body() dto: ClaimInviteDto, @Req() req: Request) {
+    return this.auth.claimInvite(dto, meta(req));
   }
 
   @Throttle(PIN_THROTTLE)

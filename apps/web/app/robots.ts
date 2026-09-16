@@ -13,10 +13,11 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      // The vet app surface is chrome for clinic staff — only the application
-      // door is a public landing page. Most-specific path wins, so /vet/apply
-      // stays crawlable while /vet, /vet/login, /vet/scan… do not.
-      allow: ["/", "/vet/apply"],
+      // The vet app surface is chrome for clinic staff. Clinic partnerships are
+      // invitation-only since MRC-VET-002, so /vet/apply is no longer a search
+      // landing page — it sits under the /vet disallow with everything else
+      // (and carries meta-robots noindex on its layout).
+      allow: ["/"],
       // Private and app-chrome surfaces should never be crawled. The public
       // auth doors additionally carry meta-robots noindex on their layouts —
       // belt and braces, since Disallow alone can't unlist a linked URL (R040).

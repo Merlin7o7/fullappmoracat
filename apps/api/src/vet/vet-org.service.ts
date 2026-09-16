@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
+import { findSaudiCity } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { vetError } from "./guards/vet-staff.guard";
 import type { VetActor } from "./decorators/vet-actor.decorator";
@@ -209,6 +210,8 @@ export class VetOrgService {
           services: true,
           photos: true,
           emergency24h: true,
+          district: true,
+          cityCode: true,
           city: { select: { id: true, slug: true, nameEn: true, nameAr: true } },
           org: { select: { id: true, slug: true, nameEn: true, nameAr: true, logoUrl: true } },
         },
@@ -217,7 +220,16 @@ export class VetOrgService {
     ]);
 
     return {
-      items: rows.map((b) => ({ ...b, verified: true })),
+      // A clinic outside the delivery cities still has a city: fall back to the
+      // census city list (MRC-VET-002 registers branches by census city code).
+      items: rows.map((b) => {
+        const census = findSaudiCity(b.cityCode);
+        return {
+          ...b,
+          city: b.city ?? (census ? { id: null, slug: census.code, nameEn: census.en, nameAr: census.ar } : null),
+          verified: true,
+        };
+      }),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }

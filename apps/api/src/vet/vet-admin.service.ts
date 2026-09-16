@@ -518,8 +518,9 @@ export class VetAdminService {
       data: { verifiedAt: new Date() },
       select: { id: true, verifiedAt: true, status: true },
     });
-    await this.audit(actorId, "vet.org.verify", "PartnerOrg", id, meta, {});
-    return { ...org, verified: true };
+    const published = org.status === "LIVE" ? await this.publishBranches(id) : 0;
+    await this.audit(actorId, "vet.org.verify", "PartnerOrg", id, meta, { branchesPublished: published });
+    return { ...org, verified: true, branchesPublished: published };
   }
 
   async unverifyOrg(actorId: string, id: string, meta: RequestMeta) {
@@ -541,6 +542,19 @@ export class VetAdminService {
   async goLive(actorId: string, id: string, meta: RequestMeta) {
     const existing = await this.assertOrg(id);
     if (existing.status === "LIVE") return { id, status: "LIVE" };
+    const gate = await this.prisma.partnerOrg.findUnique({
+      where: { id },
+      select: { testScanAt: true, isDemo: true, verifiedAt: true },
+    });
+    // MRC-VET-002 phase 5: the one hard gate — a counter that has never
+    // verified a cat must not be sent members.
+    if (existing.status === "APPROVED" && !gate?.isDemo && !gate?.testScanAt) {
+      throw new BadRequestException(
+        vetError("VET_GO_LIVE_NOT_READY", "The clinic hasn't completed its test scan yet.", {
+          missing: ["testScan"],
+        })
+      );
+    }
     if (existing.status !== "APPROVED") {
       throw new BadRequestException(
         vetError(
@@ -556,8 +570,9 @@ export class VetAdminService {
       data: { status: "LIVE", suspendedAt: null, suspendReason: null },
       select: { id: true, status: true },
     });
-    await this.audit(actorId, "vet.org.golive", "PartnerOrg", id, meta, {});
-    return org;
+    const published = gate?.verifiedAt ? await this.publishBranches(id) : 0;
+    await this.audit(actorId, "vet.org.golive", "PartnerOrg", id, meta, { branchesPublished: published });
+    return { ...org, branchesPublished: published };
   }
 
   async suspendOrg(actorId: string, id: string, dto: SuspendOrgDto, meta: RequestMeta) {
@@ -611,6 +626,23 @@ export class VetAdminService {
     });
     await this.audit(actorId, "vet.org.unsuspend", "PartnerOrg", id, meta, {});
     return org;
+  }
+
+  /**
+   * Put a live, verified clinic's branches in the member directory — every
+   * active branch whose licence is still valid. An expired licence stays out
+   * (VetComplianceService pulls them the same way).
+   */
+  private async publishBranches(orgId: string): Promise<number> {
+    const { count } = await this.prisma.branch.updateMany({
+      where: {
+        orgId,
+        isActive: true,
+        OR: [{ licenceExpiresAt: null }, { licenceExpiresAt: { gt: new Date() } }],
+      },
+      data: { directoryVisible: true },
+    });
+    return count;
   }
 
   // ── Audit: who read whose record ──────────────────────────────────────────

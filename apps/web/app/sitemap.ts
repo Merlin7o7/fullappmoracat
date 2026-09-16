@@ -23,7 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   // Public, indexable pages only. /register is the census conversion page and
   // earns its place; /login and the other auth screens are app chrome and stay
-  // out (noindex + robots Disallow). /vet/apply is the clinics' public door.
+  // out (noindex + robots Disallow). /vet/apply is not listed: clinic
+  // partnerships are invitation-only (MRC-VET-002) and that page is noindex.
   // Commerce surfaces are submitted only when they have something to sell:
   // asking Google to index a priced page during the Census would advertise what
   // we can't deliver (R040). /benefits carries no price, so it always stays.
@@ -36,13 +37,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: path === "" ? 1 : path === "/register" ? 0.9 : 0.7,
     })
   );
-  const vetApplyRoute = {
-    url: `${SITE}/vet/apply`,
-    lastModified: now,
-    changeFrequency: "monthly" as const,
-    priority: 0.4,
-  };
-
   const legalRoutes = LEGAL_DOCS.map((d) => ({
     url: `${SITE}/legal/${d.slug}`,
     lastModified: new Date(d.updated),
@@ -87,5 +81,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...staticRoutes, vetApplyRoute, ...legalRoutes, ...blogRoutes, ...communityRoutes];
+  return [...staticRoutes, ...legalRoutes, ...blogRoutes, ...communityRoutes];
 }

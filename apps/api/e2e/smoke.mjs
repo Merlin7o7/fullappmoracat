@@ -530,5 +530,195 @@ const arCat = (await call("/cats", "POST", { name: "مِشْمِش", activityLev
 const arSearch = (await call(`/community/cats?search=${encodeURIComponent("مشمش")}`)).json;
 ok(arSearch.pagination.total >= 1, "Arabic search matches across diacritics/tatweel");
 
+console.log("━━ vet clinic registration (MRC-VET-002) ━━");
+{
+  // Public apply is retired: invitation-only network. An old cached form gets a
+  // clear 410, not a validation 400.
+  const applied = await call("/vet/apply", "POST", { clinicName: "Old Form" });
+  ok(applied.status === 410 && applied.json?.code === "VET_APPLY_RETIRED", "public clinic apply is retired (410)");
+
+  const upload = async (path, token, fields, bytes, name, type) => {
+    const form = new FormData();
+    form.append("file", new Blob([bytes], { type }), name);
+    for (const [k, v] of Object.entries(fields)) form.append(k, v);
+    const res = await fetch(base + path, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: form });
+    let json; try { json = await res.json(); } catch { json = null; }
+    return { status: res.status, json };
+  };
+  const PDF = new TextEncoder().encode("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82]);
+  const nextYear = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+  const tag = rnd();
+  const ownerEmail = `clinic-owner+${tag}@e.com`;
+
+  // ── Phase 1: Moracat invites ──
+  ok((await call("/vet/admin/clinics/invite", "POST", { nameAr: "عيادة", contactName: "x", email: "a@b.co", phone: "0501234567" }, C)).status === 403,
+    "members cannot invite clinics (partners.write)");
+  const inv = await call("/vet/admin/clinics/invite", "POST", {
+    nameAr: "عيادة النخيل البيطرية", nameEn: "Palm Vet " + tag, contactName: "د. نورة الحربي",
+    email: ownerEmail, phone: "٠٥٠١٢٣٤٥٦٧", tier: "founding",
+  }, A);
+  ok(inv.status === 201 && inv.json?.org?.status === "INVITED" && !!inv.json?.invite?.devToken, "admin invites a clinic (Arabic digits in phone accepted)");
+  const orgId = inv.json?.org?.id;
+  const regToken = inv.json?.invite?.devToken;
+  ok((await call("/vet/admin/clinics/invite", "POST", { nameAr: "مكرر", contactName: "x y", email: ownerEmail, phone: "0501234567" }, A)).json?.code === "VET_REG_ALREADY_INVITED",
+    "a second invite for the same owner is refused");
+  const list = (await call("/vet/admin/clinics?status=INVITED", "GET", undefined, A)).json;
+  ok(list.items?.some((o) => o.id === orgId && o.invite && !o.invite.claimed), "invited clinic appears in the admin pipeline");
+
+  // ── Phase 2: owner claims the link and registers ──
+  const preview = (await call("/vet/registration/invite/preview", "POST", { token: regToken })).json;
+  ok(preview.email === ownerEmail && preview.accountExists === false && preview.orgName?.ar === "عيادة النخيل البيطرية", "invite preview (no account yet)");
+  ok((await call("/vet/registration/invite/preview", "POST", { token: "x".repeat(40) })).status === 404, "a forged token is rejected");
+  const acct = await call("/vet/registration/invite/account", "POST", { token: regToken, firstName: "نورة", lastName: "الحربي", phone: "0501234567", password: "weak" });
+  ok(acct.status === 400, "weak owner password rejected");
+  const owner = (await call("/vet/registration/invite/account", "POST", { token: regToken, firstName: "نورة", lastName: "الحربي", phone: "0551234567", password: "S3cure!pass" })).json;
+  ok(!!owner.accessToken && owner.registration?.status === "REGISTERING" && owner.user?.emailVerified === true, "owner account created from the link, email verified, clinic REGISTERING");
+  const O = owner.accessToken;
+  ok((await call("/vet/registration/invite/account", "POST", { token: regToken, firstName: "x", phone: "0551234567", password: "S3cure!pass" })).json?.code === "VET_INVITE_USED",
+    "the link can't create a second account");
+  ok((await call(`/vet/registration/${orgId}`, "GET", undefined, C)).status === 403, "a stranger can't read the registration");
+
+  let st = (await call(`/vet/registration/${orgId}`, "GET", undefined, O)).json;
+  ok(st.org?.status === "REGISTERING" && st.gaps.length > 0 && st.editableSteps.includes("documents"), "wizard state lists bilingual gaps");
+  ok(st.gaps.every((g) => g.ar && g.en && g.step), "every gap is bilingual and linked to a step");
+  const early = await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-09-16", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O);
+  ok(early.status === 400 && early.json?.code === "VET_REG_INCOMPLETE" && Array.isArray(early.json?.gaps), "incomplete registration can't be submitted (gaps returned)");
+
+  const crNumber = String(1000000000 + Math.floor(Math.random() * 899999999));
+  const arabicCr = crNumber.replace(/\d/g, (d) => String.fromCharCode(0x0660 + Number(d)));
+  st = (await call(`/vet/registration/${orgId}/clinic`, "PUT", {
+    nameAr: "عيادة النخيل البيطرية", nameEn: "Palm Veterinary Clinic " + tag, legalNameAr: "مؤسسة النخيل للخدمات البيطرية",
+    crNumber: arabicCr, unifiedNumber: "7001234567", crExpiresAt: nextYear, vatNumber: "300000000000003",
+  }, O)).json;
+  ok(st.org?.crNumber === crNumber, "clinic legal details saved (Arabic-Indic CR digits normalised)");
+  ok((await call(`/vet/registration/${orgId}/clinic`, "PUT", { nameAr: "a", nameEn: "b", legalNameAr: "c", crNumber: "123", unifiedNumber: "1", crExpiresAt: "x" }, O)).status === 400,
+    "malformed legal details rejected");
+
+  st = (await call(`/vet/registration/${orgId}/branches`, "PUT", { branches: [{
+    nameAr: "فرع العليا", nameEn: "Olaya", cityCode: "riyadh", district: "العليا", addressLine: "طريق الملك فهد",
+    nationalAddressCode: "rrrd ٢٩٢٩", lat: 24.6995, lng: 46.6853, phone: "0112345678", emergency24h: true,
+    hours: [{ day: 0, open: "09:00", close: "21:00" }, { day: 5, closed: true }], services: ["تطعيم"],
+    licenceNo: "MEWA-" + tag, licenceExpiresAt: nextYear,
+  }] }, O)).json;
+  const branchId = st.branches?.[0]?.id;
+  ok(!!branchId && st.branches[0].nationalAddressCode === "RRRD2929" && st.branches[0].city?.ar === "الرياض", "branch saved with census city + normalised short address");
+
+  ok((await upload(`/vet/registration/${orgId}/documents`, O, { kind: "CR" }, new TextEncoder().encode("<html>not a pdf</html>"), "cr.pdf", "application/pdf")).json?.code === "VET_DOC_TYPE",
+    "a fake PDF is rejected by content sniffing");
+  ok((await upload(`/vet/registration/${orgId}/documents`, O, { kind: "MEWA_LICENCE" }, PDF, "l.pdf", "application/pdf")).json?.code === "VET_BRANCH_NOT_FOUND",
+    "a licence must name its branch");
+  st = (await upload(`/vet/registration/${orgId}/documents`, O, { kind: "CR", number: crNumber, expiresAt: nextYear }, PDF, "السجل.pdf", "application/pdf")).json;
+  st = (await upload(`/vet/registration/${orgId}/documents`, O, { kind: "MEWA_LICENCE", branchId }, PNG, "licence.png", "image/png")).json;
+  const crDoc = st.documents?.find((d) => d.kind === "CR");
+  ok(crDoc?.fileName === "السجل.pdf", "Arabic file names survive multipart upload (no mojibake)");
+  ok(!!crDoc && st.documents.some((d) => d.kind === "MEWA_LICENCE" && d.branchId === branchId), "CR + branch licence uploaded");
+  ok(!JSON.stringify(st.documents).includes("http") && !JSON.stringify(st.documents).includes("private/"), "document storage keys/URLs are never exposed");
+  const fileRes = await fetch(`${base}/vet/registration/${orgId}/documents/${crDoc?.id}/file`, { headers: { authorization: `Bearer ${O}` } });
+  ok(fileRes.status === 200 && (fileRes.headers.get("content-type") ?? "").includes("application/pdf"), "owner reads back a private document through the API");
+  ok((await fetch(`${base}/vet/registration/${orgId}/documents/${crDoc?.id}/file`, { headers: { authorization: `Bearer ${C}` } })).status === 403,
+    "a stranger can't read clinic documents");
+
+  const vetEmail = `clinic-vet+${tag}@e.com`;
+  const deskEmail = `clinic-desk+${tag}@e.com`;
+  // Solo practice: the owner can be the clinic's veterinarian.
+  ok((await call(`/vet/registration/${orgId}/team`, "PUT", { members: [], ownerPractisesAsVet: true }, O)).json?.code === "VET_REG_OWNER_LICENCE",
+    "a practising owner must give their own licence");
+  const solo = (await call(`/vet/registration/${orgId}/team`, "PUT", { members: [], ownerPractisesAsVet: true, ownerLicenceNo: "OWN-" + tag, ownerTitle: "د." }, O)).json;
+  ok(solo.owner?.practisesAsVet === true && solo.gaps.length === 0, "solo-vet clinic is complete with the owner's licence");
+  ok((await call(`/vet/registration/${orgId}/team`, "PUT", { members: [{ fullName: "Dr A", email: ownerEmail, phone: "0561234567", role: "VET" }] }, O)).json?.code === "VET_REG_TEAM_OWNER",
+    "owner can't list themselves as staff");
+  st = (await call(`/vet/registration/${orgId}/team`, "PUT", { members: [
+    { fullName: "د. سارة القحطاني", email: vetEmail, phone: "0561234567", role: "VET", title: "د.", licenceNo: "SVL-" + tag, branchIds: [branchId] },
+    { fullName: "Faisal Desk", email: deskEmail, phone: "0571234567", role: "RECEPTION" },
+  ] }, O)).json;
+  ok(st.team?.length === 2 && st.gaps.length === 0, "team saved — registration is complete (no gaps)");
+  ok((await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "1999-01-01", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O)).json?.code === "VET_REG_TERMS_OUTDATED",
+    "an outdated terms version can't be accepted");
+  const submitted = (await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-09-16", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O)).json;
+  ok(submitted.org?.status === "SUBMITTED" && submitted.terms?.accepted?.signedByName === "نورة الحربي", "submitted with click-accept terms evidence");
+  ok(submitted.invites?.length === 2 && submitted.invites.every((i) => i.state === "pending"), "staff invitations sent at submission");
+  ok((await call(`/vet/registration/${orgId}/clinic`, "PUT", { nameAr: "x y", nameEn: "x y", legalNameAr: "x y", crNumber, unifiedNumber: "7001234567", crExpiresAt: nextYear }, O)).json?.code === "VET_REG_LOCKED",
+    "registration is locked while under review");
+
+  // ── Phase 4: a doctor accepts before approval ──
+  const vetToken = submitted.devInviteTokens?.[vetEmail];
+  const vp = (await call("/vet/auth/invite/preview", "POST", { token: vetToken })).json;
+  ok(vp.accountExists === false && vp.orgStatus === "SUBMITTED" && vp.fullName === "د. سارة القحطاني" && !!vp.confidentialityVersion, "staff invite preview carries wizard details");
+  ok((await call("/vet/auth/invite/claim", "POST", { token: vetToken, firstName: "سارة", password: "S3cure!pass", acceptConfidentiality: false, confidentialityVersion: vp.confidentialityVersion })).status === 400,
+    "joining requires the confidentiality undertaking");
+  const doc = (await call("/vet/auth/invite/claim", "POST", { token: vetToken, firstName: "سارة", lastName: "القحطاني", password: "S3cure!pass", acceptConfidentiality: true, confidentialityVersion: vp.confidentialityVersion })).json;
+  ok(!!doc.accessToken && doc.accepted?.role === "VET", "doctor creates an account and joins in one step");
+  const V = doc.accessToken;
+  const VH = { "x-moracat-org": orgId };
+  const vctx = (await call("/vet/auth/context", "POST", {}, V)).json;
+  const vMember = vctx.memberships?.find((m) => m.org.id === orgId);
+  ok(vMember?.status === "ACTIVE" && vMember?.org.status === "SUBMITTED", "doctor's seat exists while the clinic is under review");
+  ok((await call("/vet/patients/search?q=" + encodeURIComponent(cat.catIdNumber), "GET", undefined, V, VH)).json?.code === "VET_ORG_NOT_LIVE",
+    "no member lookup before approval (VET_ORG_NOT_LIVE)");
+
+  // ── Phase 3: review ──
+  const review = (await call(`/vet/admin/clinics/${orgId}`, "GET", undefined, A)).json;
+  ok(review.admin?.agreement?.contentHash?.length === 64 && review.admin?.staff?.some((s) => s.email === vetEmail && s.confidentialityAccepted), "admin review shows agreement hash + staff confidentiality");
+  const adminFile = await fetch(`${base}/vet/admin/clinics/${orgId}/documents/${crDoc?.id}/file`, { headers: { authorization: `Bearer ${A}` } });
+  ok(adminFile.status === 200, "reviewer opens the private CR document");
+  ok((await call(`/vet/admin/clinics/${orgId}/approve`, "POST", {}, A)).json?.code === "VET_REG_DOCS_UNVERIFIED", "approval blocked until documents are verified");
+
+  const changes = (await call(`/vet/admin/clinics/${orgId}/request-changes`, "POST", { note: "أضف ترخيص الطبيب الصحيح · Fix the doctor licence", steps: ["team"] }, A)).json;
+  ok(changes.org?.status === "CHANGES_REQUESTED", "reviewer requests changes");
+  st = (await call(`/vet/registration/${orgId}`, "GET", undefined, O)).json;
+  ok(st.editableSteps.includes("team") && !st.editableSteps.includes("clinic") && st.org.changesRequestedNote?.includes("Fix"), "only the reopened step is editable, note is shown");
+  ok((await call(`/vet/registration/${orgId}/clinic`, "PUT", { nameAr: "x y", nameEn: "x y", legalNameAr: "x y", crNumber, unifiedNumber: "7001234567", crExpiresAt: nextYear }, O)).json?.code === "VET_REG_LOCKED",
+    "steps that weren't reopened stay locked");
+  await call(`/vet/registration/${orgId}/team`, "PUT", { members: [
+    { fullName: "د. سارة القحطاني", email: vetEmail, phone: "0561234567", role: "VET", licenceNo: "SVL-FIXED-" + tag, branchIds: [branchId] },
+    { fullName: "Faisal Desk", email: deskEmail, phone: "0571234567", role: "RECEPTION" },
+  ] }, O);
+  const resub = (await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-09-16", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O)).json;
+  ok(resub.org?.status === "SUBMITTED" && resub.terms?.accepted?.version === 2 && Object.keys(resub.devInviteTokens ?? {}).length === 0,
+    "resubmitted (agreement v2) without re-inviting existing team");
+
+  for (const d of review.documents.filter((x) => x.required)) {
+    await call(`/vet/admin/clinics/${orgId}/documents/${d.id}/verify`, "POST", {}, A);
+  }
+  const approved = (await call(`/vet/admin/clinics/${orgId}/approve`, "POST", { note: "checked" }, A)).json;
+  ok(approved.org?.status === "APPROVED" && approved.org?.verified === true, "approved once every required document is verified");
+
+  // ── Phase 5: setup sandbox + go-live gate ──
+  const sandboxSearch = await call("/vet/patients/search?q=" + encodeURIComponent(cat.catIdNumber), "GET", undefined, V, VH);
+  ok(sandboxSearch.status === 200 && sandboxSearch.json?.total === 0, "approved clinic's search can't resolve a real member (sandbox quarantine)");
+  ok((await call(`/vet/patients/${cat.id}`, "GET", undefined, V, VH)).json?.code === "VET_ORG_NOT_LIVE", "no record reads before go-live");
+  const vctx2 = (await call("/vet/auth/context", "POST", {}, V)).json;
+  const caps = vctx2.memberships?.find((m) => m.org.id === orgId)?.capabilities ?? [];
+  ok(caps.includes("patient.search") && !caps.includes("record.write"), "portal capabilities are sandboxed until live");
+  const OH = { "x-moracat-org": orgId };
+  let ob = (await call("/vet/org/onboarding", "GET", undefined, O, OH)).json;
+  ok(ob.status === "APPROVED" && ob.items?.testScan?.done === false && ob.ready === false, "go-live checklist starts incomplete");
+  ok((await call(`/vet/admin/orgs/${orgId}/go-live`, "POST", {}, A)).json?.code === "VET_GO_LIVE_NOT_READY", "go-live is gated on the test scan");
+  ok((await call("/vet/org/onboarding/request-go-live", "POST", {}, O, OH)).json?.code === "VET_GO_LIVE_NOT_READY", "clinic can't ask to go live early");
+  ob = (await call("/vet/org/onboarding/confirm-branches", "POST", {}, O, OH)).json;
+  const device = await call(`/vet/org/branches/${branchId}/devices`, "POST", { name: "Reception iPad" }, O, OH);
+  ok(device.status === 201, "counter device registered in setup mode");
+  if (ob.testCat?.microchipNo) {
+    await call("/vet/patients/search?q=" + ob.testCat.microchipNo, "GET", undefined, V, VH);
+    ob = (await call("/vet/org/onboarding", "GET", undefined, O, OH)).json;
+    ok(ob.items.testScan.done && ob.items.device.done && ob.items.branches.done && ob.ready, "test scan of the demo cat completes the checklist");
+    ok((await call("/vet/org/onboarding/request-go-live", "POST", {}, O, OH)).json?.goLiveRequestedAt, "clinic asks Moracat to go live");
+    const live = (await call(`/vet/admin/orgs/${orgId}/go-live`, "POST", {}, A)).json;
+    ok(live.status === "LIVE" && live.branchesPublished === 1, "admin switches the clinic live; branch published");
+    const dir = (await call("/vet/directory")).json;
+    ok(dir.items?.some((b) => b.id === branchId && b.city?.nameAr === "الرياض"), "live clinic appears in the public directory");
+    ok((await call(`/vet/patients/search?q=${encodeURIComponent(cat.catIdNumber)}`, "GET", undefined, V, VH)).json?.total === 1, "live clinic finds real members by Cat ID");
+  } else {
+    ok(true, "no demo cat seeded — test-scan/go-live leg skipped (run db:seed:vet-demo)");
+  }
+
+  // ── Withdrawal + rejection paths ──
+  const inv2 = (await call("/vet/admin/clinics/invite", "POST", { nameAr: "عيادة تجريبية", contactName: "Test Person", email: `clinic-x+${tag}@e.com`, phone: "0591234567" }, A)).json;
+  ok((await call(`/vet/admin/clinics/${inv2.org.id}/invite/resend`, "POST", {}, A)).json?.invite?.devToken !== inv2.invite.devToken, "resend issues a fresh link");
+  ok((await call("/vet/registration/invite/preview", "POST", { token: inv2.invite.devToken })).status === 404, "the superseded link stops working");
+  ok((await call(`/vet/admin/clinics/${inv2.org.id}/invite/revoke`, "POST", {}, A)).json?.revoked === true, "an unclaimed invitation can be withdrawn");
+}
+
 console.log(`\n${fail === 0 ? "✅ SMOKE PASS" : "❌ SMOKE FAILURES"}: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

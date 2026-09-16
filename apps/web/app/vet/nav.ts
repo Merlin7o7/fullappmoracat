@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Sun, ClipboardList, Cat, ScanLine, ShieldAlert } from "lucide-react";
+import { Sun, ClipboardList, Cat, ScanLine, ShieldAlert, Settings } from "lucide-react";
 import type { VetCapability } from "@moraqat/core";
 
 /**
@@ -26,6 +26,18 @@ export interface VetNavItem {
   primary?: boolean;
   /** Hidden entirely unless the actor holds this capability. */
   capability?: VetCapability;
+  /**
+   * Hidden unless the actor holds AT LEAST ONE of these. For management
+   * destinations that serve several jobs (a receptionist never sees Settings;
+   * a manager who only runs devices still does).
+   */
+  anyCapability?: VetCapability[];
+  /**
+   * Shown to every PERSONAL session regardless of capability, and never on a
+   * shared counter terminal. Used for settings: every staff member owns their
+   * own counter PIN, even when they manage nothing else (MRC-VET-002).
+   */
+  personalOnly?: boolean;
   /** Linear-style `g` then key jump. */
   shortcut?: string;
 }
@@ -53,6 +65,18 @@ export const VET_NAV: VetNavItem[] = [
   // /vet/consent/grants endpoint is the OWNER's view of who they've trusted),
   // so this entry pointed at a route that could never exist. Removed rather
   // than replaced with a screen that would have to invent its own data.
+
+  // The "right wing" (§03): management, visited weekly, never in the way of the
+  // counter — so it is never primary and lives under More on the tab bar.
+  // Counter-mode sessions lose every one of these capabilities, so the shared
+  // terminal never shows it (§02: no settings on a terminal).
+  {
+    href: "/vet/settings",
+    icon: Settings,
+    en: "Clinic settings",
+    ar: "إعدادات العيادة",
+    personalOnly: true,
+  },
 ];
 
 /**
@@ -60,6 +84,15 @@ export const VET_NAV: VetNavItem[] = [
  * from `useVetActor().can` — the same pure function the API guard runs, so the
  * interface and the authorisation can never disagree.
  */
-export function visibleVetNav(can: (c: VetCapability) => boolean): VetNavItem[] {
-  return VET_NAV.filter((item) => !item.capability || can(item.capability));
+export function visibleVetNav(
+  can: (c: VetCapability) => boolean,
+  opts: { counterMode?: boolean } = {},
+): VetNavItem[] {
+  return VET_NAV.filter((item) => {
+    if (item.personalOnly) return !opts.counterMode;
+    return (
+      (!item.capability || can(item.capability)) &&
+      (!item.anyCapability || item.anyCapability.some((c) => can(c)))
+    );
+  });
 }

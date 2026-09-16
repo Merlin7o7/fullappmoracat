@@ -12,6 +12,11 @@
  * summary endpoint may not exist yet; when it doesn't, the stat cards simply
  * aren't rendered. A clinic that sees a fabricated number once never trusts the
  * real ones again (R006).
+ *
+ * MRC-VET-002: an APPROVED clinic is in the setup sandbox. Today leads with the
+ * go-live checklist (the "first login" welcome of dossier §18) and simply does
+ * not ask for clinical data the API will refuse until the clinic is LIVE — a
+ * setup week should never be a wall of 403s (R084, R111).
  */
 
 import * as React from "react";
@@ -45,6 +50,7 @@ import {
   type VetVisit,
 } from "@/lib/vet-api";
 import { EmptyState, PatientRow, SectionCard } from "@/components/vet/vet-shell-bits";
+import { GoLiveChecklist } from "@/components/vet/go-live-checklist";
 
 export default function VetTodayPage() {
   const { locale } = useLocale();
@@ -56,11 +62,15 @@ export default function VetTodayPage() {
   const { orgId, org, branchId, can, counterMode, counterSession } = useVetActor();
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+  // Only a LIVE clinic has a queue, numbers or recall lists to show.
+  const orgStatus = org?.org.status;
+  const isLive = orgStatus === "LIVE";
+  const inSetup = orgStatus === "APPROVED";
 
   const visitsQuery = useQuery({
     queryKey: ["vet", "visits", orgId, branchId, today],
     queryFn: () => api.listVisits({ date: today, branchId: branchId ?? undefined }),
-    enabled: !!orgId && can("visit.open"),
+    enabled: !!orgId && isLive && can("visit.open"),
     refetchInterval: 60_000, // the queue is a live thing
   });
 
@@ -68,7 +78,7 @@ export default function VetTodayPage() {
   const summaryQuery = useQuery({
     queryKey: ["vet", "summary", orgId, branchId],
     queryFn: () => api.getOrgSummary(),
-    enabled: !!orgId,
+    enabled: !!orgId && isLive,
     retry: 0,
   });
 
@@ -116,6 +126,9 @@ export default function VetTodayPage() {
           )}
         </div>
       </header>
+
+      {/* ── Setup sandbox: the checklist is the day's work ── */}
+      {inSetup && <GoLiveChecklist />}
 
       {/* ── Needs attention: the only thing allowed to interrupt ── */}
       {summary?.attention?.length ? (
@@ -204,81 +217,85 @@ export default function VetTodayPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+      {/* In the setup sandbox the queue, recents and recall lists would all point
+          at records the API refuses until go-live — so they wait with them. */}
+      <div className={cn("grid gap-4 lg:grid-cols-[1.35fr_1fr]", !isLive && "hidden")}>
         {/* ── The queue: the only list that matters at 9am ── */}
-        <SectionCard
-          title={isAr ? "الزيارات المفتوحة" : "Open visits"}
-          hint={
-            visitsQuery.data
-              ? isAr
-                ? `${openVisits.length} مفتوحة · ${completedCount} مكتملة اليوم`
-                : `${openVisits.length} open · ${completedCount} completed today`
-              : undefined
-          }
-          icon={ClipboardList}
-          action={
-            can("visit.open") ? (
-              <Link
-                href="/vet/visits"
-                className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {isAr ? "كل الزيارات" : "All visits"}
-                <ArrowRight className="size-3.5 rtl:rotate-180" aria-hidden />
-              </Link>
-            ) : null
-          }
-          contentClassName="p-2"
-        >
-          {!can("visit.open") ? (
-            <EmptyState
-              tone="boundary"
-              icon={ClipboardList}
-              title={isAr ? "الزيارات خارج نطاق دورك" : "Visits aren't part of your role"}
-              body={
-                isAr
-                  ? "مدير العيادة يقدر يوسّع صلاحياتك إذا احتجت متابعة الطابور."
-                  : "A clinic manager can widen your access if you need the queue."
-              }
-            />
-          ) : visitsQuery.isLoading ? (
-            <VisitSkeletons />
-          ) : visitsQuery.isError ? (
-            <EmptyState
-              icon={Clock}
-              title={vetFriendlyError(visitsQuery.error, isAr).title}
-              body={vetFriendlyError(visitsQuery.error, isAr).message}
-              action={
-                <Button size="sm" variant="outline" onClick={() => void visitsQuery.refetch()} loading={visitsQuery.isFetching}>
-                  {isAr ? "أعد المحاولة" : "Try again"}
-                </Button>
-              }
-            />
-          ) : openVisits.length === 0 ? (
-            <EmptyState
-              icon={ScanLine}
-              title={isAr ? "الكاونتر جاهز" : "Your counter is ready"}
-              body={
-                isAr
-                  ? "أول ما تُمسح بطاقة عضو، تبدأ هذه الصفحة تمتلئ بنفسها."
-                  : "The first time a member's card is scanned, this page starts filling itself."
-              }
-              action={
-                <Button size="sm" variant="outline" onClick={() => router.push("/vet/scan")}>
-                  <ScanLine className="size-4" aria-hidden />
-                  {isAr ? "جرّب مسحاً" : "Try a scan"}
-                </Button>
-              }
-            />
-          ) : (
-            <ul className="flex flex-col gap-0.5">
-              {openVisits.map((v) => (
-                <li key={v.id}>
-                  <VisitRow visit={v} isAr={isAr} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
+        {isLive && (
+          <SectionCard
+            title={isAr ? "الزيارات المفتوحة" : "Open visits"}
+            hint={
+              visitsQuery.data
+                ? isAr
+                  ? `${openVisits.length} مفتوحة · ${completedCount} مكتملة اليوم`
+                  : `${openVisits.length} open · ${completedCount} completed today`
+                : undefined
+            }
+            icon={ClipboardList}
+            action={
+              can("visit.open") ? (
+                <Link
+                  href="/vet/visits"
+                  className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {isAr ? "كل الزيارات" : "All visits"}
+                  <ArrowRight className="size-3.5 rtl:rotate-180" aria-hidden />
+                </Link>
+              ) : null
+            }
+            contentClassName="p-2"
+          >
+            {!can("visit.open") ? (
+              <EmptyState
+                tone="boundary"
+                icon={ClipboardList}
+                title={isAr ? "الزيارات خارج نطاق دورك" : "Visits aren't part of your role"}
+                body={
+                  isAr
+                    ? "مدير العيادة يقدر يوسّع صلاحياتك إذا احتجت متابعة الطابور."
+                    : "A clinic manager can widen your access if you need the queue."
+                }
+              />
+            ) : visitsQuery.isLoading ? (
+              <VisitSkeletons />
+            ) : visitsQuery.isError ? (
+              <EmptyState
+                icon={Clock}
+                title={vetFriendlyError(visitsQuery.error, isAr).title}
+                body={vetFriendlyError(visitsQuery.error, isAr).message}
+                action={
+                  <Button size="sm" variant="outline" onClick={() => void visitsQuery.refetch()} loading={visitsQuery.isFetching}>
+                    {isAr ? "أعد المحاولة" : "Try again"}
+                  </Button>
+                }
+              />
+            ) : openVisits.length === 0 ? (
+              <EmptyState
+                icon={ScanLine}
+                title={isAr ? "الكاونتر جاهز" : "Your counter is ready"}
+                body={
+                  isAr
+                    ? "أول ما تُمسح بطاقة عضو، تبدأ هذه الصفحة تمتلئ بنفسها."
+                    : "The first time a member's card is scanned, this page starts filling itself."
+                }
+                action={
+                  <Button size="sm" variant="outline" onClick={() => router.push("/vet/scan")}>
+                    <ScanLine className="size-4" aria-hidden />
+                    {isAr ? "جرّب مسحاً" : "Try a scan"}
+                  </Button>
+                }
+              />
+            ) : (
+              <ul className="flex flex-col gap-0.5">
+                {openVisits.map((v) => (
+                  <li key={v.id}>
+                    <VisitRow visit={v} isAr={isAr} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
+        )}
 
         <div className="flex flex-col gap-4">
           {/* ── Recent lookups: the regulars at the counter ── */}

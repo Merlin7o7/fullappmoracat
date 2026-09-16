@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
 
-// The clinics' public door (client page → metadata on the layout). The only
-// /vet route meant for search — robots.ts allows it while disallowing the rest.
+// Clinic partnerships are invitation-only (MRC-VET-002). This page explains
+// that and names the contact; it is not a search landing page any more, so it
+// is noindex and no longer allowed in robots.ts or listed in the sitemap (R040).
 export const metadata: Metadata = {
-  title: "Join the clinic network · انضموا لشبكة العيادات",
+  title: "Clinic partnerships · شراكات العيادات",
   description:
-    "Run a veterinary clinic in Saudi Arabia? Apply to join the Moracat network and be listed as a verified clinic. عندك عيادة بيطرية؟ قدّم للانضمام لشبكة مرقط الموثّقة.",
+    "Moracat clinic partnerships are by invitation — every clinic is chosen and verified. شراكات عيادات مرقط بالدعوة، وكل عيادة نختارها ونتحقق منها.",
   alternates: { canonical: "/vet/apply" },
-  openGraph: {
-    type: "website",
-    title: "Join the Moracat clinic network · انضموا لشبكة العيادات",
-    description:
-      "Apply to join the Moracat network and be listed as a verified clinic in Saudi Arabia.",
-    url: "/vet/apply",
-  },
+  robots: { index: false, follow: true },
 };
 
 export default function VetApplyLayout({ children }: { children: React.ReactNode }) {
