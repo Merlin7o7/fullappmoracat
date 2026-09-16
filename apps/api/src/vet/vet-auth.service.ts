@@ -237,7 +237,7 @@ export class VetAuthService {
     // address, so this discloses nothing they don't have.
     const account = await this.prisma.user.findUnique({
       where: { email: invite.email },
-      select: { passwordHash: true, status: true },
+      select: { passwordHash: true, status: true, accounts: { select: { provider: true } } },
     });
     return {
       orgName: { en: invite.org.nameEn, ar: invite.org.nameAr },
@@ -249,6 +249,10 @@ export class VetAuthService {
       roleLabel: VET_ROLE_LABELS[role],
       expiresAt: invite.expiresAt,
       accountExists: !!account && (!!account.passwordHash || account.status !== "PENDING"),
+      signIn: {
+        password: !!account?.passwordHash,
+        google: !!account?.accounts.some((a) => a.provider === "google"),
+      },
       confidentialityVersion: VET_STAFF_CONFIDENTIALITY_VERSION,
     };
   }

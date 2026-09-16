@@ -18,13 +18,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Building2, ChevronRight, KeyRound, Loader2, LogOut, MailQuestion, ShieldCheck, UserRoundX } from "lucide-react";
+import { Building2, ChevronRight, Loader2, LogOut, MailQuestion, ShieldCheck, UserRoundX } from "lucide-react";
 import { Button, Card, buttonVariants, cn } from "@moraqat/ui";
 import { CLINIC_STATUS_LABELS, REGISTRATION_STEPS, normalizeSaudiMobile } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
-import { ApiError } from "@/lib/http";
-import { friendlyError } from "@/lib/errors";
 import {
   createOwnerAccount,
   previewRegistrationInvite,
@@ -35,6 +33,7 @@ import {
   type RegistrationPreview,
 } from "@/lib/vet-registration";
 import { IlloCat, IlloHeart } from "@/components/illustrations";
+import { InviteSignIn } from "@/components/vet/invite-sign-in";
 import { PARTNERS_EMAIL } from "./status-screens";
 import { Centered, ErrorNote, TextField } from "./ui";
 import { RegistrationWizard } from "./wizard-shell";
@@ -212,7 +211,27 @@ function InviteFlow({ token, isAr, onResolved }: { token: string; isAr: boolean;
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 py-8 sm:py-12">
       <InviteWelcome isAr={isAr} clinicName={clinicName} preview={preview} />
       {mode === "signin" ? (
-        <SignInCard isAr={isAr} email={preview.email} onCreateInstead={preview.accountExists || preview.claimed ? undefined : () => setMode("create")} />
+        <Card className="p-4 sm:p-6">
+          {/* Only the sign-in doors this account really has — a Google-created
+              account has no password (production, 2026-09-16). Once a session
+              exists, the signed-in branch above claims the clinic. */}
+          <InviteSignIn
+            isAr={isAr}
+            email={preview.email}
+            methods={preview.signIn}
+            onSignedIn={() => undefined}
+            submitLabel={{ ar: "دخول ومتابعة التسجيل", en: "Sign in and continue" }}
+          />
+          {!(preview.accountExists || preview.claimed) && (
+            <button
+              type="button"
+              onClick={() => setMode("create")}
+              className="mx-auto mt-2 flex min-h-[44px] items-center text-xs font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {isAr ? "ليس لدي حساب" : "I don't have an account"}
+            </button>
+          )}
+        </Card>
       ) : (
         <CreateAccountCard
           isAr={isAr}
@@ -417,92 +436,6 @@ function CreateAccountCard({
   );
 }
 
-function SignInCard({ isAr, email, onCreateInstead }: { isAr: boolean; email: string; onCreateInstead?: () => void }) {
-  const { login } = useAuth();
-  const [password, setPassword] = React.useState("");
-  const [totp, setTotp] = React.useState("");
-  const [needsTotp, setNeedsTotp] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
-  const [error, setError] = React.useState<RegFriendlyError | null>(null);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!password) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await login(email, password, { totp: totp || undefined, rememberMe: true });
-      // The signed-in branch of InviteFlow takes over and claims the clinic.
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "TOTP_REQUIRED") setNeedsTotp(true);
-      // Sign-in failures (wrong password, lockout, 2FA) aren't registration
-      // codes — the member-auth catalogue has warm bilingual copy for them.
-      setError(friendlyError(err, isAr));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Card className="p-4 sm:p-6">
-      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-        <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary" aria-hidden>
-            <KeyRound className="size-4" />
-          </span>
-          <div>
-            <h2 className="font-display text-lg font-semibold">{isAr ? "سجّل دخولك للمتابعة" : "Sign in to continue"}</h2>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              {isAr ? "لديك حساب في مرقط بهذا البريد — ادخل به لتكمل تسجيل العيادة." : "You already have a Moracat account with this email — sign in to carry on."}
-            </p>
-          </div>
-        </div>
-        <TextField isAr={isAr} label={isAr ? "البريد الإلكتروني" : "Email"} value={email} onChange={() => undefined} readOnly dir="ltr" />
-        <TextField
-          isAr={isAr}
-          type="password"
-          label={isAr ? "كلمة المرور" : "Password"}
-          value={password}
-          onChange={setPassword}
-          required
-          dir="ltr"
-          autoComplete="current-password"
-          autoFocus
-        />
-        {needsTotp && (
-          <TextField
-            isAr={isAr}
-            label={isAr ? "رمز المصادقة الثنائية" : "Two-factor code"}
-            value={totp}
-            onChange={(v) => setTotp(v.replace(/\D/g, "").slice(0, 6))}
-            required
-            dir="ltr"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-          />
-        )}
-        <ErrorNote error={error} />
-        <Button type="submit" size="lg" loading={busy} disabled={!password} className="w-full">
-          {isAr ? "دخول ومتابعة التسجيل" : "Sign in and continue"}
-        </Button>
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <Link href="/login" className="inline-flex min-h-[44px] items-center text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-            {isAr ? "نسيت كلمة المرور؟" : "Forgot your password?"}
-          </Link>
-          {onCreateInstead && (
-            <button
-              type="button"
-              onClick={onCreateInstead}
-              className="inline-flex min-h-[44px] items-center font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {isAr ? "ليس لدي حساب" : "I don't have an account"}
-            </button>
-          )}
-        </div>
-      </form>
-    </Card>
-  );
-}
 
 /* ── No link ───────────────────────────────────────────────────────────── */
 

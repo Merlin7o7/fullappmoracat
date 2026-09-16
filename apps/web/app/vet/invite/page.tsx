@@ -25,7 +25,6 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
-  KeyRound,
   Languages,
   Loader2,
   LogOut,
@@ -40,6 +39,7 @@ import { useLocale } from "@/app/providers";
 import { ApiError } from "@/lib/http";
 import { formatDate } from "@/lib/datetime";
 import { rememberVetOrg } from "@/lib/vet-api";
+import { InviteSignIn } from "@/components/vet/invite-sign-in";
 import {
   claimStaffInvite,
   previewStaffInvite,
@@ -60,7 +60,7 @@ export default function VetInvitePage() {
   const isAr = locale === "ar";
   const loc = isAr ? "ar" : "en";
   const { toast } = useToast();
-  const { user, ready, login, logout, adoptSession } = useAuth();
+  const { user, ready, logout, adoptSession } = useAuth();
   const regApi = useRegistrationApi();
 
   const [token, setToken] = React.useState<string | null | undefined>(undefined);
@@ -79,10 +79,6 @@ export default function VetInvitePage() {
   const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
-  // Sign-in fields
-  const [signInPassword, setSignInPassword] = React.useState("");
-  const [totp, setTotp] = React.useState("");
-  const [needsTotp, setNeedsTotp] = React.useState(false);
 
   // The undertaking follows the interface language until someone chooses.
   const docLangTouched = React.useRef(false);
@@ -156,20 +152,11 @@ export default function VetInvitePage() {
     }
   }
 
-  /** Account exists, not signed in → sign in inline, then accept. */
-  async function signInAndAccept(e: React.FormEvent) {
-    e.preventDefault();
-    if (!token || !preview || !requireAgreement()) return;
+  /** Account exists: a session was just established (password or Google) → accept. */
+  async function acceptAfterSignIn() {
+    if (!token || !preview) return;
     setBusy(true);
     setError(null);
-    try {
-      await login(preview.email, signInPassword, { totp: totp || undefined, rememberMe: true });
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "TOTP_REQUIRED") setNeedsTotp(true);
-      setError(signInError(err, isAr));
-      setBusy(false);
-      return;
-    }
     try {
       onAccepted(await regApi.acceptStaffInvite(token, preview.confidentialityVersion));
     } catch (err) {
@@ -445,50 +432,20 @@ export default function VetInvitePage() {
             </Button>
           </>
         ) : preview.accountExists ? (
-          <form onSubmit={signInAndAccept} className="flex flex-col gap-4">
-            <div className="flex items-start gap-3">
-              <IconBubble tone="primary">
-                <KeyRound className="size-5" />
-              </IconBubble>
-              <div className="min-w-0">
-                <h2 className="text-sm font-semibold">{isAr ? "لديك حساب في مرقط" : "You already have a Moracat account"}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {isAr ? "ادخل بكلمة مرورك لتنضم — لا حاجة لحساب جديد." : "Sign in with your password to join — no new account needed."}
-                </p>
-              </div>
-            </div>
-            <ReadOnlyEmail email={preview.email} isAr={isAr} />
-            <TextField
-              label={isAr ? "كلمة المرور" : "Password"}
-              type="password"
-              value={signInPassword}
-              onChange={setSignInPassword}
-              autoComplete="current-password"
-              dir="ltr"
-              required
+          // Only the doors this account has: Google for a Google-created account
+          // (no password exists), the password form when one does, and an
+          // emailed set-password link as the fallback.
+          <>
+            <InviteSignIn
+              isAr={isAr}
+              email={preview.email}
+              methods={preview.signIn}
+              beforeSignIn={requireAgreement}
+              onSignedIn={acceptAfterSignIn}
+              submitLabel={{ ar: "ادخل واقبل الدعوة", en: "Sign in and accept" }}
             />
-            {needsTotp && (
-              <TextField
-                label={isAr ? "رمز المصادقة الثنائية" : "Two-factor code"}
-                value={totp}
-                onChange={(v) => setTotp(v.replace(/\D/g, "").slice(0, 6))}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                dir="ltr"
-                required
-              />
-            )}
             <ErrorBlock error={error} />
-            <Button type="submit" size="lg" className="w-full" loading={busy}>
-              {isAr ? "ادخل واقبل الدعوة" : "Sign in and accept"}
-            </Button>
-            <Link
-              href="/login"
-              className="mx-auto inline-flex min-h-[44px] items-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              {isAr ? "نسيت كلمة المرور؟" : "Forgot your password?"}
-            </Link>
-          </form>
+          </>
         ) : (
           <form onSubmit={createAndAccept} className="flex flex-col gap-4">
             <div>
@@ -631,19 +588,6 @@ function AcceptedScreen({ accepted, isAr }: { accepted: StaffInviteAccepted; isA
   );
 }
 
-function signInError(err: unknown, isAr: boolean): Friendly {
-  if (err instanceof ApiError && err.code === "TOTP_REQUIRED") {
-    return isAr
-      ? { title: "أدخل رمز المصادقة الثنائية", message: "حسابك محمي بالمصادقة الثنائية — اكتب الرمز من تطبيقك." }
-      : { title: "Enter your two-factor code", message: "Your account uses two-factor sign-in — type the code from your app." };
-  }
-  if (err instanceof ApiError && (err.status === 401 || err.code === "INVALID_CREDENTIALS")) {
-    return isAr
-      ? { title: "كلمة المرور غير صحيحة", message: "تأكد منها وحاول مجدداً، أو استعدها من «نسيت كلمة المرور»." }
-      : { title: "That password isn't right", message: "Check it and try again, or reset it from “Forgot your password”." };
-  }
-  return registrationError(err, isAr);
-}
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (

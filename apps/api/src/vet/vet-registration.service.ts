@@ -236,7 +236,7 @@ export class VetRegistrationService {
     const invite = await this.findInvite(token);
     const account = await this.prisma.user.findUnique({
       where: { email: invite.email },
-      select: { passwordHash: true, status: true },
+      select: { passwordHash: true, status: true, accounts: { select: { provider: true } } },
     });
     return {
       orgId: invite.orgId,
@@ -248,6 +248,12 @@ export class VetRegistrationService {
       expiresAt: invite.expiresAt,
       claimed: !!invite.claimedAt,
       accountExists: !!account && (!!account.passwordHash || account.status !== "PENDING"),
+      // How the existing account can actually sign in. A Google-created account
+      // has no password, so offering only a password box strands its owner.
+      signIn: {
+        password: !!account?.passwordHash,
+        google: !!account?.accounts.some((a) => a.provider === "google"),
+      },
     };
   }
 

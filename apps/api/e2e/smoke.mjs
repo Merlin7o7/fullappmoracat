@@ -568,6 +568,7 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
 
   // ── Phase 2: owner claims the link and registers ──
   const preview = (await call("/vet/registration/invite/preview", "POST", { token: regToken })).json;
+  ok(preview.signIn?.password === false && preview.signIn?.google === false, "invite preview reports how an existing account can sign in");
   ok(preview.email === ownerEmail && preview.accountExists === false && preview.orgName?.ar === "عيادة النخيل البيطرية", "invite preview (no account yet)");
   ok((await call("/vet/registration/invite/preview", "POST", { token: "x".repeat(40) })).status === 404, "a forged token is rejected");
   const acct = await call("/vet/registration/invite/account", "POST", { token: regToken, firstName: "نورة", lastName: "الحربي", phone: "0501234567", password: "weak" });
@@ -644,6 +645,7 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
   // ── Phase 4: a doctor accepts before approval ──
   const vetToken = submitted.devInviteTokens?.[vetEmail];
   const vp = (await call("/vet/auth/invite/preview", "POST", { token: vetToken })).json;
+  ok(vp.signIn && vp.signIn.password === false, "staff invite preview reports sign-in methods");
   ok(vp.accountExists === false && vp.orgStatus === "SUBMITTED" && vp.fullName === "د. سارة القحطاني" && !!vp.confidentialityVersion, "staff invite preview carries wizard details");
   ok((await call("/vet/auth/invite/claim", "POST", { token: vetToken, firstName: "سارة", password: "S3cure!pass", acceptConfidentiality: false, confidentialityVersion: vp.confidentialityVersion })).status === 400,
     "joining requires the confidentiality undertaking");
@@ -715,6 +717,9 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
 
   // ── Withdrawal + rejection paths ──
   const inv2 = (await call("/vet/admin/clinics/invite", "POST", { nameAr: "عيادة تجريبية", contactName: "Test Person", email: `clinic-x+${tag}@e.com`, phone: "0591234567" }, A)).json;
+  const inv3 = (await call("/vet/admin/clinics/invite", "POST", { nameAr: "عيادة عضو", contactName: "Member Owner", email, phone: "0581234567" }, A)).json;
+  const p3 = (await call("/vet/registration/invite/preview", "POST", { token: inv3.invite.devToken })).json;
+  ok(p3.accountExists === true && p3.signIn?.password === true, "an existing password member is offered sign-in, not a new account");
   ok((await call(`/vet/admin/clinics/${inv2.org.id}/invite/resend`, "POST", {}, A)).json?.invite?.devToken !== inv2.invite.devToken, "resend issues a fresh link");
   ok((await call("/vet/registration/invite/preview", "POST", { token: inv2.invite.devToken })).status === 404, "the superseded link stops working");
   ok((await call(`/vet/admin/clinics/${inv2.org.id}/invite/revoke`, "POST", {}, A)).json?.revoked === true, "an unclaimed invitation can be withdrawn");

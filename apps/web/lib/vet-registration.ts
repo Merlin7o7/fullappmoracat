@@ -261,6 +261,13 @@ export interface RegistrationPreview {
   expiresAt: ISO;
   claimed: boolean;
   accountExists: boolean;
+  /** How the existing account signs in (a Google-created account has no password). */
+  signIn: InviteSignInMethods;
+}
+
+export interface InviteSignInMethods {
+  password: boolean;
+  google: boolean;
 }
 
 export interface MyRegistration {
@@ -367,6 +374,7 @@ export interface StaffInvitePreview {
   roleLabel: Bilingual;
   expiresAt: ISO;
   accountExists: boolean;
+  signIn: InviteSignInMethods;
   confidentialityVersion: string;
 }
 
