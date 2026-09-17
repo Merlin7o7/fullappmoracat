@@ -481,9 +481,11 @@ export function subscriptionConfirmedTemplate(locale: Locale, name: string | nul
 }
 
 /**
- * Term-end invitation (R025). The whole term is prepaid, so nothing auto-renews —
- * this is an INVITATION, never a charge warning. "We never charge silently" is
- * the brand's loudest promise; this email is where it is kept, out loud.
+ * Term-end invitation (R025). Sent to members who did NOT opt into automatic
+ * renewal: their term is prepaid and simply ends, so this is an INVITATION,
+ * never a charge warning. Members who opted in get the renewal notice instead.
+ * "We never charge silently" is the brand's loudest promise; this email is
+ * where it is kept, out loud.
  */
 export function termEndInvitationTemplate(
   locale: Locale,

@@ -327,8 +327,12 @@ function toPayload(d: Draft) {
     isNeutered: d.isNeutered === "unknown" ? undefined : d.isNeutered === "true",
     microchipNo: d.microchipNo || undefined,
     vaccinationStatus: d.vaccinationStatus || undefined,
-    allergies: splitList(d.allergies),
-    healthConditions: splitList(d.medicalConditions),
+    // Only send list fields the member actually filled in: the API replaces
+    // the whole list whenever the key is present, so an empty draft field
+    // would silently wipe allergies/conditions a vet or the member recorded
+    // elsewhere (R117 — never lose entered data).
+    ...(d.allergies.trim() ? { allergies: splitList(d.allergies) } : {}),
+    ...(d.medicalConditions.trim() ? { healthConditions: splitList(d.medicalConditions) } : {}),
     currentMedications: d.currentMedications || undefined,
     emergencyNotes: d.emergencyNotes || undefined,
     favoriteFoods: d.favoriteFood ? [d.favoriteFood] : [],

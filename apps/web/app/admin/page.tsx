@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     queryFn: async () => {
       const [pub, waitlist] = await Promise.all([
         authedFetch<{ pagination: { total: number } }>("/admin/community/cats?filter=public&page=1"),
-        authedFetch<{ pagination: { total: number } }>("/admin/community/waitlist?page=1"),
+        authedFetch<{ pagination: { total: number } }>("/admin/waitlist?page=1"),
       ]);
       return { publicCats: pub.pagination.total, waitlist: waitlist.pagination.total };
     },
