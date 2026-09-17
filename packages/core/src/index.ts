@@ -27,3 +27,6 @@ export * from "./vet-registration";
 // for the API, the web app and the nightly roll-up.
 export * from "./events";
 export * from "./metrics";
+// The owner's view of clinic-written records — the only place that decides
+// which clinical facts leave the clinic portal (MRC-PROD-001 T3).
+export * from "./owner-health";

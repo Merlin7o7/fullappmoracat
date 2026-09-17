@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Plus, Sparkles, Loader2, Search, Star, IdCard, Settings2, Copy, Check, FileDown, ImageDown, Printer, Wallet, Share2 } from "lucide-react";
 import { Card, Badge, Button, Skeleton, Drawer, Avatar, useToast, cn } from "@moraqat/ui";
@@ -46,16 +47,23 @@ export default function CatsPage() {
   // the panel). The dashboard's quick actions land HERE, on the right cat.
   // (location.search read in-effect: client-only, no Suspense requirement.)
   const deepLinkedRef = React.useRef(false);
+  const router = useRouter();
   React.useEffect(() => {
     if (deepLinkedRef.current || !cats.length) return;
-    const target = new URLSearchParams(window.location.search).get("cat");
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get("cat");
     if (!target) return;
     const cat = cats.find((c) => c.id === target);
-    if (cat) {
-      deepLinkedRef.current = true;
-      setManageCat(cat);
+    if (!cat) return;
+    deepLinkedRef.current = true;
+    // The health record now has its own page (MRC-PROD-001 T3); old deep links
+    // keep working by landing there instead of in the drawer.
+    if (params.get("panel") === "health") {
+      router.replace(`/portal/cats/${cat.id}/health`);
+      return;
     }
-  }, [cats]);
+    setManageCat(cat);
+  }, [cats, router]);
 
   const feed = useMutation({
     mutationFn: (catId: string) => authedFetch<Recommendation>(`/feeding/cats/${catId}`, { method: "POST", body: "{}" }),

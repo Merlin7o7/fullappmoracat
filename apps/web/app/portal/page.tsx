@@ -202,7 +202,7 @@ export default function OverviewPage() {
               {/* Two actions, two destinations — each carries the featured cat so
                   the next screen opens on THEIR card/record, not a generic list (R005). */}
               <Link href={`/portal/cats?cat=${featured.id}`}><Button variant="outline" size="sm" className="w-full"><IdCard className="size-4" /> {isAr ? "الهوية" : "Cat ID"}</Button></Link>
-              <Link href={`/portal/cats?cat=${featured.id}&panel=health`}><Button variant="outline" size="sm" className="w-full"><HeartPulse className="size-4" /> {isAr ? "السجل الصحي" : "Health"}</Button></Link>
+              <Link href={`/portal/cats/${featured.id}/health`}><Button variant="outline" size="sm" className="w-full"><HeartPulse className="size-4" /> {isAr ? "السجل الصحي" : "Health"}</Button></Link>
             </div>
           </div>
 
@@ -242,7 +242,7 @@ export default function OverviewPage() {
               <li key={i}>
                 {e.type === "vaccination" ? (
                   <Link
-                    href={`/portal/cats?cat=${e.catId}&panel=health`}
+                    href={`/portal/cats/${e.catId}/health`}
                     className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted"
                   >
                     <span>

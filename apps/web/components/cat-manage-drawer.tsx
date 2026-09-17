@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Star, Pencil, Archive, RotateCcw, Trash2, Loader2 } from "lucide-react";
+import { Star, Pencil, Archive, RotateCcw, Trash2, Loader2, ArrowRight } from "lucide-react";
 import { Badge, Button, Drawer, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useCats, type PortalCat } from "@/lib/cat-context";
@@ -128,9 +129,15 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
           <CatCommunityPanel catId={cat.id} catName={cat.name} photoUrl={cat.photoUrl} isAr={isAr} />
         )}
 
-        {/* Health record */}
+        {/* Health record — quick adds here; the full record (what the clinic
+            wrote, weight, prescriptions, privacy) has its own page. */}
         <div>
-          <h3 className="mb-2 text-sm font-semibold">{isAr ? "السجل الصحي" : "Health record"}</h3>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">{isAr ? "السجل الصحي" : "Health record"}</h3>
+            <Link href={`/portal/cats/${cat.id}/health`} onClick={onClose} className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
+              {isAr ? "السجل الكامل" : "Full record"} <ArrowRight className="size-4 rtl:rotate-180" />
+            </Link>
+          </div>
           <CatHealthPanel catId={cat.id} isAr={isAr} />
         </div>
 

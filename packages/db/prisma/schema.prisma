@@ -83,6 +83,19 @@ enum CatClaimStatus {
   PENDING_CLAIM
 }
 
+/// How the cat came into the household — the kitten-year wedge's channel
+/// question (breeder / shelter / street) answered once, optionally, at the
+/// owner's pace. Aggregate only; never shown publicly.
+enum CatAcquisitionSource {
+  ADOPTED
+  PURCHASED_BREEDER
+  PURCHASED_SHOP
+  RESCUED_STRAY
+  GIFT
+  BORN_AT_HOME
+  OTHER
+}
+
 /// Per-cat membership standing. Each cat carries its own identity and benefits,
 /// so membership is tracked per cat, not only per account.
 enum CatMembershipStatus {
@@ -756,6 +769,16 @@ model Cat {
   microchipNo    String?
   favoriteFoods  String[]
   preferredBrand String[]
+  /// What the cat eats today (brand / product, free text). Drives "keep it
+  /// coming" and allergy-safe swaps; owner-editable on the health page.
+  currentFood       String?
+  acquisitionSource CatAcquisitionSource?
+  /// District within the census city — the unit the clinic-network strategy
+  /// measures density in (MRC-STRAT-001 §C.6). Never public.
+  district          String?
+  /// The clinic reminders route back to: set from the first clinic-written
+  /// record, changeable by the owner. Cleared if the branch is deleted.
+  homeBranchId      String?
   // Full-registration profile (#3) — collected before the Cat ID is issued.
   coatColor          String?
   isNeutered         Boolean?
@@ -842,8 +865,10 @@ model Cat {
   consentGrants     ConsentGrant[]
   recordAccessLogs  RecordAccessLog[]
   emergencyContacts CatEmergencyContact[]
+  homeBranch        Branch?               @relation("CatHomeBranch", fields: [homeBranchId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([homeBranchId])
   @@index([userId, status])
   // Community browse: public + not hidden, ordered by recency / popularity /
   // featured. Partial-index-friendly composite keys.
@@ -962,11 +987,17 @@ model CatVaccination {
   clinic         String?
   batchNo        String?
   notes          String?
+  /// Which clinic wrote this dose (null = owner-entered / legacy). Lets the
+  /// reminder name the clinic and route the owner back to it (T5), and lets
+  /// the owner's record mark the dose as clinic-verified.
+  orgId          String?
+  branchId       String?
   createdAt      DateTime  @default(now())
 
   cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
 
   @@index([catId, administeredAt])
+  @@index([orgId, dueAt])
   @@map("cat_vaccinations")
 }
 
@@ -2784,6 +2815,8 @@ model Branch {
   devices   CounterDevice[]
   visits    Visit[]
   staff     PartnerStaff[] // branch scope (implicit m2m)
+  /// Cats whose reminders route back to this branch (Cat.homeBranchId).
+  homeCats  Cat[]            @relation("CatHomeBranch")
 
   @@index([orgId])
   @@index([directoryVisible, isActive])

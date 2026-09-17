@@ -466,7 +466,7 @@ export class LifecycleService {
       const milestone = days <= 1 ? "t1" : "t7";
       const loc = v.cat.user.locale === "en" ? "en" : "ar";
       const dueStr = fmtDate(v.dueAt, loc);
-      const url = `${SITE()}/portal/cats?cat=${v.cat.id}&panel=health`;
+      const url = `${SITE()}/portal/cats/${v.cat.id}/health`;
 
       await this.once(`vacc_${milestone}:${v.id}`, "vaccination_due", { userId: v.cat.userId, subjectId: v.id, catId: v.cat.id }, async () => {
         this.notifications.emit(v.cat.userId, {

@@ -61,6 +61,11 @@ export interface PortalCat {
   coatColor?: string | null;
   isNeutered?: boolean | null;
   microchipNo?: string | null;
+  /** Owner health profile (MRC-PROD-001 T3) — edited on the cat's health page. */
+  currentFood?: string | null;
+  acquisitionSource?: string | null;
+  district?: string | null;
+  homeBranchId?: string | null;
 }
 
 interface CatContextValue {

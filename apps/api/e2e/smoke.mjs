@@ -223,6 +223,28 @@ ok((await call("/events", "POST", { name: "page_landed", anonId: "bad id!" })).s
   ok(snap.status === 201 && typeof snap.json?.registrations === "number", "metrics snapshot can be recomputed on demand");
   ok((await call("/admin/metrics", "GET", undefined, C)).status === 403, "metrics are staff-only (403 for a member)");
 }
+
+console.log("━━ the living record — owner health page (MRC-PROD-001 T3) ━━");
+{
+  const h = await call(`/cats/${cat.id}/health`, "GET", undefined, C);
+  ok(h.status === 200 && h.json?.cat?.id === cat.id && Array.isArray(h.json?.vaccination?.records) && Array.isArray(h.json?.clinicalEntries), "GET /cats/:id/health returns the owner projection");
+  ok(["UP_TO_DATE", "DUE_SOON", "OVERDUE", "UNKNOWN"].includes(h.json?.vaccination?.standing), "vaccination standing is derived, never stored");
+  // Ownership: another member's cat is a 404, not a 403 (no existence leak).
+  const stranger = (await call("/auth/register", "POST", { email: `stranger+${rnd()}@e.com`, password: "S3cure!pass", acceptTerms: true })).json;
+  ok((await call(`/cats/${cat.id}/health`, "GET", undefined, stranger.accessToken)).status === 404, "another member cannot read the record (404)");
+  // The profile editor: lists replace only when sent; omitted lists survive.
+  const p1 = await call(`/cats/${cat.id}/health-profile`, "PATCH", { allergies: ["chicken", "chicken", "fish"], currentFood: "Royal Canin Indoor" }, C);
+  ok(p1.status === 200 && p1.json?.cat?.allergies?.length === 2 && p1.json?.cat?.currentFood === "Royal Canin Indoor", "health-profile replaces the allergy list (de-duplicated) and sets food");
+  const p2 = await call(`/cats/${cat.id}/health-profile`, "PATCH", { currentMedications: "none" }, C);
+  ok(p2.json?.cat?.allergies?.length === 2, "omitting the list leaves allergies untouched (R117)");
+  const p3 = await call(`/cats/${cat.id}/health-profile`, "PATCH", { microchipNo: "", allergies: [] }, C);
+  ok(p3.json?.cat?.microchipNo === null && p3.json?.cat?.allergies?.length === 0, "empty string clears a field; empty list clears the list on purpose");
+  ok((await call(`/cats/${cat.id}/health-profile`, "PATCH", { homeBranchId: "not-a-branch" }, C)).status === 400, "home clinic must be a real live branch (400)");
+  const ec = await call(`/cats/${cat.id}/emergency-contact`, "PUT", { name: "Sara", phone: "+966500000001", relation: "Sister" }, C);
+  ok(ec.status === 200 && ec.json?.phone === "+966500000001", "emergency contact saved");
+  const ec2 = await call(`/cats/${cat.id}/emergency-contact`, "PUT", { name: "Sara", phone: "+966500000002" }, C);
+  ok(ec2.json?.phone === "+966500000002" && (await call(`/cats/${cat.id}/health`, "GET", undefined, C)).json?.cat?.emergencyContact?.phone === "+966500000002", "setting it again replaces the one primary contact");
+}
 const ss = rnd();
 const dry = (await call("/admin/products", "POST", { slug: `smoke-dry-${ss}`, sku: `SMKD-${ss.toUpperCase()}`, type: "DRY_FOOD", nameEn: "Smoke Dry", nameAr: "جاف", price: 49 }, A)).json;
 let cart = (await call("/cart", "POST")).json;

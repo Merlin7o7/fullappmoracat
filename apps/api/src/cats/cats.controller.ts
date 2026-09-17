@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseInterceptors,
   UploadedFile,
@@ -27,6 +28,8 @@ import {
   CreateDocumentDto,
   CreateVaccinationDto,
   CreateVetVisitDto,
+  EmergencyContactDto,
+  HealthProfileDto,
 } from "./dto/cat-health.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 
@@ -109,6 +112,28 @@ export class CatsController {
   @ApiOperation({ summary: "Remove a cat (soft delete)" })
   remove(@CurrentUser("id") userId: string, @Param("id") id: string) {
     return this.cats.remove(userId, id);
+  }
+
+  // ── The living record (MRC-PROD-001 T3) ──────────────────────────────────
+  // Everything the owner may see about their cat's health in one read:
+  // clinic-written entries (owner projection), vaccinations with standing,
+  // weights, prescriptions, visit summaries, and the owner-editable profile.
+  @Get(":id/health")
+  @ApiOperation({ summary: "The owner's view of the cat's full health record" })
+  health(@CurrentUser("id") userId: string, @Param("id") id: string) {
+    return this.cats.getHealth(userId, id);
+  }
+
+  @Patch(":id/health-profile")
+  @ApiOperation({ summary: "Edit the owner-maintained health profile (chip, allergies, food, home clinic…)" })
+  updateHealthProfile(@CurrentUser("id") userId: string, @Param("id") id: string, @Body() dto: HealthProfileDto) {
+    return this.cats.updateHealthProfile(userId, id, dto);
+  }
+
+  @Put(":id/emergency-contact")
+  @ApiOperation({ summary: "Set the person to reach when the owner can't be" })
+  setEmergencyContact(@CurrentUser("id") userId: string, @Param("id") id: string, @Body() dto: EmergencyContactDto) {
+    return this.cats.upsertEmergencyContact(userId, id, dto);
   }
 
   // ── Health record ────────────────────────────────────────────────────────

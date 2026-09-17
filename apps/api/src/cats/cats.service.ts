@@ -20,6 +20,8 @@ import { StorageService } from "../storage/storage.service";
 import { MailService } from "../mail/mail.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { EventsService } from "../events/events.service";
+import { deriveVaccinationStatus, describeEntryForOwner } from "@moraqat/core";
+import type { EmergencyContactDto, HealthProfileDto } from "./dto/cat-health.dto";
 import { catIdIssuedTemplate } from "../mail/mail.templates";
 import { normalizeName } from "../common/text";
 import type { UpdateVisibilityDto } from "./dto/cat-visibility.dto";
@@ -84,6 +86,10 @@ type CatRow = {
   vetNotes: string | null;
   favoriteFoods: string[];
   preferredBrand: string[];
+  currentFood: string | null;
+  acquisitionSource: string | null;
+  district: string | null;
+  homeBranchId: string | null;
   profile: unknown;
   createdAt: Date;
   breed?: { nameEn: string; nameAr: string } | null;
@@ -603,6 +609,206 @@ export class CatsService implements OnModuleInit {
     return { success: true };
   }
 
+  // ── The living record (MRC-PROD-001 T3) ─────────────────────────────────────
+
+  /**
+   * Everything the owner may see about their cat's health, in one read.
+   *
+   * Clinic-written entries are projected through `describeEntryForOwner`
+   * (packages/core) — the single place that decides which clinical facts leave
+   * the clinic portal. Drafts, retractions, superseded revisions and NOTE
+   * entries never appear here; a vet's free text stays with the vet.
+   */
+  async getHealth(userId: string, catId: string) {
+    const cat = await this.prisma.cat.findFirst({
+      where: { id: catId, userId, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        microchipNo: true,
+        currentMedications: true,
+        currentFood: true,
+        emergencyNotes: true,
+        acquisitionSource: true,
+        district: true,
+        homeBranchId: true,
+        homeBranch: {
+          select: { id: true, nameAr: true, nameEn: true, phone: true, org: { select: { nameAr: true, nameEn: true } } },
+        },
+        allergies: { select: { allergen: true } },
+        healthConds: { select: { name: true } },
+        emergencyContacts: { orderBy: { isPrimary: "desc" }, take: 1, select: { name: true, phone: true, relation: true } },
+        vaccinations: { orderBy: { administeredAt: "desc" } },
+        weightRecords: { orderBy: { measuredAt: "asc" }, select: { id: true, weightKg: true, bcs: true, measuredAt: true, source: true } },
+        prescriptions: {
+          orderBy: { issuedAt: "desc" },
+          take: 50,
+          select: {
+            id: true, medication: true, strength: true, form: true, dosage: true, frequency: true,
+            durationDays: true, status: true, issuedAt: true, org: { select: { nameAr: true, nameEn: true } },
+          },
+        },
+        clinicalEntries: {
+          where: { status: "FINAL", retractedAt: null, type: { not: "NOTE" } },
+          orderBy: { occurredAt: "desc" },
+          take: 200,
+          select: { id: true, type: true, payload: true, occurredAt: true, visitId: true, org: { select: { nameAr: true, nameEn: true } } },
+        },
+        visits: {
+          orderBy: { checkedInAt: "desc" },
+          take: 50,
+          select: {
+            id: true, checkedInAt: true, closedAt: true, state: true, reason: true, ownerSummary: true,
+            summarySentAt: true, followUpAt: true, org: { select: { nameAr: true, nameEn: true } },
+          },
+        },
+      },
+    });
+    if (!cat) throw new NotFoundException("Cat not found");
+
+    // Clinic names for clinic-written vaccinations (orgId is set by the
+    // clinical write-through; owner-entered doses carry only a free-text clinic).
+    const orgIds = [...new Set(cat.vaccinations.map((v) => v.orgId).filter((x): x is string => !!x))];
+    const orgs = orgIds.length
+      ? await this.prisma.partnerOrg.findMany({ where: { id: { in: orgIds } }, select: { id: true, nameAr: true, nameEn: true } })
+      : [];
+    const orgName = new Map(orgs.map((o) => [o.id, { ar: o.nameAr, en: o.nameEn }]));
+
+    const standing = deriveVaccinationStatus(cat.vaccinations);
+    this.events.emit("health_page_viewed", { userId, catId, props: { entries: cat.clinicalEntries.length } });
+
+    return {
+      cat: {
+        id: cat.id,
+        name: cat.name,
+        microchipNo: cat.microchipNo,
+        allergies: cat.allergies.map((a) => a.allergen),
+        healthConditions: cat.healthConds.map((h) => h.name),
+        currentMedications: cat.currentMedications,
+        currentFood: cat.currentFood,
+        emergencyNotes: cat.emergencyNotes,
+        acquisitionSource: cat.acquisitionSource,
+        district: cat.district,
+        homeBranch: cat.homeBranch
+          ? {
+              id: cat.homeBranch.id,
+              name: { ar: cat.homeBranch.nameAr, en: cat.homeBranch.nameEn },
+              clinic: { ar: cat.homeBranch.org.nameAr, en: cat.homeBranch.org.nameEn },
+              phone: cat.homeBranch.phone,
+            }
+          : null,
+        emergencyContact: cat.emergencyContacts[0] ?? null,
+      },
+      vaccination: {
+        ...standing,
+        records: cat.vaccinations.map((v) => ({
+          id: v.id,
+          name: v.name,
+          administeredAt: v.administeredAt,
+          dueAt: v.dueAt,
+          vetName: v.vetName,
+          clinic: (v.orgId && orgName.get(v.orgId)) || (v.clinic ? { ar: v.clinic, en: v.clinic } : null),
+          // Written by a partner clinic (verified) vs typed by the owner.
+          verified: !!v.orgId,
+        })),
+      },
+      weights: cat.weightRecords,
+      prescriptions: cat.prescriptions.map((rx) => ({
+        id: rx.id,
+        medication: rx.medication,
+        strength: rx.strength,
+        form: rx.form,
+        dosage: rx.dosage,
+        frequency: rx.frequency,
+        durationDays: rx.durationDays,
+        status: rx.status,
+        issuedAt: rx.issuedAt,
+        clinic: { ar: rx.org.nameAr, en: rx.org.nameEn },
+      })),
+      clinicalEntries: cat.clinicalEntries
+        .map((e) => {
+          const owner = describeEntryForOwner(e.type, e.payload);
+          return owner
+            ? { id: e.id, type: e.type, occurredAt: e.occurredAt, visitId: e.visitId, clinic: { ar: e.org.nameAr, en: e.org.nameEn }, ...owner }
+            : null;
+        })
+        .filter((e): e is NonNullable<typeof e> => e !== null),
+      visits: cat.visits.map((v) => ({
+        id: v.id,
+        checkedInAt: v.checkedInAt,
+        closedAt: v.closedAt,
+        state: v.state,
+        reason: v.reason,
+        ownerSummary: v.ownerSummary,
+        summarySentAt: v.summarySentAt,
+        followUpAt: v.followUpAt,
+        clinic: { ar: v.org.nameAr, en: v.org.nameEn },
+      })),
+    };
+  }
+
+  /**
+   * The owner-maintained health profile. PATCH semantics: absent = unchanged,
+   * null = cleared, a list = replaced (this is the one deliberate list editor,
+   * so an empty list here IS a decision). The home clinic must be a live,
+   * directory-visible branch — the owner can only route reminders somewhere
+   * that exists.
+   */
+  async updateHealthProfile(userId: string, catId: string, dto: HealthProfileDto) {
+    await this.ownedCat(userId, catId);
+    if (dto.homeBranchId) {
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: dto.homeBranchId, isActive: true, org: { status: "LIVE", isDemo: false } },
+        select: { id: true },
+      });
+      if (!branch) throw new BadRequestException("Unknown clinic");
+    }
+    await this.prisma.$transaction(async (tx) => {
+      if (dto.allergies !== undefined) {
+        await tx.catAllergy.deleteMany({ where: { catId } });
+        if (dto.allergies.length) {
+          await tx.catAllergy.createMany({ data: [...new Set(dto.allergies.map((a) => a.trim()).filter(Boolean))].map((allergen) => ({ catId, allergen })) });
+        }
+      }
+      if (dto.healthConditions !== undefined) {
+        await tx.catHealthCondition.deleteMany({ where: { catId } });
+        if (dto.healthConditions.length) {
+          await tx.catHealthCondition.createMany({ data: [...new Set(dto.healthConditions.map((n) => n.trim()).filter(Boolean))].map((name) => ({ catId, name })) });
+        }
+      }
+      await tx.cat.update({
+        where: { id: catId },
+        data: {
+          microchipNo: dto.microchipNo,
+          currentMedications: dto.currentMedications,
+          currentFood: dto.currentFood,
+          emergencyNotes: dto.emergencyNotes,
+          acquisitionSource: dto.acquisitionSource,
+          district: dto.district,
+          homeBranchId: dto.homeBranchId,
+        },
+      });
+    });
+    this.events.emit("cat_updated", {
+      userId,
+      catId,
+      props: { surface: "health_profile", fields: Object.keys(dto).filter((k) => (dto as Record<string, unknown>)[k] !== undefined).join(",") },
+    });
+    return this.getHealth(userId, catId);
+  }
+
+  /** One primary emergency contact per cat; setting it again replaces it. */
+  async upsertEmergencyContact(userId: string, catId: string, dto: EmergencyContactDto) {
+    await this.ownedCat(userId, catId);
+    const existing = await this.prisma.catEmergencyContact.findFirst({ where: { catId, isPrimary: true }, select: { id: true } });
+    const data = { name: dto.name.trim(), phone: dto.phone.trim(), relation: dto.relation ?? null, isPrimary: true };
+    const contact = existing
+      ? await this.prisma.catEmergencyContact.update({ where: { id: existing.id }, data })
+      : await this.prisma.catEmergencyContact.create({ data: { catId, kind: "SECONDARY", ...data } });
+    this.events.emit("cat_updated", { userId, catId, props: { surface: "emergency_contact" } });
+    return { name: contact.name, phone: contact.phone, relation: contact.relation };
+  }
+
   // ── Health record: vaccinations ─────────────────────────────────────────────
   async addVaccination(userId: string, catId: string, dto: CreateVaccinationDto) {
     await this.ownedCat(userId, catId);
@@ -943,6 +1149,11 @@ export class CatsService implements OnModuleInit {
       vetNotes: cat.vetNotes,
       favoriteFoods: cat.favoriteFoods,
       preferredBrand: cat.preferredBrand,
+      // Owner health profile (T3) — edited on the cat's health page.
+      currentFood: cat.currentFood,
+      acquisitionSource: cat.acquisitionSource,
+      district: cat.district,
+      homeBranchId: cat.homeBranchId,
       // The character & keepsake layer (personality/favourites/fun +
       // personalisation) — powers the profile journey and the personalised card.
       profile: (cat.profile ?? null) as Record<string, unknown> | null,
