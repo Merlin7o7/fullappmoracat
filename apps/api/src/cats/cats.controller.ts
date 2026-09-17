@@ -136,6 +136,12 @@ export class CatsController {
     return this.cats.upsertEmergencyContact(userId, id, dto);
   }
 
+  @Patch(":id/lost-mode")
+  @ApiOperation({ summary: "Lost mode: the public card shows an 'I found this cat' form that relays to you" })
+  setLostMode(@CurrentUser("id") userId: string, @Param("id") id: string, @Body() body: { enabled: boolean }) {
+    return this.cats.setLostMode(userId, id, body?.enabled === true);
+  }
+
   // ── Health record ────────────────────────────────────────────────────────
   @Get(":id/vaccinations")
   @ApiOperation({ summary: "List a cat's vaccination history" })

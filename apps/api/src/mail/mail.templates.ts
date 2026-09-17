@@ -555,19 +555,70 @@ export function vaccinationReminderTemplate(
   catName: string,
   vaccineName: string,
   dueAt: string,
-  url: string
+  url: string,
+  /** The clinic that wrote the dose (T5) — the reminder sends the owner back to it. */
+  clinic?: { name: string; callUrl?: string | null; whatsappUrl?: string | null } | null
 ): BuiltEmail {
   const ar = locale === "ar";
   const heading = ar ? `تطعيم ${catName} يقترب` : `${catName}'s vaccination is coming up`;
   const body = [
     hiName(ar, name),
-    ar
-      ? `تذكير لطيف: موعد تطعيم «${vaccineName}» لـ${catName} بتاريخ ${dueAt}. حبّينا نذكّرك قبل الموعد — هذا جزء من عنايتنا بـ${catName}.`
-      : `A gentle reminder: ${catName}'s ${vaccineName} vaccination is due on ${dueAt}. We wanted to let you know ahead of time — looking after ${catName} is what we're here for.`,
+    clinic
+      ? ar
+        ? `تذكير من ${clinic.name}: موعد تطعيم «${vaccineName}» لـ${catName} بتاريخ ${dueAt}. احجز موعدك معهم قبل التاريخ — هم من يعرف ${catName}.`
+        : `A reminder from ${clinic.name}: ${catName}'s ${vaccineName} vaccination is due on ${dueAt}. Book with them before then — they're the ones who know ${catName}.`
+      : ar
+        ? `تذكير لطيف: موعد تطعيم «${vaccineName}» لـ${catName} بتاريخ ${dueAt}. حبّينا نذكّرك قبل الموعد — هذا جزء من عنايتنا بـ${catName}.`
+        : `A gentle reminder: ${catName}'s ${vaccineName} vaccination is due on ${dueAt}. We wanted to let you know ahead of time — looking after ${catName} is what we're here for.`,
   ];
   const cta = { label: ar ? `افتح سجل ${catName} الصحي` : `Open ${catName}'s health record`, url };
+  const contact = clinic
+    ? [
+        clinic.callUrl ? actionLink(clinic.callUrl, ar ? `اتصل بـ${clinic.name}` : `Call ${clinic.name}`) : "",
+        clinic.whatsappUrl ? actionLink(clinic.whatsappUrl, ar ? "واتساب العيادة" : "WhatsApp the clinic") : "",
+      ]
+        .filter(Boolean)
+        .join("")
+    : "";
+  const extraLines = clinic
+    ? [clinic.callUrl ? `${ar ? "اتصل" : "Call"}: ${clinic.callUrl}` : "", clinic.whatsappUrl ? `WhatsApp: ${clinic.whatsappUrl}` : ""].filter(Boolean)
+    : [];
   return {
     subject: ar ? `تطعيم ${catName} يقترب — مُرقّط` : `${catName}'s vaccination is coming up — Moracat`,
+    html: layout({ locale, preheader: heading, heading, body, extra: contact ? `<div style="text-align:center;margin:4px 0 10px;">${contact}</div>` : undefined, cta }),
+    text: toText(heading, body, cta, extraLines),
+  };
+}
+
+/** A secondary action pill (call / WhatsApp) — quieter than the CTA, still 44px tall. */
+function actionLink(url: string, label: string): string {
+  return `<a href="${url}" style="display:inline-block;margin:4px 6px;padding:12px 18px;border-radius:999px;border:1px solid ${BRAND.hairline};color:${BRAND.green};font-weight:600;text-decoration:none;font-size:14px;">${label}</a>`;
+}
+
+/**
+ * "I found this cat" (T6): a stranger scanned the collar and left a message.
+ * The finder's number (if given) is for the owner only; the finder never
+ * learns anything about the owner.
+ */
+export function catFoundTemplate(
+  locale: Locale,
+  name: string | null,
+  catName: string,
+  message: string,
+  finderPhone: string | null,
+  url: string
+): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = ar ? `شخص وجد ${catName} 🐾` : `Someone found ${catName} 🐾`;
+  const body = [
+    hiName(ar, name),
+    ar ? `مسح أحدهم رمز ${catName} على الطوق وترك لك رسالة:` : `Someone scanned ${catName}'s collar tag and left you a message:`,
+    `“${message}”`,
+    finderPhone ? (ar ? `رقمه: ${finderPhone}` : `Their number: ${finderPhone}`) : ar ? "لم يترك رقماً — قد يعاود المحاولة." : "They didn't leave a number — they may try again.",
+  ];
+  const cta = { label: ar ? `افتح صفحة ${catName}` : `Open ${catName}'s page`, url };
+  return {
+    subject: ar ? `شخص وجد ${catName} — مُرقّط` : `Someone found ${catName} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, cta }),
     text: toText(heading, body, cta),
   };

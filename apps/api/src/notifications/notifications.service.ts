@@ -59,6 +59,23 @@ export class NotificationsService {
     return notification;
   }
 
+  /**
+   * May we email this member about this category? Reads the preference the
+   * settings page saves (channel EMAIL); absent = on, except PROMOTION = off.
+   * Transactional money mail (receipts, renewal warnings — R025) never asks.
+   */
+  async emailAllowed(userId: string, category: Category): Promise<boolean> {
+    try {
+      const row = await this.prisma.notificationPreference.findUnique({
+        where: { userId_channel_category: { userId, channel: "EMAIL", category } },
+        select: { enabled: true },
+      });
+      return row ? row.enabled : category !== "PROMOTION";
+    } catch {
+      return category !== "PROMOTION";
+    }
+  }
+
   /** Fire-and-forget wrapper: emit without ever blocking or failing the caller. */
   emit(userId: string, input: NotifyInput): void {
     void this.notify(userId, input).catch((e) =>

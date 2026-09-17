@@ -32,3 +32,5 @@ export * from "./metrics";
 export * from "./owner-health";
 // Clinic-created patients + the claim link (MRC-PROD-001 T4).
 export * from "./claim";
+// The Cat ID QR: public URL out, every older form still accepted in (T6).
+export * from "./qr";

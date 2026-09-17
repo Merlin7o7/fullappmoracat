@@ -12,6 +12,7 @@ import {
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { commerceEnabled } from "../common/config/features";
 import { withJobLock } from "../common/jobs/job-lock";
+import { EventsService } from "../events/events.service";
 import { termTotal as termUpfrontTotal } from "../common/config/pricing";
 import {
   PAYMENT_PROVIDER_FACTORY,
@@ -70,8 +71,14 @@ export class LifecycleService {
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
     private readonly subscriptions: SubscriptionsService,
+    private readonly events: EventsService,
     @Inject(PAYMENT_PROVIDER_FACTORY) private readonly payments: IPaymentProviderFactory
   ) {}
+
+  /** Run one pass on demand (admin, tests). Same lease as the cron. */
+  runNow() {
+    return this.run();
+  }
 
   /**
    * One hourly pass. Hourly (not daily) so term-end and vaccination windows are
@@ -458,7 +465,14 @@ export class LifecycleService {
         id: true,
         name: true,
         dueAt: true,
-        cat: { select: { id: true, name: true, userId: true, user: { select: { email: true, firstName: true, locale: true } } } },
+        orgId: true,
+        branchId: true,
+        cat: {
+          select: {
+            id: true, name: true, userId: true, homeBranchId: true,
+            user: { select: { email: true, firstName: true, locale: true } },
+          },
+        },
       },
     });
     for (const v of vaccs) {
@@ -470,18 +484,66 @@ export class LifecycleService {
       const url = `${SITE()}/portal/cats/${v.cat.id}/health`;
 
       await this.once(`vacc_${milestone}:${v.id}`, "vaccination_due", { userId: v.cat.userId, subjectId: v.id, catId: v.cat.id }, async () => {
+        // The clinic to return to (T5): the branch that gave the dose, else the
+        // owner's home clinic, else the writing org's first branch. Actions go
+        // through tracked links so "reminder → contact" is a measurable step.
+        const clinic = await this.reminderClinic(v.branchId ?? v.cat.homeBranchId, v.orgId, loc, v.cat.id, v.cat.userId);
         this.notifications.emit(v.cat.userId, {
           category: "SYSTEM",
           type: "vaccination_due",
-          params: { name: v.cat.name, vaccine: v.name, dueAt: dueStr },
-          data: { catId: v.cat.id, url },
+          params: { name: v.cat.name, vaccine: v.name, dueAt: dueStr, ...(clinic ? { clinic: clinic.name } : {}) },
+          data: { catId: v.cat.id, url, ...(clinic ? { clinic: { name: clinic.name, callUrl: clinic.callUrl, whatsappUrl: clinic.whatsappUrl, branchId: clinic.branchId } } : {}) },
         });
-        if (v.cat.user.email) {
-          const mail = vaccinationReminderTemplate(loc, v.cat.user.firstName, v.cat.name, v.name, dueStr, url);
+        this.events.emit("reminder_sent", {
+          userId: v.cat.userId, catId: v.cat.id, orgId: clinic?.orgId ?? v.orgId ?? null, source: "cron",
+          props: { kind: "vaccination", milestone, channel: "in_app", named_clinic: !!clinic },
+        });
+        if (v.cat.user.email && (await this.notifications.emailAllowed(v.cat.userId, "SYSTEM"))) {
+          const mail = vaccinationReminderTemplate(loc, v.cat.user.firstName, v.cat.name, v.name, dueStr, url, clinic);
           await this.mail.send({ to: v.cat.user.email, subject: mail.subject, html: mail.html, text: mail.text });
+          this.events.emit("reminder_sent", {
+            userId: v.cat.userId, catId: v.cat.id, orgId: clinic?.orgId ?? v.orgId ?? null, source: "cron",
+            props: { kind: "vaccination", milestone, channel: "email", named_clinic: !!clinic },
+          });
         }
       });
     }
+  }
+
+  /**
+   * Resolve the clinic a reminder should name, and mint tracked call /
+   * WhatsApp links for it. Null when no clinic wrote the dose and the owner
+   * has no home clinic — then the reminder is simply from Moracat.
+   */
+  private async reminderClinic(
+    preferredBranchId: string | null,
+    orgId: string | null,
+    loc: "ar" | "en",
+    catId: string,
+    userId: string
+  ): Promise<{ name: string; orgId: string; branchId: string; callUrl: string | null; whatsappUrl: string | null } | null> {
+    const select = { id: true, orgId: true, nameAr: true, nameEn: true, phone: true, org: { select: { nameAr: true, nameEn: true } } } as const;
+    let branch = preferredBranchId
+      ? await this.prisma.branch.findFirst({ where: { id: preferredBranchId, isActive: true }, select })
+      : null;
+    if (!branch && orgId) {
+      branch = await this.prisma.branch.findFirst({ where: { orgId, isActive: true }, orderBy: { createdAt: "asc" }, select });
+    }
+    if (!branch) return null;
+    const name = loc === "ar" ? branch.org.nameAr || branch.nameAr : branch.org.nameEn || branch.nameEn;
+    const digits = branch.phone?.replace(/[^\d+]/g, "") ?? "";
+    let callUrl: string | null = null;
+    let whatsappUrl: string | null = null;
+    if (digits.length >= 8) {
+      const tel = digits.startsWith("+") ? digits : digits.startsWith("00") ? `+${digits.slice(2)}` : digits.startsWith("0") ? `+966${digits.slice(1)}` : `+${digits}`;
+      const [call, wa] = await Promise.all([
+        this.prisma.trackedLink.create({ data: { kind: "reminder_call", target: `tel:${tel}`, catId, orgId: branch.orgId, branchId: branch.id, userId }, select: { id: true } }),
+        this.prisma.trackedLink.create({ data: { kind: "reminder_whatsapp", target: `https://wa.me/${tel.replace("+", "")}`, catId, orgId: branch.orgId, branchId: branch.id, userId }, select: { id: true } }),
+      ]);
+      callUrl = `${SITE()}/r/${call.id}`;
+      whatsappUrl = `${SITE()}/r/${wa.id}`;
+    }
+    return { name, orgId: branch.orgId, branchId: branch.id, callUrl, whatsappUrl };
   }
 
   // ── birthdays + anniversaries (R073 — sparing, real delight) ────────────────

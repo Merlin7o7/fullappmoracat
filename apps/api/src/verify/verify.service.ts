@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { timingSafeEqual } from "node:crypto";
+import { parseQrValue } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 
 /** Constant-time string compare — avoids leaking the partner key via timing. */
@@ -16,14 +17,14 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 const IS_PROD = process.env.NODE_ENV === "production";
-const TOKEN_PREFIX = "MRCV1:";
 
 /**
- * QR verification (#2). The Cat ID card's QR encodes an opaque token — NOT a URL.
- * A generic phone camera scanning it just sees meaningless text (no public page).
- * Only the Moracat app / an authorized partner (holding the partner key) can
- * resolve it here, and we return the minimum needed to verify identity +
- * membership — never a public profile or sensitive data.
+ * Partner verification (#2). The card's QR now encodes the public page URL
+ * (T6 — a phone camera gets the Safety job); this endpoint is the deeper,
+ * partner-keyed read that also reports membership standing. It accepts the
+ * URL, the legacy `MRCV1:` form, or a bare token, and returns the minimum
+ * needed to verify identity + membership — never a public profile or
+ * sensitive data.
  */
 @Injectable()
 export class VerifyService {
@@ -32,7 +33,8 @@ export class VerifyService {
   async verifyCat(rawToken: string, partnerKey?: string) {
     this.authorize(partnerKey);
 
-    const token = rawToken.startsWith(TOKEN_PREFIX) ? rawToken.slice(TOKEN_PREFIX.length) : rawToken;
+    const token = parseQrValue(rawToken);
+    if (!token) throw new NotFoundException("Unknown or revoked code");
     const cat = await this.prisma.cat.findFirst({
       where: { qrToken: token, deletedAt: null },
       select: {

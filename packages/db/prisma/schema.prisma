@@ -785,6 +785,9 @@ model Cat {
   /// The clinic reminders route back to: set from the first clinic-written
   /// record, changeable by the owner. Cleared if the branch is deleted.
   homeBranchId      String?
+  /// Lost mode (T6): while set, the public card page shows a prominent
+  /// "I found this cat" form that relays to the owner without exposing them.
+  lostModeAt        DateTime?
   // Full-registration profile (#3) — collected before the Cat ID is issued.
   coatColor          String?
   isNeutered         Boolean?
@@ -873,6 +876,7 @@ model Cat {
   emergencyContacts CatEmergencyContact[]
   homeBranch        Branch?               @relation("CatHomeBranch", fields: [homeBranchId], references: [id], onDelete: SetNull)
   claimInvites      ClaimInvite[]
+  foundReports      FoundReport[]
 
   @@index([userId])
   @@index([homeBranchId])
@@ -2204,6 +2208,42 @@ model ClaimInvite {
   @@index([orgId, createdAt])
   @@index([phoneHash])
   @@map("cat_claim_invites")
+}
+
+/// "I found this cat" (T6): a stranger scanned the collar QR and left a
+/// message. Relayed to the owner (in-app, email, SMS when enabled); the
+/// finder's number is shown to the owner only, never the reverse.
+model FoundReport {
+  id          String   @id @default(cuid())
+  catId       String
+  message     String
+  finderPhone String?
+  ipHash      String?
+  createdAt   DateTime @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId, createdAt])
+  @@map("cat_found_reports")
+}
+
+/// A short redirect behind a reminder's "call the clinic" / "WhatsApp"
+/// actions (T5), so "did the reminder bring the owner back to the clinic?"
+/// is a number rather than a hope. Target is a tel: or https: URL only.
+model TrackedLink {
+  id            String    @id @default(cuid())
+  kind          String
+  target        String
+  catId         String?
+  orgId         String?
+  branchId      String?
+  userId        String?
+  clicks        Int       @default(0)
+  lastClickedAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([orgId, createdAt])
+  @@map("tracked_links")
 }
 
 /// One Riyadh calendar day of operating metrics (packages/core `metrics.ts`),

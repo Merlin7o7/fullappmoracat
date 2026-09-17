@@ -8,6 +8,7 @@ import { Button, Card } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { CatCommunityPanel } from "@/components/cat-community-panel";
+import { LostModeCard } from "@/components/lost-mode-card";
 import { AccessLedger } from "@/app/portal/health-access/access-ledger";
 
 /**
@@ -26,6 +27,9 @@ export default function CatPrivacyPage() {
 
   return (
     <div className="space-y-6">
+      {cat.status === "ACTIVE" && (
+        <LostModeCard catId={cat.id} catName={cat.name} qrToken={cat.qrToken} lostModeAt={cat.lostModeAt} isAr={isAr} />
+      )}
       {cat.status === "ACTIVE" && (
         <CatCommunityPanel catId={cat.id} catName={cat.name} photoUrl={cat.photoUrl} isAr={isAr} />
       )}

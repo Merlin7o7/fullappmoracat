@@ -66,6 +66,8 @@ export interface PortalCat {
   acquisitionSource?: string | null;
   district?: string | null;
   homeBranchId?: string | null;
+  /** Lost mode (T6): set while the public card shows the found-cat form. */
+  lostModeAt?: string | null;
 }
 
 interface CatContextValue {

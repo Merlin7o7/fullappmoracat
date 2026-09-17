@@ -11,5 +11,7 @@ import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 @Module({
   imports: [SubscriptionsModule],
   providers: [LifecycleService],
+  // Exported so admin can run a pass on demand (ops + the e2e suite).
+  exports: [LifecycleService],
 })
 export class LifecycleModule {}

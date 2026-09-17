@@ -242,6 +242,27 @@ console.log("━━ the living record — owner health page (MRC-PROD-001 T3) �
   ok(ec2.json?.phone === "+966500000002" && (await call(`/cats/${cat.id}/health`, "GET", undefined, C)).json?.cat?.emergencyContact?.phone === "+966500000002", "setting it again replaces the one primary contact");
 }
 
+console.log("━━ the collar QR, lost mode and found-cat relay (MRC-PROD-001 T6) ━━");
+{
+  const pub = await call(`/public/cats/${cat.qrToken}`);
+  ok(pub.status === 200 && pub.json?.name === "Smokey" && pub.json?.registered === true, "public card resolves from the bare QR token");
+  ok(!JSON.stringify(pub.json).includes(email) && !("ownerName" in (pub.json ?? {})) && pub.json?.catIdMasked?.startsWith("MRC-••••-"), "public card carries no owner identity and masks the number");
+  ok((await call(`/public/cats/${encodeURIComponent("MRCV1:" + cat.qrToken)}`)).status === 200, "legacy MRCV1: form still resolves");
+  ok((await call("/public/cats/NOTATOKEN0000000000000")).status === 404, "unknown token is a 404");
+  ok((await call(`/verify/cat/${encodeURIComponent("https://moracat.co/c/" + cat.qrToken)}`)).json?.catName === "Smokey", "partner verify accepts the URL form (dev: no key configured)");
+  const lost = await call(`/cats/${cat.id}/lost-mode`, "PATCH", { enabled: true }, C);
+  ok(lost.status === 200 && !!lost.json?.lostModeAt, "owner switches lost mode on");
+  ok((await call(`/public/cats/${cat.qrToken}`)).json?.isLost === true, "public card reflects lost mode immediately");
+  const found = await call(`/public/cats/${cat.qrToken}/found`, "POST", { message: "Found near Al Olaya park, safe with me", finderPhone: "0509876543" });
+  ok(found.status === 200 && found.json?.delivered === true, "a finder's message is accepted");
+  const inbox = await call("/notifications", "GET", undefined, C);
+  const foundNote = (inbox.json?.items ?? []).find((n) => n?.data?.type === "cat_found_report");
+  ok(!!foundNote && JSON.stringify(foundNote).includes("+966509876543"), "the owner is notified in-app with the finder's number");
+  ok((await call(`/public/cats/${cat.qrToken}/found`, "POST", { message: "x" })).status === 400, "a one-character message is rejected");
+  ok((await call(`/cats/${cat.id}/lost-mode`, "PATCH", { enabled: false }, C)).json?.lostModeAt === null, "lost mode off again");
+  ok((await fetch(`${base.replace(/\/api$/, "")}/r/not-a-link`)).status === 404, "unknown tracked link is a 404");
+}
+
 console.log("━━ admin cat CRM + merge (MRC-PROD-001 T4) ━━");
 {
   const found = await call(`/admin/cats?q=${encodeURIComponent(cat.catIdNumber)}`, "GET", undefined, A);
@@ -360,6 +381,29 @@ console.log("━━ demo quarantine ━━");
     const mine = await call(`/cats/${walkId}/health`, "GET", undefined, owner.accessToken);
     ok(mine.status === 200 && mine.json?.vaccination?.records?.some((v) => v.verified === true && v.name === "Tricat"), "the owner sees the clinic-verified vaccination on their record");
     ok((await call(`/claim/${claimToken}/accept`, "POST", { phoneOtpCode: otp.json.devCode }, owner.accessToken)).status === 400, "a claimed link cannot be claimed twice");
+
+    console.log("━━ reminders route back to the clinic (MRC-PROD-001 T5) ━━");
+    {
+      // A clinic-written dose due in 3 days → the hourly pass names the clinic
+      // and hands the owner tracked call / WhatsApp actions.
+      const soon = new Date(Date.now() + 3 * 86_400_000).toISOString();
+      const dose = await call("/vet/records", "POST", { catId: walkId, visitId: created.json.visit.id, type: "VACCINATION", payload: { vaccine: "Rabies", dueAt: soon } }, DT, H);
+      ok(dose.status === 201, "clinic writes a dose due in 3 days");
+      const ran = await call("/admin/jobs/lifecycle/run", "POST", {}, A);
+      ok(ran.status === 201 && ran.json?.ran === "lifecycle", "admin runs the lifecycle pass on demand");
+      const inbox = await call("/notifications", "GET", undefined, owner.accessToken);
+      const rem = (inbox.json?.items ?? []).find((n) => n?.data?.type === "vaccination_due" && n?.data?.params?.vaccine === "Rabies");
+      ok(!!rem && typeof rem.data?.params?.clinic === "string" && rem.data.params.clinic.length > 0, `reminder names the clinic: ${rem?.data?.params?.clinic}`);
+      ok(!!rem?.data?.clinic?.callUrl && rem.data.clinic.callUrl.includes("/r/"), "reminder carries a tracked call link");
+      if (rem?.data?.clinic?.callUrl) {
+        const linkId = rem.data.clinic.callUrl.split("/r/")[1];
+        const r = await fetch(`${base.replace(/\/api$/, "")}/r/${linkId}`, { redirect: "manual" });
+        ok(r.status === 302 && (r.headers.get("location") ?? "").startsWith("tel:"), "tracked link 302s to the clinic's number");
+      }
+      const again = await call("/admin/jobs/lifecycle/run", "POST", {}, A);
+      const count = (await call("/notifications", "GET", undefined, owner.accessToken)).json?.items?.filter((n) => n?.data?.type === "vaccination_due" && n?.data?.params?.vaccine === "Rabies").length;
+      ok(again.status === 201 && count === 1, "running the pass again does not send the reminder twice (idempotency ledger)");
+    }
     // Refreshing after claim is refused; state reports claimed.
     ok((await call(`/vet/patients/${walkId}/claim`, "GET", undefined, DT, H)).json?.state === "claimed", "counter sees the cat as claimed");
     // Old-name twins: a second walk-in with the same name for the same owner offers a merge.

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CatsModule } from "../cats/cats.module";
+import { LifecycleModule } from "../lifecycle/lifecycle.module";
 import { AdminController } from "./admin.controller";
 import { AdminCatsService } from "./admin-cats.service";
 import { CmsController } from "./cms.controller";
@@ -18,7 +19,7 @@ import { AdminStaffService } from "./staff.service";
 import { CmsService } from "./cms.service";
 
 @Module({
-  imports: [CatsModule],
+  imports: [CatsModule, LifecycleModule],
   controllers: [AdminController, CmsController, AdminCommunityController, AdminStaffController, FeatureFlagsController],
   providers: [
     AdminAnalyticsService,

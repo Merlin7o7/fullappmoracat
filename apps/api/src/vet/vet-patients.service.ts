@@ -24,7 +24,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma, type ConsentTier } from "@moraqat/db";
-import { normalizeSaudiPhone } from "@moraqat/core";
+import { normalizeSaudiPhone, parseQrValue } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { normalizeName } from "../common/text";
 import { PlaceholderOwnerService } from "./placeholder-owner.service";
@@ -131,6 +131,12 @@ export { normalizeSaudiPhone };
  */
 export function detectQuery(raw: string): DetectedQuery {
   const q = raw.trim();
+  // The collar QR now carries the public page URL (T6); a camera scanner
+  // hands the whole URL over. Legacy `MRCV1:` cards keep working too.
+  if (/^https?:\/\//i.test(q) || q.toUpperCase().startsWith("MRCV1:")) {
+    const token = parseQrValue(q);
+    if (token) return { kind: "qrToken", normalized: token, isIdentifier: true };
+  }
   const compact = q.replace(/[\s-]/g, "");
 
   if (q.includes("@") && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(q)) {

@@ -98,7 +98,8 @@ async function bootstrap() {
     })
   );
 
-  app.setGlobalPrefix("api", { exclude: ["health"] });
+  // /r/:id is the tracked reminder action — short and human in an email.
+  app.setGlobalPrefix("api", { exclude: ["health", "r/:id"] });
 
   // ── Swagger / OpenAPI ─────────────────────────────────────────────────
   // Exposed in non-production by default. In production it stays off unless

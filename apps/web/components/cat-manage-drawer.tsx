@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Star, Pencil, Archive, RotateCcw, Trash2, Loader2, ArrowRight } from "lucide-react";
 import { Badge, Button, Drawer, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { qrValueFor } from "@moraqat/core";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { Field, SelectField } from "@/components/field";
 import { CatIdCard } from "@/components/cat-id-card";
@@ -57,7 +58,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
   const restore = () =>
     action.mutate({ path: `/cats/${cat.id}/restore` }, { onSuccess: () => done(isAr ? `عاد ${cat.name} 🐈` : `${cat.name} is back 🐈`) });
 
-  const qrValue = cat.qrToken ? `MRCV1:${cat.qrToken}` : null;
+  const qrValue = cat.qrToken ? qrValueFor(process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co", cat.qrToken) : null;
 
   return (
     <Drawer open onClose={onClose} title={isAr ? `إدارة ${cat.name}` : `Manage ${cat.name}`}>
@@ -91,7 +92,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
                 <QRCodeSVG value={qrValue} size={112} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
               </div>
               <p className="max-w-[16rem] text-center text-[11px] leading-relaxed text-muted-foreground">
-                {isAr ? "رمز تحقق آمن — يُقرأ داخل مرقط أو من شريك معتمد" : "Secure token — read inside Moracat or by an authorized partner"}
+                {isAr ? "أي كاميرا جوال تفتح صفحة القط العامة — من يجدها يصل إليك دون أن يعرف من أنت" : "Any phone camera opens the cat's public page — whoever finds them can reach you without learning who you are"}
               </p>
             </div>
           )}

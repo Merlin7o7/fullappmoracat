@@ -4,7 +4,10 @@ import type { CSSProperties } from "react";
 import { ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
-import { isFoundingMember } from "@moraqat/core";
+import { isFoundingMember, qrValueFor } from "@moraqat/core";
+
+/** The public page the collar QR opens (T6) — a phone camera gets the Safety job. */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
 import { localizeName } from "@/lib/translit";
 import { formatDate } from "@/lib/datetime";
 import { commerceEnabled } from "@/lib/features";
@@ -53,7 +56,7 @@ interface CatIdCardProps {
   gender?: string | null;
   birthDate?: string | null;
   vaccinationStatus?: string | null;
-  /** Opaque QR verification token (#2) — encoded as `MRCV1:<token>`, never a URL. */
+  /** QR token — encoded as the public page URL (`/c/<token>`, T6) so any camera opens it. */
   qrToken?: string | null;
   /** Static export rendering — drops the drop-shadow so the captured PNG has no
    *  clipped shadow halo; geometry is identical (everything is sized in cqw). */
@@ -121,7 +124,7 @@ export function CatIdCard({
   const since = issuedAt
     ? formatDate(issuedAt, isAr ? "ar" : "en", { month: "short", year: "numeric" })
     : null;
-  const qrValue = qrToken ? `MRCV1:${qrToken}` : null;
+  const qrValue = qrToken ? qrValueFor(SITE_URL, qrToken) : null;
   const loc = isAr ? "ar" : "en";
   const dispName = localizeName(catName, loc);
   const dispOwner = ownerName ? localizeName(ownerName, loc) : ownerName;

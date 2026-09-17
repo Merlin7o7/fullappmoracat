@@ -90,6 +90,7 @@ type CatRow = {
   acquisitionSource: string | null;
   district: string | null;
   homeBranchId: string | null;
+  lostModeAt: Date | null;
   profile: unknown;
   createdAt: Date;
   breed?: { nameEn: string; nameAr: string } | null;
@@ -881,6 +882,18 @@ export class CatsService implements OnModuleInit {
     return this.getHealth(userId, catId);
   }
 
+  /** Lost mode (T6): a timestamp, so "since when" is on the record. */
+  async setLostMode(userId: string, catId: string, enabled: boolean) {
+    await this.ownedCat(userId, catId);
+    const cat = await this.prisma.cat.update({
+      where: { id: catId },
+      data: { lostModeAt: enabled ? new Date() : null },
+      select: { id: true, lostModeAt: true, qrToken: true },
+    });
+    this.events.emit("lost_mode_toggled", { userId, catId, props: { enabled } });
+    return { id: cat.id, lostModeAt: cat.lostModeAt, qrToken: cat.qrToken };
+  }
+
   /** One primary emergency contact per cat; setting it again replaces it. */
   async upsertEmergencyContact(userId: string, catId: string, dto: EmergencyContactDto) {
     await this.ownedCat(userId, catId);
@@ -1225,6 +1238,7 @@ export class CatsService implements OnModuleInit {
       archivedAt: cat.archivedAt,
       deceasedAt: cat.deceasedAt,
       microchipNo: cat.microchipNo,
+      lostModeAt: cat.lostModeAt,
       coatColor: cat.coatColor,
       isNeutered: cat.isNeutered,
       currentMedications: cat.currentMedications,

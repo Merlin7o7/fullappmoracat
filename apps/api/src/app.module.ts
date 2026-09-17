@@ -45,6 +45,8 @@ import { VetModule } from "./vet/vet.module";
 import { EventsModule } from "./events/events.module";
 import { SmsModule } from "./sms/sms.module";
 import { ClaimsModule } from "./claims/claims.module";
+import { PublicCatsModule } from "./public-cats/public-cats.module";
+import { LinksModule } from "./links/links.module";
 
 @Module({
   imports: [
@@ -125,6 +127,10 @@ import { ClaimsModule } from "./claims/claims.module";
     VetModule,
     // The owner side of clinic-created patients: /claim/:token (T4).
     ClaimsModule,
+    // The collar QR's public page + found-cat relay (T6); tracked reminder
+    // actions at /r/:id (T5).
+    PublicCatsModule,
+    LinksModule,
   ],
   providers: [
     // Order matters: rate-limit → Community-Mode kill-switch → authenticate →

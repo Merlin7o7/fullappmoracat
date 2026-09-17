@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AdminAnalyticsService } from "./analytics.service";
 import { AdminMetricsService } from "./metrics.service";
 import { AdminCatsService } from "./admin-cats.service";
+import { LifecycleService } from "../lifecycle/lifecycle.service";
 import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
@@ -29,7 +30,8 @@ export class AdminController {
     private readonly refunds: RefundsService,
     private readonly audit: AdminAuditService,
     private readonly metrics_: AdminMetricsService,
-    private readonly adminCats: AdminCatsService
+    private readonly adminCats: AdminCatsService,
+    private readonly lifecycle: LifecycleService
   ) {}
 
   // ── Me ────────────────────────────────────────────────────────────────
@@ -80,6 +82,24 @@ export class AdminController {
   recomputeMetrics(@Body() body: { day?: string }) {
     const at = body?.day ? new Date(`${body.day}T12:00:00Z`) : new Date();
     return this.metrics_.snapshotDay(Number.isNaN(at.getTime()) ? new Date() : at);
+  }
+
+  // ── Scheduled jobs, on demand (T1) ───────────────────────────────────────
+  // For ops after a sleeping dyno missed a tick, and for the e2e suite. Same
+  // lease as the cron, so a manual run can never double up with a live tick.
+  @Post("jobs/:name/run")
+  @RequirePermissions("settings.write")
+  @ApiOperation({ summary: "Run a scheduled job now: lifecycle | metrics" })
+  async runJob(@Param("name") name: string) {
+    if (name === "lifecycle") {
+      await this.lifecycle.runNow();
+      return { ran: "lifecycle" };
+    }
+    if (name === "metrics") {
+      await this.metrics_.nightly();
+      return { ran: "metrics" };
+    }
+    throw new ForbiddenException("Unknown job");
   }
 
   // ── Cats (MRC-PROD-001 T4) ─────────────────────────────────────────────

@@ -29,6 +29,7 @@ export type NotificationType =
   | "renewal_payment_failed"
   | "membership_lapsed"
   | "vaccination_due"
+  | "cat_found_report"
   | "cat_birthday"
   | "member_anniversary"
   | "refund_requested"
@@ -279,15 +280,34 @@ export function buildNotificationText(
           body: `${p(params, "name")}'s record, ID and photos are all kept. Their place is waiting whenever you'd like to return.`,
         },
       };
-    case "vaccination_due":
+    case "vaccination_due": {
+      // Named clinic when the dose was written by one (T5): the reminder
+      // returns the patient to the clinic that cares for them.
+      const clinic = p(params, "clinic");
       return {
         ar: {
           title: `تطعيم ${p(params, "name")} يقترب`,
-          body: `موعد «${p(params, "vaccine")}» بتاريخ ${p(params, "dueAt")}. تذكير منّا — عناية بـ${p(params, "name")}.`,
+          body: clinic
+            ? `تذكير من ${clinic}: موعد «${p(params, "vaccine")}» لـ${p(params, "name")} بتاريخ ${p(params, "dueAt")}.`
+            : `موعد «${p(params, "vaccine")}» بتاريخ ${p(params, "dueAt")}. تذكير منّا — عناية بـ${p(params, "name")}.`,
         },
         en: {
           title: `${p(params, "name")}'s vaccination is coming up`,
-          body: `${p(params, "vaccine")} is due ${p(params, "dueAt")}. A reminder from us — looking after ${p(params, "name")}.`,
+          body: clinic
+            ? `A reminder from ${clinic}: ${p(params, "name")}'s ${p(params, "vaccine")} is due ${p(params, "dueAt")}.`
+            : `${p(params, "vaccine")} is due ${p(params, "dueAt")}. A reminder from us — looking after ${p(params, "name")}.`,
+        },
+      };
+    }
+    case "cat_found_report":
+      return {
+        ar: {
+          title: `شخص وجد ${p(params, "name")} 🐾`,
+          body: `مسح أحدهم رمز ${p(params, "name")} وترك رسالة: «${p(params, "message")}»${p(params, "phone") ? ` — تواصل معه على ${p(params, "phone")}` : ""}.`,
+        },
+        en: {
+          title: `Someone found ${p(params, "name")} 🐾`,
+          body: `Someone scanned ${p(params, "name")}'s tag and left a message: “${p(params, "message")}”${p(params, "phone") ? ` — reach them on ${p(params, "phone")}` : ""}.`,
         },
       };
     case "cat_birthday":
