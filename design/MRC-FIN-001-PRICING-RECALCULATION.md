@@ -1,5 +1,11 @@
 # MRC-FIN-001 — Market Pricing Recalculation & Sourcing Analysis
 
+> ⚠️ **Superseded (2026-07-23).** This is the analysis that led to Pricing Model v2.
+> Every price, margin and recipe figure below is historical; the committed model
+> is **`MRC-FIN-002-PRICING-MODEL-V2.md`** (Kitten 199 / Essentials 219 /
+> Complete 329 / Signature 479, household modules). Keep this document for the
+> market evidence and sourcing reasoning only.
+
 **Date:** 2026-07-23 · **Status:** Decision document — supersedes the internal-only value math in `seed-catalog.ts` and amends MRC-LAUNCH-001 §7
 **Method:** live prices read from amazon.sa, zarafaksa.com (Zarafa/الزرافة), petzone.com/ksa, pethouseksa.com (Pet House / بيت الأليفة), mycat.com.sa (My Cat/قطتي) on 2026-07-22/23; wholesale costs from `packages/db/data/supplier-catalog-2026-07.psv` (verified against the three box recipes in `seed-catalog.ts`); import economics from sourced industry research.
 **Every figure is tagged:** ✅ VERIFIED (read from a store page / repo file / cited source) or ⚠️ ESTIMATE (reasoned; treat as planning input).

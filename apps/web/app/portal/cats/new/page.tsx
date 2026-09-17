@@ -377,7 +377,7 @@ function IssueIdFlow() {
         }
       }
     },
-    [authedFetch, f.ownerName, f.ownerPhone, isAr, toast]
+    [authedFetch, f.ownerName, f.ownerPhone, f.ownerDialCode, isAr, toast]
   );
 
   const create = useMutation({

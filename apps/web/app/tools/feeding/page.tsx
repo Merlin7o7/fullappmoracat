@@ -246,7 +246,10 @@ export default function FeedingCalculatorPage() {
     } catch { /* ignore */ }
   };
 
-  const input: FeedingInput = {
+  // One memoised input object: the recommendation recomputes only when a
+  // field actually changes (and the hook's dependency list stays honest).
+  const input: FeedingInput = React.useMemo(
+    () => ({
     weightKg,
     ageMonths,
     activity,
@@ -255,10 +258,10 @@ export default function FeedingCalculatorPage() {
     neutered,
     dryShare,
     cats,
-  };
-  const rec = React.useMemo(() => calculateFeeding(input), [
-    weightKg, ageMonths, activity, bodyCondition, isIndoor, neutered, dryShare, cats,
-  ]);
+    }),
+    [weightKg, ageMonths, activity, bodyCondition, isIndoor, neutered, dryShare, cats]
+  );
+  const rec = React.useMemo(() => calculateFeeding(input), [input]);
 
   const confidencePct = Math.round(rec.confidence * 100);
 

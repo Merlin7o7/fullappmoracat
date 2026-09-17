@@ -18,10 +18,8 @@ coverage/
 playwright-report/
 test-results/
 
-# Env
-.env
-.env.local
-.env.*.local
+# Env — every .env* is local; only the documented example is tracked.
+.env*
 !.env.example
 
 # Prisma
@@ -45,9 +43,6 @@ Thumbs.db
 # Misc
 .vercel
 .sentryclirc
-
-.vercel
-.env*
 
 # Local dev object-storage fallback (prod uses R2)
 .uploads/

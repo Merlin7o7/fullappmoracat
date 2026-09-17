@@ -1,8 +1,8 @@
 # Deploying Moracat to your own domain
 
-Two supported paths. **Path A** (a server you control + Docker) is the best fit for
-"host it on my own domain" — one command brings up web + API + Postgres + Redis
-behind Caddy with automatic HTTPS. **Path B** is the fully-managed free trio.
+**Production runs the managed trio below** (Vercel + Render + Neon, files on
+Cloudflare R2). The Docker/VPS path further down is kept as an alternative for
+self-hosting and is *not* what moracat.co runs — treat it as best-effort.
 
 Throughout, replace `example.com` with your real domain.
 
@@ -33,7 +33,7 @@ Do these in order. You log into the accounts; the repo is pre-configured
    shared `@moraqat/core` package before the app. Add **Environment Variables**:
    - `NEXT_PUBLIC_API_BASE_URL` = `https://api.moracat.co`
    - `NEXT_PUBLIC_SITE_URL` = `https://moracat.co`
-   - `NEXT_PUBLIC_CAT_ID_BASE` = `https://moracat.co/c`
+   - `NEXT_PUBLIC_COMMERCE_ENABLED` = `false` until payments go live (mirrors the API switch)
 3. Deploy. Then **Settings → Domains** → add `moracat.co` **and** `www.moracat.co`.
 
 ### 4. GoDaddy DNS — add these records
@@ -55,7 +55,7 @@ and **https://api.moracat.co** the API. Push to `main` → both auto-redeploy.
 
 ---
 
-## Path A — One VPS + Docker (recommended, full control)
+## Alternative A — One VPS + Docker (self-hosting; not what production runs)
 
 **What you need:** a small Linux server with a public IP and SSH access.
 - Truly free option: **Oracle Cloud Always Free** (ARM VM, 24 GB RAM free forever).
@@ -107,7 +107,7 @@ Your site is now live at **https://example.com** with the API at
 
 ---
 
-## Path B — Managed, $0 (Vercel + Render + Neon)
+## Alternative B — Managed, generic domain (same trio as the ⭐ setup)
 
 Stable 24/7 on free tiers. Custom domain is free on Vercel. Trade-off: the free
 Render API cold-starts after ~15 min idle (first request takes ~30–50s).
@@ -130,7 +130,6 @@ Create a project at neon.tech → copy the `postgresql://…?sslmode=require` st
   output `apps/web/.next`, install `pnpm install`.
 - Env: `NEXT_PUBLIC_API_BASE_URL=https://api.example.com`,
   `NEXT_PUBLIC_SITE_URL=https://example.com`,
-  `NEXT_PUBLIC_CAT_ID_BASE=https://example.com/c`.
 - Add domain `example.com` in Vercel → it gives you the DNS records to set.
 
 ### DNS summary (Path B)

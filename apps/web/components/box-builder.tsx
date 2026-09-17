@@ -225,7 +225,9 @@ function LinePicker({
   catLifeStage?: "KITTEN" | "ADULT" | "SENIOR" | null;
   catSterilized?: boolean | null;
 }) {
-  const opts = line.options ?? [];
+  // Memoised so the facet memos below depend on a stable array, not a fresh
+  // `?? []` each render.
+  const opts = React.useMemo(() => line.options ?? [], [line.options]);
   const chosen = opts.find((o) => o.productId === chosenId);
   // Our recommendation stays reachable no matter how the facets are set —
   // "keep our pick" must never be filtered out of existence (R005).
