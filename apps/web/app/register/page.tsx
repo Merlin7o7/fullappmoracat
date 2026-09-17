@@ -15,6 +15,7 @@ import { OtpBoxes } from "@/components/otp-boxes";
 import { ApiError } from "@/lib/http";
 import { friendlyError } from "@/lib/errors";
 import { useCaptureSource } from "@/lib/source";
+import { readFirstTouch } from "@/lib/first-touch";
 import { track } from "@/lib/track";
 
 // Draft persistence (R117 — never lose entered data). Name, phone and email
@@ -112,6 +113,7 @@ export default function RegisterPage() {
     : (isAr ? "إنشاء الحساب" : "Create account");
 
   async function doRegister(withOtp?: string) {
+    const firstTouch = readFirstTouch();
     await register({
       fullName: form.fullName || undefined,
       email: form.email,
@@ -120,6 +122,8 @@ export default function RegisterPage() {
       acceptTerms: true,
       ...(withOtp ? { otp: withOtp } : {}),
       ...(refCode ? { ref: refCode } : {}),
+      // Where this person first arrived from (stand / campaign / referrer).
+      ...(firstTouch ? { firstTouch } : {}),
     });
     // Account created — the draft has done its job.
     clearSignupDraft();

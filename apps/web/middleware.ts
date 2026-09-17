@@ -133,7 +133,52 @@ export function middleware(req: NextRequest) {
 
   const res = NextResponse.next({ request: { headers: requestHeaders } });
   res.headers.set("Content-Security-Policy", csp);
+  setFirstTouch(req, res);
   return res;
+}
+
+/**
+ * First-touch attribution (MRC-PROD-001 T2). On a visitor's very first page
+ * request, remember what they arrived with — `?src=` (a stand), `utm_*`, a
+ * referral code, the referrer's host and the landing path — in a first-party
+ * cookie the register page copies onto the account. First touch wins: a later
+ * visit through a different link does not overwrite the channel that actually
+ * brought the person here. No personal data is ever stored here.
+ */
+const FIRST_TOUCH_COOKIE = "mrc_ft";
+const FIRST_TOUCH_DAYS = 90;
+
+function setFirstTouch(req: NextRequest, res: NextResponse): void {
+  if (req.cookies.has(FIRST_TOUCH_COOKIE)) return;
+  if (req.method !== "GET") return;
+  const { pathname, searchParams } = req.nextUrl;
+  // Only real page loads — never data/prefetch traffic.
+  if (pathname.startsWith("/_next") || pathname.startsWith("/api")) return;
+  if (req.headers.get("next-router-prefetch") || req.headers.get("purpose") === "prefetch") return;
+
+  const ft: Record<string, string> = { landingPath: pathname.slice(0, 120), at: new Date().toISOString().slice(0, 10) };
+  for (const key of ["src", "utm_source", "utm_medium", "utm_campaign", "utm_content", "ref"]) {
+    const v = searchParams.get(key);
+    if (v) ft[key] = v.slice(0, 120);
+  }
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      const host = new URL(referer).host;
+      if (host && host !== req.nextUrl.host) ft.referrerHost = host.slice(0, 120);
+    } catch {
+      /* malformed referer — ignore */
+    }
+  }
+
+  res.cookies.set(FIRST_TOUCH_COOKIE, encodeURIComponent(JSON.stringify(ft)), {
+    maxAge: FIRST_TOUCH_DAYS * 86_400,
+    path: "/",
+    sameSite: "lax",
+    secure: IS_PROD,
+    // Readable by the register page (it is attribution, not a credential).
+    httpOnly: false,
+  });
 }
 
 export const config = {

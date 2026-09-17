@@ -19,6 +19,7 @@ import { IdsService } from "../ids/ids.service";
 import { StorageService } from "../storage/storage.service";
 import { MailService } from "../mail/mail.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { EventsService } from "../events/events.service";
 import { catIdIssuedTemplate } from "../mail/mail.templates";
 import { normalizeName } from "../common/text";
 import type { UpdateVisibilityDto } from "./dto/cat-visibility.dto";
@@ -230,7 +231,8 @@ export class CatsService implements OnModuleInit {
     private readonly ids: IdsService,
     private readonly storage: StorageService,
     private readonly mail: MailService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly events: EventsService
   ) {}
 
   /**
@@ -324,6 +326,11 @@ export class CatsService implements OnModuleInit {
           : undefined,
       },
       include: catInclude,
+    });
+    this.events.emit("cat_id_issued", {
+      userId,
+      catId: cat.id,
+      props: { origin: "OWNER", src: cat.sourceCode ?? null, city: cat.cityCode ?? null, hasPhoto: !!cat.photoUrl },
     });
 
     // The first cat a household adds becomes the Primary Cat automatically —

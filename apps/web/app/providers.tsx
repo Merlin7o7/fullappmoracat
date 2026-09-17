@@ -9,6 +9,7 @@ import { dict, type Locale } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { CookieConsent } from "@/components/cookie-consent";
 import { type CalendarPref, CALENDAR_STORAGE_KEY, setCurrentCalendar } from "@/lib/datetime";
+import { trackPageLanded } from "@/lib/track";
 
 type Dictionary = (typeof dict)[Locale];
 type LocaleCtx = {
@@ -86,6 +87,12 @@ export function Providers({
     document.documentElement.lang = locale;
     document.documentElement.dir = dict[locale].dir;
   }, [locale]);
+
+  // One landing event per browser session, with whatever attribution was on
+  // the URL (MRC-PROD-001 T2). Coarse, first-party, never personal.
+  React.useEffect(() => {
+    trackPageLanded();
+  }, []);
 
   // Client-side error tracking — loaded only when a DSN is configured, so it
   // adds nothing to the bundle payload for unconfigured/dev environments.

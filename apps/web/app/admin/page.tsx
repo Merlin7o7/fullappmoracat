@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, Repeat, Users, ShoppingBag, Wallet, Percent, Cat, ListChecks } from "lucide-react";
+import { TrendingUp, Repeat, Users, ShoppingBag, Wallet, Percent, Cat, ListChecks, Stethoscope } from "lucide-react";
+import type { MetricSnapshotData } from "@moraqat/core";
 import { Card, Skeleton, AnimatedCounter } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -18,6 +19,13 @@ interface Dashboard {
   ordersByStatus: { status: string; count: number }[];
   topProducts: { productId: string; name: string; unitsSold: number; revenue: number }[];
   recentOrders: { orderNumber: string; status: string; grandTotal: number; customer: string; placedAt: string }[];
+}
+
+type MetricDay = MetricSnapshotData;
+interface Metrics {
+  days: number;
+  today: { day: string; data: MetricDay };
+  series: { day: string; data: MetricDay }[];
 }
 
 export default function AdminDashboard() {
@@ -45,6 +53,23 @@ export default function AdminDashboard() {
     enabled: !!user?.isStaff,
   });
 
+  // The living record (MRC-STRAT-001 §F): the numbers the strategy steers by.
+  // Today is computed live so the strip is never empty on day one.
+  const metrics = useQuery({
+    queryKey: ["admin-metrics", user?.id],
+    queryFn: () => authedFetch<Metrics>("/admin/metrics?days=30"),
+    enabled: !!user?.isStaff,
+  });
+  const m = metrics.data?.today.data;
+  const last30 = (key: keyof MetricDay) =>
+    (metrics.data?.series ?? []).reduce((sum, r) => sum + (Number(r.data[key]) || 0), 0) + (Number(m?.[key]) || 0);
+  const recordStats = [
+    { icon: Stethoscope, label: isAr ? "قطط موثّقة من عيادة" : "Clinic-verified active cats", num: m?.cvac, sub: isAr ? "المؤشر الأول" : "north star" },
+    { icon: Cat, label: isAr ? "قطط مسجّلة" : "Registered cats", num: m?.catsRegisteredTotal, sub: m ? (isAr ? `${m.catsByOrigin.CLINIC} عبر العيادات` : `${m.catsByOrigin.CLINIC} via clinics`) : "" },
+    { icon: ListChecks, label: isAr ? "هويات صدرت — ٣٠ يوماً" : "Cat IDs issued — 30d", num: metrics.data ? last30("catIdsIssued") : undefined, sub: metrics.data ? (isAr ? `${last30("claimsAccepted")} مطالبات مقبولة` : `${last30("claimsAccepted")} claims accepted`) : "" },
+    { icon: Stethoscope, label: isAr ? "عيادات فعّالة" : "Clinics live", num: m?.clinicsLive, sub: metrics.data ? (isAr ? `${last30("clinicalEntries")} سجلاً — ٣٠ يوماً` : `${last30("clinicalEntries")} entries — 30d`) : "" },
+  ];
+
   const kpis = data?.kpis;
   const commStats = [
     { icon: Cat, label: isAr ? "قطط عامة" : "Public cats", num: community.data?.publicCats },
@@ -71,6 +96,22 @@ export default function AdminDashboard() {
         <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
       ) : (
         <>
+
+      {/* The living record — what the strategy steers by (MRC-STRAT-001 §F). */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {recordStats.map((c) => (
+          <Card key={c.label} className="p-5">
+            <span className="mb-3 grid size-9 place-items-center rounded-lg bg-primary/10 text-primary"><c.icon className="size-4" /></span>
+            {metrics.isLoading || c.num == null ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              <p className="font-display text-2xl font-bold tabular"><AnimatedCounter value={c.num} /></p>
+            )}
+            <p className="text-sm text-muted-foreground">{c.label}</p>
+            {c.sub && <p className="mt-1 text-xs text-muted-foreground">{c.sub}</p>}
+          </Card>
+        ))}
+      </div>
 
       {/* Community-Mode strip — the live product (commerce KPIs below read 0
           until memberships launch). */}

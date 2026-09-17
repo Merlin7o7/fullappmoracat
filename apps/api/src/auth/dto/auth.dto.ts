@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsEmail,
   IsIn,
+  IsObject,
   IsOptional,
   IsString,
   Matches,
@@ -88,6 +89,15 @@ export class RegisterDto {
   @IsString()
   @MaxLength(32)
   ref?: string;
+
+  /**
+   * First-touch attribution from the landing cookie (src, utm_*, ref,
+   * referrer host, landing path). Re-sanitised server-side; never PII.
+   */
+  @ApiPropertyOptional({ example: { src: "stand-004", utm_source: "snapchat" } })
+  @IsOptional()
+  @IsObject()
+  firstTouch?: Record<string, unknown>;
 }
 
 export class LoginDto {

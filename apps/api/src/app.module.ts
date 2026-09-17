@@ -42,6 +42,7 @@ import { UploadsModule } from "./uploads/uploads.module";
 import { WalletModule } from "./wallet/wallet.module";
 import { LifecycleModule } from "./lifecycle/lifecycle.module";
 import { VetModule } from "./vet/vet.module";
+import { EventsModule } from "./events/events.module";
 
 @Module({
   imports: [
@@ -89,6 +90,9 @@ import { VetModule } from "./vet/vet.module";
     // vaccination reminders, birthdays/anniversaries, DRAFT expiry).
     ScheduleModule.forRoot(),
     PrismaModule,
+    // First-party product events — global so every domain can record the
+    // fact it owns (MRC-PROD-001 T2).
+    EventsModule,
 
     CommonModule,
     IdsModule,

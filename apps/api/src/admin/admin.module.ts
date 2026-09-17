@@ -5,6 +5,7 @@ import { AdminCommunityController } from "./admin-community.controller";
 import { AdminStaffController } from "./staff.controller";
 import { FeatureFlagsController } from "./feature-flags.controller";
 import { AdminAnalyticsService } from "./analytics.service";
+import { AdminMetricsService } from "./metrics.service";
 import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
@@ -18,6 +19,7 @@ import { CmsService } from "./cms.service";
   controllers: [AdminController, CmsController, AdminCommunityController, AdminStaffController, FeatureFlagsController],
   providers: [
     AdminAnalyticsService,
+    AdminMetricsService,
     AdminAuditService,
     AdminCustomersService,
     AdminOrdersService,

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { FirstTouch } from "@moraqat/core";
 import { fetchWithTimeout, httpError, ApiError, friendly } from "./http";
 import { clearAllCachedCats } from "./offline";
 
@@ -53,6 +54,8 @@ export interface RegisterInput {
   otp?: string;
   /** Referral code from ?ref= — attributes the signup to the inviting member. */
   ref?: string;
+  /** First-touch attribution from the landing cookie (see lib/first-touch.ts). */
+  firstTouch?: FirstTouch;
 }
 
 interface AuthContextValue extends AuthState {

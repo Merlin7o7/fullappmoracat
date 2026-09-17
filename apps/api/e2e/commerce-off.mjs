@@ -42,6 +42,9 @@ ok(health.json?.status === "ok" && health.json?.db === "up", "API boots with com
 const email = `killswitch+${rnd()}@e.com`;
 const reg = (await call("/auth/register", "POST", { email, password: "S3cure!pass", firstName: "Kill", acceptTerms: true })).json;
 const C = reg.accessToken;
+// Measurement is not commerce: the event log keeps working while the switch
+// is off (the census funnel is exactly what Phase 0 needs to measure).
+ok((await call("/events", "POST", { name: "page_landed", anonId: "e2e-off-1" })).status === 202, "client events still recorded with commerce off");
 ok(!!C, "member can still register an account while commerce is off");
 
 console.log("━━ pricing surfaces are unreachable ━━");

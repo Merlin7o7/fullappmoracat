@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../prisma/prisma.service";
+import { withJobLock } from "../common/jobs/job-lock";
 import { VetRegistrationService } from "./vet-registration.service";
 
 /** Warn this many days before a licence or CR lapses. */
@@ -30,6 +31,12 @@ export class VetComplianceService {
 
   @Cron(CronExpression.EVERY_DAY_AT_6AM, { name: "vet-compliance", timeZone: "Asia/Riyadh" })
   async run(now: Date = new Date()) {
+    // One instance per day, with a lease trail + heartbeat (MRC-PROD-001 T1).
+    const outcome = await withJobLock(this.prisma, "vet-compliance", 20 * 60_000, () => this.runPass(now));
+    return outcome.result ?? { pulled: 0, warned: 0 };
+  }
+
+  private async runPass(now: Date) {
     try {
       const pulled = await this.pullExpiredBranches(now);
       const warned = await this.warnExpiring(now);

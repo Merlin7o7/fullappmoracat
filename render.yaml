@@ -64,6 +64,14 @@ services:
         sync: false
       - key: LOG_LEVEL
         value: info
+      # Cron heartbeats (Healthchecks.io-style ping URLs) — paste in the
+      # dashboard. A missed ping is the "dyno slept through the tick" alarm.
+      - key: HEARTBEAT_URL_LIFECYCLE
+        sync: false
+      - key: HEARTBEAT_URL_VET_COMPLIANCE
+        sync: false
+      - key: HEARTBEAT_URL_METRICS
+        sync: false
       # Seed admin: created ONLY when this is set (prod is skipped otherwise);
       # must be ≥12 chars. Leave unset unless bootstrapping the first admin.
       - key: ADMIN_SEED_PASSWORD

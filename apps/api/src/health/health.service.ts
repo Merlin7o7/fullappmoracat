@@ -12,6 +12,12 @@ export interface HealthReport {
   schema: SchemaState;
   /** Bundled migrations that the database has not applied (drift evidence). */
   pendingMigrations?: string[];
+  /**
+   * Scheduled-job trail (MRC-PROD-001 T1): when each job last finished and
+   * whether it failed. A job that has not finished within its cadence is the
+   * sleeping-dyno failure mode an uptime monitor can now see.
+   */
+  jobs?: Record<string, { lastStartedAt: string | null; lastFinishedAt: string | null; lastError: string | null }>;
   timestamp: string;
 }
 
@@ -94,14 +100,38 @@ export class HealthService implements OnModuleInit {
     }
 
     const healthy = db === "up" && schema !== "drift";
+    const jobs = db === "up" && schema === "ok" ? await this.jobTrail() : undefined;
     return {
       status: healthy ? "ok" : "degraded",
       service: "moraqat-api",
       db,
       schema,
       ...(pendingMigrations ? { pendingMigrations } : {}),
+      ...(jobs ? { jobs } : {}),
       timestamp: new Date().toISOString(),
     };
+  }
+
+  /** Read-only view of the job leases; never fails the health check. */
+  private async jobTrail(): Promise<HealthReport["jobs"] | undefined> {
+    try {
+      const rows = await this.prisma.jobLease.findMany({
+        select: { name: true, lastStartedAt: true, lastFinishedAt: true, lastError: true },
+      });
+      if (!rows.length) return undefined;
+      return Object.fromEntries(
+        rows.map((r) => [
+          r.name,
+          {
+            lastStartedAt: r.lastStartedAt?.toISOString() ?? null,
+            lastFinishedAt: r.lastFinishedAt?.toISOString() ?? null,
+            lastError: r.lastError,
+          },
+        ])
+      );
+    } catch {
+      return undefined;
+    }
   }
 
   /**

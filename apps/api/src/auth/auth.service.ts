@@ -13,6 +13,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { IdsService } from "../ids/ids.service";
 import { MailService } from "../mail/mail.service";
+import { EventsService } from "../events/events.service";
+import { sanitizeFirstTouch } from "@moraqat/core";
 import { resolveJwtSecret } from "../common/config/secrets";
 import { authError } from "../common/errors";
 import { PASSWORD_RULES, passwordRuleFailures } from "./password-policy";
@@ -73,7 +75,8 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly notifications: NotificationsService,
     private readonly ids: IdsService,
-    private readonly mail: MailService
+    private readonly mail: MailService,
+    private readonly events: EventsService
   ) {}
 
   // ── Registration ────────────────────────────────────────────────────────
@@ -119,6 +122,10 @@ export class AuthService {
       if (referrer) referredByCode = dto.ref;
     }
 
+    // First-touch attribution from the landing cookie — allow-listed and
+    // clipped, so a crafted request can at most invent a campaign name.
+    const firstTouch = sanitizeFirstTouch(dto.firstTouch);
+
     const user = await this.prisma.user.create({
       data: {
         email,
@@ -132,10 +139,21 @@ export class AuthService {
         status: "ACTIVE",
         phoneVerified,
         referredByCode,
+        firstTouch: firstTouch ?? undefined,
         termsAcceptedAt: new Date(),
         // Provision wallet + loyalty on signup.
         wallet: { create: {} },
         loyalty: { create: {} },
+      },
+    });
+    this.events.emit("user_registered", {
+      userId: user.id,
+      props: {
+        method: "email",
+        hasPhone: !!phone,
+        referred: !!referredByCode,
+        src: firstTouch?.src ?? null,
+        utm_source: firstTouch?.utm_source ?? null,
       },
     });
 
@@ -236,6 +254,7 @@ export class AuthService {
             loyalty: { create: {} },
           },
         });
+    if (!existing) this.events.emit("user_registered", { userId: user.id, props: { method: "invite" } });
 
     return this.completeLogin(user.id, user.email, user.isStaff, this.publicUser(user), false, meta);
   }
@@ -406,6 +425,7 @@ export class AuthService {
           loyalty: { create: {} },
         },
       });
+      this.events.emit("user_registered", { userId: user.id, props: { method: "google" } });
       // Google emails are already verified — just welcome them.
       void this.dispatchWelcome(user.email, user.firstName, user.locale);
     }

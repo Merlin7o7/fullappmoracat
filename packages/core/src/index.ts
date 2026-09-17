@@ -23,3 +23,7 @@ export * from "./saudi-cities";
 // Clinic registration (MRC-VET-002) — steps, Saudi field rules, the one
 // completeness check, the go-live checklist and the versioned terms text.
 export * from "./vet-registration";
+// Product events + the operating metrics (MRC-PROD-001 T2) — one vocabulary
+// for the API, the web app and the nightly roll-up.
+export * from "./events";
+export * from "./metrics";

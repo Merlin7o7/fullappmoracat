@@ -64,6 +64,25 @@ enum CatStatus {
   DECEASED
 }
 
+/// How a cat entered the record. OWNER = the member registered it; CLINIC = a
+/// partner clinic created it at the counter for a walk-in (MRC-PROD-001 T4)
+/// and the owner claimed it afterwards; ADMIN_IMPORT is reserved for staff
+/// backfills. Measured, never edited: it is the acquisition channel.
+enum CatOrigin {
+  OWNER
+  CLINIC
+  ADMIN_IMPORT
+}
+
+/// Whether a real owner holds this cat. A clinic-created cat sits at
+/// PENDING_CLAIM (owned by the system placeholder account) until the owner
+/// follows the claim link; every owner-facing send and public count filters on
+/// CLAIMED so a pending record is never mistaken for a member's.
+enum CatClaimStatus {
+  CLAIMED
+  PENDING_CLAIM
+}
+
 /// Per-cat membership standing. Each cat carries its own identity and benefits,
 /// so membership is tracked per cat, not only per account.
 enum CatMembershipStatus {
@@ -342,6 +361,10 @@ model User {
   /// (captured from ?ref= at signup). Powers the invite loop + "invited N friends".
   referralCode   String?   @unique
   referredByCode String?
+  /// First-touch attribution captured on the visitor's first landing (src,
+  /// utm_*, ref, referrer host, landing path) and copied here at registration.
+  /// Allow-listed + clipped by `sanitizeFirstTouch` (packages/core). Never PII.
+  firstTouch     Json?
   lastLoginAt   DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -694,6 +717,11 @@ model Cat {
   /// Gaps are possible (a rolled-back insert consumes a value); that is fine,
   /// because founding status is defined by the *number*, not by a running count.
   catNumber      Int           @unique @default(autoincrement())
+  /// Acquisition channel + claim state (MRC-PROD-001 T2/T4). See the enums.
+  origin         CatOrigin      @default(OWNER)
+  claimStatus    CatClaimStatus @default(CLAIMED)
+  /// When a clinic-created cat was claimed by its owner (null for OWNER origin).
+  claimedAt      DateTime?
   /// Where this cat lives — a census city code from packages/core SAUDI_CITIES
   /// (e.g. "jeddah", "makkah"). NOT a FK to the `cities` table: that one is the
   /// *delivery* city list and knows only where we can ship, which during the
@@ -838,6 +866,9 @@ model Cat {
   /// Per-city census counts — "how many cats does Riyadh have?" is the
   /// question the campaign is built on (MRC-GTM-001 §1).
   @@index([cityCode])
+  /// Owner-facing sends and counts filter pending-claim cats out.
+  @@index([claimStatus])
+  @@index([origin, createdAt])
   @@map("cats")
 }
 
@@ -2059,6 +2090,57 @@ model LifecycleEvent {
   @@index([userId, type])
   @@index([catId, type])
   @@map("lifecycle_events")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  RELIABILITY + MEASUREMENT (MRC-PROD-001 T1/T2)
+// ─────────────────────────────────────────────────────────────────────────
+
+/// One row per scheduled job. A compare-and-set on `leaseUntil` guarantees at
+/// most one instance runs a tick, and the trailing fields are what /health and
+/// the heartbeat monitor read. Works through pgbouncer, unlike advisory locks.
+model JobLease {
+  name           String    @id
+  leaseUntil     DateTime
+  holder         String?
+  lastStartedAt  DateTime?
+  lastFinishedAt DateTime?
+  lastDurationMs Int?
+  lastError      String?
+
+  @@map("job_leases")
+}
+
+/// The first-party event log. Deliberately no foreign keys: an event is a fact
+/// about a moment and must survive the row it referred to (a merged cat, a
+/// deleted account). Names come from packages/core `events.ts`.
+model ProductEvent {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String?
+  catId     String?
+  orgId     String?
+  /// Random, non-identifying browser id for pre-signup funnels.
+  anonId    String?
+  source    String   @default("api")
+  props     Json?
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([userId, createdAt])
+  @@index([orgId, name, createdAt])
+  @@map("product_events")
+}
+
+/// One Riyadh calendar day of operating metrics (packages/core `metrics.ts`),
+/// recomputed nightly from the source tables.
+model MetricSnapshot {
+  id         String   @id @default(cuid())
+  day        DateTime @unique @db.Date
+  data       Json
+  computedAt DateTime @default(now())
+
+  @@map("metric_snapshots")
 }
 
 // ─────────────────────────────────────────────────────────────────────────

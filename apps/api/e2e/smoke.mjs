@@ -203,6 +203,26 @@ ok(plans.every((p) => p.contents.every((c) => c.labelAr && c.unitAr)), "box cont
 const admin = (await call("/auth/login", "POST", { email: "admin@moraqat.sa", password: "Admin!2026" })).json;
 const A = admin.accessToken;
 ok(!!A, "admin login");
+
+console.log("━━ events + metrics (MRC-PROD-001 T1/T2) ━━");
+// The public event write accepts ONLY the client allow-list: a visitor can say
+// they landed, never that a Cat ID was issued.
+ok((await call("/events", "POST", { name: "page_landed", anonId: "e2e-anon-1", props: { path: "/", email: "leak@x.y" } })).status === 202, "client event accepted (202)");
+ok((await call("/events", "POST", { name: "cat_id_issued", anonId: "e2e-anon-1" })).status === 400, "server-only event name rejected at the public endpoint (400)");
+ok((await call("/events", "POST", { name: "page_landed", anonId: "bad id!" })).status === 400, "malformed anonId rejected (400)");
+// First-touch attribution survives registration, allow-listed and clipped.
+{
+  const ft = (await call("/auth/register", "POST", { email: `ft+${rnd()}@e.com`, password: "S3cure!pass", acceptTerms: true, firstTouch: { src: "stand-004", utm_source: "snapchat", junk: "x", phone: "0500000000" } })).json;
+  ok(!!ft.accessToken, "register accepts firstTouch");
+}
+{
+  const m = await call("/admin/metrics?days=7", "GET", undefined, A);
+  ok(m.status === 200 && typeof m.json?.today?.data?.cvac === "number" && typeof m.json?.today?.data?.catsRegisteredTotal === "number", "admin metrics: today computed live with CVAC");
+  ok(m.json?.today?.data?.catsRegisteredTotal >= 3, "registered-cat count sees the cats created above");
+  const snap = await call("/admin/metrics/recompute", "POST", {}, A);
+  ok(snap.status === 201 && typeof snap.json?.registrations === "number", "metrics snapshot can be recomputed on demand");
+  ok((await call("/admin/metrics", "GET", undefined, C)).status === 403, "metrics are staff-only (403 for a member)");
+}
 const ss = rnd();
 const dry = (await call("/admin/products", "POST", { slug: `smoke-dry-${ss}`, sku: `SMKD-${ss.toUpperCase()}`, type: "DRY_FOOD", nameEn: "Smoke Dry", nameAr: "جاف", price: 49 }, A)).json;
 let cart = (await call("/cart", "POST")).json;

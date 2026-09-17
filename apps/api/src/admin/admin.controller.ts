@@ -1,6 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AdminAnalyticsService } from "./analytics.service";
+import { AdminMetricsService } from "./metrics.service";
 import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
@@ -25,7 +26,8 @@ export class AdminController {
     private readonly subscriptions: AdminSubscriptionsService,
     private readonly staff: AdminStaffService,
     private readonly refunds: RefundsService,
-    private readonly audit: AdminAuditService
+    private readonly audit: AdminAuditService,
+    private readonly metrics_: AdminMetricsService
   ) {}
 
   // ── Me ────────────────────────────────────────────────────────────────
@@ -57,6 +59,25 @@ export class AdminController {
   @ApiOperation({ summary: "Census yield — registrations over time and per acquisition source" })
   census() {
     return this.analytics.census();
+  }
+
+  // ── Operating metrics (MRC-STRAT-001 §F) ───────────────────────────────
+  // CVAC, registrations by origin, claims, reminders — from nightly snapshots
+  // plus today computed live. Not @Commercial(): the record is measured
+  // whether or not anything is for sale.
+  @Get("metrics")
+  @RequirePermissions("dashboard.read")
+  @ApiOperation({ summary: "Operating metrics — nightly snapshots + today live" })
+  metrics(@Query("days") days?: string) {
+    return this.metrics_.series(Number(days) || 30);
+  }
+
+  @Post("metrics/recompute")
+  @RequirePermissions("dashboard.read")
+  @ApiOperation({ summary: "Recompute a day's snapshot (default: today)" })
+  recomputeMetrics(@Body() body: { day?: string }) {
+    const at = body?.day ? new Date(`${body.day}T12:00:00Z`) : new Date();
+    return this.metrics_.snapshotDay(Number.isNaN(at.getTime()) ? new Date() : at);
   }
 
   // ── Audit log (read-only accountability surface) ───────────────────────

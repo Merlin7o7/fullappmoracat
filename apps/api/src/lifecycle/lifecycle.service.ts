@@ -11,6 +11,7 @@ import {
 } from "../mail/mail.templates";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { commerceEnabled } from "../common/config/features";
+import { withJobLock } from "../common/jobs/job-lock";
 import { termTotal as termUpfrontTotal } from "../common/config/pricing";
 import {
   PAYMENT_PROVIDER_FACTORY,
@@ -79,6 +80,13 @@ export class LifecycleService {
    */
   @Cron(CronExpression.EVERY_HOUR, { name: "lifecycle" })
   async run() {
+    // At most one instance per tick, with a trail /health can read and a
+    // heartbeat the monitor can miss (MRC-PROD-001 T1). Lease TTL is under the
+    // hourly cadence so a crashed holder never blocks the next pass.
+    await withJobLock(this.prisma, "lifecycle", 50 * 60_000, () => this.runPass());
+  }
+
+  private async runPass() {
     const started = Date.now();
     // The kill-switch has to be read HERE as well as inside the services: this
     // cron runs in-process, and CommerceGuard is an APP_GUARD that only ever
