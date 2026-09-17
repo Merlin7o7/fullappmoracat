@@ -30,3 +30,5 @@ export * from "./metrics";
 // The owner's view of clinic-written records — the only place that decides
 // which clinical facts leave the clinic portal (MRC-PROD-001 T3).
 export * from "./owner-health";
+// Clinic-created patients + the claim link (MRC-PROD-001 T4).
+export * from "./claim";

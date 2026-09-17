@@ -2,6 +2,7 @@ import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query } 
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AdminAnalyticsService } from "./analytics.service";
 import { AdminMetricsService } from "./metrics.service";
+import { AdminCatsService } from "./admin-cats.service";
 import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
@@ -27,7 +28,8 @@ export class AdminController {
     private readonly staff: AdminStaffService,
     private readonly refunds: RefundsService,
     private readonly audit: AdminAuditService,
-    private readonly metrics_: AdminMetricsService
+    private readonly metrics_: AdminMetricsService,
+    private readonly adminCats: AdminCatsService
   ) {}
 
   // ── Me ────────────────────────────────────────────────────────────────
@@ -78,6 +80,21 @@ export class AdminController {
   recomputeMetrics(@Body() body: { day?: string }) {
     const at = body?.day ? new Date(`${body.day}T12:00:00Z`) : new Date();
     return this.metrics_.snapshotDay(Number.isNaN(at.getTime()) ? new Date() : at);
+  }
+
+  // ── Cats (MRC-PROD-001 T4) ─────────────────────────────────────────────
+  @Get("cats")
+  @RequirePermissions("customers.read")
+  @ApiOperation({ summary: "Find any cat by Cat ID, microchip, owner phone/email or name" })
+  cats(@Query("q") q?: string, @Query("page") page?: string) {
+    return this.adminCats.search(q, Number(page) || 1);
+  }
+
+  @Post("cats/:id/merge")
+  @RequirePermissions("customers.write")
+  @ApiOperation({ summary: "Fold this cat into another cat of the same owner (records move, source archived)" })
+  mergeCats(@CurrentUser() user: AuthUser, @Param("id") id: string, @Body() body: { targetId: string }) {
+    return this.adminCats.merge(user.id, id, body.targetId);
   }
 
   // ── Audit log (read-only accountability surface) ───────────────────────

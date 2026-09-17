@@ -735,6 +735,12 @@ model Cat {
   claimStatus    CatClaimStatus @default(CLAIMED)
   /// When a clinic-created cat was claimed by its owner (null for OWNER origin).
   claimedAt      DateTime?
+  /// The clinic + staff member who created this cat at the counter (T4).
+  createdByOrgId   String?
+  createdByStaffId String?
+  /// Set when this row was merged into another cat (soft-deleted); the survivor
+  /// keeps every record. Lets a stale link resolve to the right cat.
+  mergedIntoCatId  String?
   /// Where this cat lives — a census city code from packages/core SAUDI_CITIES
   /// (e.g. "jeddah", "makkah"). NOT a FK to the `cities` table: that one is the
   /// *delivery* city list and knows only where we can ship, which during the
@@ -866,9 +872,11 @@ model Cat {
   recordAccessLogs  RecordAccessLog[]
   emergencyContacts CatEmergencyContact[]
   homeBranch        Branch?               @relation("CatHomeBranch", fields: [homeBranchId], references: [id], onDelete: SetNull)
+  claimInvites      ClaimInvite[]
 
   @@index([userId])
   @@index([homeBranchId])
+  @@index([createdByOrgId])
   @@index([userId, status])
   // Community browse: public + not hidden, ordered by recency / popularity /
   // featured. Partial-index-friendly composite keys.
@@ -2161,6 +2169,41 @@ model ProductEvent {
   @@index([userId, createdAt])
   @@index([orgId, name, createdAt])
   @@map("product_events")
+}
+
+/// A clinic-created cat's claim link (MRC-PROD-001 T4). The clinic creates the
+/// cat for a walk-in and hands the owner a link (SMS or on-screen QR); following
+/// it moves the cat from the placeholder owner to the real one and issues the
+/// Cat ID. Token stored hashed; the phone stays so the link can be re-sent and
+/// the owner can prove possession by OTP. One live invite per cat at a time —
+/// refreshing revokes the previous one.
+model ClaimInvite {
+  id               String    @id @default(cuid())
+  catId            String
+  orgId            String
+  branchId         String?
+  /// E.164 as the clinic typed it (normalised). Needed to (re)send and to OTP.
+  phone            String
+  phoneHash        String
+  phoneLast4       String
+  tokenHash        String    @unique
+  expiresAt        DateTime
+  claimedAt        DateTime?
+  claimedByUserId  String?
+  revokedAt        DateTime?
+  sentCount        Int       @default(0)
+  lastSentAt       DateTime?
+  /// The staff member who confirmed the owner agreed at the counter.
+  attestedByStaffId String?
+  attestedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId])
+  @@index([orgId, createdAt])
+  @@index([phoneHash])
+  @@map("cat_claim_invites")
 }
 
 /// One Riyadh calendar day of operating metrics (packages/core `metrics.ts`),

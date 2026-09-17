@@ -8,14 +8,18 @@
  *   • consent    — may this CLINIC see this depth? (the owner decides)
  *   • ledger     — the owner is told, every time.
  */
-import { Controller, Get, Ip, Param, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Ip, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { VetStaffGuard } from "./guards/vet-staff.guard";
 import { VetCapability } from "./decorators/vet-capability.decorator";
 import { VetActorParam } from "./decorators/vet-actor.decorator";
 import { VetPatientsService, type VetActor } from "./vet-patients.service";
+import { VetClaimsService } from "./vet-claims.service";
 import {
+  CreatePatientDto,
   PrescriptionListQueryDto,
+  RefreshClaimDto,
   SearchPatientsQueryDto,
   TimelineQueryDto,
   WeightSeriesQueryDto,
@@ -27,7 +31,26 @@ import {
 @UseGuards(VetStaffGuard)
 @Controller("vet/patients")
 export class VetPatientsController {
-  constructor(private readonly patients: VetPatientsService) {}
+  constructor(
+    private readonly patients: VetPatientsService,
+    private readonly claims: VetClaimsService
+  ) {}
+
+  // ── Walk-ins (MRC-PROD-001 T4) ─────────────────────────────────────────
+  @Post()
+  @VetCapability("patient.create")
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({
+    summary: "Register a walk-in cat and hand the owner a claim link",
+    description:
+      "Creates the cat (owned by the system placeholder until claimed), opens an intake visit so " +
+      "the clinic can write the record immediately, and mints a one-time claim link. Returns the " +
+      "link once for the counter screen; SMS delivery is behind CLAIM_SMS_ENABLED. If a cat with " +
+      "that microchip or (owner phone + name) already exists, returns it instead of a duplicate.",
+  })
+  createPatient(@VetActorParam() actor: VetActor, @Body() dto: CreatePatientDto) {
+    return this.claims.createPatient(actor, dto);
+  }
 
   // Declared BEFORE :catId — Nest matches in declaration order, so a literal
   // segment placed after a param route would be swallowed by it.
@@ -58,6 +81,21 @@ export class VetPatientsController {
   @ApiOkResponse({ description: "Result cards + the scope the search actually ran under." })
   search(@VetActorParam() actor: VetActor, @Query() query: SearchPatientsQueryDto) {
     return this.patients.search(actor, query);
+  }
+
+  @Get(":catId/claim")
+  @VetCapability("patient.search")
+  @ApiOperation({ summary: "Claim state of a clinic-created cat (never the token)" })
+  claimState(@VetActorParam() actor: VetActor, @Param("catId") catId: string) {
+    return this.claims.getClaim(actor, catId);
+  }
+
+  @Post(":catId/claim/refresh")
+  @VetCapability("patient.create")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: "Mint a fresh claim link (revokes the previous) and optionally re-send the SMS" })
+  refreshClaim(@VetActorParam() actor: VetActor, @Param("catId") catId: string, @Body() dto: RefreshClaimDto) {
+    return this.claims.refreshClaim(actor, catId, dto ?? {});
   }
 
   @Get(":catId")

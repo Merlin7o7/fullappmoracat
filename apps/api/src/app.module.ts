@@ -43,6 +43,8 @@ import { WalletModule } from "./wallet/wallet.module";
 import { LifecycleModule } from "./lifecycle/lifecycle.module";
 import { VetModule } from "./vet/vet.module";
 import { EventsModule } from "./events/events.module";
+import { SmsModule } from "./sms/sms.module";
+import { ClaimsModule } from "./claims/claims.module";
 
 @Module({
   imports: [
@@ -93,6 +95,8 @@ import { EventsModule } from "./events/events.module";
     // First-party product events — global so every domain can record the
     // fact it owns (MRC-PROD-001 T2).
     EventsModule,
+    // One SMS sender for OTPs, claim links and found-cat relays.
+    SmsModule,
 
     CommonModule,
     IdsModule,
@@ -119,6 +123,8 @@ import { EventsModule } from "./events/events.module";
     CensusModule,
     LifecycleModule,
     VetModule,
+    // The owner side of clinic-created patients: /claim/:token (T4).
+    ClaimsModule,
   ],
   providers: [
     // Order matters: rate-limit → Community-Mode kill-switch → authenticate →

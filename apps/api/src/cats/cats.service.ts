@@ -609,6 +609,90 @@ export class CatsService implements OnModuleInit {
     return { success: true };
   }
 
+  // ── Merge (MRC-PROD-001 T4) ─────────────────────────────────────────────────
+
+  /**
+   * Fold `sourceId` into `targetId`: every record moves to the survivor, the
+   * survivor's blanks are filled from the source, and the source is soft-
+   * deleted with a pointer to where it went. Used when an owner claims a
+   * clinic-created cat that is one they already registered, and by admin.
+   *
+   * Uniqueness-aware: likes, reports and membership links that would collide
+   * on the target are dropped from the source rather than failing the merge.
+   * Both cats must belong to the same owner — ownership is never transferred
+   * by a merge.
+   */
+  async merge(sourceId: string, targetId: string, opts: { actorUserId?: string; reason?: string } = {}) {
+    if (sourceId === targetId) throw new BadRequestException("A cat cannot be merged into itself");
+    const [source, target] = await Promise.all([
+      this.prisma.cat.findFirst({ where: { id: sourceId, deletedAt: null } }),
+      this.prisma.cat.findFirst({ where: { id: targetId, deletedAt: null } }),
+    ]);
+    if (!source || !target) throw new NotFoundException("Cat not found");
+    if (source.userId !== target.userId) throw new BadRequestException("Both cats must belong to the same owner");
+
+    await this.prisma.$transaction(async (tx) => {
+      const move = { where: { catId: sourceId }, data: { catId: targetId } };
+      await tx.catVaccination.updateMany(move);
+      await tx.clinicalEntry.updateMany(move);
+      await tx.prescription.updateMany(move);
+      await tx.catWeightRecord.updateMany(move);
+      await tx.catDocument.updateMany(move);
+      await tx.catPhoto.updateMany(move);
+      await tx.consentGrant.updateMany(move);
+      await tx.recordAccessLog.updateMany(move);
+      await tx.visit.updateMany(move);
+      await tx.catVetVisit.updateMany(move);
+      await tx.catEmergencyContact.updateMany(move);
+      await tx.feedingRecommendation.updateMany(move);
+      await tx.claimInvite.updateMany(move);
+
+      // Collision-aware moves.
+      const targetLikers = (await tx.catLike.findMany({ where: { catId: targetId }, select: { userId: true } })).map((l) => l.userId);
+      await tx.catLike.updateMany({ where: { catId: sourceId, userId: { notIn: targetLikers } }, data: { catId: targetId } });
+      await tx.catLike.deleteMany({ where: { catId: sourceId } });
+      const targetReporters = (await tx.catReport.findMany({ where: { catId: targetId }, select: { reporterId: true } }))
+        .map((r) => r.reporterId)
+        .filter((id): id is string => !!id);
+      await tx.catReport.updateMany({ where: { catId: sourceId, reporterId: { notIn: targetReporters } }, data: { catId: targetId } });
+      await tx.catReport.deleteMany({ where: { catId: sourceId } });
+      const targetSubs = (await tx.subscriptionCat.findMany({ where: { catId: targetId }, select: { subscriptionId: true } })).map((s) => s.subscriptionId);
+      await tx.subscriptionCat.updateMany({ where: { catId: sourceId, subscriptionId: { notIn: targetSubs } }, data: { catId: targetId } });
+      await tx.subscriptionCat.deleteMany({ where: { catId: sourceId } });
+
+      // Fill the survivor's blanks from the source; never overwrite a known value.
+      await tx.cat.update({
+        where: { id: targetId },
+        data: {
+          microchipNo: target.microchipNo ?? source.microchipNo,
+          birthDate: target.birthDate ?? source.birthDate,
+          breedId: target.breedId ?? source.breedId,
+          coatColor: target.coatColor ?? source.coatColor,
+          gender: target.gender === "UNKNOWN" ? source.gender : target.gender,
+          homeBranchId: target.homeBranchId ?? source.homeBranchId,
+          photoUrl: target.photoUrl ?? source.photoUrl,
+          likeCount: { increment: 0 },
+        },
+      });
+      await tx.cat.update({
+        where: { id: sourceId },
+        data: { deletedAt: new Date(), status: "ARCHIVED", mergedIntoCatId: targetId, isPublic: false },
+      });
+      await tx.user.updateMany({ where: { primaryCatId: sourceId }, data: { primaryCatId: targetId } });
+      await tx.auditLog.create({
+        data: {
+          userId: opts.actorUserId ?? null,
+          action: "cat.merge",
+          entityType: "Cat",
+          entityId: targetId,
+          metadata: { sourceId, targetId, reason: opts.reason ?? null },
+        },
+      });
+    });
+    this.events.emit("cat_merged", { userId: target.userId, catId: targetId, props: { reason: opts.reason ?? null } });
+    return { mergedInto: targetId, removed: sourceId };
+  }
+
   // ── The living record (MRC-PROD-001 T3) ─────────────────────────────────────
 
   /**

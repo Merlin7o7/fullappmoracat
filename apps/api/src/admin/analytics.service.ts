@@ -26,7 +26,8 @@ export class AdminAnalyticsService {
   async census() {
     const now = new Date();
     const d30 = new Date(now.getTime() - 30 * 86400_000);
-    const live = { deletedAt: null };
+    // A clinic-created cat is not a registration until its owner claims it.
+    const live = { deletedAt: null, claimStatus: "CLAIMED" as const };
 
     const [total, last30, founding, bySource, bySource30, recent] = await Promise.all([
       this.prisma.cat.count({ where: live }),

@@ -39,6 +39,7 @@ import {
   vetFriendlyError,
 } from "@/lib/vet-api";
 import { EmptyState } from "@/components/vet/vet-shell-bits";
+import { NewPatientSheet } from "@/components/vet/new-patient-sheet";
 
 /* The BarcodeDetector API isn't in TypeScript's DOM lib yet. */
 interface DetectedBarcode {
@@ -77,8 +78,15 @@ export default function VetScanPage() {
   const [slow, setSlow] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [wedgeSeen, setWedgeSeen] = React.useState(false);
+  // Walk-ins (T4): a no-match is the moment reception registers the cat.
+  const [newPatient, setNewPatient] = React.useState(false);
+  const [noMatchFor, setNoMatchFor] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") setNewPatient(true);
+  }, []);
 
   const allowed = can("patient.search");
+  const canCreate = can("patient.create");
 
   /* ── The one pipeline every input funnels into ─────────────────────────── */
   const resolve = React.useCallback(
@@ -93,13 +101,15 @@ export default function VetScanPage() {
         const res = await api.searchPatients(token);
         const hit = res.results?.[0];
         if (!hit) {
+          setNoMatchFor(raw);
           setError(
             isAr
-              ? "قرأنا البطاقة، لكن ما لقينا عضواً بهذا الرقم. تأكد من الرقم المطبوع تحت الرمز، أو جرّب جوال المالك."
-              : "We read the card, but no member matches it. Check the number printed under the code, or try the owner's phone."
+              ? "قرأنا البطاقة، لكن ما لقينا عضواً بهذا الرقم. تأكد من الرقم المطبوع تحت الرمز، أو جرّب جوال المالك — أو سجّله كمريض جديد."
+              : "We read the card, but no member matches it. Check the number printed under the code, or try the owner's phone — or register them as a new patient."
           );
           return;
         }
+        setNoMatchFor(null);
         pushRecentLookup({
           catId: hit.catId,
           name: hit.name,
@@ -262,6 +272,11 @@ export default function VetScanPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {canCreate && (
+            <Button size="sm" variant="outline" onClick={() => setNewPatient(true)}>
+              {isAr ? "مريض جديد" : "New patient"}
+            </Button>
+          )}
           {wedgeSeen && (
             <Badge variant="success" dot>
               {isAr ? "الماسح السلكي جاهز" : "Hardware scanner ready"}
@@ -398,9 +413,22 @@ export default function VetScanPage() {
       </Card>
 
       {error && (
-        <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/[0.06] px-3 py-2.5">
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/30 bg-destructive/[0.06] px-3 py-2.5">
           <p className="text-xs leading-relaxed text-muted-foreground">{error}</p>
+          {noMatchFor && canCreate && (
+            <Button size="sm" variant="outline" onClick={() => setNewPatient(true)}>
+              {isAr ? "مريض جديد" : "New patient"}
+            </Button>
+          )}
         </div>
+      )}
+
+      {canCreate && (
+        <NewPatientSheet
+          open={newPatient}
+          onClose={() => setNewPatient(false)}
+          initialPhone={noMatchFor && /^\+?\d[\d\s-]{7,}$/.test(noMatchFor) ? noMatchFor : undefined}
+        />
       )}
 
       {/* ── The path that always works ── */}

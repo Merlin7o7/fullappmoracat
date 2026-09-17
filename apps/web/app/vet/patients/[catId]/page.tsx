@@ -57,6 +57,7 @@ import { VET_ROLE_LABELS } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
 import { QueryError } from "@/components/query-error";
+import { ClaimPanel } from "@/components/vet/claim-panel";
 import {
   AlertsBand,
   deriveMissingVaccinations,
@@ -101,6 +102,12 @@ export default function PatientProfilePage({ params }: { params: { catId: string
   const actor = useVetActor();
   const api = useVetApi();
 
+  // Arriving straight from "New patient" opens the claim code without a tap.
+  const [claimAutoOpen, setClaimAutoOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("claim") === "1") setClaimAutoOpen(true);
+  }, []);
+
   // Health leads — §06: "the tab a vet needs (Health)".
   const [tab, setTab] = React.useState<TabKey>("records");
   // Tabs mount on first open and stay mounted, so switching back is instant
@@ -142,6 +149,9 @@ export default function PatientProfilePage({ params }: { params: { catId: string
       <AlertsBand alerts={flattenTier0Alerts(profile.alerts)} missingVaccinations={missing} catName={profile.name} />
 
       <ConsentBanner profile={profile} catId={catId} />
+
+      {/* A clinic-created cat waits here for its owner (T4). Renders nothing otherwise. */}
+      <ClaimPanel catId={catId} autoOpen={claimAutoOpen} />
 
       <QuickActions profile={profile} catId={catId} />
 

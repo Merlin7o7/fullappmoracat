@@ -35,6 +35,16 @@ const PASSWORD_CHECKS = [
   { id: "number", ar: "رقم واحد على الأقل", en: "At least one number", test: (p: string) => /\d/.test(p) },
 ] as const;
 
+/** An in-app `?next=` path only — never an external URL (open-redirect guard). */
+function safeNext(): string | null {
+  try {
+    const next = new URLSearchParams(window.location.search).get("next");
+    return next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { register, requestOtp, loginWithGoogle } = useAuth();
@@ -132,7 +142,9 @@ export default function RegisterPage() {
     // Email verification runs in parallel — a quiet portal banner invites it;
     // it gates only community interactions (likes/reports), never the ID or
     // its visibility (opt-out at creation, decision 2026-08-14).
-    router.push("/portal/cats/new");
+    // A claim link (/claim/…) brought them here: go back to it, the cat is
+    // already waiting there (T4).
+    router.push(safeNext() ?? "/portal/cats/new");
   }
 
   async function startVerification(e: React.FormEvent) {
@@ -178,7 +190,7 @@ export default function RegisterPage() {
       await loginWithGoogle(idToken);
       clearSignupDraft();
       track("registration_completed", { google: true });
-      router.push(pendingCat ? "/portal/cats/new" : "/portal");
+      router.push(safeNext() ?? (pendingCat ? "/portal/cats/new" : "/portal"));
     } catch (err) {
       setError(friendlyError(err, isAr).message);
     }

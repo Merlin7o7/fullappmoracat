@@ -451,7 +451,8 @@ export class LifecycleService {
     const now = new Date();
     const in7 = new Date(now.getTime() + 7 * DAY_MS);
     const vaccs = await this.prisma.catVaccination.findMany({
-      where: { dueAt: { gt: now, lte: in7 }, cat: { status: "ACTIVE", deletedAt: null } },
+      // Pending-claim cats have no owner to remind yet (T4).
+      where: { dueAt: { gt: now, lte: in7 }, cat: { status: "ACTIVE", deletedAt: null, claimStatus: "CLAIMED" } },
       take: BATCH,
       select: {
         id: true,
@@ -502,6 +503,7 @@ export class LifecycleService {
       FROM cats
       WHERE status = 'ACTIVE'
         AND "deletedAt" IS NULL
+        AND "claimStatus" = 'CLAIMED'
         AND (
           (
             "birthDate" IS NOT NULL

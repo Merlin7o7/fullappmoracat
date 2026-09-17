@@ -25,6 +25,7 @@
  */
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Clock, Loader2, Search, ShieldCheck, X } from "lucide-react";
 import { Badge, cn } from "@moraqat/ui";
@@ -484,6 +485,13 @@ function NoMatch({ isAr, detected }: { isAr: boolean; detected: VetDetectedType 
             ? "البحث بالاسم يشمل القطط التي عالجتها عيادتك — وهذه حماية لبقية الأعضاء، لا نقص في النظام. إذا كان العضو أمامك، امسح بطاقته أو اكتب رقم هويته أو جواله."
             : "Name search reaches the cats your clinic has treated — a boundary that protects every other member, not a limitation. If the member is with you, scan their card or enter their Cat ID or phone."}
       </p>
+      {/* A cat that isn't on Moracat yet is registered here, at the counter (T4). */}
+      <Link
+        href="/vet/scan?new=1"
+        className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-medium text-foreground hover:bg-muted"
+      >
+        {isAr ? "قط جديد؟ سجّله كمريض" : "New cat? Register as a patient"}
+      </Link>
     </div>
   );
 }

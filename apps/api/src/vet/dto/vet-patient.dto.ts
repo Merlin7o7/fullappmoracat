@@ -69,6 +69,79 @@ export class SearchPatientsQueryDto {
   limit?: number;
 }
 
+/**
+ * Register a walk-in cat at the counter (MRC-PROD-001 T4). The minimum a
+ * receptionist can type in thirty seconds: the cat's name and the owner's
+ * mobile. Everything else is optional and the clinic fills it in during the
+ * visit; the owner completes the file when they claim the cat.
+ */
+export class CreatePatientDto {
+  @ApiPropertyOptional({ example: "Luna" })
+  @Transform(({ value }) => (typeof value === "string" ? value.trim() : value))
+  @IsString()
+  @MaxLength(60)
+  name!: string;
+
+  @ApiPropertyOptional({ example: "0501234567", description: "Owner's mobile — the claim link goes here" })
+  @IsString()
+  @MaxLength(24)
+  ownerPhone!: string;
+
+  @ApiPropertyOptional({ enum: ["MALE", "FEMALE", "UNKNOWN"] })
+  @IsOptional()
+  @IsIn(["MALE", "FEMALE", "UNKNOWN"])
+  gender?: "MALE" | "FEMALE" | "UNKNOWN";
+
+  @ApiPropertyOptional({ example: "2026-03-01", description: "Approximate is fine" })
+  @IsOptional()
+  @IsDateString()
+  birthDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  breedId?: string;
+
+  @ApiPropertyOptional({ example: "968000011122233" })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === "string" ? value.replace(/\s/g, "") : value))
+  @IsString()
+  @MaxLength(30)
+  microchipNo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  coatColor?: string;
+
+  @ApiPropertyOptional({ description: "Branch the cat is at (defaults to the staff member's only branch)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  branchId?: string;
+
+  @ApiPropertyOptional({ example: "First vaccination", description: "Reason for the intake visit opened alongside" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  reason?: string;
+
+  /** The clinic confirms the owner asked for this at the counter. Required. */
+  @ApiPropertyOptional({ example: true })
+  @IsIn([true])
+  ownerConsented!: true;
+}
+
+export class RefreshClaimDto {
+  /** Also (re)send the SMS, if the feature flag allows and the cap isn't reached. */
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsIn([true, false])
+  sendSms?: boolean;
+}
+
 export class TimelineQueryDto extends VetPageQueryDto {
   @ApiPropertyOptional({
     isArray: true,

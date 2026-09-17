@@ -24,6 +24,9 @@ const NAV = [
   // (MRC-GTM-001 §1–§2). Same permission as the dashboard it stands in for.
   { href: "/admin/census", icon: ScanLine, en: "Census", ar: "التعداد", perm: "dashboard.read" },
   { href: "/admin/customers", icon: Users, en: "Customers", ar: "العملاء", perm: "customers.read" },
+  // The cat CRM: any cat by ID / chip / owner, its origin and claim state, and
+  // merge for the twins clinic claims produce (MRC-PROD-001 T4).
+  { href: "/admin/cats", icon: Cat, en: "Cats", ar: "القطط", perm: "customers.read" },
   // The veterinary network console: approve clinics, verify licences, audit
   // who opened which cat's record. Write actions need partners.write.
   { href: "/admin/partners", icon: Stethoscope, en: "Partners", ar: "الشركاء", perm: "partners.read" },

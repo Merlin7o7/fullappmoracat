@@ -96,6 +96,12 @@ services:
         sync: false
       - key: TWILIO_AUTH_TOKEN
         sync: false
+      # Clinic-created patients (T4): claim links by SMS only when true; the
+      # counter QR always works. Salt for phone hashes on claim invites.
+      - key: CLAIM_SMS_ENABLED
+        value: false
+      - key: CLAIM_HASH_SALT
+        generateValue: true
       - key: TWILIO_FROM_NUMBER
         sync: false
       # Optional integrations — set when ready.

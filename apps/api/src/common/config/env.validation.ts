@@ -54,6 +54,12 @@ export function assertProductionConfig(): void {
     if (!process.env[key]) errors.push(`${key} is missing — ${what}.`);
   }
 
+  // Claim-invite phone hashes (clinic-created patients, T4) must be salted
+  // with a real secret, or a leaked table is a rainbow-table away from phones.
+  if (!process.env.CLAIM_HASH_SALT || process.env.CLAIM_HASH_SALT.length < 16) {
+    errors.push("CLAIM_HASH_SALT is missing or too short (≥16 chars) — needed to hash owner phones on claim invites.");
+  }
+
   // Transactional email is on the critical signup path (email-verification OTP
   // gates the dashboard). Without a real provider the app would "succeed" while
   // silently dropping every message to the log, so members could never verify.

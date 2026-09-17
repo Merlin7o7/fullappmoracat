@@ -23,6 +23,8 @@ import { VetConsentController, VetOwnerConsentController } from "./vet-consent.c
 import { VetConsentService } from "./vet-consent.service";
 import { VetEmergencyController } from "./vet-emergency.controller";
 import { VetEmergencyService } from "./vet-emergency.service";
+import { VetClaimsService } from "./vet-claims.service";
+import { PlaceholderOwnerService } from "./placeholder-owner.service";
 
 @Module({
   // Every clinical controller is gated by VetStaffGuard, which Nest therefore
@@ -44,7 +46,9 @@ import { VetEmergencyService } from "./vet-emergency.service";
     VetRecordsService,
     VetConsentService,
     VetEmergencyService,
+    VetClaimsService,
+    PlaceholderOwnerService,
   ],
-  exports: [VetPatientsService, VetVisitsService, VetRecordsService, VetConsentService],
+  exports: [VetPatientsService, VetVisitsService, VetRecordsService, VetConsentService, PlaceholderOwnerService],
 })
 export class VetClinicalModule {}

@@ -24,8 +24,10 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma, type ConsentTier } from "@moraqat/db";
+import { normalizeSaudiPhone } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { normalizeName } from "../common/text";
+import { PlaceholderOwnerService } from "./placeholder-owner.service";
 import {
   type PrescriptionListQueryDto,
   type SearchPatientsQueryDto,
@@ -118,17 +120,9 @@ const ID_CHARS = "23456789A-HJ-NP-Z";
 const CAT_ID_RE = new RegExp(`^(?:MRC)?([${ID_CHARS}]{4})([${ID_CHARS}]{4})$`, "i");
 const QR_TOKEN_RE = new RegExp(`^[${ID_CHARS}]{20}$`, "i");
 
-/** Saudi-aware E.164 normalisation: 05…, 5…, 9665…, 009665…, +9665… → +9665…. */
-export function normalizeSaudiPhone(raw: string): string | null {
-  const digits = raw.replace(/[\s()-]/g, "");
-  if (!/^\+?\d{7,15}$/.test(digits)) return null;
-  let d = digits.replace(/^\+/, "").replace(/^00/, "");
-  if (d.startsWith("966")) d = d.slice(3);
-  else if (d.startsWith("0")) d = d.slice(1);
-  if (/^5\d{8}$/.test(d)) return `+966${d}`;
-  // A non-Saudi number the member registered with — keep it in E.164 as typed.
-  return digits.startsWith("+") ? digits : `+${digits}`;
-}
+// Saudi-aware E.164 normalisation now lives in packages/core (shared with the
+// claim flow and the portal); re-exported so existing imports keep working.
+export { normalizeSaudiPhone };
 
 /**
  * One omnibox, every identifier. The receptionist never chooses a mode; the
@@ -350,7 +344,10 @@ const PAGE_DEFAULT = 20;
 export class VetPatientsService {
   private readonly logger = new Logger("VetPatients");
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly placeholder: PlaceholderOwnerService
+  ) {}
 
   // ── Shared infrastructure the other clinical services use ───────────────
 
@@ -486,6 +483,9 @@ export class VetPatientsService {
     data?: Record<string, unknown>;
   }): Promise<void> {
     try {
+      // A clinic-created cat has no owner yet: the placeholder account must
+      // never accumulate notifications meant for a person.
+      if (await this.placeholder.is(input.userId)) return;
       await this.prisma.notification.create({
         data: {
           userId: input.userId,
@@ -706,7 +706,10 @@ export class VetPatientsService {
     }
   }
 
-  private cardOf(c: {
+  /** The select `cardOf` needs — exported so the claim flow can build the same card. */
+  readonly cardSelect = CAT_CARD_SELECT;
+
+  cardOf(c: {
     id: string;
     catIdNumber: string | null;
     name: string;

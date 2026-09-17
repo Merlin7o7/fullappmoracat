@@ -81,7 +81,7 @@ export class CensusService {
       // water mark separately instead of comparing against this number.
       // isDemo excluded: the census ordinal IS the founding-member campaign, so
       // a fictional cat inside it is a false public claim (R006).
-      this.prisma.cat.count({ where: { deletedAt: null, isDemo: false } }),
+      this.prisma.cat.count({ where: { deletedAt: null, isDemo: false, claimStatus: "CLAIMED" } }),
       this.prisma.cat.aggregate({ _max: { catNumber: true }, where: { isDemo: false } }),
       // Only community-visible cats (shared by default at registration —
       // opt-out, decision 2026-08-14), and that a moderator hasn't hidden.

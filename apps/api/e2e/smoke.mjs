@@ -25,7 +25,7 @@ ok(health.json?.status === "ok" && health.json?.db === "up", `health ok, db up`)
 
 console.log("━━ auth ━━");
 const email = `smoke+${rnd()}@e.com`;
-const reg = (await call("/auth/register", "POST", { email, password: "S3cure!pass", firstName: "Smoke", acceptTerms: true })).json;
+const reg = (await call("/auth/register", "POST", { email, password: "S3cure!pass", firstName: "Smoke", acceptTerms: true, firstTouch: { src: "stand-004", utm_source: "snapchat", junk: "x", phone: "0500000000" } })).json;
 ok(!!reg.accessToken && !!reg.refreshToken, "register issues token pair");
 ok(reg.needsEmailVerification === true && reg.user?.emailVerified === false, "signup requires email verification (OTP)");
 const C = reg.accessToken;
@@ -211,10 +211,7 @@ ok((await call("/events", "POST", { name: "page_landed", anonId: "e2e-anon-1", p
 ok((await call("/events", "POST", { name: "cat_id_issued", anonId: "e2e-anon-1" })).status === 400, "server-only event name rejected at the public endpoint (400)");
 ok((await call("/events", "POST", { name: "page_landed", anonId: "bad id!" })).status === 400, "malformed anonId rejected (400)");
 // First-touch attribution survives registration, allow-listed and clipped.
-{
-  const ft = (await call("/auth/register", "POST", { email: `ft+${rnd()}@e.com`, password: "S3cure!pass", acceptTerms: true, firstTouch: { src: "stand-004", utm_source: "snapchat", junk: "x", phone: "0500000000" } })).json;
-  ok(!!ft.accessToken, "register accepts firstTouch");
-}
+ok(!!reg.accessToken, "register accepts firstTouch (sent with the first registration above)");
 {
   const m = await call("/admin/metrics?days=7", "GET", undefined, A);
   ok(m.status === 200 && typeof m.json?.today?.data?.cvac === "number" && typeof m.json?.today?.data?.catsRegisteredTotal === "number", "admin metrics: today computed live with CVAC");
@@ -230,8 +227,7 @@ console.log("━━ the living record — owner health page (MRC-PROD-001 T3) �
   ok(h.status === 200 && h.json?.cat?.id === cat.id && Array.isArray(h.json?.vaccination?.records) && Array.isArray(h.json?.clinicalEntries), "GET /cats/:id/health returns the owner projection");
   ok(["UP_TO_DATE", "DUE_SOON", "OVERDUE", "UNKNOWN"].includes(h.json?.vaccination?.standing), "vaccination standing is derived, never stored");
   // Ownership: another member's cat is a 404, not a 403 (no existence leak).
-  const stranger = (await call("/auth/register", "POST", { email: `stranger+${rnd()}@e.com`, password: "S3cure!pass", acceptTerms: true })).json;
-  ok((await call(`/cats/${cat.id}/health`, "GET", undefined, stranger.accessToken)).status === 404, "another member cannot read the record (404)");
+  ok((await call(`/cats/${cat.id}/health`, "GET", undefined, A)).status === 404, "another member cannot read the record (404)");
   // The profile editor: lists replace only when sent; omitted lists survive.
   const p1 = await call(`/cats/${cat.id}/health-profile`, "PATCH", { allergies: ["chicken", "chicken", "fish"], currentFood: "Royal Canin Indoor" }, C);
   ok(p1.status === 200 && p1.json?.cat?.allergies?.length === 2 && p1.json?.cat?.currentFood === "Royal Canin Indoor", "health-profile replaces the allergy list (de-duplicated) and sets food");
@@ -244,6 +240,22 @@ console.log("━━ the living record — owner health page (MRC-PROD-001 T3) �
   ok(ec.status === 200 && ec.json?.phone === "+966500000001", "emergency contact saved");
   const ec2 = await call(`/cats/${cat.id}/emergency-contact`, "PUT", { name: "Sara", phone: "+966500000002" }, C);
   ok(ec2.json?.phone === "+966500000002" && (await call(`/cats/${cat.id}/health`, "GET", undefined, C)).json?.cat?.emergencyContact?.phone === "+966500000002", "setting it again replaces the one primary contact");
+}
+
+console.log("━━ admin cat CRM + merge (MRC-PROD-001 T4) ━━");
+{
+  const found = await call(`/admin/cats?q=${encodeURIComponent(cat.catIdNumber)}`, "GET", undefined, A);
+  ok(found.status === 200 && found.json?.items?.[0]?.id === cat.id && found.json.items[0].owner?.email === email, "admin finds a cat by its Cat ID with its owner");
+  ok((await call("/admin/cats?q=x", "GET", undefined, C)).status === 403, "cat CRM is staff-only (403)");
+  const twinCat = (await call("/cats", "POST", { name: "SmokeyTwin", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2022-05-01", cityCode: "jeddah" }, C)).json;
+  await call(`/cats/${twinCat.id}/vaccinations`, "POST", { name: "Rabies", administeredAt: "2026-01-01", dueAt: "2027-01-01" }, C);
+  const before = (await call(`/cats/${cat.id}/health`, "GET", undefined, C)).json?.vaccination?.records?.length ?? 0;
+  const merged = await call(`/admin/cats/${twinCat.id}/merge`, "POST", { targetId: cat.id }, A);
+  ok(merged.status === 201 && merged.json?.mergedInto === cat.id, "admin merges a twin into the survivor");
+  const after = (await call(`/cats/${cat.id}/health`, "GET", undefined, C)).json?.vaccination?.records?.length ?? 0;
+  ok(after === before + 1, "the twin's vaccination now lives on the survivor");
+  ok((await call(`/cats/${twinCat.id}`, "GET", undefined, C)).status === 404, "the merged twin is archived (404 to its owner)");
+  ok((await call(`/admin/cats/${cat.id}/merge`, "POST", { targetId: cat.id }, A)).status === 400, "a cat cannot be merged into itself");
 }
 const ss = rnd();
 const dry = (await call("/admin/products", "POST", { slug: `smoke-dry-${ss}`, sku: `SMKD-${ss.toUpperCase()}`, type: "DRY_FOOD", nameEn: "Smoke Dry", nameAr: "جاف", price: 49 }, A)).json;
@@ -313,6 +325,56 @@ console.log("━━ demo quarantine ━━");
     ok(!(feed.json?.items ?? []).some((c) => c.name === "مشمش"), "demo cats never appear in the community feed");
     const dir = await call("/vet/directory");
     ok(!JSON.stringify(dir.json ?? {}).includes("demo-alnoor-vet"), "demo clinic never appears in the public directory");
+
+    console.log("━━ walk-ins: clinic-created patient → claim (MRC-PROD-001 T4) ━━");
+    const walkName = `Walkin${rnd()}`;
+    const walkPhone = `+9665${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
+    const created = await call("/vet/patients", "POST", { name: walkName, ownerPhone: walkPhone, gender: "FEMALE", reason: "First vaccination", ownerConsented: true }, DT, H);
+    ok(created.status === 201 && created.json?.created === true && !!created.json?.cat?.catId, "clinic registers a walk-in cat");
+    ok(!!created.json?.visit?.id, "an intake visit opens with it (treatment relationship is real)");
+    ok(typeof created.json?.claim?.url === "string" && created.json.claim.url.includes("/claim/"), "a claim link is returned once for the counter");
+    ok(created.json?.cat?.catIdNumber === null, "no Cat ID number before the owner claims (issued at claim, R032)");
+    const walkId = created.json.cat.catId;
+    const claimToken = created.json.claim.url.split("/claim/")[1];
+    // Same chip / same phone + name → the existing cat, never a twin.
+    const dupe = await call("/vet/patients", "POST", { name: walkName, ownerPhone: walkPhone, ownerConsented: true }, DT, H);
+    ok(dupe.json?.created === false && dupe.json?.match?.id === walkId, "registering the same cat again returns the existing one");
+    const claimState = await call(`/vet/patients/${walkId}/claim`, "GET", undefined, DT, H);
+    ok(claimState.json?.state === "valid" && claimState.json?.phoneLast4 === walkPhone.slice(-4), "counter sees the claim state, never the token");
+    // The vet can write about the cat right away.
+    const walkEntry = await call("/vet/records", "POST", { catId: walkId, visitId: created.json.visit.id, type: "VACCINATION", payload: { vaccine: "Tricat", dueAt: "2027-01-01" } }, DT, H);
+    ok(walkEntry.status === 201, "the clinic writes a record before the owner has an account");
+    // Public preview shows the essentials and nothing identifying.
+    const prev = await call(`/claim/${claimToken}`);
+    ok(prev.status === 200 && prev.json?.state === "valid" && prev.json?.cat?.name === walkName && !JSON.stringify(prev.json).includes(walkPhone), "claim preview is public and does not leak the phone");
+    ok((await call("/claim/not-a-token")).status === 404, "unknown claim token is a 404");
+    // A brand-new owner without the number must prove it by code.
+    const owner = (await call("/auth/register", "POST", { email: `claim+${rnd()}@e.com`, password: "S3cure!pass", acceptTerms: true })).json;
+    const noProof = await call(`/claim/${claimToken}/accept`, "POST", {}, owner.accessToken);
+    ok(noProof.status === 403 && noProof.json?.code === "CLAIM_PHONE_MISMATCH" && noProof.json?.needsOtp === true, "claim without the invited number is refused with a recovery (403)");
+    const otp = await call(`/claim/${claimToken}/otp`, "POST");
+    ok(otp.status === 200 && !!otp.json?.devCode, "a code goes to the invited number (dev code returned)");
+    ok((await call(`/claim/${claimToken}/accept`, "POST", { phoneOtpCode: "000000" }, owner.accessToken)).status === 403, "a wrong code is refused");
+    const accepted = await call(`/claim/${claimToken}/accept`, "POST", { phoneOtpCode: otp.json.devCode }, owner.accessToken);
+    ok(accepted.status === 200 && accepted.json?.catId === walkId && /^MRC-/.test(accepted.json?.catIdNumber ?? ""), `owner claims the cat and the Cat ID is issued: ${accepted.json?.catIdNumber}`);
+    const mine = await call(`/cats/${walkId}/health`, "GET", undefined, owner.accessToken);
+    ok(mine.status === 200 && mine.json?.vaccination?.records?.some((v) => v.verified === true && v.name === "Tricat"), "the owner sees the clinic-verified vaccination on their record");
+    ok((await call(`/claim/${claimToken}/accept`, "POST", { phoneOtpCode: otp.json.devCode }, owner.accessToken)).status === 400, "a claimed link cannot be claimed twice");
+    // Refreshing after claim is refused; state reports claimed.
+    ok((await call(`/vet/patients/${walkId}/claim`, "GET", undefined, DT, H)).json?.state === "claimed", "counter sees the cat as claimed");
+    // Old-name twins: a second walk-in with the same name for the same owner offers a merge.
+    const twin = await call("/vet/patients", "POST", { name: walkName, ownerPhone: `+9665${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`, ownerConsented: true }, DT, H);
+    if (twin.json?.created) {
+      const twinToken = twin.json.claim.url.split("/claim/")[1];
+      const twinOtp = await call(`/claim/${twinToken}/otp`, "POST");
+      const decision = await call(`/claim/${twinToken}/accept`, "POST", { phoneOtpCode: twinOtp.json.devCode }, owner.accessToken);
+      ok(decision.status === 400 && decision.json?.code === "CLAIM_POSSIBLE_DUPLICATE" && decision.json?.candidates?.[0]?.id === walkId, "a same-name claim asks 'is this the same cat?' instead of creating a twin");
+      // The "same cat?" question must not have burned the code (a fresh one is
+      // rate-limited for 60s anyway) — the same code completes the merge.
+      const mergedRes = await call(`/claim/${twinToken}/accept`, "POST", { phoneOtpCode: twinOtp.json.devCode, mergeIntoCatId: walkId }, owner.accessToken);
+      ok(mergedRes.status === 200 && mergedRes.json?.merged === true && mergedRes.json?.catId === walkId, "merging folds the clinic record into the existing cat");
+      ok((await call(`/cats/${twin.json.cat.catId}/health`, "GET", undefined, owner.accessToken)).status === 404, "the merged twin is gone from the owner's cats");
+    }
   }
 }
 
@@ -700,6 +762,10 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
   ok(vMember?.status === "ACTIVE" && vMember?.org.status === "SUBMITTED", "doctor's seat exists while the clinic is under review");
   ok((await call("/vet/patients/search?q=" + encodeURIComponent(cat.catIdNumber), "GET", undefined, V, VH)).json?.code === "VET_ORG_NOT_LIVE",
     "no member lookup before approval (VET_ORG_NOT_LIVE)");
+  // A not-yet-live clinic cannot create real cats either (T4: patient.create
+  // is outside the setup sandbox).
+  ok((await call("/vet/patients", "POST", { name: "Sandbox Cat", ownerPhone: "0501234567", ownerConsented: true }, V, VH)).json?.code === "VET_ORG_NOT_LIVE",
+    "no walk-in registration before go-live (VET_ORG_NOT_LIVE)");
 
   // ── Phase 3: review ──
   const review = (await call(`/vet/admin/clinics/${orgId}`, "GET", undefined, A)).json;

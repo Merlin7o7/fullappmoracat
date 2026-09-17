@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
+import { CatsModule } from "../cats/cats.module";
 import { AdminController } from "./admin.controller";
+import { AdminCatsService } from "./admin-cats.service";
 import { CmsController } from "./cms.controller";
 import { AdminCommunityController } from "./admin-community.controller";
 import { AdminStaffController } from "./staff.controller";
@@ -16,10 +18,12 @@ import { AdminStaffService } from "./staff.service";
 import { CmsService } from "./cms.service";
 
 @Module({
+  imports: [CatsModule],
   controllers: [AdminController, CmsController, AdminCommunityController, AdminStaffController, FeatureFlagsController],
   providers: [
     AdminAnalyticsService,
     AdminMetricsService,
+    AdminCatsService,
     AdminAuditService,
     AdminCustomersService,
     AdminOrdersService,

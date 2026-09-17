@@ -18,7 +18,11 @@ import { AuthService } from "./auth.service";
  * default is a loose 120/min meant for ordinary reads). These blunt credential
  * stuffing and stop the SMS/email OTP endpoints from being pumped for cost.
  */
-const STRICT = { default: { limit: 8, ttl: 60_000 } } as const;
+// 8/min per IP in every real deployment. THROTTLE_LIMIT (set only by the e2e
+// runner, which registers dozens of accounts from one IP in a minute) may raise
+// it, never lower it — same contract as the global limiter in app.module.
+const STRICT_LIMIT = Math.max(8, Number(process.env.THROTTLE_LIMIT) || 0);
+const STRICT = { default: { limit: STRICT_LIMIT, ttl: 60_000 } } as const;
 const OTP_SEND = { default: { limit: 4, ttl: 60_000 } } as const;
 import {
   ForgotPasswordDto,

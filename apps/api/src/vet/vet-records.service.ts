@@ -742,7 +742,7 @@ export class VetRecordsService {
   private async writeVaccination(
     tx: Tx,
     actor: VetActor,
-    entry: { id: string; catId: string; orgId: string; payload: Prisma.JsonValue; occurredAt: Date }
+    entry: { id: string; catId: string; orgId: string; visitId?: string | null; payload: Prisma.JsonValue; occurredAt: Date }
   ) {
     const p = (entry.payload ?? {}) as {
       vaccine?: string;
@@ -760,6 +760,14 @@ export class VetRecordsService {
       }),
     ]);
 
+    // Which branch gave the dose — so the reminder can name it and route the
+    // owner back (T5). The visit's branch when there is one, else the staff
+    // member's single branch.
+    const visitBranch = entry.visitId
+      ? (await tx.visit.findUnique({ where: { id: entry.visitId }, select: { branchId: true } }))?.branchId ?? null
+      : null;
+    const branchId = visitBranch ?? (actor.branchIds.length === 1 ? actor.branchIds[0]! : null);
+
     const created = await tx.catVaccination.create({
       data: {
         catId: entry.catId,
@@ -768,11 +776,20 @@ export class VetRecordsService {
         dueAt: p.dueAt ? new Date(p.dueAt) : null,
         vetName: staffLabel(staff ?? null),
         clinic: org?.nameEn ?? null,
+        // Clinic attribution: the owner's record marks this dose clinic-verified
+        // and the reminder names the clinic (T3/T5).
+        orgId: entry.orgId,
+        branchId,
         batchNo: p.batchNo ?? null,
         notes: `Recorded from clinical entry ${entry.id}`,
       },
       select: { id: true, name: true, administeredAt: true, dueAt: true },
     });
+    // The first clinic to write a dose becomes the home clinic, unless the
+    // owner already chose one.
+    if (branchId) {
+      await tx.cat.updateMany({ where: { id: entry.catId, homeBranchId: null }, data: { homeBranchId: branchId } });
+    }
 
     // The badge is DERIVED from the records (see deriveVaccinationStatus), not
     // asserted here. Writing "UP_TO_DATE" unconditionally meant one dose of a

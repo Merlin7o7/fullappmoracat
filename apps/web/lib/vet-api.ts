@@ -180,6 +180,57 @@ export interface VetSearchResult {
  * The server sends `{query:{detectedAs}, scope:{scopedToClinic, notice}, …}`
  * and each row nests owner/relationship. See lib/vet-wire.ts.
  */
+/* ────────────────────────────────────────────────────────────────────────────
+ * Walk-ins + claim links (MRC-PROD-001 T4)
+ * ──────────────────────────────────────────────────────────────────────────*/
+
+export interface VetCreatePatientInput {
+  name: string;
+  ownerPhone: string;
+  gender?: "MALE" | "FEMALE" | "UNKNOWN";
+  birthDate?: string;
+  breedId?: string;
+  microchipNo?: string;
+  coatColor?: string;
+  branchId?: string;
+  reason?: string;
+  ownerConsented: true;
+}
+
+export interface VetClaimLink {
+  url: string;
+  expiresAt: string;
+  phoneLast4: string;
+  smsSent: boolean;
+  smsAvailable: boolean;
+  smsReason?: "disabled" | "cap" | "cooldown" | "provider" | "not_requested";
+}
+
+export type VetCreatePatientResult =
+  | {
+      created: true;
+      cat: { catId: string; name: string; catIdNumber: string | null; photoUrl: string | null };
+      visit: { id: string };
+      claim: VetClaimLink;
+    }
+  | {
+      created: false;
+      match: { id: string; name: string; catIdNumber: string | null; photoUrl: string | null; claimStatus: "CLAIMED" | "PENDING_CLAIM" };
+    };
+
+export type VetClaimState =
+  | { state: "claimed"; claimedAt: string | null }
+  | { state: "none"; canCreate: boolean }
+  | {
+      state: "valid" | "expired" | "revoked";
+      phoneLast4: string;
+      expiresAt: string;
+      sentCount: number;
+      lastSentAt: string | null;
+      smsAvailable: boolean;
+      canResend: boolean;
+    };
+
 export interface VetSearchResponse {
   results: VetSearchResult[];
   /**
@@ -1432,6 +1483,12 @@ export interface VetApi {
   counterLock: () => Promise<void>;
   /** GET /vet/patients/search?q= — the omnibox. */
   searchPatients: (q: string, opts?: { signal?: AbortSignal }) => Promise<VetSearchResponse>;
+  /** POST /vet/patients — register a walk-in cat and get its claim link (T4). */
+  createPatient: (input: VetCreatePatientInput) => Promise<VetCreatePatientResult>;
+  /** GET /vet/patients/:catId/claim — claim state for the counter screen. */
+  getClaim: (catId: string) => Promise<VetClaimState>;
+  /** POST /vet/patients/:catId/claim/refresh — a fresh link (+ optional SMS). */
+  refreshClaim: (catId: string, input?: { sendSms?: boolean }) => Promise<VetClaimLink>;
   /** GET /vet/patients/:catId — the clinical profile, consent-filtered. */
   getPatient: (catId: string) => Promise<VetPatientProfile>;
   /** GET /vet/patients/:catId/timeline */
@@ -1531,6 +1588,17 @@ export function useVetApi(): VetApi {
             "GET /vet/patients/search",
           ),
         ),
+
+      createPatient: (input) =>
+        vetFetch<VetCreatePatientResult>("/vet/patients", { method: "POST", body: JSON.stringify(input) }),
+
+      getClaim: (catId) => vetFetch<VetClaimState>(`/vet/patients/${encodeURIComponent(catId)}/claim`),
+
+      refreshClaim: (catId, input) =>
+        vetFetch<VetClaimLink>(`/vet/patients/${encodeURIComponent(catId)}/claim/refresh`, {
+          method: "POST",
+          body: JSON.stringify(input ?? {}),
+        }),
 
       getPatient: async (catId) =>
         adaptPatientProfile(

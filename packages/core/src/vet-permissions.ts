@@ -30,6 +30,7 @@ export type VetRole =
 export type VetCapability =
   // patients & records
   | "patient.search" // find a cat by identifier
+  | "patient.create" // register a walk-in cat at the counter and hand the owner a claim link
   | "patient.view" // open the clinical profile (subject to consent tier)
   | "record.read" // read clinical entries
   | "record.write" // author clinical entries
@@ -56,6 +57,7 @@ export type VetCapability =
 
 const ALL_CLINICAL: VetCapability[] = [
   "patient.search",
+  "patient.create",
   "patient.view",
   "record.read",
   "record.write",
@@ -91,6 +93,7 @@ const MATRIX: Record<VetRole, VetCapability[]> = {
   // authoring of medical records unless they also hold a vet role.
   MANAGER: [
     "patient.search",
+    "patient.create",
     "patient.view",
     "record.read",
     "visit.open",
@@ -114,6 +117,7 @@ const MATRIX: Record<VetRole, VetCapability[]> = {
   // upload results, but never prescribe.
   VET_TECH: [
     "patient.search",
+    "patient.create",
     "patient.view",
     "record.read",
     "record.write",
@@ -125,7 +129,9 @@ const MATRIX: Record<VetRole, VetCapability[]> = {
   // The front desk. Can find a patient, open a visit and see safety alerts —
   // and CANNOT read or write the clinical record. This is the rule the whole
   // matrix exists to guarantee.
-  RECEPTION: ["patient.search", "visit.open", "emergency.access", "billing.view"],
+  // Intake is a front-desk act: the receptionist registers the walk-in cat
+  // and hands the owner the claim link, without ever seeing the record.
+  RECEPTION: ["patient.search", "patient.create", "visit.open", "emergency.access", "billing.view"],
   FINANCE: ["billing.view", "billing.write", "reports.view", "export.data"],
   // Trainees author real records, but everything they write stays DRAFT until
   // a senior co-signs — teaching and legal attribution in one workflow.
