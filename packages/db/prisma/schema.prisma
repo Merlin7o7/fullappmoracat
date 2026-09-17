@@ -83,6 +83,13 @@ enum CatClaimStatus {
   PENDING_CLAIM
 }
 
+/// What a certificate attests (T9). CAT_ID is the identity + vaccination
+/// snapshot; VACCINATION is reserved for a doses-only variant.
+enum CertificateKind {
+  CAT_ID
+  VACCINATION
+}
+
 /// Why a member chose not to renew (T8). Asked once, never argued with (R068).
 enum CancelReason {
   TOO_EXPENSIVE
@@ -436,6 +443,8 @@ model User {
   consentsRevoked    ConsentGrant[]      @relation("ConsentRevokedBy")
   registeredDevices  CounterDevice[]     @relation("DeviceRegisteredBy")
   partnerInvitesSent PartnerInvite[]     @relation("PartnerInviteSender")
+
+  certificatesIssued Certificate[]
 
   @@index([status])
   @@index([createdAt])
@@ -891,6 +900,7 @@ model Cat {
   homeBranch        Branch?               @relation("CatHomeBranch", fields: [homeBranchId], references: [id], onDelete: SetNull)
   claimInvites      ClaimInvite[]
   foundReports      FoundReport[]
+  certificates      Certificate[]
 
   @@index([userId])
   @@index([homeBranchId])
@@ -2247,6 +2257,32 @@ model ClaimInvite {
 /// "I found this cat" (T6): a stranger scanned the collar QR and left a
 /// message. Relayed to the owner (in-app, email, SMS when enabled); the
 /// finder's number is shown to the owner only, never the reverse.
+/// A Cat ID certificate (MRC-PROD-001 T9): a frozen, numbered snapshot of the
+/// record at issue time, verifiable by an unguessable token. The PDF renders
+/// from `snapshot`, so the document in hand always matches the verify page.
+model Certificate {
+  id             String          @id @default(cuid())
+  catId          String
+  number         String          @unique
+  verifyToken    String          @unique
+  kind           CertificateKind @default(CAT_ID)
+  /// CertificateSnapshot (certificate-pdf.ts) — what was certified.
+  snapshot       Json
+  /// Private object key of the cached PDF (rendered lazily).
+  pdfKey         String?
+  issuedAt       DateTime        @default(now())
+  issuedByOrgId  String?
+  issuedByUserId String?
+  revokedAt      DateTime?
+
+  cat          Cat         @relation(fields: [catId], references: [id], onDelete: Cascade)
+  issuedByOrg  PartnerOrg? @relation(fields: [issuedByOrgId], references: [id], onDelete: SetNull)
+  issuedByUser User?       @relation(fields: [issuedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([catId, issuedAt])
+  @@map("cat_certificates")
+}
+
 model FoundReport {
   id          String   @id @default(cuid())
   catId       String
@@ -2865,6 +2901,7 @@ model PartnerOrg {
   // each entry says who wrote it.
   clinicalEntries ClinicalEntry[]
   prescriptions   Prescription[]
+  certificatesIssued Certificate[]
 
   @@index([status])
   @@map("partner_orgs")

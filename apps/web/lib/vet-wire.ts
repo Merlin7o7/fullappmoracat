@@ -806,7 +806,19 @@ export function adaptTimelineEntry(w: VetWireTimelineEntry) {
     revisionOf: w.revision?.isRevisionOf ?? null,
     cosignedBy: w.coSignedBy?.name ?? null,
     cosignedAt: toIso(w.coSignedAt),
-    attachments: (Array.isArray(w.attachments) ? w.attachments : []) as never,
+    // Metadata only crosses the wire; the object opens through the access-logged
+    // attachment endpoint (T12) — `url` stays null until then.
+    attachments: (Array.isArray(w.attachments) ? w.attachments : []).map((raw) => {
+      const a = raw as { id?: string; fileName?: string | null; mime?: string | null; bytes?: number | null; createdAt?: string | null; url?: string | null };
+      return {
+        id: String(a.id ?? ""),
+        filename: a.fileName ?? "",
+        mimeType: a.mime ?? "",
+        sizeBytes: a.bytes ?? 0,
+        url: a.url ?? null,
+        uploadedAt: a.createdAt ?? "",
+      };
+    }) as never,
     /** Retraction survives the crossing — a withdrawn entry must still show as withdrawn. */
     retracted: retracted
       ? { at: toIso(retracted.at), reason: retracted.reason ?? null, notice: retracted.notice ?? null }

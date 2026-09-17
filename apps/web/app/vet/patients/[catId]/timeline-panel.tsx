@@ -411,11 +411,15 @@ function TimelineRow({
                       >
                         {inner}
                       </a>
-                    ) : (
+                    ) : a.pending ? (
                       <span className="flex items-center gap-2 rounded-xl border border-dashed border-border p-1.5 pe-3 text-xs text-muted-foreground">
                         {inner}
                         <span>{isAr ? "قيد الرفع" : "uploading"}</span>
                       </span>
+                    ) : (
+                      <AttachmentOpen entryId={entry.id} attachmentId={a.id} isAr={isAr}>
+                        {inner}
+                      </AttachmentOpen>
                     )}
                   </li>
                 );
@@ -590,5 +594,46 @@ function RecordsWithheld({ isAr, className }: { isAr: boolean; className?: strin
           : "You can open a visit and see the critical alerts — reading and writing the clinical record is reserved for clinical staff. A veterinarian or the clinic manager can open it."}
       </p>
     </Card>
+  );
+}
+
+/**
+ * Private attachments (T12) never carry a public URL: opening one asks the API
+ * for a signed, short-lived link — and that read lands in the owner's ledger.
+ */
+function AttachmentOpen({
+  entryId,
+  attachmentId,
+  isAr,
+  children,
+}: {
+  entryId: string;
+  attachmentId: string;
+  isAr: boolean;
+  children: React.ReactNode;
+}) {
+  const api = useVetApi();
+  const { toast } = useToast();
+  const [busy, setBusy] = React.useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          const { url } = await api.openRecordAttachment(entryId, attachmentId);
+          window.open(url, "_blank", "noopener,noreferrer");
+        } catch (err) {
+          const f = vetFriendlyError(err, isAr);
+          toast({ variant: "error", title: f.title, description: f.message });
+        } finally {
+          setBusy(false);
+        }
+      }}
+      className="flex items-center gap-2 rounded-xl border border-border bg-background p-1.5 pe-3 text-xs transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+    >
+      {children}
+    </button>
   );
 }

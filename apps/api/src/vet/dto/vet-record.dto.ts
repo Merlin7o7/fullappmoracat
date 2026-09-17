@@ -738,9 +738,10 @@ export class CreateAttachmentDto {
       "Must be an http(s) URL on a storage host — never a data: or file: URI.",
     example: "https://media.moracat.sa/users/abc/uploads/9f2.jpg",
   })
+  @IsOptional()
   @IsString()
   @MaxLength(2000)
-  fileUrl!: string;
+  fileUrl?: string;
 
   @ApiPropertyOptional({ example: "thorax-lateral.jpg" })
   @IsOptional()

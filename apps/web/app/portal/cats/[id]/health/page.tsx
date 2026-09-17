@@ -11,6 +11,8 @@ import { CatHealthRecord, type HealthRecord } from "@/components/cat-health-reco
 import { HealthProfileForm } from "@/components/health-profile-form";
 import { EmergencyContactForm } from "@/components/emergency-contact-form";
 import { CatHealthPanel } from "@/components/cat-health-panel";
+import { CertificateCard } from "@/components/certificate-card";
+import { useCats } from "@/lib/cat-context";
 
 /**
  * The living record (MRC-PROD-001 T3) — the visible half of the moat. What
@@ -23,6 +25,8 @@ export default function CatHealthPage() {
   const { authedFetch, user } = useAuth();
   const { locale } = useLocale();
   const isAr = locale === "ar";
+  const { cats } = useCats();
+  const cat = cats.find((c) => c.id === id);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["cat-health", id],
@@ -36,6 +40,7 @@ export default function CatHealthPage() {
   return (
     <div className="space-y-6">
       <CatHealthRecord record={data} isAr={isAr} />
+      {cat && <CertificateCard catId={id} catName={cat.name} hasCatId={!!cat.catIdNumber} isAr={isAr} />}
       <HealthProfileForm record={data} isAr={isAr} />
       <EmergencyContactForm record={data} isAr={isAr} />
       <section className="space-y-2">

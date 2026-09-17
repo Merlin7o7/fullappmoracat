@@ -124,6 +124,12 @@ export class CatsController {
     return this.cats.getHealth(userId, id);
   }
 
+  @Get(":id/health/attachments/:attId")
+  @ApiOperation({ summary: "Open one attachment on my cat's record (signed, short-lived link)" })
+  healthAttachment(@CurrentUser("id") userId: string, @Param("id") id: string, @Param("attId") attId: string) {
+    return this.cats.getHealthAttachment(userId, id, attId);
+  }
+
   @Patch(":id/health-profile")
   @ApiOperation({ summary: "Edit the owner-maintained health profile (chip, allergies, food, home clinic…)" })
   updateHealthProfile(@CurrentUser("id") userId: string, @Param("id") id: string, @Body() dto: HealthProfileDto) {

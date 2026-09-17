@@ -406,6 +406,57 @@ console.log("━━ demo quarantine ━━");
     }
     // Refreshing after claim is refused; state reports claimed.
     ok((await call(`/vet/patients/${walkId}/claim`, "GET", undefined, DT, H)).json?.state === "claimed", "counter sees the cat as claimed");
+
+    console.log("━━ T9/T10/T12: private attachments, certificates, clinic Today ━━");
+    // T12 — bytes go to PRIVATE storage; the only way out is a signed link.
+    const entryId = walkEntry.json?.entry?.id ?? walkEntry.json?.id;
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+    const fd = new FormData();
+    fd.append("file", new Blob([png], { type: "image/png" }), "xray.png");
+    const up = await fetch(base + `/vet/records/${entryId}/attachments`, { method: "POST", headers: { authorization: `Bearer ${DT}`, ...H }, body: fd });
+    const upJson = await up.json().catch(() => null);
+    ok(up.status === 201 && !!upJson?.attachment?.id && upJson.attachment.mime === "image/png", "multipart attachment lands in private storage (sniffed as PNG)");
+    const attId = upJson?.attachment?.id;
+    const svg = new FormData();
+    svg.append("file", new Blob(["<svg xmlns='http://www.w3.org/2000/svg'/>"], { type: "image/png" }), "x.png");
+    const bad = await fetch(base + `/vet/records/${entryId}/attachments`, { method: "POST", headers: { authorization: `Bearer ${DT}`, ...H }, body: svg });
+    ok(bad.status === 400, "a mislabelled non-image is refused by content sniffing, whatever the client says");
+    const opened = await call(`/vet/records/${entryId}/attachments/${attId}`, "GET", undefined, DT, H);
+    ok(opened.status === 200 && typeof opened.json?.url === "string" && opened.json.url.includes("/api/files/"), "the clinic opens it through a signed link (read logged)");
+    const bytes = await fetch(opened.json.url);
+    ok(bytes.status === 200 && (bytes.headers.get("content-type") ?? "").startsWith("image/png") && (bytes.headers.get("cache-control") ?? "").includes("no-store"), "signed link streams the bytes, never cached");
+    ok((await fetch(opened.json.url.replace(/\.[^./]+$/, ".tampered"))).status === 401, "a tampered file token is refused");
+    // The owner sees the attachment on their record and opens it the same way.
+    const ownerHealth = (await call(`/cats/${walkId}/health`, "GET", undefined, owner.accessToken)).json;
+    const ownerAtt = (ownerHealth?.clinicalEntries ?? []).flatMap((e) => e.attachments ?? []).find((a) => a.id === attId);
+    ok(!!ownerAtt && !("fileUrl" in ownerAtt), "owner's record lists the attachment (metadata only)");
+    const ownerOpen = await call(`/cats/${walkId}/health/attachments/${attId}`, "GET", undefined, owner.accessToken);
+    ok(ownerOpen.status === 200 && typeof ownerOpen.json?.url === "string" && ownerOpen.json.url.includes("/api/files/"), "owner opens the attachment through a signed link");
+    ok((await call(`/cats/${walkId}/health/attachments/${attId}`, "GET", undefined, C)).status === 404, "another member cannot open it");
+
+    // T9 — certificates: the owner's, then the clinic's signature on one.
+    const certRes = await call(`/cats/${walkId}/certificate`, "POST", {}, owner.accessToken);
+    ok(certRes.status === 201 && /^MRC-CERT-\d{4}-[A-F0-9]{6}$/.test(certRes.json?.number ?? "") && (certRes.json?.verifyUrl ?? "").includes("/certificates/verify/"), `owner issues a certificate (${certRes.json?.number})`);
+    const certToken = certRes.json.verifyUrl.split("/certificates/verify/")[1];
+    const ver = await call(`/certificates/verify/${certToken}`);
+    ok(ver.status === 200 && ver.json?.valid === true && ver.json?.catName === walkName && ver.json?.verifiedVaccinations >= 1 && !JSON.stringify(ver.json).includes(walkPhone), "public verify confirms the certificate without leaking the owner");
+    ok((await call("/certificates/verify/nope")).json?.valid === false, "unknown certificate token → valid:false");
+    const pdf = await fetch(base + `/certificates/${certToken}/pdf`);
+    const pdfBuf = Buffer.from(await pdf.arrayBuffer());
+    ok(pdf.status === 200 && (pdf.headers.get("content-type") ?? "").includes("application/pdf") && pdfBuf.subarray(0, 5).toString() === "%PDF-", `certificate PDF renders (${pdfBuf.length} bytes)`);
+    ok((await fetch(base + `/certificates/${certToken}/pdf`)).status === 200, "the cached PDF serves again");
+    ok((await call(`/cats/${walkId}/certificate`, "POST", {}, C)).status === 404, "another member cannot issue a certificate for this cat");
+    ok((await call(`/cats/${walkId}/certificate`, "GET", undefined, owner.accessToken)).json?.number === certRes.json.number, "owner reads back the latest certificate");
+    const clinicCert = await call(`/vet/patients/${walkId}/certificate`, "POST", {}, DT, H);
+    ok(clinicCert.status === 201 && clinicCert.json?.number !== certRes.json.number, "the treating clinic issues a clinic-signed certificate");
+    const clinicToken = clinicCert.json.verifyUrl.split("/certificates/verify/")[1];
+    ok(!!(await call(`/certificates/verify/${clinicToken}`)).json?.issuedBy?.en, "clinic-signed certificate names the clinic as issuer");
+
+    // T10 — the clinic's Today numbers.
+    const summary = await call("/vet/org/summary", "GET", undefined, DT, H);
+    ok(summary.status === 200 && typeof summary.json?.visitsToday?.open === "number" && Array.isArray(summary.json?.attention) && Array.isArray(summary.json?.vaccinationsDue) && typeof summary.json?.newMembersNearby === "number", "clinic Today summary has visits, attention, recalls and demand");
+    ok((summary.json?.vaccinationsDue ?? []).some((v) => v.catId === walkId), "the walk-in's clinic-written dose shows in the recall list");
+    ok(typeof summary.json?.remindersSent === "number", "summary carries the registry-loop counters");
     // Old-name twins: a second walk-in with the same name for the same owner offers a merge.
     const twin = await call("/vet/patients", "POST", { name: walkName, ownerPhone: `+9665${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`, ownerConsented: true }, DT, H);
     if (twin.json?.created) {
@@ -911,6 +962,7 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
 
   // ── Phase 5: setup sandbox + go-live gate ──
   const sandboxSearch = await call("/vet/patients/search?q=" + encodeURIComponent(cat.catIdNumber), "GET", undefined, V, VH);
+  ok((await call(`/vet/patients/${cat.id}/certificate`, "POST", {}, V, VH)).status === 403, "a sandbox (not-live) clinic cannot issue certificates");
   ok(sandboxSearch.status === 200 && sandboxSearch.json?.total === 0, "approved clinic's search can't resolve a real member (sandbox quarantine)");
   ok((await call(`/vet/patients/${cat.id}`, "GET", undefined, V, VH)).json?.code === "VET_ORG_NOT_LIVE", "no record reads before go-live");
   const vctx2 = (await call("/vet/auth/context", "POST", {}, V)).json;

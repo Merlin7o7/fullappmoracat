@@ -20,6 +20,7 @@ import { StorageService } from "../storage/storage.service";
 import { MailService } from "../mail/mail.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { EventsService } from "../events/events.service";
+import { FilesService } from "../files/files.service";
 import { deriveVaccinationStatus, describeEntryForOwner } from "@moraqat/core";
 import type { EmergencyContactDto, HealthProfileDto } from "./dto/cat-health.dto";
 import { catIdIssuedTemplate } from "../mail/mail.templates";
@@ -239,7 +240,8 @@ export class CatsService implements OnModuleInit {
     private readonly storage: StorageService,
     private readonly mail: MailService,
     private readonly notifications: NotificationsService,
-    private readonly events: EventsService
+    private readonly events: EventsService,
+    private readonly files: FilesService
   ) {}
 
   /**
@@ -737,7 +739,11 @@ export class CatsService implements OnModuleInit {
           where: { status: "FINAL", retractedAt: null, type: { not: "NOTE" } },
           orderBy: { occurredAt: "desc" },
           take: 200,
-          select: { id: true, type: true, payload: true, occurredAt: true, visitId: true, org: { select: { nameAr: true, nameEn: true } } },
+          select: {
+            id: true, type: true, payload: true, occurredAt: true, visitId: true, org: { select: { nameAr: true, nameEn: true } },
+            // Metadata only — the bytes open through an owner-scoped, signed link (T12).
+            attachments: { select: { id: true, fileName: true, mime: true, kind: true, createdAt: true } },
+          },
         },
         visits: {
           orderBy: { checkedInAt: "desc" },
@@ -814,7 +820,15 @@ export class CatsService implements OnModuleInit {
         .map((e) => {
           const owner = describeEntryForOwner(e.type, e.payload);
           return owner
-            ? { id: e.id, type: e.type, occurredAt: e.occurredAt, visitId: e.visitId, clinic: { ar: e.org.nameAr, en: e.org.nameEn }, ...owner }
+            ? {
+                id: e.id,
+                type: e.type,
+                occurredAt: e.occurredAt,
+                visitId: e.visitId,
+                clinic: { ar: e.org.nameAr, en: e.org.nameEn },
+                attachments: e.attachments.map((a) => ({ id: a.id, fileName: a.fileName, mime: a.mime, kind: a.kind, createdAt: a.createdAt })),
+                ...owner,
+              }
             : null;
         })
         .filter((e): e is NonNullable<typeof e> => e !== null),
@@ -830,6 +844,24 @@ export class CatsService implements OnModuleInit {
         clinic: { ar: v.org.nameAr, en: v.org.nameEn },
       })),
     };
+  }
+
+  /**
+   * Open one attachment on the owner's own record (T12): the entry must be
+   * FINAL and not retracted (the same projection rule as getHealth), and the
+   * bytes come back as a 5-minute signed link — never a public object.
+   */
+  async getHealthAttachment(userId: string, catId: string, attachmentId: string) {
+    await this.ownedCat(userId, catId);
+    const a = await this.prisma.entryAttachment.findFirst({
+      where: { id: attachmentId, entry: { catId, status: "FINAL", retractedAt: null } },
+      select: { id: true, fileUrl: true, fileName: true, mime: true, kind: true },
+    });
+    if (!a) throw new NotFoundException("Attachment not found");
+    const url = a.fileUrl.startsWith("private:")
+      ? this.files.linkFor({ key: a.fileUrl.slice("private:".length), mime: a.mime ?? "application/octet-stream", fileName: a.fileName ?? "attachment" })
+      : a.fileUrl;
+    return { id: a.id, url, fileName: a.fileName, mime: a.mime, kind: a.kind };
   }
 
   /**

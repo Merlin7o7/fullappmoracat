@@ -32,6 +32,7 @@ import { AlertOctagon, Check, Info } from "lucide-react";
 import { Button, Input, Badge, cn, useToast } from "@moraqat/ui";
 import { requiresCoSign } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
+import { AttachmentPicker } from "@/components/vet/attachment-picker";
 import { VET_ENTRY_KIND_LABELS } from "@/lib/vet-wire";
 import {
   useVetActor,
@@ -393,6 +394,8 @@ export function EntryComposer({
   const [override, setOverride] = React.useState("");
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState(false);
+  // Attachments ride behind the entry (T12): picked now, uploaded once it exists.
+  const [files, setFiles] = React.useState<File[]>([]);
   const formErrorRef = React.useRef<HTMLDivElement>(null);
 
   const fields = TYPE_FIELDS[type];
@@ -517,6 +520,25 @@ export function EntryComposer({
             note: note.trim() || undefined,
             occurredAt: new Date(occurredAt).toISOString(),
           });
+
+      // The entry is saved FIRST, so a failed upload never costs the vet their
+      // typing (R117); each failure is named, never silent.
+      let failedUploads = 0;
+      for (const f of files) {
+        try {
+          await api.uploadRecordAttachmentFile(saved.id, f);
+        } catch {
+          failedUploads += 1;
+        }
+      }
+      if (failedUploads > 0) {
+        toast({
+          variant: "error",
+          title: isAr ? `تعذّر رفع ${failedUploads} من الملفات` : `${failedUploads} file(s) didn't upload`,
+          description: isAr ? "الإدخال محفوظ — أعد إرفاق الملفات من السجل." : "The entry is saved — re-attach the files from the record.",
+        });
+      }
+      setFiles([]);
 
       const isDraft = saved.status === "DRAFT" || saved.status === "AWAITING_COSIGN" || savesAsDraft;
       toast({
@@ -843,6 +865,10 @@ export function EntryComposer({
             ? "ما تكتبه يُحفظ كمسودة موقّعة باسمك، ولا يصبح جزءاً نهائياً من السجل حتى يوقّعه طبيب بيطري. لا شيء يُفقد في الانتظار."
             : "What you write is saved as a draft under your name, and becomes a final part of the record once a veterinarian co-signs it. Nothing is lost while it waits."}
         </p>
+      )}
+
+      {!isAmend && actor.can("attachment.upload") && (
+        <AttachmentPicker files={files} onChange={setFiles} isAr={isAr} className="mt-4" />
       )}
 
       <div className="mt-5 flex flex-wrap gap-2">

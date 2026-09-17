@@ -543,6 +543,15 @@ export interface VetAttachment {
   pending?: boolean;
 }
 
+/** A clinic-signed Cat ID certificate (T9). */
+export interface VetCertificate {
+  id: string;
+  number: string;
+  issuedAt: string;
+  verifyUrl: string;
+  pdfUrl: string;
+}
+
 export interface VetTimelineEntry {
   id: string;
   kind: VetTimelineKind;
@@ -835,6 +844,9 @@ export interface VetOrgSummary {
   vaccinationsDue?: VetVaccinationDue[];
   /** Licence expiry, unverified device, pending invite… — always actionable. */
   attention?: VetAttentionItem[];
+  /** The registry loop, measured for this clinic over 30 days (T2/T5). */
+  remindersSent?: number;
+  reminderClicks?: number;
 }
 
 export interface VetFollowUp {
@@ -1508,8 +1520,14 @@ export interface VetApi {
   openVisit: (input: { catId: string; reason?: string; branchId?: string }) => Promise<VetVisit>;
   /** POST /vet/visits/:id/close */
   closeVisit: (id: string) => Promise<VetVisit>;
-  /** GET /vet/org/summary — Today's numbers; may legitimately not exist. */
+  /** GET /vet/org/summary — Today's numbers (T10). */
   getOrgSummary: () => Promise<VetOrgSummary | null>;
+  /** POST /vet/records/:id/attachments (multipart) — bytes go to PRIVATE storage (T12). */
+  uploadRecordAttachmentFile: (entryId: string, file: File, kind?: string) => Promise<{ attachment: { id: string; fileName?: string | null } }>;
+  /** GET /vet/records/:id/attachments/:attachmentId — a short-lived signed link; the read is logged. */
+  openRecordAttachment: (entryId: string, attachmentId: string) => Promise<{ url: string; fileName?: string | null }>;
+  /** POST /vet/patients/:catId/certificate — a clinic-signed Cat ID certificate (T9). */
+  issueCertificate: (catId: string) => Promise<VetCertificate>;
   /** GET /vet/consent?catId= */
   listConsent: (catId?: string) => Promise<{ grants: VetConsentGrant[] }>;
   /** POST /vet/consent/request — ask the owner for a higher tier. */
@@ -1562,6 +1580,8 @@ export interface VetApi {
  */
 export function useVetApi(): VetApi {
   const vetFetch = useVetFetch();
+  const { authedUpload } = useAuth();
+  const { orgId } = useVetActor();
 
   return React.useMemo<VetApi>(
     () => ({
@@ -1688,16 +1708,27 @@ export function useVetApi(): VetApi {
       closeVisit: (id) =>
         vetFetch<VetVisit>(`/vet/visits/${encodeURIComponent(id)}/close`, { method: "POST", body: "{}" }),
 
-      // Today must survive this endpoint not existing yet: a missing summary is
-      // "no numbers to show", never an error banner over the day's work.
-      getOrgSummary: async () => {
-        try {
-          return await vetFetch<VetOrgSummary>("/vet/org/summary");
-        } catch (err) {
-          if (err instanceof ApiError && err.status === 404) return null;
-          throw err;
-        }
+      getOrgSummary: () => vetFetch<VetOrgSummary>("/vet/org/summary"),
+
+      uploadRecordAttachmentFile: (entryId, file, kind) => {
+        const fd = new FormData();
+        fd.append("file", file, file.name);
+        if (kind) fd.append("kind", kind);
+        return authedUpload<{ attachment: { id: string; fileName?: string | null } }>(
+          `/vet/records/${encodeURIComponent(entryId)}/attachments`,
+          fd,
+          "POST",
+          orgId ? { "x-moracat-org": orgId } : {},
+        );
       },
+
+      openRecordAttachment: (entryId, attachmentId) =>
+        vetFetch<{ url: string; fileName?: string | null }>(
+          `/vet/records/${encodeURIComponent(entryId)}/attachments/${encodeURIComponent(attachmentId)}`,
+        ),
+
+      issueCertificate: (catId) =>
+        vetFetch<VetCertificate>(`/vet/patients/${encodeURIComponent(catId)}/certificate`, { method: "POST", body: "{}" }),
 
       listConsent: (catId) =>
         vetFetch<{ grants: VetConsentGrant[] }>(
@@ -1773,7 +1804,7 @@ export function useVetApi(): VetApi {
           body: JSON.stringify({ summary }),
         }),
     }),
-    [vetFetch],
+    [vetFetch, authedUpload, orgId],
   );
 }
 

@@ -22,6 +22,8 @@ import { Injectable } from "@nestjs/common";
 import { Prisma, type ClinicalEntryType, type PrescriptionStatus } from "@moraqat/db";
 import { requiresCoSign, deriveVaccinationStatus } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
+import { StorageService } from "../storage/storage.service";
+import { FilesService } from "../files/files.service";
 import {
   VetPatientsService,
   staffLabel,
@@ -118,11 +120,16 @@ const ACTION_TARGET: Record<PrescriptionAction, PrescriptionStatus> = {
   cancel: "CANCELLED",
 };
 
+/** Per-file ceiling for medical attachments (T12). */
+export const VET_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
+
 @Injectable()
 export class VetRecordsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly patients: VetPatientsService
+    private readonly patients: VetPatientsService,
+    private readonly storage: StorageService,
+    private readonly files: FilesService
   ) {}
 
   // ── 4 · Author an entry ─────────────────────────────────────────────────
@@ -426,7 +433,7 @@ export class VetRecordsService {
 
     let url: URL;
     try {
-      url = new URL(dto.fileUrl);
+      url = new URL(dto.fileUrl ?? "");
     } catch {
       throw vetBadRequest("VET_ATTACHMENT_INVALID", "fileUrl must be an absolute URL", {
         hint: {
@@ -449,7 +456,7 @@ export class VetRecordsService {
     const attachment = await this.prisma.entryAttachment.create({
       data: {
         entryId: entry.id,
-        fileUrl: dto.fileUrl,
+        fileUrl: url.toString(),
         fileName: dto.fileName ?? null,
         mime: dto.mime ?? null,
         bytes: dto.bytes ?? null,
@@ -471,6 +478,70 @@ export class VetRecordsService {
       notice: {
         ar: "أُرفق الملف بالسجل. يُفتح عبر رابط مُسجَّل الوصول، لا كملف عام.",
         en: "Attached to the record. It opens through an access-logged endpoint, never as a public file.",
+      },
+    };
+  }
+
+  /**
+   * Multipart upload straight into PRIVATE storage (T12). The bytes are
+   * content-sniffed (PDF / JPEG / PNG only — never trust the client's mime),
+   * written under an unguessable private key, and recorded on the entry. The
+   * object is never a public URL: it opens only through a signed, short-lived
+   * link minted by getAttachment(), which logs the read.
+   */
+  async addAttachmentFile(
+    actor: VetActor,
+    entryId: string,
+    file: { buffer: Buffer; originalname?: string; mimetype?: string; size: number } | undefined,
+    kind?: string | null
+  ) {
+    const entry = await this.requireOwnEntry(actor, entryId);
+    if (entry.retractedAt) throw this.immutable(entry.id, "retracted");
+    if (!file?.buffer?.length) {
+      throw vetBadRequest("VET_ATTACHMENT_INVALID", "No file received", {
+        hint: { ar: "اختاروا ملفًا (صورة أو PDF) ثم أعيدوا المحاولة.", en: "Choose a file (image or PDF) and try again." },
+      });
+    }
+    if (file.size > VET_ATTACHMENT_MAX_BYTES) {
+      throw vetBadRequest("VET_ATTACHMENT_INVALID", "Attachment exceeds 20 MB", {
+        maxBytes: VET_ATTACHMENT_MAX_BYTES,
+        hint: { ar: "الحد الأقصى ٢٠ ميغابايت للملف الواحد.", en: "Files are limited to 20 MB each." },
+      });
+    }
+    const sniffed = this.storage.sniffDocument(file.buffer);
+    if (!sniffed) {
+      throw vetBadRequest("VET_ATTACHMENT_INVALID", "Only PDF, JPEG or PNG files are accepted", {
+        hint: { ar: "الملفات المقبولة: PDF أو JPEG أو PNG.", en: "Accepted: PDF, JPEG or PNG." },
+      });
+    }
+    const key = this.storage.buildPrivateKey(`vet/${actor.orgId}/entries/${entry.id}`, sniffed.ext);
+    await this.storage.putPrivate(key, file.buffer, sniffed.mime);
+    const safeName = (file.originalname ?? `attachment.${sniffed.ext}`).replace(/[^\w.\- \u0600-\u06FF]/g, "_").slice(0, 200);
+
+    const attachment = await this.prisma.entryAttachment.create({
+      data: {
+        entryId: entry.id,
+        fileUrl: `private:${key}`,
+        fileName: safeName,
+        mime: sniffed.mime,
+        bytes: file.size,
+        kind: kind ?? (sniffed.ext === "pdf" ? "pdf" : "photo"),
+        scanStatus: "clean",
+      },
+      select: { id: true, fileName: true, mime: true, bytes: true, kind: true, scanStatus: true, createdAt: true },
+    });
+    await this.patients.logAccess({
+      catId: entry.catId,
+      orgId: actor.orgId,
+      staffId: actor.staffId,
+      tier: "T2",
+      surface: "write",
+    });
+    return {
+      attachment: { ...attachment, urlEndpoint: `/api/vet/records/${entry.id}/attachments/${attachment.id}` },
+      notice: {
+        ar: "أُرفق الملف بالسجل في مساحة خاصة. يُفتح عبر رابط مؤقت مُسجَّل الوصول.",
+        en: "Attached to the record in private storage. It opens through a short-lived, access-logged link.",
       },
     };
   }
@@ -523,9 +594,18 @@ export class VetRecordsService {
       ipAddress: ip,
     });
 
+    // Private objects (T12) open through a 5-minute signed link; legacy rows
+    // that stored a public object URL are handed back as-is.
+    const url = attachment.fileUrl.startsWith("private:")
+      ? this.files.linkFor({
+          key: attachment.fileUrl.slice("private:".length),
+          mime: attachment.mime ?? "application/octet-stream",
+          fileName: attachment.fileName ?? "attachment",
+        })
+      : attachment.fileUrl;
     return {
       id: attachment.id,
-      url: attachment.fileUrl,
+      url,
       fileName: attachment.fileName,
       mime: attachment.mime,
       bytes: attachment.bytes,

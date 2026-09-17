@@ -5,12 +5,14 @@
  * PUT/PATCH on an entry and no DELETE. Correction is `POST :id/revise`
  * (a new row), withdrawal is `POST :id/retract` (a reason, never a removal).
  */
-import { Body, Controller, Get, Ip, Param, Post, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Get, Ip, Param, Post, UseGuards, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { Throttle } from "@nestjs/throttler";
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiConsumes } from "@nestjs/swagger";
 import { VetStaffGuard } from "./guards/vet-staff.guard";
 import { VetCapability } from "./decorators/vet-capability.decorator";
 import { VetActorParam } from "./decorators/vet-actor.decorator";
-import { VetRecordsService } from "./vet-records.service";
+import { VetRecordsService, VET_ATTACHMENT_MAX_BYTES } from "./vet-records.service";
 import type { VetActor } from "./vet-patients.service";
 import {
   CoSignClinicalEntryDto,
@@ -91,14 +93,23 @@ export class VetRecordsController {
 
   @Post("records/:id/attachments")
   @VetCapability("attachment.upload")
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: VET_ATTACHMENT_MAX_BYTES + 1024 } }))
   @ApiOperation({
-    summary: "Attach a stored object (X-ray, lab PDF, photo) to an entry",
+    summary: "Attach an X-ray, lab PDF or photo to an entry",
     description:
-      "Upload the bytes first via POST /api/uploads/image (which sniffs the real file type), then " +
-      "send the returned URL here. Only http(s) URLs are accepted. List responses return metadata " +
-      "only — the object URL comes from the attachment endpoint, which logs the read.",
+      "Send the bytes as multipart `file` (PDF/JPEG/PNG, 20 MB) — they are content-sniffed and stored " +
+      "PRIVATELY (T12). A JSON body with `fileUrl` (an already-stored http(s) object) is still accepted. " +
+      "List responses return metadata only — the object opens through the attachment endpoint, which logs the read.",
   })
-  addAttachment(@VetActorParam() actor: VetActor, @Param("id") id: string, @Body() dto: CreateAttachmentDto) {
+  addAttachment(
+    @VetActorParam() actor: VetActor,
+    @Param("id") id: string,
+    @Body() dto: CreateAttachmentDto,
+    @UploadedFile() file?: { buffer: Buffer; originalname?: string; mimetype?: string; size: number }
+  ) {
+    if (file) return this.records.addAttachmentFile(actor, id, file, dto.kind ?? null);
     return this.records.addAttachment(actor, id, dto);
   }
 

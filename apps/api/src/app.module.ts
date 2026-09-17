@@ -43,6 +43,8 @@ import { WalletModule } from "./wallet/wallet.module";
 import { LifecycleModule } from "./lifecycle/lifecycle.module";
 import { VetModule } from "./vet/vet.module";
 import { EventsModule } from "./events/events.module";
+import { FilesModule } from "./files/files.module";
+import { CertificatesModule } from "./certificates/certificates.module";
 import { SmsModule } from "./sms/sms.module";
 import { ClaimsModule } from "./claims/claims.module";
 import { PublicCatsModule } from "./public-cats/public-cats.module";
@@ -97,6 +99,8 @@ import { LinksModule } from "./links/links.module";
     // First-party product events — global so every domain can record the
     // fact it owns (MRC-PROD-001 T2).
     EventsModule,
+    FilesModule,
+    CertificatesModule,
     // One SMS sender for OTPs, claim links and found-cat relays.
     SmsModule,
 

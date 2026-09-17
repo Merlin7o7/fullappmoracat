@@ -7,6 +7,8 @@ import {
 import { Prisma } from "@moraqat/db";
 import { findSaudiCity } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
+import { riyadhDayBounds } from "@moraqat/core";
+import { EventsService } from "../events/events.service";
 import { vetError } from "./guards/vet-staff.guard";
 import type { VetActor } from "./decorators/vet-actor.decorator";
 import { VetAuthService, type RequestMeta } from "./vet-auth.service";
@@ -34,6 +36,7 @@ const DEFAULT_DIRECTORY_LIMIT = 24;
 export class VetOrgService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly events: EventsService,
     private readonly vetAuth: VetAuthService
   ) {}
 
@@ -264,6 +267,132 @@ export class VetOrgService {
       verified: !!org.verifiedAt,
       counts: { branches: org._count.branches, staff: org._count.staff },
       _count: undefined,
+    };
+  }
+
+  /**
+   * Today's numbers (MRC-PROD-001 T10). Everything here is org-wide and cheap:
+   * counts for the day, the two lists that bring patients back (follow-ups
+   * promised, doses due — only for roles that may see patients), a proxy for
+   * demand nearby, and an attention list that is always actionable.
+   */
+  async summary(actor: VetActor) {
+    const now = new Date();
+    const day = riyadhDayBounds(now);
+    const DAY = 86_400_000;
+    const canSeePatients = actor.capabilities.includes("patient.view");
+    const org = await this.prisma.partnerOrg.findUniqueOrThrow({
+      where: { id: actor.orgId },
+      select: { nameEn: true, nameAr: true, status: true, branches: { select: { id: true, cityCode: true } } },
+    });
+    const cityCodes = [...new Set(org.branches.map((b) => b.cityCode).filter((c): c is string => !!c))];
+
+    const [open, completed, followUps, due, newMembersNearby, drafts, unclaimed, expiringConsents, remindersSent, reminderClicks] =
+      await Promise.all([
+        this.prisma.visit.count({ where: { orgId: actor.orgId, checkedInAt: { gte: day.start, lt: day.end }, state: "OPEN" } }),
+        this.prisma.visit.count({ where: { orgId: actor.orgId, checkedInAt: { gte: day.start, lt: day.end }, state: "CLOSED" } }),
+        canSeePatients
+          ? this.prisma.visit.findMany({
+              where: { orgId: actor.orgId, followUpAt: { gte: new Date(now.getTime() - 30 * DAY), lte: new Date(now.getTime() + 14 * DAY) }, cat: { deletedAt: null } },
+              orderBy: { followUpAt: "asc" },
+              take: 10,
+              select: { id: true, followUpAt: true, reason: true, cat: { select: { id: true, name: true, photoUrl: true } }, closedBy: { select: { user: { select: { firstName: true } } } } },
+            })
+          : Promise.resolve([]),
+        canSeePatients
+          ? this.prisma.catVaccination.findMany({
+              where: {
+                orgId: actor.orgId,
+                dueAt: { gte: new Date(now.getTime() - 7 * DAY), lte: new Date(now.getTime() + 30 * DAY) },
+                cat: { deletedAt: null, status: "ACTIVE", claimStatus: "CLAIMED" },
+              },
+              orderBy: { dueAt: "asc" },
+              take: 15,
+              select: { name: true, dueAt: true, cat: { select: { id: true, name: true, photoUrl: true, user: { select: { firstName: true } } } } },
+            })
+          : Promise.resolve([]),
+        cityCodes.length
+          ? this.prisma.cat.count({ where: { deletedAt: null, claimStatus: "CLAIMED", isDemo: actor.orgIsDemo, cityCode: { in: cityCodes }, createdAt: { gte: new Date(now.getTime() - 30 * DAY) } } })
+          : Promise.resolve(0),
+        this.prisma.clinicalEntry.findMany({ where: { orgId: actor.orgId, status: "DRAFT", retractedAt: null }, take: 1, orderBy: { createdAt: "asc" }, select: { catId: true } }).then(async (rows) => ({
+          count: await this.prisma.clinicalEntry.count({ where: { orgId: actor.orgId, status: "DRAFT", retractedAt: null } }),
+          firstCatId: rows[0]?.catId ?? null,
+        })),
+        this.prisma.cat.findMany({ where: { createdByOrgId: actor.orgId, claimStatus: "PENDING_CLAIM", deletedAt: null, createdAt: { lte: new Date(now.getTime() - 7 * DAY) } }, take: 1, orderBy: { createdAt: "asc" }, select: { id: true } }).then(async (rows) => ({
+          count: await this.prisma.cat.count({ where: { createdByOrgId: actor.orgId, claimStatus: "PENDING_CLAIM", deletedAt: null, createdAt: { lte: new Date(now.getTime() - 7 * DAY) } } }),
+          firstCatId: rows[0]?.id ?? null,
+        })),
+        this.prisma.consentGrant.findMany({ where: { orgId: actor.orgId, revokedAt: null, expiresAt: { gte: now, lte: new Date(now.getTime() + 3 * DAY) } }, take: 5, select: { catId: true } }),
+        this.prisma.productEvent.count({ where: { orgId: actor.orgId, name: "reminder_sent", createdAt: { gte: new Date(now.getTime() - 30 * DAY) } } }),
+        this.prisma.productEvent.count({ where: { orgId: actor.orgId, name: "reminder_link_clicked", createdAt: { gte: new Date(now.getTime() - 30 * DAY) } } }),
+      ]);
+
+    const attention: { id: string; severity: "INFO" | "WARN" | "CRITICAL"; titleEn: string; titleAr: string; href?: string | null; actionEn?: string | null; actionAr?: string | null }[] = [];
+    if (drafts.count > 0) {
+      attention.push({
+        id: "drafts",
+        severity: "WARN",
+        titleEn: `${drafts.count} ${drafts.count === 1 ? "entry waits" : "entries wait"} for a veterinarian's co-signature`,
+        titleAr: `${drafts.count} ${drafts.count === 1 ? "إدخال ينتظر" : "إدخالات تنتظر"} توقيع طبيب بيطري`,
+        href: drafts.firstCatId ? `/vet/patients/${drafts.firstCatId}` : null,
+        actionEn: "Review drafts",
+        actionAr: "راجع المسودات",
+      });
+    }
+    if (unclaimed.count > 0) {
+      attention.push({
+        id: "unclaimed",
+        severity: "INFO",
+        titleEn: `${unclaimed.count} walk-in ${unclaimed.count === 1 ? "patient is" : "patients are"} still unclaimed after a week`,
+        titleAr: `${unclaimed.count} ${unclaimed.count === 1 ? "مريض جديد لم يُطالَب به" : "مرضى جدد لم يُطالَب بهم"} بعد أسبوع`,
+        href: unclaimed.firstCatId ? `/vet/patients/${unclaimed.firstCatId}?claim=1` : null,
+        actionEn: "Resend the claim link",
+        actionAr: "أعد إرسال رابط المطالبة",
+      });
+    }
+    if (expiringConsents.length > 0) {
+      attention.push({
+        id: "consents",
+        severity: "INFO",
+        titleEn: `${expiringConsents.length} record ${expiringConsents.length === 1 ? "permission expires" : "permissions expire"} within 3 days`,
+        titleAr: `${expiringConsents.length} ${expiringConsents.length === 1 ? "إذن سجل ينتهي" : "أذونات سجل تنتهي"} خلال ٣ أيام`,
+        href: `/vet/patients/${expiringConsents[0]!.catId}`,
+        actionEn: "Ask the owner to renew",
+        actionAr: "اطلب من المالك التجديد",
+      });
+    }
+
+    this.events.emit("clinic_summary_viewed", { userId: actor.userId, orgId: actor.orgId });
+
+    return {
+      orgNameEn: org.nameEn,
+      orgNameAr: org.nameAr,
+      orgStatus: org.status,
+      visitsToday: { open, completed },
+      newMembersNearby,
+      pendingFollowUps: followUps.map((v) => ({
+        id: v.id,
+        catId: v.cat.id,
+        catName: v.cat.name,
+        catPhotoUrl: v.cat.photoUrl,
+        dueAt: v.followUpAt!.toISOString(),
+        reasonEn: v.reason,
+        reasonAr: v.reason,
+        assignedStaffName: v.closedBy?.user.firstName ?? null,
+      })),
+      vaccinationsDue: due.map((d) => ({
+        catId: d.cat.id,
+        catName: d.cat.name,
+        catPhotoUrl: d.cat.photoUrl,
+        vaccineEn: d.name,
+        vaccineAr: d.name,
+        dueAt: d.dueAt!.toISOString(),
+        ownerName: d.cat.user?.firstName ?? null,
+      })),
+      attention,
+      // The registry loop, measured for this clinic (T2/T5).
+      remindersSent,
+      reminderClicks,
     };
   }
 

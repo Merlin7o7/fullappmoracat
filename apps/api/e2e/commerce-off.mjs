@@ -45,6 +45,7 @@ const C = reg.accessToken;
 // Measurement is not commerce: the event log keeps working while the switch
 // is off (the census funnel is exactly what Phase 0 needs to measure).
 ok((await call("/events", "POST", { name: "page_landed", anonId: "e2e-off-1" })).status === 202, "client events still recorded with commerce off");
+ok((await call("/certificates/verify/nope")).status === 200, "certificate verification stays open with commerce off (the record is not for sale)");
 ok(!!C, "member can still register an account while commerce is off");
 
 console.log("━━ pricing surfaces are unreachable ━━");

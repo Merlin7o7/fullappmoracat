@@ -80,7 +80,7 @@ interface AuthContextValue extends AuthState {
   /** Authenticated download — returns the raw response Blob (e.g. CSV export). */
   authedBlob: (path: string) => Promise<Blob>;
   /** Multipart upload (FormData) with the same token-attach + refresh flow. */
-  authedUpload: <T = unknown>(path: string, form: FormData, method?: string) => Promise<T>;
+  authedUpload: <T = unknown>(path: string, form: FormData, method?: string, headers?: Record<string, string>) => Promise<T>;
   /** Image upload via XHR with real upload-progress events (0–100). */
   uploadImage: <T = unknown>(
     path: string,
@@ -302,7 +302,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const authedUpload = React.useCallback<AuthContextValue["authedUpload"]>(
-    async (path, form, method = "POST") => {
+    async (path, form, method = "POST", extraHeaders = {}) => {
       const doFetch = (token: string) =>
         // NOTE: no content-type header — the browser sets the multipart boundary.
         // Uploads get a longer ceiling than JSON calls: a photo on mobile data
@@ -310,7 +310,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fetchWithTimeout(`${BASE}/api${path}`, {
           method,
           body: form,
-          headers: { authorization: `Bearer ${token}` },
+          headers: { ...extraHeaders, authorization: `Bearer ${token}` },
         }, UPLOAD_TIMEOUT_MS);
 
       const tokens = tokensRef.current;

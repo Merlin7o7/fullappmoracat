@@ -51,6 +51,7 @@ import {
   Syringe,
   Unlock,
   Weight,
+  Award,
 } from "lucide-react";
 import { Badge, Button, buttonVariants, Card, Dialog, Input, Skeleton, cn, useToast } from "@moraqat/ui";
 import { VET_ROLE_LABELS } from "@moraqat/core";
@@ -686,9 +687,23 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
     },
   });
 
+  // A clinic-signed Cat ID certificate (T9): the vet's name on the document.
+  const certify = useMutation({
+    mutationFn: () => api.issueCertificate(catId),
+    onSuccess: (c) => {
+      window.open(c.pdfUrl, "_blank", "noopener,noreferrer");
+      toast({ variant: "success", title: isAr ? `صدرت الشهادة ${c.number}` : `Certificate ${c.number} issued` });
+    },
+    onError: (err) => {
+      const f = vetFriendlyError(err, isAr);
+      toast({ variant: "error", title: f.title, description: f.message });
+    },
+  });
+
   const canOpenVisit = actor.can("visit.open");
   const canEmergency = actor.can("emergency.access");
-  if (!canOpenVisit && !canEmergency) return null;
+  const canCertify = actor.can("record.write");
+  if (!canOpenVisit && !canEmergency && !canCertify) return null;
 
   return (
     <>
@@ -697,6 +712,12 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
           <Button variant="brand" size="lg" onClick={() => setOpen(true)}>
             <CalendarDays className="size-4" />
             {isAr ? `افتح زيارة لـ${profile.name}` : `Start a visit for ${profile.name}`}
+          </Button>
+        )}
+        {canCertify && (
+          <Button variant="outline" size="lg" loading={certify.isPending} onClick={() => certify.mutate()}>
+            {!certify.isPending && <Award className="size-4" />}
+            {isAr ? "أصدر شهادة الهوية" : "Issue Cat ID certificate"}
           </Button>
         )}
         {canEmergency && (

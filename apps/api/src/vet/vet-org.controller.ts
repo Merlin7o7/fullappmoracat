@@ -103,6 +103,14 @@ export class VetOrgController {
     return this.org.updateOrg(actor, dto, meta(req));
   }
 
+  // Today's numbers (T10): the clinic's day at a glance, with the lists that
+  // bring patients back (follow-ups, recalls) and the things that need a hand.
+  @Get("summary")
+  @ApiOperation({ summary: "Today summary: visits, follow-ups, vaccinations due, new members nearby, attention" })
+  summary(@VetActorParam() actor: VetActor) {
+    return this.org.summary(actor);
+  }
+
   // ── Branches ──────────────────────────────────────────────────────────────
 
   @Get("branches")
