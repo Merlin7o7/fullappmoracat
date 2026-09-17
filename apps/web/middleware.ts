@@ -35,6 +35,8 @@ const IS_PROD = process.env.NODE_ENV === "production";
 /** Origins the browser is allowed to talk to. Keep in sync with next.config remotePatterns. */
 function connectOrigins(): string[] {
   const out = new Set<string>(["'self'"]);
+  // The embedded card form (T7) tokenises straight into Moyasar.
+  out.add("https://api.moyasar.com");
   const api = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (api) {
     try {
@@ -70,6 +72,7 @@ const IMAGE_HOSTS = [
   "https://*.r2.dev",
   "https://*.r2.cloudflarestorage.com",
   "https://lh3.googleusercontent.com",
+  "https://cdn.moyasar.com", // card-brand logos inside the PSP form
 ];
 
 function buildCsp(nonce: string): string {
@@ -80,11 +83,13 @@ function buildCsp(nonce: string): string {
     // scripts. Older browsers ignore strict-dynamic and fall back to 'self'.
     // Dev only: next dev's eval-based sourcemaps and react-refresh need
     // unsafe-eval — without it hydration dies silently in `pnpm dev`. Never prod.
-    "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(IS_PROD ? [] : ["'unsafe-eval'"])],
+    // cdn.moyasar.com is a fallback for browsers without strict-dynamic; the
+    // form's script is inserted from our nonced bundle (T7).
+    "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", "https://cdn.moyasar.com", ...(IS_PROD ? [] : ["'unsafe-eval'"])],
     // Tailwind emits a stylesheet, but Next and framer-motion also set inline
     // style attributes. style-src-attr must stay permissive for those; the
     // stylesheet itself is same-origin. Inline styles cannot execute script.
-    "style-src": ["'self'", "'unsafe-inline'"],
+    "style-src": ["'self'", "'unsafe-inline'", "https://cdn.moyasar.com"],
     "style-src-attr": ["'unsafe-inline'"],
     "img-src": IMAGE_HOSTS,
     "font-src": ["'self'", "data:"],
@@ -96,7 +101,8 @@ function buildCsp(nonce: string): string {
     "base-uri": ["'self'"],
     "form-action": ["'self'"],
     "frame-ancestors": ["'none'"],
-    "frame-src": ["'none'"],
+    // Only the PSP may frame anything (3-D Secure challenges, T7).
+    "frame-src": ["https://api.moyasar.com"],
   };
 
   const parts = Object.entries(directives).map(([k, v]) => `${k} ${v.join(" ")}`);

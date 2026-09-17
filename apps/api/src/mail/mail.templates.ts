@@ -590,6 +590,81 @@ export function vaccinationReminderTemplate(
   };
 }
 
+/**
+ * T-7 / T-1 notice for an OPTED-IN auto-renewal (T7, R025): the exact amount,
+ * the exact date, the exact card — and one-tap ways to skip or pause before
+ * anything is charged. A charge is never a surprise.
+ */
+export function renewalUpcomingTemplate(
+  locale: Locale,
+  name: string | null,
+  catName: string,
+  planName: string,
+  endsAt: string,
+  amount: number,
+  last4: string,
+  manageUrl: string,
+  skipUrl: string
+): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = ar ? `عضوية ${catName} تتجدد في ${endsAt}` : `${catName}'s membership renews on ${endsAt}`;
+  const body = [
+    hiName(ar, name),
+    ar
+      ? `كما طلبت، نجدّد باقة «${planName}» تلقائياً بتاريخ ${endsAt} بمبلغ ${sar(amount, ar)} على البطاقة المنتهية بـ ${last4}. لا شيء يتغيّر في صندوق ${catName}.`
+      : `As you asked, we'll renew the ${planName} plan automatically on ${endsAt} for ${sar(amount, ar)} on the card ending ${last4}. Nothing about ${catName}'s box changes.`,
+    ar
+      ? "ما تبي التجديد هالمرة؟ أوقفه بضغطة وحدة قبل التاريخ — بدون أسئلة، وسجلّ قطك يبقى معك."
+      : "Don't want it this time? Stop it in one tap before then — no questions, and your cat's record stays yours.",
+  ];
+  const cta = { label: ar ? "إدارة العضوية" : "Manage membership", url: manageUrl };
+  const pills = actionLink(skipUrl, ar ? "لا تجدّدها هالمرة" : "Don't renew this time");
+  return {
+    subject: ar ? `عضوية ${catName} تتجدد في ${endsAt} — مُرقّط` : `${catName}'s membership renews on ${endsAt} — Moracat`,
+    html: layout({ locale, preheader: heading, heading, body, extra: `<div style="text-align:center;margin:4px 0 10px;">${pills}</div>`, cta, footnote: ar ? "أنت من فعّل التجديد التلقائي، وتقدر توقفه في أي وقت." : "You switched auto-renew on, and you can switch it off any time." }),
+    text: toText(heading, body, cta, [`${ar ? "لا تجدّدها" : "Skip"}: ${skipUrl}`]),
+  };
+}
+
+/**
+ * A renewal charge failed (dunning, T7). Never "your membership ended": the
+ * benefits stay on while we retry, the fix is one tap, and the record is safe.
+ */
+export function renewalFailedTemplate(
+  locale: Locale,
+  name: string | null,
+  catName: string,
+  last4: string,
+  attempt: number,
+  graceUntil: string,
+  updateUrl: string,
+  final: boolean
+): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = final
+    ? ar ? `آخر محاولة لتجديد عضوية ${catName}` : `Last try renewing ${catName}'s membership`
+    : ar ? `ما نجح تجديد عضوية ${catName}` : `We couldn't renew ${catName}'s membership`;
+  const body = [
+    hiName(ar, name),
+    ar
+      ? `الدفعة على البطاقة المنتهية بـ ${last4} ما نجحت (المحاولة ${attempt}). مزايا ${catName} مستمرة حتى ${graceUntil} — حدّث البطاقة ونكمل من حيث توقفنا.`
+      : `The charge on the card ending ${last4} didn't go through (attempt ${attempt}). ${catName}'s benefits continue until ${graceUntil} — update the card and we'll pick up where we left off.`,
+    final
+      ? ar
+        ? `بعد ${graceUntil} تتوقف الصناديق بهدوء. سجلّ ${catName} وهويته يبقيان معك دائماً، والرجوع يأخذ دقيقة.`
+        : `After ${graceUntil} the boxes pause quietly. ${catName}'s record and ID stay yours always, and coming back takes a minute.`
+      : ar
+        ? "نحاول مرة ثانية تلقائياً خلال أيام — أو حدّث البطاقة الآن وننهيها اليوم."
+        : "We'll try again automatically in a few days — or update the card now and we'll finish it today.",
+  ];
+  const cta = { label: ar ? "حدّث طريقة الدفع" : "Update payment method", url: updateUrl };
+  return {
+    subject: `${heading} — ${ar ? "مُرقّط" : "Moracat"}`,
+    html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "لا نخصم أبداً بدون إشعار، ولا نأخذ سجلّ قطك أبداً." : "We never charge without notice, and we never take your cat's record away." }),
+    text: toText(heading, body, cta),
+  };
+}
+
 /** A secondary action pill (call / WhatsApp) — quieter than the CTA, still 44px tall. */
 function actionLink(url: string, label: string): string {
   return `<a href="${url}" style="display:inline-block;margin:4px 6px;padding:12px 18px;border-radius:999px;border:1px solid ${BRAND.hairline};color:${BRAND.green};font-weight:600;text-decoration:none;font-size:14px;">${label}</a>`;

@@ -15,7 +15,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle2, BellRing, Mail, RefreshCw, Inbox } from "lucide-react";
 import { Card, Button } from "@moraqat/ui";
@@ -37,6 +37,8 @@ interface ActivationStatus {
   taxTotal: number;
   currency: string;
   nextBillingAt: string | null;
+  /** Opt-in auto-renew, armed only once a reusable card was captured (T7). */
+  autoRenew: boolean;
   plan: { tier: string; nameEn: string; nameAr: string } | null;
   cats: { id: string; name: string }[];
 }
@@ -64,6 +66,8 @@ function ReturnInner() {
   const router = useRouter();
   const params = useSearchParams();
   const ref = params.get("ref");
+  // Embedded-form rails send the PSP's payment id back as ?id= (T7).
+  const pspId = params.get("id");
   const { authedFetch, user } = useAuth();
   const { locale } = useLocale();
   const isAr = locale === "ar";
@@ -89,10 +93,29 @@ function ReturnInner() {
   const [startedAt] = React.useState(() => Date.now());
   const [timedOut, setTimedOut] = React.useState(false);
 
+  // Embedded-form return (T7): hand the PSP's payment id to the server FIRST —
+  // it reads the payment back from the PSP and settles it through the same
+  // idempotent path as the webhook — and only then start polling.
+  const [attachSettled, setAttachSettled] = React.useState(false);
+  const attach = useMutation({
+    mutationFn: () =>
+      authedFetch(`/subscriptions/order-status/${ref}/attach`, {
+        method: "POST",
+        body: JSON.stringify({ providerPaymentId: pspId }),
+      }),
+    onSettled: () => setAttachSettled(true),
+  });
+  const attachStarted = React.useRef(false);
+  React.useEffect(() => {
+    if (!commerceOn || !user || !ref || !pspId || attachStarted.current) return;
+    attachStarted.current = true;
+    attach.mutate();
+  }, [commerceOn, user, ref, pspId, attach]);
+
   const { data, isError } = useQuery({
     queryKey: ["activation", ref],
     queryFn: () => authedFetch<ActivationStatus>(`/subscriptions/order-status/${ref}`),
-    enabled: commerceOn && !!user && !!ref && !timedOut,
+    enabled: commerceOn && !!user && !!ref && !timedOut && (!pspId || attachSettled),
     refetchInterval: (q) => {
       if (q.state.data?.state !== "pending") return false;
       if (Date.now() - startedAt >= POLL_CAP_MS) return false;
@@ -216,9 +239,13 @@ function ReturnInner() {
               <p className="flex items-start gap-2 text-muted-foreground">
                 <BellRing className="mt-0.5 size-4 shrink-0" aria-hidden />
                 <span>
-                  {isAr
-                    ? `مدتكم مدفوعة حتى ${formatMoneyDate(data.nextBillingAt, true)} — بدون أي تجديد تلقائي؛ ندعوك قبل نهايتها.`
-                    : `Your term is paid through ${formatMoneyDate(data.nextBillingAt, false)} — no automatic renewal; we'll invite you before it ends.`}
+                  {data.autoRenew
+                    ? isAr
+                      ? `مدتكم مدفوعة حتى ${formatMoneyDate(data.nextBillingAt, true)} — وتتجدد تلقائياً كما طلبت؛ نذكّرك قبلها بسبعة أيام ويوم واحد، وتوقفه بضغطة من صفحة اشتراكك.`
+                      : `Your term is paid through ${formatMoneyDate(data.nextBillingAt, false)} — and renews automatically as you asked; we'll remind you 7 days and 1 day before, and one tap on your subscription page stops it.`
+                    : isAr
+                      ? `مدتكم مدفوعة حتى ${formatMoneyDate(data.nextBillingAt, true)} — بدون تجديد تلقائي؛ ندعوك قبل نهايتها.`
+                      : `Your term is paid through ${formatMoneyDate(data.nextBillingAt, false)} — no automatic renewal; we'll invite you before it ends.`}
                 </span>
               </p>
             )}

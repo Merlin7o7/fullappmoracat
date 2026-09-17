@@ -50,6 +50,10 @@ import { BoxBuilder, type BoxSelections } from "@/components/box-builder";
 import { QueryError } from "@/components/query-error";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloPaw } from "@/components/illustrations";
+import { ProviderPicker, useApplePayAvailable, type CheckoutProvider } from "@/components/checkout/provider-picker";
+import { AutoRenewToggle } from "@/components/checkout/auto-renew-toggle";
+import { MoyasarForm, type ClientSession } from "@/components/checkout/moyasar-form";
+import { track } from "@/lib/track";
 
 const TIERS: PlanTier[] = ["KITTEN", "STARTER", "STANDARD", "PREMIUM"];
 
@@ -57,8 +61,9 @@ const TIERS: PlanTier[] = ["KITTEN", "STARTER", "STANDARD", "PREMIUM"];
  *  the recommended default. Members pay price × term upfront. */
 const TERM_OPTIONS = [1, 3, 6, 12] as const;
 
-// Tamara is the only payment method (customers choose full vs. instalments on
-// Tamara's page). No in-app method selector.
+// Rails (T7): card (mada / Visa / Mastercard) and Apple Pay through the
+// embedded PSP form, or Tamara (full or instalments) on Tamara's page. Only a
+// card can renew itself — and only if the member ticks the (unticked) toggle.
 
 interface ActivateResponse {
   subscriptionId: string;
@@ -69,6 +74,11 @@ interface ActivateResponse {
   currency?: string;
   nextBillingAt?: string | null;
   redirectUrl: string | null;
+  /** Embedded PSP form session (card rails) — rendered in place of the button. */
+  clientSession?: ClientSession | null;
+  /** What the member asked for vs. what the chosen rail can honour. */
+  autoRenewRequested?: boolean;
+  autoRenewAccepted?: boolean;
   /** True when an abandoned DRAFT was picked back up instead of re-charged. */
   resumed?: boolean;
   payment?: { provider: string; status: string };
@@ -189,9 +199,28 @@ function CheckoutInner() {
   React.useEffect(() => {
     setTermMonths((t) => (t < minTerm ? minTerm : t));
   }, [minTerm]);
-  // Tamara is the only payment method. The customer chooses full vs. instalments
-  // on Tamara's own page, so there's no method selector here.
-  const provider = "TAMARA" as const;
+  // Rail default (D10): a single month goes on a card (the rail that can renew
+  // itself); a prepaid term defaults to Tamara (full or instalments). The
+  // member can switch, and an explicit choice is never overridden by a term
+  // change.
+  const applePayAvailable = useApplePayAvailable();
+  const [provider, setProviderState] = React.useState<CheckoutProvider>(minTerm === 1 ? "MADA" : "TAMARA");
+  const [providerTouched, setProviderTouched] = React.useState(false);
+  React.useEffect(() => {
+    if (providerTouched) return;
+    setProviderState(termMonths === 1 ? "MADA" : "TAMARA");
+  }, [termMonths, providerTouched]);
+  const setProvider = (p: CheckoutProvider) => {
+    setProviderTouched(true);
+    setProviderState(p);
+    track("checkout_provider_selected", { provider: p });
+  };
+  // Opt-IN auto-renew: unticked every time (R006/R025) — and only meaningful
+  // on a card, which is the one rail that can be charged again.
+  const [autoRenew, setAutoRenew] = React.useState(false);
+  const wantsAutoRenew = autoRenew && provider === "MADA";
+  // The embedded PSP form, once activate() opens a session.
+  const [session, setSession] = React.useState<ClientSession | null>(null);
   const [done, setDone] = React.useState<ActivateResponse | null>(null);
   // Per-line brand/flavor picks from the box builder (contentId → productId).
   // Pre-filled with our recommendations; the member may change any of them.
@@ -222,6 +251,7 @@ function CheckoutInner() {
           addressId,
           provider,
           termMonths,
+          autoRenew: wantsAutoRenew,
           selections: Object.entries(boxSelections).map(([contentId, productId]) => ({
             contentId,
             productId,
@@ -229,8 +259,14 @@ function CheckoutInner() {
         }),
       }),
     onSuccess: (res) => {
+      // Embedded-form flows (card rails): the PSP form opens right here, and
+      // the return page attaches the payment. A resumed DRAFT hands back the
+      // SAME session — never a duplicate charge.
+      if (res.clientSession) {
+        setSession(res.clientSession);
+        return;
+      }
       // PSP redirect flows: the member finishes payment on the provider's page.
-      // A resumed DRAFT hands back the SAME session — never a duplicate charge.
       if (res.redirectUrl) {
         window.location.assign(res.redirectUrl);
         return;
@@ -285,9 +321,13 @@ function CheckoutInner() {
               <p className="flex items-start gap-2 text-muted-foreground">
                 <BellRing className="mt-0.5 size-4 shrink-0" aria-hidden />
                 <span>
-                  {isAr
-                    ? `مدتكم مدفوعة حتى ${formatMoneyDate(done.nextBillingAt, true)} — بدون أي تجديد تلقائي؛ ندعوك قبل نهايتها.`
-                    : `Your term is paid through ${formatMoneyDate(done.nextBillingAt, false)} — no automatic renewal; we'll invite you before it ends.`}
+                  {done.autoRenewAccepted
+                    ? isAr
+                      ? `مدتكم مدفوعة حتى ${formatMoneyDate(done.nextBillingAt, true)} — وتتجدد تلقائياً كما طلبت؛ نذكّرك قبلها بسبعة أيام ويوم واحد.`
+                      : `Your term is paid through ${formatMoneyDate(done.nextBillingAt, false)} — and renews automatically as you asked; we'll remind you 7 days and 1 day before.`
+                    : isAr
+                      ? `مدتكم مدفوعة حتى ${formatMoneyDate(done.nextBillingAt, true)} — بدون تجديد تلقائي؛ ندعوك قبل نهايتها.`
+                      : `Your term is paid through ${formatMoneyDate(done.nextBillingAt, false)} — no automatic renewal; we'll invite you before it ends.`}
                 </span>
               </p>
             )}
@@ -318,7 +358,7 @@ function CheckoutInner() {
     );
   }
 
-  const canPay = !!addressId && targetCats.length > 0 && !activate.isPending;
+  const canPay = !!addressId && targetCats.length > 0 && !activate.isPending && !session;
 
   // ── The money math — MUST mirror the API's activate() exactly (R021) ──────
   // Household monthly = base (first cat) + module × each additional cat
@@ -547,26 +587,25 @@ function CheckoutInner() {
         </p>
       </Card>
 
-      {/* ── 4 · Payment — Tamara only, positioned as choice not just financing ── */}
+      {/* ── 4 · Payment — the rail is a choice; auto-renew is opt-IN (T7) ──── */}
       <Card className="space-y-5 p-6">
         <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
           <CreditCard className="size-4 text-primary" aria-hidden />
           {isAr ? "الدفع" : "Payment"}
         </h2>
 
-        <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/[0.04] p-4">
-          <span className="grid h-10 shrink-0 place-items-center rounded-lg bg-primary px-2.5 text-sm font-bold lowercase tracking-tight text-primary-foreground">
-            tamara
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">{isAr ? "الدفع الآمن عبر تمارا" : "Pay securely through Tamara"}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              {isAr
-                ? "ادفع كامل المبلغ اليوم، أو قسّمه على دفعات ميسّرة — تختار الطريقة في صفحة تمارا (حسب الموافقة والأهلية)."
-                : "Pay in full today, or split into convenient instalments — you choose on Tamara's secure page (subject to approval & eligibility)."}
-            </p>
-          </div>
-        </div>
+        {/* Locked once the PSP form is open — switching rails mid-session
+            would orphan the order the form is bound to. */}
+        {!session && <ProviderPicker value={provider} onChange={setProvider} isAr={isAr} applePayAvailable={applePayAvailable} />}
+        {!session && (
+          <AutoRenewToggle
+            provider={provider}
+            checked={autoRenew}
+            onChange={setAutoRenew}
+            isAr={isAr}
+            termLabel={monthsLabel(termMonths, uiLocale)}
+          />
+        )}
 
         {/* Founding-member launch note — first delivery date, shown before payment. */}
         <LaunchDeliveryNote isAr={isAr} />
@@ -629,13 +668,20 @@ function CheckoutInner() {
               ? `توصيل شهري حتى ${termEndDate}`
               : `Delivered monthly until ${termEndDate}`}
           </p>
+          {/* The renewal truth, exactly as the member set it (R021/R025). */}
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <BellRing className="size-3.5 shrink-0" aria-hidden />
             <span>
-              {isAr ? (
-                <><strong className="font-semibold text-foreground">بدون أي تجديد تلقائي — أبداً</strong>؛ ندعوك قبل نهاية مدتك.</>
+              {wantsAutoRenew ? (
+                isAr ? (
+                  <><strong className="font-semibold text-foreground">يتجدد تلقائياً في {termEndDate}</strong> بنفس المبلغ — نذكّرك قبلها، وتوقفه بضغطة.</>
+                ) : (
+                  <><strong className="font-semibold text-foreground">Renews automatically on {termEndDate}</strong> for the same amount — we remind you first, and one tap stops it.</>
+                )
+              ) : isAr ? (
+                <><strong className="font-semibold text-foreground">بدون تجديد تلقائي</strong> — ندعوك قبل نهاية مدتك.</>
               ) : (
-                <><strong className="font-semibold text-foreground">No automatic renewal — ever</strong>; we invite you before your term ends.</>
+                <><strong className="font-semibold text-foreground">No automatic renewal</strong> — we invite you before your term ends.</>
               )}
             </span>
           </p>
@@ -694,11 +740,15 @@ function CheckoutInner() {
           );
         })()}
 
-        <Button size="lg" className="w-full" disabled={!canPay} loading={activate.isPending} onClick={() => activate.mutate()}>
-          {activate.isPending
-            ? isAr ? "نحوّلك إلى تمارا…" : "Taking you to Tamara…"
-            : isAr ? "المتابعة إلى الدفع عبر تمارا" : "Continue to payment with Tamara"}
-        </Button>
+        {session ? (
+          <MoyasarForm session={session} isAr={isAr} />
+        ) : (
+          <Button size="lg" className="w-full" disabled={!canPay} loading={activate.isPending} onClick={() => activate.mutate()}>
+            {activate.isPending
+              ? isAr ? "لحظة…" : "One moment…"
+              : payLabel(provider, upfrontTotal, isAr)}
+          </Button>
+        )}
         {!addressId && !addrLoading && (
           <p className="text-center text-xs text-muted-foreground">
             {isAr ? "اختر عنوان التوصيل أولاً وبعدها فعّل" : "Pick a delivery address first, then activate"}
@@ -716,14 +766,16 @@ function CheckoutInner() {
 
       {/* ── Sticky mobile bar — the exact total + the action survive scrolling
              (R021/R100: the commitment stays visible in the thumb zone). ───── */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+      {!session && <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="min-w-0">
             <p className="font-display text-base font-bold leading-tight">
               <span dir="ltr" className="tabular">{formatSAR(upfrontTotal, isAr)}</span>
             </p>
             <p className="truncate text-[11px] text-muted-foreground">
-              {isAr ? `${monthsLabel(termMonths, "ar")} — بدون تجديد تلقائي` : `${monthsLabel(termMonths, "en")} — no auto-renewal`}
+              {wantsAutoRenew
+                ? isAr ? `${monthsLabel(termMonths, "ar")} — يتجدد تلقائياً` : `${monthsLabel(termMonths, "en")} — renews automatically`
+                : isAr ? `${monthsLabel(termMonths, "ar")} — بدون تجديد تلقائي` : `${monthsLabel(termMonths, "en")} — no auto-renewal`}
             </p>
           </div>
           <Button
@@ -734,11 +786,22 @@ function CheckoutInner() {
             onClick={() => activate.mutate()}
           >
             {activate.isPending
-              ? isAr ? "نحوّلك…" : "One moment…"
-              : isAr ? "ادفع عبر تمارا" : "Pay with Tamara"}
+              ? isAr ? "لحظة…" : "One moment…"
+              : provider === "TAMARA"
+                ? isAr ? "ادفع عبر تمارا" : "Pay with Tamara"
+                : provider === "APPLE_PAY"
+                  ? "Apple Pay"
+                  : isAr ? "ادفع بالبطاقة" : "Pay by card"}
           </Button>
         </div>
-      </div>
+      </div>}
     </div>
   );
+}
+
+/** The pay button names the action and the rail (R086) — never a generic "Submit". */
+function payLabel(provider: CheckoutProvider, total: number, isAr: boolean): string {
+  if (provider === "TAMARA") return isAr ? "المتابعة إلى الدفع عبر تمارا" : "Continue to payment with Tamara";
+  if (provider === "APPLE_PAY") return isAr ? "ادفع عبر Apple Pay" : "Pay with Apple Pay";
+  return isAr ? `ادفع ${formatSAR(total, true)} بالبطاقة` : `Pay ${formatSAR(total, false)} by card`;
 }

@@ -81,6 +81,17 @@ export function assertProductionConfig(): void {
     );
   }
 
+  // The embedded card form (T7) needs the PUBLISHABLE key; without it every
+  // card rail silently falls back to the hosted invoice, which can never mint
+  // the token auto-renew depends on.
+  if (
+    (process.env.PAYMENTS_MODE ?? "mock") === "live" &&
+    process.env.MOYASAR_SECRET_KEY &&
+    !process.env.MOYASAR_PUBLISHABLE_KEY
+  ) {
+    errors.push("MOYASAR_PUBLISHABLE_KEY is required alongside MOYASAR_SECRET_KEY in live mode (embedded card form).");
+  }
+
   if (errors.length > 0) {
     const logger = new Logger("Bootstrap");
     errors.forEach((e) => logger.error(e));

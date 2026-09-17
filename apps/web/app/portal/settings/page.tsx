@@ -16,6 +16,7 @@ import { formatDate, type CalendarPref } from "@/lib/datetime";
 import { Field } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { QueryError } from "@/components/query-error";
+import { SavedCardsSection } from "@/components/saved-cards";
 
 interface Profile {
   firstName: string | null;
@@ -66,6 +67,7 @@ export default function SettingsPage() {
           <PreferencesSection isAr={isAr} />
           <AboutMoracatSection isAr={isAr} />
           <NotificationsSection isAr={isAr} authedFetch={authedFetch} />
+          <SavedCardsSection isAr={isAr} />
           <PasswordSection isAr={isAr} authedFetch={authedFetch} logout={logout} />
           <TwoFactorSection isAr={isAr} enabled={profile.twoFactorEnabled} authedFetch={authedFetch} onChanged={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
           <DangerZoneSection isAr={isAr} authedFetch={authedFetch} logout={logout} />

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { TERM_OPTIONS } from "../../common/config/pricing";
+import { CANCEL_REASONS } from "@moraqat/core";
 import {
   IsArray,
   IsBoolean,
@@ -102,11 +103,14 @@ export class RefundRequestDto {
 }
 
 /**
- * Payment providers accepted for a membership's first charge. Tamara is the ONLY
- * method — the customer chooses pay-in-full vs. instalments on Tamara's page. The
- * API rejects anything else (defence in depth behind the Tamara-only checkout UI).
+ * Payment providers accepted for a membership's first charge (T7):
+ *  - card rails (mada / Visa / Mastercard / Apple Pay) via the embedded PSP
+ *    form — the only rails that can mint a reusable token for auto-renew;
+ *  - Tamara — pay-in-full or instalments on Tamara's page; never auto-renews.
  */
-const ACTIVATION_PROVIDERS = ["TAMARA"] as const;
+export const ACTIVATION_PROVIDERS = ["TAMARA", "MADA", "VISA", "MASTERCARD", "APPLE_PAY"] as const;
+/** Rails that can be charged again off-session (auto-renew eligible). */
+export const RECURRING_PROVIDERS: readonly ActivationProvider[] = ["MADA", "VISA", "MASTERCARD"];
 
 export type ActivationProvider = (typeof ACTIVATION_PROVIDERS)[number];
 
@@ -131,9 +135,18 @@ export class ActivateSubscriptionDto {
   @IsString()
   addressId!: string;
 
-  @ApiProperty({ enum: ACTIVATION_PROVIDERS, example: "TAMARA", default: "TAMARA" })
+  @ApiProperty({ enum: ACTIVATION_PROVIDERS, example: "MADA" })
   @IsIn(ACTIVATION_PROVIDERS)
   provider!: ActivationProvider;
+
+  @ApiPropertyOptional({
+    description:
+      "Opt-IN auto-renew (T7). Unticked by default. Honoured only on card rails once the first charge captures with a reusable token; ignored (and reported back as not accepted) on Tamara.",
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  autoRenew?: boolean;
 
   @ApiPropertyOptional({
     description: "Committed term in months (min 1; 3 recommended). Member pays price x term upfront.",
@@ -155,6 +168,35 @@ export class ActivateSubscriptionDto {
   @ValidateNested({ each: true })
   @Type(() => BoxSelectionDto)
   selections?: BoxSelectionDto[];
+}
+
+/** The browser finished an embedded PSP form — attach the PSP's payment id to our order. */
+export class AttachPaymentDto {
+  @ApiProperty({ description: "The PSP payment id returned to the callback URL (?id=)" })
+  @IsString()
+  @MaxLength(80)
+  providerPaymentId!: string;
+}
+
+/** Honest cancel (T8): one optional reason, never argued with. */
+export class CancelSubscriptionDto {
+  @ApiPropertyOptional({ enum: CANCEL_REASONS })
+  @IsOptional()
+  @IsIn([...CANCEL_REASONS])
+  reason?: (typeof CANCEL_REASONS)[number];
+
+  @ApiPropertyOptional({ description: "Free text, only if the member wants to say more" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
+}
+
+/** Mid-term plan change (T8) — applied at the next successful renewal. */
+export class ChangePlanDto {
+  @ApiProperty({ description: "The plan to switch to at renewal" })
+  @IsString()
+  planId!: string;
 }
 
 /**

@@ -3,7 +3,8 @@
 // ════════════════════════════════════════════════════════════════════════
 //  Subscriptions — the manage surface for the honest term model.
 //
-//  The member paid price × termMonths upfront; nothing ever auto-renews.
+//  The member paid price × termMonths upfront; a term renews itself ONLY if
+//  the member ticked auto-renew (T7) — and that truth is on every card.
 //  Every card therefore answers the three money questions truthfully (R021
 //  post-purchase): paid through WHEN, how many boxes REMAIN, what was the
 //  TOTAL. Each lifecycle state gets its own honest treatment:
@@ -29,8 +30,14 @@ import {
   Package,
   RefreshCcw,
   Undo2,
+  SkipForward,
+  ArrowLeftRight,
 } from "lucide-react";
-import { Card, Badge, Button, Skeleton, Dialog, useToast } from "@moraqat/ui";
+import { useSearchParams } from "next/navigation";
+import { Card, Badge, Button, Skeleton, Dialog, useToast, cn } from "@moraqat/ui";
+import { CANCEL_REASONS, CANCEL_REASON_LABELS, type CancelReasonCode } from "@moraqat/core";
+import type { ApiPlan } from "@/lib/plan-recommend";
+import { useSavedCards, brandLabel } from "@/components/saved-cards";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { formatDate, monthsLabel } from "@/lib/datetime";
@@ -56,6 +63,14 @@ interface Sub {
   pausedAt: string | null;
   pausedUntil: string | null;
   cancelAtTermEnd: boolean;
+  cancelReason: string | null;
+  /** Opt-in auto-renew (T7) and the exact card it charges. */
+  autoRenew: boolean;
+  renewalPaymentMethod: { id: string; brand: string | null; last4: string | null } | null;
+  dunningAttempts: number;
+  graceUntil: string | null;
+  /** A plan change waiting for the next renewal (T8). */
+  pendingPlan: { id: string; tier: string; nameEn: string; nameAr: string } | null;
   refundRequested: boolean;
   resumeUrl: string | null;
   plan: { tier: string; nameEn: string; nameAr: string } | null;
@@ -63,10 +78,19 @@ interface Sub {
   items: { nameEn: string; quantity: number }[];
 }
 
-type Verb = "pause" | "resume" | "cancel";
+type Verb = "pause" | "resume" | "cancel" | "skip";
 
 export default function SubscriptionsPage() {
+  return (
+    <React.Suspense fallback={<div className="mx-auto max-w-4xl"><Skeleton className="h-40 w-full" /></div>}>
+      <SubscriptionsInner />
+    </React.Suspense>
+  );
+}
+
+function SubscriptionsInner() {
   const { authedFetch, user } = useAuth();
+  const search = useSearchParams();
   const { locale } = useLocale();
   const { toast } = useToast();
   const isAr = locale === "ar";
@@ -87,23 +111,40 @@ export default function SubscriptionsPage() {
   const [expiredDrafts, setExpiredDrafts] = React.useState<Record<string, boolean>>({});
   // Pressed state while the browser navigates to a stored checkout URL.
   const [redirectingId, setRedirectingId] = React.useState<string | null>(null);
+  // T8: the honest cancel asks ONE optional question; a plan change waits for
+  // the next renewal. "Don't renew this time" arrives from the T-7 mail (T7).
+  const [cancelReason, setCancelReason] = React.useState<CancelReasonCode | null>(null);
+  const [cancelNote, setCancelNote] = React.useState("");
+  const [planFor, setPlanFor] = React.useState<Sub | null>(null);
+  const [planPick, setPlanPick] = React.useState<string | null>(null);
+  const [skipRenewalFor, setSkipRenewalFor] = React.useState<string | null>(() => search.get("skip"));
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["subscriptions", user?.id],
     queryFn: () => authedFetch<Sub[]>("/subscriptions"),
     enabled: !!user && commerce,
   });
+  const cards = useSavedCards(commerce);
+  const defaultCard = cards.data?.find((c) => c.isDefault) ?? cards.data?.[0] ?? null;
+  const plansQ = useQuery({
+    queryKey: ["plans"],
+    queryFn: () => authedFetch<ApiPlan[]>("/plans"),
+    enabled: !!user && commerce && !!planFor,
+  });
 
   const closeCancelDialog = () => {
     setCancelFor(null);
     setRefundOpen(false);
     setRefundReason("");
+    setCancelReason(null);
+    setCancelNote("");
   };
 
   const doneCopy: Record<Verb, { en: string; ar: string }> = {
     pause: { en: "Membership paused — your days are saved", ar: "تم الإيقاف المؤقت — أيامك محفوظة" },
     resume: { en: "Welcome back — membership resumed", ar: "أهلاً بعودتك — استؤنفت العضوية" },
     cancel: { en: "It won't renew — everything you paid for still arrives", ar: "لن تتجدد — وكل ما دفعته يصلك كاملاً" },
+    skip: { en: "Next box skipped — your term end doesn't move", ar: "تخطّينا الصندوق القادم — ونهاية مدتك ما تتغير" },
   };
 
   const action = useMutation({
@@ -122,6 +163,75 @@ export default function SubscriptionsPage() {
   });
   const actionPending = (id: string, verb: Verb) =>
     action.isPending && action.variables?.id === id && action.variables?.verb === verb;
+
+  // The honest cancel (T8): reason is optional and never argued with (R068).
+  const cancelSub = useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      authedFetch(`/subscriptions/${id}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({
+          ...(cancelReason ? { reason: cancelReason } : {}),
+          ...(cancelNote.trim() ? { note: cancelNote.trim() } : {}),
+        }),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["subscriptions"] });
+      void qc.invalidateQueries({ queryKey: ["cats"] });
+      const grieving = cancelReason === "CAT_PASSED";
+      closeCancelDialog();
+      toast({
+        title: grieving
+          ? isAr ? "نحن معك. سجلّه وذكرياته محفوظة معك دائماً" : "We're with you. Their record and memories stay with you, always"
+          : isAr ? doneCopy.cancel.ar : doneCopy.cancel.en,
+        variant: "default",
+      });
+    },
+    onError: (e) => {
+      const fe = friendlyError(e, isAr);
+      toast({ title: fe.title, description: fe.message, variant: "error" });
+    },
+  });
+
+  // Auto-renew on/off (T7). Off is one tap; on names the exact card.
+  const setAutoRenew = useMutation({
+    mutationFn: ({ id, enabled, paymentMethodId }: { id: string; enabled: boolean; paymentMethodId?: string }) =>
+      authedFetch<{ autoRenew: boolean; notice?: { ar: string; en: string } }>(`/subscriptions/${id}/auto-renew`, {
+        method: "POST",
+        body: JSON.stringify({ enabled, ...(paymentMethodId ? { paymentMethodId } : {}) }),
+      }),
+    onSuccess: (res) => {
+      void qc.invalidateQueries({ queryKey: ["subscriptions"] });
+      setSkipRenewalFor(null);
+      toast({
+        title: res.notice ? (isAr ? res.notice.ar : res.notice.en) : isAr ? "تم" : "Done",
+        variant: res.autoRenew ? "success" : "default",
+      });
+    },
+    onError: (e) => {
+      const fe = friendlyError(e, isAr);
+      toast({ title: fe.title, description: fe.message, variant: "error" });
+    },
+  });
+  const autoRenewPending = (id: string) => setAutoRenew.isPending && setAutoRenew.variables?.id === id;
+
+  // Plan change (T8) — takes effect at the next renewal, never mid-term.
+  const changePlan = useMutation({
+    mutationFn: ({ id, planId }: { id: string; planId: string }) =>
+      authedFetch(`/subscriptions/${id}/change-plan`, { method: "POST", body: JSON.stringify({ planId }) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["subscriptions"] });
+      setPlanFor(null);
+      setPlanPick(null);
+      toast({
+        title: isAr ? "سجّلنا التغيير — يبدأ مع التجديد القادم" : "Change noted — it starts with your next renewal",
+        variant: "success",
+      });
+    },
+    onError: (e) => {
+      const fe = friendlyError(e, isAr);
+      toast({ title: fe.title, description: fe.message, variant: "error" });
+    },
+  });
 
   const resumePayment = useMutation({
     mutationFn: (id: string) =>
@@ -211,8 +321,8 @@ export default function SubscriptionsPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           {isAr
-            ? "مدفوعة مقدماً وبدون تجديد تلقائي — أوقف مؤقتاً أو ألغِ أو اطلب استرداداً في أي وقت"
-            : "Paid upfront, never auto-renewed — pause, cancel, or request a refund anytime"}
+            ? "مدفوعة مقدماً، وتتجدد فقط إذا طلبت — أوقف مؤقتاً أو تخطَّ أو ألغِ أو اطلب استرداداً في أي وقت"
+            : "Paid upfront, renewed only if you ask — pause, skip, cancel, or request a refund anytime"}
         </p>
       </div>
 
@@ -274,6 +384,67 @@ export default function SubscriptionsPage() {
                   </span>
                   <span className="text-muted-foreground">{isAr ? "إجمالاً" : "total"}</span>
                 </div>
+              )}
+
+              {/* The renewal truth (T7, R021/R025): what happens at term end,
+                  the exact card, and the one-tap way to change it. */}
+              {(status === "ACTIVE" || status === "PAUSED") && !wontRenew && (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border p-4 text-sm">
+                  <span className="flex min-w-0 items-start gap-2">
+                    <RefreshCcw className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span>
+                      {sub.autoRenew && sub.renewalPaymentMethod ? (
+                        isAr ? (
+                          <>
+                            تتجدد تلقائياً في {sub.endsAt ? formatMoneyDate(sub.endsAt, true) : "—"} على{" "}
+                            <span dir="ltr">{brandLabel(sub.renewalPaymentMethod.brand, "")} •••• {sub.renewalPaymentMethod.last4}</span> — نذكّرك قبلها بسبعة أيام ويوم واحد.
+                          </>
+                        ) : (
+                          <>
+                            Renews automatically on {sub.endsAt ? formatMoneyDate(sub.endsAt, false) : "—"} on{" "}
+                            <span dir="ltr">{brandLabel(sub.renewalPaymentMethod.brand, "")} •••• {sub.renewalPaymentMethod.last4}</span> — we remind you 7 days and 1 day before.
+                          </>
+                        )
+                      ) : isAr ? (
+                        "لا تتجدد تلقائياً — ندعوك قبل نهاية مدتك."
+                      ) : (
+                        "Doesn't renew itself — we invite you before your term ends."
+                      )}
+                    </span>
+                  </span>
+                  {sub.autoRenew ? (
+                    <Button variant="ghost" size="sm" loading={autoRenewPending(sub.id)} onClick={() => setAutoRenew.mutate({ id: sub.id, enabled: false })}>
+                      {isAr ? "أوقف التجديد التلقائي" : "Turn off auto-renew"}
+                    </Button>
+                  ) : defaultCard ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      loading={autoRenewPending(sub.id)}
+                      onClick={() => setAutoRenew.mutate({ id: sub.id, enabled: true, paymentMethodId: defaultCard.id })}
+                    >
+                      <span dir="ltr">{isAr ? `جدّد تلقائياً على •••• ${defaultCard.last4}` : `Renew automatically on •••• ${defaultCard.last4}`}</span>
+                    </Button>
+                  ) : null}
+                </div>
+              )}
+
+              {/* Dunning (T7): a failed renewal keeps benefits through the grace week — say so, and point at the fix. */}
+              {status === "ACTIVE" && sub.dunningAttempts > 0 && sub.graceUntil && (
+                <p className="mb-4 rounded-xl bg-warning/10 p-4 text-sm text-[hsl(38_92%_26%)] dark:text-warning">
+                  {isAr
+                    ? `ما نجح التجديد على البطاقة المحفوظة — مزاياكم مستمرة حتى ${formatMoneyDate(sub.graceUntil, true)}. حدّث البطاقة ونكمل. `
+                    : `The renewal didn't go through on the saved card — your benefits continue until ${formatMoneyDate(sub.graceUntil, false)}. Update the card and we'll finish it. `}
+                  <Link href="/portal/settings" className="font-semibold underline underline-offset-4">{isAr ? "الإعدادات" : "Settings"}</Link>
+                </p>
+              )}
+
+              {/* A plan change waiting for the next renewal (T8). */}
+              {sub.pendingPlan && (
+                <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <ArrowLeftRight className="size-4 shrink-0" aria-hidden />
+                  {isAr ? `تنتقل إلى باقة «${sub.pendingPlan.nameAr}» مع التجديد القادم.` : `Switching to the ${sub.pendingPlan.nameEn} plan at your next renewal.`}
+                </p>
               )}
 
               {/* DRAFT: nothing has been charged — say so, then one clear action. */}
@@ -389,6 +560,26 @@ export default function SubscriptionsPage() {
                       {!actionPending(sub.id, "pause") && <Pause className="size-4" aria-hidden />}
                       {isAr ? "إيقاف مؤقت" : "Pause"}
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      loading={actionPending(sub.id, "skip")}
+                      onClick={() => action.mutate({ id: sub.id, verb: "skip" })}
+                    >
+                      {!actionPending(sub.id, "skip") && <SkipForward className="size-4" aria-hidden />}
+                      {isAr ? "تخطَّ الصندوق القادم" : "Skip next box"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setPlanFor(sub);
+                        setPlanPick(sub.pendingPlan?.id ?? null);
+                      }}
+                    >
+                      <ArrowLeftRight className="size-4" aria-hidden />
+                      {isAr ? "غيّر الباقة" : "Change plan"}
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => setCancelFor(sub)}>
                       <X className="size-4" aria-hidden />
                       {isAr ? "إلغاء التجديد" : "Cancel renewal"}
@@ -427,8 +618,8 @@ export default function SubscriptionsPage() {
           <IlloCan tone="green" className="h-24 w-auto" />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr
-              ? "لا توجد اشتراكات بعد — صندوق شهري يوصل احتياج قطك إلى بابك، بدون أي تجديد تلقائي"
-              : "No subscriptions yet — a monthly box brings your cat's needs to your door, never auto-renewed"}
+              ? "لا توجد اشتراكات بعد — صندوق شهري يوصل احتياج قطك إلى بابك، ويتجدد فقط إذا طلبت"
+              : "No subscriptions yet — a monthly box brings your cat's needs to your door, renewed only if you ask"}
           </p>
           <Link href="/portal/subscribe">
             <Button size="sm">{isAr ? "ابنِ باقة قطك" : "Build your cat's plan"}</Button>
@@ -457,13 +648,10 @@ export default function SubscriptionsPage() {
             </Button>
             <Button
               variant="destructive"
-              loading={!!cancelFor && actionPending(cancelFor.id, "cancel")}
+              loading={cancelSub.isPending}
               onClick={() => {
                 if (!cancelFor) return;
-                action.mutate(
-                  { id: cancelFor.id, verb: "cancel" },
-                  { onSuccess: closeCancelDialog }
-                );
+                cancelSub.mutate({ id: cancelFor.id });
               }}
             >
               {isAr ? "نعم، لا تجدّدها" : "Yes, don't renew"}
@@ -497,6 +685,46 @@ export default function SubscriptionsPage() {
               </span>
             </span>
           </button>
+
+          {/* One optional question, never argued with (T8, R068). */}
+          <fieldset className="space-y-1">
+            <legend className="mb-1 px-1 text-xs font-medium text-muted-foreground">
+              {isAr ? "إذا حبيت تخبرنا — ليش؟ (اختياري)" : "If you'd like to tell us — why? (optional)"}
+            </legend>
+            {CANCEL_REASONS.map((r) => (
+              <label
+                key={r}
+                className={cn(
+                  "flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm transition-colors",
+                  cancelReason === r ? "bg-muted" : "hover:bg-muted/50"
+                )}
+              >
+                <input
+                  type="radio"
+                  name="cancel-reason"
+                  value={r}
+                  checked={cancelReason === r}
+                  onChange={() => setCancelReason(r)}
+                  className="accent-primary"
+                />
+                {isAr ? CANCEL_REASON_LABELS[r].ar : CANCEL_REASON_LABELS[r].en}
+              </label>
+            ))}
+            {cancelReason === "CAT_PASSED" && (
+              <p className="px-2 pt-1 text-xs leading-relaxed text-muted-foreground">
+                {isAr ? "نحن معك. سجلّه وصوره وهويته تبقى محفوظة معك دائماً." : "We're so sorry. Their record, photos and ID stay with you, always."}
+              </p>
+            )}
+            {(cancelReason === "SERVICE_ISSUE" || cancelReason === "OTHER") && (
+              <textarea
+                rows={2}
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+                placeholder={isAr ? "أخبرنا أكثر إذا حبيت…" : "Tell us more if you'd like…"}
+                className="mt-1 w-full resize-none rounded-xl border border-input bg-background p-3 text-sm text-foreground shadow-e1 outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            )}
+          </fieldset>
 
           {/* The refund stays safe to raise — a quiet path, never buried (R030). */}
           {cancelFor?.refundRequested ? (
@@ -539,6 +767,100 @@ export default function SubscriptionsPage() {
             </button>
           )}
         </div>
+      </Dialog>
+
+      {/* ── Change plan — applied at the next renewal, never mid-term (T8) ─── */}
+      <Dialog
+        open={!!planFor}
+        onClose={() => {
+          setPlanFor(null);
+          setPlanPick(null);
+        }}
+        title={isAr ? "تغيير الباقة" : "Change plan"}
+        description={
+          isAr
+            ? "مدتك المدفوعة تبقى كما هي. الباقة الجديدة تبدأ مع التجديد القادم، وبالسعر الظاهر هنا."
+            : "Your paid term stays exactly as it is. The new plan starts with your next renewal, at the price shown here."
+        }
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setPlanFor(null);
+                setPlanPick(null);
+              }}
+            >
+              {isAr ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button
+              loading={changePlan.isPending}
+              disabled={!planPick || !planFor}
+              onClick={() => planFor && planPick && changePlan.mutate({ id: planFor.id, planId: planPick })}
+            >
+              {isAr ? "اعتمد التغيير" : "Confirm change"}
+            </Button>
+          </>
+        }
+      >
+        {plansQ.isLoading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : (
+          <div role="radiogroup" aria-label={isAr ? "الباقات" : "Plans"} className="space-y-2">
+            {(plansQ.data ?? [])
+              .filter((p) => (p.maxCats ?? 1) >= (planFor?.cats.length ?? 1))
+              .map((p) => {
+                const selected = planPick === p.id;
+                const current = planFor?.plan?.tier === p.tier;
+                const cats = planFor?.cats.length ?? 1;
+                const monthly = Math.round((p.price + (p.modulePriceSar ?? 0) * Math.max(0, cats - 1)) * 100) / 100;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setPlanPick(p.id)}
+                    className={cn(
+                      "flex w-full min-h-11 items-center justify-between gap-3 rounded-xl border p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      selected ? "border-primary bg-primary/[0.06]" : "border-border hover:bg-muted/50"
+                    )}
+                  >
+                    <span className="text-sm font-semibold">
+                      {isAr ? p.nameAr : p.nameEn}
+                      {current && <span className="ms-2 text-xs font-normal text-muted-foreground">{isAr ? "(الحالية)" : "(current)"}</span>}
+                    </span>
+                    <span dir="ltr" className="tabular text-sm">
+                      {formatSAR(monthly, isAr)}
+                      <span className="text-xs text-muted-foreground">{isAr ? " / شهر" : " / mo"}</span>
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+        )}
+      </Dialog>
+
+      {/* ── "Don't renew this time" — the one-tap out promised in the T-7 mail (T7, R025) ── */}
+      <Dialog
+        open={!!skipRenewalFor && !!data?.some((s) => s.id === skipRenewalFor && s.autoRenew)}
+        onClose={() => setSkipRenewalFor(null)}
+        title={isAr ? "لا تجدّدها هالمرة؟" : "Don't renew this time?"}
+        description={
+          isAr
+            ? "نوقف التجديد التلقائي. مدتك المدفوعة تكمل كما هي، وما نخصم منك شيء بعدها — وتقدر تفعّله متى ما حبيت."
+            : "We'll switch auto-renew off. Your paid term runs to the end, nothing is charged after it — and you can switch it back on whenever you like."
+        }
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setSkipRenewalFor(null)}>{isAr ? "خلّها تتجدد" : "Keep renewing"}</Button>
+            <Button loading={setAutoRenew.isPending} onClick={() => skipRenewalFor && setAutoRenew.mutate({ id: skipRenewalFor, enabled: false })}>
+              {isAr ? "نعم، لا تجدّدها" : "Yes, don't renew"}
+            </Button>
+          </>
+        }
+      >
+        <span className="sr-only">{isAr ? "تأكيد" : "Confirm"}</span>
       </Dialog>
     </div>
   );

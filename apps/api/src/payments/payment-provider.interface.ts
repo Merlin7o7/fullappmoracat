@@ -31,6 +31,34 @@ export interface ChargeRequest {
   customer?: { email?: string; name?: string; phone?: string };
   /** Where the PSP should send the shopper after a hosted/redirect flow. */
   returnUrl?: string;
+  /**
+   * Ask the rail to mint a reusable card token alongside this charge (T7:
+   * the member ticked "renew automatically"). Only meaningful on card rails;
+   * BNPL ignores it. The token is read back via fetchPayment / the webhook,
+   * never from the browser.
+   */
+  saveCard?: boolean;
+}
+
+/**
+ * A client-side PSP session (Moyasar Payment Form). The browser collects card
+ * details straight into the PSP with the PUBLISHABLE key; our server only ever
+ * sees the resulting payment id, which it confirms via fetchPayment. Nothing
+ * card-shaped touches our API.
+ */
+export interface ClientSession {
+  kind: "moyasar_form" | "mock_form";
+  publishableKey: string;
+  /** Smallest unit (halalas). */
+  amount: number;
+  currency: string;
+  /** Our order number — echoed back in the payment's metadata. */
+  reference: string;
+  description: string;
+  callbackUrl: string;
+  saveCard: boolean;
+  /** Which methods the form should offer for this rail. */
+  methods: ("creditcard" | "applepay")[];
 }
 
 export interface ChargeResult {
@@ -40,6 +68,35 @@ export interface ChargeResult {
   failureReason?: string;
   /** Present when the shopper must complete payment on the PSP's page. */
   redirectUrl?: string;
+  /** Present when the shopper completes payment in an embedded PSP form. */
+  clientSession?: ClientSession;
+}
+
+/** A stored-credential summary the PSP hands back after a save_card payment. */
+export interface StoredCard {
+  token: string;
+  /** mada | visa | mastercard | … as the PSP names it (lower-case). */
+  company: string | null;
+  last4: string | null;
+  expMonth: number | null;
+  expYear: number | null;
+  holderName: string | null;
+  /** creditcard | applepay | … */
+  sourceType: string | null;
+}
+
+/** The PSP's own view of one payment, read back server-side (attach / reconcile). */
+export interface FetchedPayment {
+  id: string;
+  status: "CAPTURED" | "AUTHORIZED" | "PENDING" | "FAILED" | "REFUNDED";
+  /** Smallest unit (halalas). */
+  amount: number;
+  currency: string;
+  /** Our order number as the PSP echoes it back (metadata.reference). */
+  reference: string | null;
+  card: StoredCard | null;
+  failureReason?: string;
+  raw?: unknown;
 }
 
 export interface RefundResult {
@@ -89,6 +146,12 @@ export interface IPaymentProvider {
     currency: string,
     reference?: string
   ): Promise<CaptureResult>;
+  /**
+   * Read one payment back from the PSP by its id. Used by the attach step of
+   * an embedded-form flow (the browser tells us the id; we trust only what the
+   * PSP says about it) and by reconciliation.
+   */
+  fetchPayment?(providerPaymentId: string): Promise<FetchedPayment | null>;
 }
 
 /** Normalized event parsed from a PSP webhook. */
@@ -109,6 +172,16 @@ export interface WebhookEvent {
   /** Which PSP this came from — scopes the replay ledger. */
   provider?: string;
   eventType?: string;
+  /**
+   * Our order number as echoed by the PSP (metadata.reference). An embedded-form
+   * payment is persisted as `pending:<orderNumber>` until we learn the PSP's
+   * id, so settlement resolves by reference when the id doesn't match yet.
+   */
+  reference?: string | null;
+  /** Smallest unit; asserted against the order before settling when present. */
+  amount?: number | null;
+  /** Reusable card the PSP minted for this payment (save_card), if any. */
+  card?: StoredCard | null;
   raw?: unknown;
 }
 

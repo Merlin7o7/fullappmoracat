@@ -23,6 +23,8 @@ import {
   type IPaymentProviderFactory,
   type PaymentProviderKey,
 } from "../payments/payment-provider.interface";
+import { WebhooksService } from "../payments/webhooks.service";
+import { EventsService } from "../events/events.service";
 import { commerceEnabled } from "../common/config/features";
 import {
   splitVat,
@@ -33,7 +35,7 @@ import {
   termDiscount,
   termTotal as termUpfrontTotal,
 } from "../common/config/pricing";
-import type { ActivateSubscriptionDto } from "./dto/subscription.dto";
+import { RECURRING_PROVIDERS, type ActivateSubscriptionDto, type CancelSubscriptionDto } from "./dto/subscription.dto";
 
 const INTERVAL_DAYS: Record<string, number> = {
   MONTHLY: 30,
@@ -47,6 +49,8 @@ export class SubscriptionsService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly notifications: NotificationsService,
+    private readonly webhooks: WebhooksService,
+    private readonly events: EventsService,
     @Inject(PAYMENT_PROVIDER_FACTORY) private readonly payments: IPaymentProviderFactory
   ) {}
 
@@ -120,7 +124,7 @@ export class SubscriptionsService {
       const draft = coveringRows.find((r) => r.subscription.status === "DRAFT");
       if (draft) {
         const meta = draft.subscription.orders[0]?.payments[0]?.metadata as
-          | { redirectUrl?: string }
+          | { redirectUrl?: string; clientSession?: unknown }
           | null
           | undefined;
         return {
@@ -128,6 +132,7 @@ export class SubscriptionsService {
           status: "DRAFT" as const,
           resumed: true,
           redirectUrl: meta?.redirectUrl ?? null,
+          clientSession: meta?.clientSession ?? null,
         };
       }
 
@@ -213,6 +218,10 @@ export class SubscriptionsService {
 
     // 1) Charge (or open a PSP session) first — never persist a membership we
     //    didn't at least initiate collection for.
+    // Opt-in auto-renew (T7) is only a promise the engine can keep on a rail
+    // that mints a reusable token. On Tamara it's silently not a thing, and the
+    // response says so — the member is never told something renews that can't.
+    const autoRenewRequested = !!dto.autoRenew && RECURRING_PROVIDERS.includes(dto.provider);
     const adapter = this.payments.resolve(dto.provider as PaymentProviderKey);
     const charge = await adapter.charge({
       amount: grandTotal,
@@ -220,6 +229,7 @@ export class SubscriptionsService {
       provider: dto.provider as PaymentProviderKey,
       reference: orderNumber,
       description: `Moracat membership — ${plan.nameEn}`,
+      saveCard: autoRenewRequested,
       customer: {
         email: user.email,
         name: [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined,
@@ -264,6 +274,7 @@ export class SubscriptionsService {
           // Renewal is due at term end (whole term prepaid); deliveries monthly.
           nextBillingAt: isPending ? null : termEnd,
           nextDeliveryAt: isPending ? null : firstDelivery,
+          autoRenewRequestedAt: autoRenewRequested ? now : null,
           cats: { create: dto.catIds.map((catId) => ({ catId })) },
           // The member's chosen brands/flavors, recorded on the subscription so
           // the box ships what they picked (flat pricing → unitPrice 0).
@@ -313,9 +324,13 @@ export class SubscriptionsService {
               currency: plan.currency,
               providerRef: charge.providerRef,
               capturedAt: isPending ? null : new Date(),
-              // Persist the hosted checkout URL so an abandoned redirect can be
-              // resumed (fire #4) — an in-flight payment is never a dead end.
-              metadata: charge.redirectUrl ? { redirectUrl: charge.redirectUrl } : undefined,
+              // Persist the hosted checkout URL / embedded-form session so an
+              // abandoned payment can be resumed (fire #4) — never a dead end.
+              metadata: charge.redirectUrl
+                ? { redirectUrl: charge.redirectUrl }
+                : charge.clientSession
+                  ? { clientSession: charge.clientSession as unknown as Prisma.InputJsonValue }
+                  : undefined,
             },
           },
           invoice: {
@@ -338,6 +353,11 @@ export class SubscriptionsService {
     if (!isPending) {
       // Membership goes live for the covered cats the moment payment captures.
       await this.syncCatsMembership(dto.catIds);
+      this.events.emit("membership_activated", {
+        userId,
+        catId: dto.catIds[0],
+        props: { via: "direct", termMonths, provider: dto.provider },
+      });
 
       this.notifications.emit(userId, {
         category: "ORDER",
@@ -382,6 +402,11 @@ export class SubscriptionsService {
       nextBillingAt: isPending ? null : termEnd.toISOString(),
       // Redirect flows: the client sends the member here to complete payment.
       redirectUrl: charge.redirectUrl ?? null,
+      // Embedded-form flows: the client opens the PSP form with this session.
+      clientSession: charge.clientSession ?? null,
+      // What the member asked for vs. what this rail can honour (R025).
+      autoRenewRequested,
+      autoRenewAccepted: autoRenewRequested,
       payment: { provider: dto.provider, status: isPending ? "PENDING" : "CAPTURED" },
       plan: { tier: plan.tier, nameEn: plan.nameEn, nameAr: plan.nameAr },
       cats: cats.map((c) => ({ id: c.id, name: c.name })),
@@ -394,6 +419,66 @@ export class SubscriptionsService {
    * live) or `failed` (payment declined / capture failed). Scoped to the member
    * so one member can never read another's order.
    */
+  /**
+   * The browser finished an embedded PSP form and came back with the PSP's
+   * payment id (T7). We trust nothing the browser says beyond that id: the
+   * payment is read back from the PSP, its reference and amount are asserted
+   * against OUR order, and only then does it flow through the same idempotent
+   * settle() the webhook uses — so attach and webhook can race safely.
+   */
+  async attachPayment(userId: string, orderNumber: string, providerPaymentId: string) {
+    if (!commerceEnabled()) {
+      throw new ForbiddenException({ code: "MEMBERSHIPS_COMING_SOON", message: "Memberships are launching soon." });
+    }
+    const order = await this.prisma.order.findFirst({
+      where: { orderNumber, userId },
+      select: {
+        orderNumber: true,
+        grandTotal: true,
+        currency: true,
+        payments: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, provider: true, providerRef: true, status: true } },
+      },
+    });
+    if (!order) throw new NotFoundException("Order not found");
+    const payment = order.payments[0];
+    if (!payment) throw new NotFoundException("Order not found");
+    if (payment.status === "CAPTURED") return { state: "active" as const, orderNumber };
+
+    const adapter = this.payments.resolve(payment.provider as PaymentProviderKey);
+    if (!adapter.fetchPayment) {
+      throw new BadRequestException({ code: "NOT_ATTACHABLE", message: "This payment can't be attached." });
+    }
+    const fetched = await adapter.fetchPayment(providerPaymentId);
+    if (!fetched) throw new NotFoundException({ code: "PSP_PAYMENT_NOT_FOUND", message: "Payment not found." });
+    if (fetched.reference !== order.orderNumber) {
+      throw new BadRequestException({ code: "PAYMENT_MISMATCH", message: "That payment doesn't belong to this order." });
+    }
+    if (fetched.amount !== Math.round(Number(order.grandTotal) * 100) || fetched.currency !== order.currency) {
+      throw new BadRequestException({ code: "PAYMENT_MISMATCH", message: "That payment doesn't match this order." });
+    }
+
+    const status =
+      fetched.status === "CAPTURED" ? ("CAPTURED" as const)
+      : fetched.status === "FAILED" ? ("FAILED" as const)
+      : ("IGNORED" as const);
+    const result = await this.webhooks.settle({
+      providerRef: fetched.id,
+      status,
+      provider: adapter.name,
+      eventType: `attach:${fetched.status.toLowerCase()}`,
+      eventId: `attach:${fetched.id}:${fetched.status}`,
+      reference: order.orderNumber,
+      amount: fetched.amount,
+      card: fetched.card,
+      raw: fetched.raw,
+    });
+    return {
+      orderNumber,
+      settled: result.status,
+      state: fetched.status === "CAPTURED" ? ("active" as const) : fetched.status === "FAILED" ? ("failed" as const) : ("pending" as const),
+    };
+  }
+
   async getActivationStatus(userId: string, orderNumber: string) {
     const order = await this.prisma.order.findFirst({
       where: { orderNumber, userId },
@@ -408,6 +493,7 @@ export class SubscriptionsService {
             id: true,
             status: true,
             nextBillingAt: true,
+            autoRenew: true,
             plan: { select: { tier: true, nameEn: true, nameAr: true } },
             cats: { select: { cat: { select: { id: true, name: true } } } },
           },
@@ -431,6 +517,7 @@ export class SubscriptionsService {
       taxTotal: Number(order.taxTotal),
       currency: order.currency,
       nextBillingAt: sub?.nextBillingAt?.toISOString() ?? null,
+      autoRenew: sub?.autoRenew ?? false,
       plan: sub?.plan ?? null,
       cats: sub?.cats.map((c) => ({ id: c.cat.id, name: c.cat.name })) ?? [],
     };
@@ -531,23 +618,30 @@ export class SubscriptionsService {
    * where the lifecycle job lapses it gracefully. Only a term with nothing left
    * to serve cancels immediately.
    */
-  async cancel(userId: string, id: string) {
+  async cancel(userId: string, id: string, why: CancelSubscriptionDto = {}) {
     const sub = await this.owned(userId, id);
     if (sub.status === "CANCELLED" || sub.status === "EXPIRED") {
       throw new BadRequestException({ code: "ALREADY_CANCELLED", message: "This membership is already cancelled." });
     }
     const now = new Date();
     const hasRemainingTerm = sub.endsAt != null && sub.endsAt.getTime() > now.getTime();
+    // The reason is kept for the founder, never argued with (T8, R068).
+    const reason = { cancelReason: why.reason ?? null, cancelNote: why.note?.trim() || null };
 
     if (hasRemainingTerm) {
       // "Won't renew" — keep everything the member paid for until the term ends.
+      // Auto-renew is switched off in the same write: a won't-renew that could
+      // still charge would be a lie.
       await this.prisma.subscription.update({
         where: { id },
         data: {
           cancelAtTermEnd: true,
-          events: { create: { type: "cancel_scheduled", metadata: { endsAt: sub.endsAt?.toISOString() } } },
+          autoRenew: false,
+          ...reason,
+          events: { create: { type: "cancel_scheduled", metadata: { endsAt: sub.endsAt?.toISOString(), reason: why.reason ?? null } } },
         },
       });
+      this.events.emit("subscription_cancelled", { userId, props: { reason: why.reason ?? null, mode: "term_end" } });
       return this.serialize(await this.reload(id));
     }
 
@@ -557,10 +651,49 @@ export class SubscriptionsService {
       data: {
         status: "CANCELLED",
         cancelledAt: now,
-        events: { create: { type: "cancelled" } },
+        autoRenew: false,
+        ...reason,
+        events: { create: { type: "cancelled", metadata: { reason: why.reason ?? null } } },
       },
     });
     await this.syncCatsMembership(sub.cats.map((c) => c.cat.id));
+    this.events.emit("subscription_cancelled", { userId, props: { reason: why.reason ?? null, mode: "now" } });
+    return this.serialize(await this.reload(id));
+  }
+
+  /**
+   * Mid-term plan change (T8). A paid term is never re-priced underneath the
+   * member: the new plan takes effect at the next successful renewal (stored
+   * on `pendingPlanId`), and the next invited/automatic renewal quotes it.
+   */
+  async changePlan(userId: string, id: string, planId: string) {
+    const sub = await this.owned(userId, id);
+    if (sub.status !== "ACTIVE" && sub.status !== "PAUSED") {
+      throw new BadRequestException({ code: "NOT_CHANGEABLE", message: "Only an active membership can change plan." });
+    }
+    const plan = await this.prisma.plan.findFirst({
+      where: { id: planId, isActive: true },
+      select: { id: true, tier: true, nameEn: true, nameAr: true, basePrice: true, modulePriceSar: true },
+    });
+    if (!plan) throw new NotFoundException({ code: "PLAN_NOT_FOUND", message: "Plan not found." });
+    // Same household rule as /plans: single-cat plans have no module price.
+    const maxCats = plan.modulePriceSar == null ? 1 : MAX_CATS_PER_SUBSCRIPTION;
+    if (sub.cats.length > maxCats) {
+      throw new BadRequestException({
+        code: "TOO_MANY_CATS",
+        message: `That plan covers up to ${maxCats} cat(s); this membership has ${sub.cats.length}.`,
+      });
+    }
+    const clearing = plan.id === sub.planId;
+    await this.prisma.subscription.update({
+      where: { id },
+      data: {
+        pendingPlanId: clearing ? null : plan.id,
+        planChangeRequestedAt: clearing ? null : new Date(),
+        events: { create: { type: "plan_change_requested", metadata: { from: sub.planId, to: plan.id } } },
+      },
+    });
+    if (!clearing) this.events.emit("plan_change_requested", { userId, props: { from: sub.plan?.tier ?? null, to: plan.tier } });
     return this.serialize(await this.reload(id));
   }
 
@@ -800,7 +933,8 @@ export class SubscriptionsService {
       where: { id: input.subscriptionId },
       select: {
         id: true, userId: true, currency: true, termMonths: true, endsAt: true,
-        addressId: true, planId: true, cats: { select: { catId: true } },
+        addressId: true, planId: true, pendingPlanId: true, cats: { select: { catId: true } },
+        pendingPlan: { select: { id: true, basePrice: true, modulePriceSar: true } },
       },
     });
     if (!sub) return { ok: false, reason: "Subscription not found" };
@@ -885,10 +1019,34 @@ export class SubscriptionsService {
       }),
       this.prisma.subscription.update({
         where: { id: sub.id },
-        data: { endsAt, nextBillingAt: endsAt, autoRenewNoticeAt: null },
+        data: {
+          endsAt,
+          nextBillingAt: endsAt,
+          autoRenewNoticeAt: null,
+          // A successful charge closes any dunning ladder in flight.
+          dunningAttempts: 0,
+          dunningStartedAt: null,
+          nextDunningAt: null,
+          graceUntil: null,
+          // A requested plan change takes effect on the freshly paid term (T8).
+          ...(sub.pendingPlan
+            ? {
+                planId: sub.pendingPlan.id,
+                price: new Prisma.Decimal(
+                  householdMonthlyPrice(Number(sub.pendingPlan.basePrice), Number(sub.pendingPlan.modulePriceSar ?? 0), sub.cats.length)
+                ),
+                pendingPlanId: null,
+                planChangeRequestedAt: null,
+              }
+            : {}),
+        },
       }),
       this.prisma.subscriptionEvent.create({
-        data: { subscriptionId: sub.id, type: "renewed", metadata: { orderNumber: order.orderNumber, amount: input.amount } },
+        data: {
+          subscriptionId: sub.id,
+          type: "renewed",
+          metadata: { orderNumber: order.orderNumber, amount: input.amount, planChangedTo: sub.pendingPlanId },
+        },
       }),
     ]);
 
@@ -1052,6 +1210,16 @@ export class SubscriptionsService {
       pausedAt: sub.pausedAt,
       // "Won't renew" state (honest cancel): still servicing until endsAt.
       cancelAtTermEnd: sub.cancelAtTermEnd,
+      cancelReason: sub.cancelReason,
+      // Opt-in auto-renew (T7) and the exact card it charges — shown, never hidden.
+      autoRenew: sub.autoRenew,
+      renewalPaymentMethod: sub.renewalPaymentMethod
+        ? { id: sub.renewalPaymentMethod.id, brand: sub.renewalPaymentMethod.brand, last4: sub.renewalPaymentMethod.last4 }
+        : null,
+      dunningAttempts: sub.dunningAttempts,
+      graceUntil: sub.graceUntil,
+      // A plan change waiting for the next renewal (T8).
+      pendingPlan: sub.pendingPlan ? { id: sub.pendingPlan.id, tier: sub.pendingPlan.tier, nameEn: sub.pendingPlan.nameEn, nameAr: sub.pendingPlan.nameAr } : null,
       refundRequested: sub.events.some((e) => e.type === "refund_requested"),
       // For a DRAFT (abandoned redirect), the URL that resumes payment.
       resumeUrl,
@@ -1070,6 +1238,8 @@ export class SubscriptionsService {
 
 const subInclude = {
   plan: true,
+  pendingPlan: { select: { id: true, tier: true, nameEn: true, nameAr: true } },
+  renewalPaymentMethod: { select: { id: true, brand: true, last4: true, deletedAt: true } },
   cats: { include: { cat: { select: { id: true, name: true } } } },
   items: { include: { product: { select: { nameEn: true } } } },
   events: { orderBy: { createdAt: "desc" as const }, take: 10 },

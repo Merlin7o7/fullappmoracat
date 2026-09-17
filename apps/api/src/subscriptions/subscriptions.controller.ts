@@ -1,7 +1,15 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { SubscriptionsService } from "./subscriptions.service";
-import { ActivateSubscriptionDto, PauseDto, RefundRequestDto, SetAutoRenewDto } from "./dto/subscription.dto";
+import {
+  ActivateSubscriptionDto,
+  AttachPaymentDto,
+  CancelSubscriptionDto,
+  ChangePlanDto,
+  PauseDto,
+  RefundRequestDto,
+  SetAutoRenewDto,
+} from "./dto/subscription.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Commercial } from "../common/decorators/commercial.decorator";
 
@@ -47,6 +55,17 @@ export class SubscriptionsController {
     return this.subs.getActivationStatus(userId, ref);
   }
 
+  // The embedded-form return (T7): the browser hands us the PSP's payment id;
+  // the server reads it back from the PSP and settles through the same
+  // idempotent path as the webhook. Money moves here → @Commercial.
+  @Post("order-status/:ref/attach")
+  @Commercial()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Attach a completed PSP form payment to an order and settle it" })
+  attach(@CurrentUser("id") userId: string, @Param("ref") ref: string, @Body() dto: AttachPaymentDto) {
+    return this.subs.attachPayment(userId, ref, dto.providerPaymentId);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get one subscription" })
   findOne(@CurrentUser("id") userId: string, @Param("id") id: string) {
@@ -80,8 +99,16 @@ export class SubscriptionsController {
   @Post(":id/cancel")
   @Commercial()
   @ApiOperation({ summary: "Cancel a subscription (won't-renew during a paid term; never confiscates it)" })
-  cancel(@CurrentUser("id") userId: string, @Param("id") id: string) {
-    return this.subs.cancel(userId, id);
+  cancel(@CurrentUser("id") userId: string, @Param("id") id: string, @Body() dto: CancelSubscriptionDto) {
+    return this.subs.cancel(userId, id, dto);
+  }
+
+  // Mid-term plan change (T8) — applied at the next renewal, never mid-term.
+  @Post(":id/change-plan")
+  @Commercial()
+  @ApiOperation({ summary: "Change plan at the next renewal (a paid term is never re-priced)" })
+  changePlan(@CurrentUser("id") userId: string, @Param("id") id: string, @Body() dto: ChangePlanDto) {
+    return this.subs.changePlan(userId, id, dto.planId);
   }
 
   // Auto-renewal is opt-out by design, so turning it OFF must be as cheap as a

@@ -577,6 +577,77 @@ ok(
   `household total = base + one module (${hhPlan.price} + ${hhPlan.modulePriceSar} = ${hhPlan.price + hhPlan.modulePriceSar})`
 );
 
+
+console.log("━━ T7: card rail + opt-in auto-renew (embedded PSP form) ━━");
+// mock mode: a card charge with autoRenew opens a form SESSION (nothing is
+// charged yet). "Completing" it means attaching mockpay_<orderNumber>, which
+// the server reads back from the PSP as a paid payment carrying a reusable
+// token → membership ACTIVE, card stored, auto-renew armed on exactly that card.
+const cardCat = (await call("/cats", "POST", { name: "Cardy", weightKg: 4, activityLevel: "LOW", isIndoor: true, gender: "FEMALE", birthDate: "2023-01-01", cityCode: "riyadh" }, C)).json;
+const cardSub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cardCat.id], addressId: addr.id, provider: "MADA", termMonths: 1, autoRenew: true }, C)).json;
+ok(cardSub.status === "DRAFT" && cardSub.clientSession?.kind === "mock_form" && cardSub.clientSession.saveCard === true && cardSub.clientSession.reference === cardSub.orderNumber,
+  "card + auto-renew opens an embedded form session with save_card (nothing charged yet)");
+ok(cardSub.autoRenewRequested === true && cardSub.redirectUrl === null, "auto-renew request recorded, not yet armed; no redirect");
+ok((await call(`/cats/${cardCat.id}`, "GET", undefined, C)).json?.membershipStatus !== "ACTIVE", "cat stays uncovered until the form payment settles");
+// Idempotent resume: a second activate hands back the SAME session, never a second order.
+const resumedCard = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [cardCat.id], addressId: addr.id, provider: "MADA", termMonths: 1, autoRenew: true }, C)).json;
+ok(resumedCard.resumed === true && resumedCard.clientSession?.reference === cardSub.orderNumber, "re-activating resumes the same form session");
+// Security: another member cannot attach a payment to this order; a payment
+// for a different reference is rejected — the server trusts the PSP, not the browser.
+ok((await call(`/subscriptions/order-status/${cardSub.orderNumber}/attach`, "POST", { providerPaymentId: `mockpay_${cardSub.orderNumber}` }, victim.accessToken)).status === 404, "attach is scoped to the order's owner");
+ok((await call(`/subscriptions/order-status/${cardSub.orderNumber}/attach`, "POST", { providerPaymentId: "mockpay_MRQ-NOPE" }, C)).status === 400, "attach rejects a payment whose reference doesn't match the order");
+const attached = await call(`/subscriptions/order-status/${cardSub.orderNumber}/attach`, "POST", { providerPaymentId: `mockpay_${cardSub.orderNumber}` }, C);
+ok(attached.status === 200 && attached.json?.state === "active", `attach settles the order (${attached.json?.settled})`);
+const cardSubFull = (await call(`/subscriptions/${cardSub.subscriptionId}`, "GET", undefined, C)).json;
+ok(cardSubFull.status === "ACTIVE" && cardSubFull.autoRenew === true && !!cardSubFull.renewalPaymentMethod?.last4,
+  "membership ACTIVE with auto-renew armed on the stored card");
+ok((await call(`/cats/${cardCat.id}`, "GET", undefined, C)).json?.membershipStatus === "ACTIVE", "cat membership flips ACTIVE on attach");
+const orderState = (await call(`/subscriptions/order-status/${cardSub.orderNumber}`, "GET", undefined, C)).json;
+ok(orderState.state === "active" && orderState.autoRenew === true, "return-page poll reports active + auto-renew");
+const again = await call(`/subscriptions/order-status/${cardSub.orderNumber}/attach`, "POST", { providerPaymentId: `mockpay_${cardSub.orderNumber}` }, C);
+ok(again.status === 200 && again.json?.state === "active", "re-attaching is idempotent (never a second settlement)");
+const cardsList = (await call("/account/payment-methods", "GET", undefined, C)).json;
+ok(Array.isArray(cardsList) && cardsList.length === 1 && !!cardsList[0].last4 && !("token" in cardsList[0]) && cardsList[0].renewingSubscriptionIds.includes(cardSub.subscriptionId),
+  "saved card listed with brand + last4 only (no token) and linked to the renewing membership");
+ok((await call("/account/payment-methods", "GET", undefined, victim.accessToken)).json?.length === 0, "saved cards are per-account");
+const off = await call(`/subscriptions/${cardSub.subscriptionId}/auto-renew`, "POST", { enabled: false }, C);
+ok(off.json?.autoRenew === false, "auto-renew turns off in one call");
+const on = await call(`/subscriptions/${cardSub.subscriptionId}/auto-renew`, "POST", { enabled: true, paymentMethodId: cardsList[0].id }, C);
+ok(on.status === 201 && on.json?.autoRenew === true, "auto-renew turns back on against the saved card");
+// Tamara + autoRenew: BNPL cannot be charged off-session — the request is
+// reported as not accepted, never silently pretended.
+const tamCat = (await call("/cats", "POST", { name: "Tammy", weightKg: 4, activityLevel: "LOW", isIndoor: true, gender: "FEMALE", birthDate: "2023-02-01", cityCode: "riyadh" }, C)).json;
+const tamSub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [tamCat.id], addressId: addr.id, provider: "TAMARA", termMonths: 1, autoRenew: true }, C)).json;
+ok(tamSub.autoRenewAccepted === false && (await call(`/subscriptions/${tamSub.subscriptionId}`, "GET", undefined, C)).json?.autoRenew === false,
+  "Tamara ignores auto-renew honestly (BNPL cannot be charged off-session)");
+// A declined form payment closes the DRAFT honestly and never activates.
+const decCat = (await call("/cats", "POST", { name: "Declan", weightKg: 4, activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2023-03-01", cityCode: "riyadh" }, C)).json;
+const decSub = (await call("/subscriptions/activate", "POST", { planId: plans[0].id, catIds: [decCat.id], addressId: addr.id, provider: "VISA", termMonths: 1, autoRenew: true }, C)).json;
+const declined = await call(`/subscriptions/order-status/${decSub.orderNumber}/attach`, "POST", { providerPaymentId: `mockpay_declined_${decSub.orderNumber}` }, C);
+ok(declined.status === 200 && declined.json?.state === "failed", "a declined form payment reports failed");
+ok((await call(`/subscriptions/${decSub.subscriptionId}`, "GET", undefined, C)).json?.status === "CANCELLED", "declined first charge closes the DRAFT (no phantom membership)");
+ok((await call(`/cats/${decCat.id}`, "GET", undefined, C)).json?.membershipStatus !== "ACTIVE", "declined payment never activates the cat");
+ok((await call("/account/payment-methods", "GET", undefined, C)).json?.length === 1, "no card is stored from a declined payment");
+// Removing the card drops every renewal on it back to an invitation, in one write.
+ok((await call(`/account/payment-methods/${cardsList[0].id}`, "DELETE", undefined, C)).status === 200, "saved card removed");
+ok((await call(`/subscriptions/${cardSub.subscriptionId}`, "GET", undefined, C)).json?.autoRenew === false, "removing the card switches auto-renew off (never points at nothing)");
+ok((await call(`/account/payment-methods/${cardsList[0].id}`, "DELETE", undefined, C)).status === 404, "a removed card is gone");
+
+console.log("━━ T8: honest cancel with a reason; plan change at renewal ━━");
+const cancelled = await call(`/subscriptions/${sub1.subscriptionId}/cancel`, "POST", { reason: "MOVING", note: "Leaving Riyadh" }, C);
+ok(cancelled.status === 201 && cancelled.json?.cancelAtTermEnd === true && cancelled.json?.cancelReason === "MOVING" && cancelled.json?.status === "ACTIVE",
+  "cancel records the reason and keeps the paid term (won't-renew, still ACTIVE)");
+ok((await call(`/subscriptions/${sub.subscriptionId}/cancel`, "POST", { reason: "NOT_A_REASON" }, C)).status === 400, "unknown cancel reason rejected");
+const changed = await call(`/subscriptions/${cardSub.subscriptionId}/change-plan`, "POST", { planId: plans[1].id }, C);
+ok(changed.status === 201 && changed.json?.pendingPlan?.id === plans[1].id && changed.json?.plan?.tier === plans[0].tier,
+  "plan change is queued for the next renewal; the paid term's plan is untouched");
+const undo = await call(`/subscriptions/${cardSub.subscriptionId}/change-plan`, "POST", { planId: plans[0].id }, C);
+ok(undo.status === 201 && undo.json?.pendingPlan === null, "choosing the current plan clears the pending change");
+ok((await call(`/subscriptions/${cardSub.subscriptionId}/change-plan`, "POST", { planId: plans[1].id }, victim.accessToken)).status === 404, "change-plan is owner-scoped");
+ok((await call(`/subscriptions/${cardSub.subscriptionId}/change-plan`, "POST", { planId: "nope" }, C)).status === 404, "unknown plan rejected");
+const skipped = await call(`/subscriptions/${cardSub.subscriptionId}/skip`, "POST", {}, C);
+ok(skipped.status === 201 && skipped.json?.endsAt === cardSubFull.endsAt, "skip moves the next box, never the term end");
+
 console.log("━━ refunds + RBAC ━━");
 ok((await call("/admin/dashboard", "GET", undefined, C)).status === 403, "customer blocked from admin (403)");
 const refund = (await call(`/admin/orders/${order.orderNumber}/refund`, "POST", { amount: 10, reason: "smoke" }, A)).json;

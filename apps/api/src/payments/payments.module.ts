@@ -26,6 +26,6 @@ import { RefundsService } from "./refunds.service";
     RefundsService,
     { provide: PAYMENT_PROVIDER_FACTORY, useClass: PaymentProviderFactory },
   ],
-  exports: [PAYMENT_PROVIDER_FACTORY, RefundsService],
+  exports: [PAYMENT_PROVIDER_FACTORY, RefundsService, WebhooksService],
 })
 export class PaymentsModule {}

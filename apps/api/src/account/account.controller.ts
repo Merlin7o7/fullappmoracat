@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
 import { AccountService } from "./account.service";
@@ -99,6 +99,19 @@ export class AccountController {
   }
 
   // ── PDPL: data portability + erasure ──────────────────────────────────────
+  // Saved cards (T7). Tokens never leave the server — only brand + last4.
+  @Get("payment-methods")
+  @ApiOperation({ summary: "Saved payment methods (brand + last4 only)" })
+  paymentMethods(@CurrentUser("id") userId: string) {
+    return this.account.paymentMethods(userId);
+  }
+
+  @Delete("payment-methods/:id")
+  @ApiOperation({ summary: "Remove a saved card; memberships renewing on it fall back to an invitation" })
+  removePaymentMethod(@CurrentUser("id") userId: string, @Param("id") id: string) {
+    return this.account.removePaymentMethod(userId, id);
+  }
+
   @Get("export")
   @ApiOperation({ summary: "Export all of my data (PDPL right of access)" })
   exportData(@CurrentUser("id") userId: string) {

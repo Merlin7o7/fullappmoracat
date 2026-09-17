@@ -21,9 +21,12 @@ import {
   PAYMENT_PROVIDER_FACTORY,
   type IPaymentProviderFactory,
   type PaymentProviderKey,
+  type StoredCard,
   type WebhookEvent,
 } from "./payment-provider.interface";
+import { normalizeMoyasarPayment, type MoyasarPayment } from "./adapters/moyasar.adapter";
 import { firstDeliveryOn } from "../common/config/launch";
+import { EventsService } from "../events/events.service";
 
 /**
  * Verifies and settles PSP webhooks. Each provider authenticates differently:
@@ -43,6 +46,7 @@ export class WebhooksService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
+    private readonly events: EventsService,
     @Inject(PAYMENT_PROVIDER_FACTORY) private readonly payments: IPaymentProviderFactory
   ) {}
 
@@ -67,12 +71,19 @@ export class WebhooksService {
             : "IGNORED";
     const providerRef = String(data.id ?? "");
     if (!providerRef) throw new BadRequestException("Missing payment id");
+    // An embedded-form payment (T7) is persisted as `pending:<orderNumber>`
+    // until attach learns Moyasar's id — the reference lets settle() find it
+    // when the webhook wins the race, and the source carries the saved card.
+    const norm = normalizeMoyasarPayment({ ...(data as unknown as MoyasarPayment), id: providerRef });
     return {
       providerRef,
       status,
       provider: "moyasar",
       eventType: type,
-      eventId: String(body.id ?? data.id ?? providerRef),
+      eventId: `${String(body.id ?? data.id ?? providerRef)}:${type}`,
+      reference: norm.reference,
+      amount: norm.amount || null,
+      card: norm.card,
       raw: body,
     };
   }
@@ -203,14 +214,42 @@ export class WebhooksService {
       }
     }
 
-    const payment = await this.prisma.payment.findFirst({
-      where: { providerRef: event.providerRef },
-      include: {
-        order: {
-          select: { id: true, orderNumber: true, status: true, userId: true, subscriptionId: true },
-        },
+    const paymentInclude = {
+      order: {
+        select: { id: true, orderNumber: true, status: true, userId: true, subscriptionId: true },
       },
+    } as const;
+    let payment = await this.prisma.payment.findFirst({
+      where: { providerRef: event.providerRef },
+      include: paymentInclude,
     });
+    if (!payment && event.reference) {
+      // Embedded-form flow: the row still carries `pending:<orderNumber>`.
+      // Resolve by our own reference and stamp the PSP's id before going on,
+      // so every later event (refund, replay) matches by id like any other.
+      const pending = await this.prisma.payment.findFirst({
+        where: { providerRef: `pending:${event.reference}`, order: { orderNumber: event.reference } },
+        include: paymentInclude,
+      });
+      if (pending) {
+        if (event.amount != null && Math.round(Number(pending.amount) * 100) !== event.amount) {
+          this.logger.error(
+            `amount mismatch for ${event.reference}: order ${Number(pending.amount)} vs PSP ${event.amount / 100}`
+          );
+          throw new BadRequestException("Payment amount does not match the order");
+        }
+        // CAS on the placeholder: two PSP ids can never both claim one order.
+        const stamped = await this.prisma.payment.updateMany({
+          where: { id: pending.id, providerRef: `pending:${event.reference}` },
+          data: { providerRef: event.providerRef },
+        });
+        if (stamped.count === 0) {
+          this.logger.warn(`order ${event.reference} already attached to another PSP payment`);
+          return { orderNumber: event.reference, status: "already_attached" as const };
+        }
+        payment = await this.prisma.payment.findFirst({ where: { id: pending.id }, include: paymentInclude });
+      }
+    }
     if (!payment) throw new NotFoundException("Payment not found for webhook");
 
     if (event.status === "CAPTURED") {
@@ -298,6 +337,11 @@ export class WebhooksService {
         payment.order.orderNumber
       );
 
+      // T7: a reusable card minted alongside this charge is stored now, and an
+      // auto-renew the member asked for at checkout is armed ONLY here — after
+      // money actually moved on a credential the engine can charge again.
+      await this.storeCardAndArmAutoRenew(payment.id, payment.order.userId, payment.order.subscriptionId, event);
+
       // Receipts land the moment money moves, even on redirect flows (R024).
       await this.sendCaptureEmails(payment.order, activatedPlanName);
 
@@ -384,6 +428,68 @@ export class WebhooksService {
     return { orderNumber: payment.order.orderNumber, status: "refunded" };
   }
 
+  // ── Stored cards + opt-in auto-renew (T7) ────────────────────────────────
+
+  /**
+   * Persist the PSP-minted token and, when the member opted in at checkout,
+   * switch auto-renew on against exactly that card. Idempotent per token. A
+   * capture with no token (BNPL, or save_card off) silently leaves auto-renew
+   * off — the product never claims a renewal it cannot perform (R025).
+   */
+  private async storeCardAndArmAutoRenew(
+    paymentId: string,
+    userId: string,
+    subscriptionId: string | null,
+    event: WebhookEvent
+  ) {
+    const card = event.card;
+    if (!card?.token) return;
+    const provider = cardRailOf(card, event.provider);
+    let pm = await this.prisma.paymentMethod.findFirst({
+      where: { userId, token: card.token, deletedAt: null },
+      select: { id: true },
+    });
+    if (!pm) {
+      const hasDefault = await this.prisma.paymentMethod.count({ where: { userId, deletedAt: null, isDefault: true } });
+      pm = await this.prisma.paymentMethod.create({
+        data: {
+          userId,
+          provider,
+          token: card.token,
+          brand: card.company,
+          last4: card.last4,
+          expMonth: card.expMonth,
+          expYear: card.expYear,
+          holderName: card.holderName,
+          isDefault: hasDefault === 0,
+          providerRef: event.providerRef,
+        },
+        select: { id: true },
+      });
+    }
+    // The row was created under the rail the member CHOSE ("card"); the PSP now
+    // tells us the exact brand — record that, so books and receipts are exact.
+    await this.prisma.payment.updateMany({ where: { id: paymentId }, data: { paymentMethodId: pm.id, provider } });
+
+    if (!subscriptionId) return;
+    const sub = await this.prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      select: { id: true, autoRenewRequestedAt: true, autoRenew: true },
+    });
+    if (!sub?.autoRenewRequestedAt || sub.autoRenew) return;
+    // Apple Pay tokens are single-merchant DPANs; whether Moyasar can re-charge
+    // them off-session is unconfirmed (D7) — never arm a renewal on one.
+    if (card.sourceType === "applepay") return;
+    await this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: {
+        autoRenew: true,
+        renewalPaymentMethodId: pm.id,
+        events: { create: { type: "auto_renew_enabled", metadata: { via: "checkout", paymentMethodId: pm.id } } },
+      },
+    });
+  }
+
   // ── Subscription settlement (redirect flows persist as DRAFT) ────────────
 
   /** Flips a DRAFT membership live once its first charge captures. */
@@ -428,6 +534,11 @@ export class WebhooksService {
       }),
     ]);
     this.logger.log(`subscription ${sub.id} activated via webhook (${orderNumber})`);
+    this.events.emit("membership_activated", {
+      userId: sub.userId,
+      catId: sub.cats[0]?.catId,
+      props: { via: "psp", termMonths: sub.termMonths ?? null },
+    });
     return { plan: sub.plan, next: termEnd };
   }
 
@@ -521,6 +632,16 @@ export class WebhooksService {
     );
     void this.mail.send({ to: buyer.email, subject: rcpt.subject, html: rcpt.html, text: rcpt.text });
   }
+}
+
+/** PaymentProvider enum value for a stored card, from the PSP's brand name. */
+function cardRailOf(card: StoredCard, provider?: string): PaymentProviderKey {
+  if (card.sourceType === "applepay") return "APPLE_PAY";
+  const c = (card.company ?? "").toLowerCase();
+  if (c.includes("mada")) return "MADA";
+  if (c.includes("master")) return "MASTERCARD";
+  if (c.includes("visa")) return "VISA";
+  return provider === "mock" ? "MADA" : "VISA";
 }
 
 /** Month arithmetic that never overflows (Jan 31 + 1mo → Feb 28/29). */

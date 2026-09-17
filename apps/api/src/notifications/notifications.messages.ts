@@ -26,6 +26,7 @@ export type NotificationType =
   | "term_ending"
   | "renewal_upcoming"
   | "membership_renewed"
+  | "renewal_final_notice"
   | "renewal_payment_failed"
   | "membership_lapsed"
   | "vaccination_due"
@@ -209,6 +210,19 @@ export function buildNotificationText(
         en: {
           title: "We couldn't renew the membership",
           body: `The renewal for ${p(params, "name")} didn't go through on the card ending ${p(params, "last4")}. ${p(params, "name")}'s records are still yours — update your payment method and we'll finish it.`,
+        },
+      };
+    case "renewal_final_notice":
+      // The last rung of the dunning ladder (T7): benefits stay on through the
+      // grace week, the record is never taken away, the fix is one tap (R068).
+      return {
+        ar: {
+          title: `آخر محاولة لتجديد عضوية ${p(params, "name")}`,
+          body: `حاولنا ثلاث مرات ولم تنجح الدفعة على البطاقة المنتهية بـ ${p(params, "last4")}. مزايا ${p(params, "name")} مستمرة حتى ${p(params, "graceUntil")} — حدّث البطاقة قبلها ونكمل من حيث توقفنا. سجلّه وهويته معك في كل الأحوال.`,
+        },
+        en: {
+          title: `Last try renewing ${p(params, "name")}'s membership`,
+          body: `We tried three times and the card ending ${p(params, "last4")} didn't go through. ${p(params, "name")}'s benefits continue until ${p(params, "graceUntil")} — update the card before then and we'll pick up where we left off. Their record and ID stay yours either way.`,
         },
       };
     case "order_refunded":

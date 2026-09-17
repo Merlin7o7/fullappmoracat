@@ -8,12 +8,15 @@ import {
   termEndInvitationTemplate,
   membershipLapsedTemplate,
   vaccinationReminderTemplate,
+  renewalUpcomingTemplate,
+  renewalFailedTemplate,
 } from "../mail/mail.templates";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { commerceEnabled } from "../common/config/features";
 import { withJobLock } from "../common/jobs/job-lock";
 import { EventsService } from "../events/events.service";
-import { termTotal as termUpfrontTotal } from "../common/config/pricing";
+import { householdMonthlyPrice, termTotal as termUpfrontTotal } from "../common/config/pricing";
+import { GRACE_DAYS, graceUntil as graceUntilFor, isFinalAttempt, nextDunningAt } from "@moraqat/core";
 import {
   PAYMENT_PROVIDER_FACTORY,
   type IPaymentProviderFactory,
@@ -157,6 +160,8 @@ export class LifecycleService {
         termMonths: true,
         userId: true,
         autoRenew: true,
+        pendingPlan: { select: { nameEn: true, nameAr: true, basePrice: true, modulePriceSar: true } },
+        renewalPaymentMethod: { select: { last4: true, deletedAt: true } },
         plan: { select: { nameEn: true, nameAr: true } },
         cats: { take: 1, select: { cat: { select: { id: true, name: true } } } },
         user: { select: { email: true, firstName: true, locale: true } },
@@ -183,15 +188,22 @@ export class LifecycleService {
       const endsStr = fmtDate(s.endsAt, loc);
       // Same deterministic prepay-discount math as activation — the invited
       // renewal quotes exactly what the charge will be (R021/R025).
-      const termTotal = termUpfrontTotal(Number(s.price), s.termMonths ?? 1);
+      // A requested plan change (T8) is what the NEXT term costs — quote that.
+      const monthly = s.pendingPlan
+        ? householdMonthlyPrice(Number(s.pendingPlan.basePrice), Number(s.pendingPlan.modulePriceSar ?? 0), s.cats.length)
+        : Number(s.price);
+      const termTotal = termUpfrontTotal(monthly, s.termMonths ?? 1);
       const renewUrl = `${SITE()}/portal/subscribe?cat=${cat?.id ?? ""}&renew=1`;
+      const manageUrl = `${SITE()}/portal/subscriptions`;
+      // Opted-in AND actually chargeable: a stored, non-removed card.
+      const willCharge = s.autoRenew && !!s.renewalPaymentMethod && !s.renewalPaymentMethod.deletedAt;
 
       await this.once(`term_end_${milestone}:${s.id}`, "term_ending", { userId: s.userId, subjectId: s.id, catId: cat?.id }, async () => {
         // R025's actual requirement is that a charge is never a surprise, not
         // that it never happens. Stamping autoRenewNoticeAt here is what LICENSES
         // the renewal: autoRenewals() refuses to charge a membership that has no
         // notice on record, so the notice and the charge cannot drift apart.
-        if (s.autoRenew) {
+        if (willCharge) {
           await this.prisma.subscription.update({
             where: { id: s.id },
             data: { autoRenewNoticeAt: new Date() },
@@ -199,13 +211,16 @@ export class LifecycleService {
         }
         this.notifications.emit(s.userId, {
           category: "BILLING",
-          type: s.autoRenew ? "renewal_upcoming" : "term_ending",
+          type: willCharge ? "renewal_upcoming" : "term_ending",
           params: { name: catName, endsAt: endsStr, total: termTotal, currency: "SAR" },
-          data: { subscriptionId: s.id, renewUrl, manageUrl: `${SITE()}/portal/subscriptions` },
+          data: { subscriptionId: s.id, renewUrl, manageUrl },
         });
-        if (s.user.email) {
-          const planName = loc === "ar" ? s.plan?.nameAr : s.plan?.nameEn;
-          const mail = termEndInvitationTemplate(loc, s.user.firstName, catName, planName ?? "Moracat", endsStr, termTotal, renewUrl);
+        if (s.user.email && (await this.notifications.emailAllowed(s.userId, "BILLING"))) {
+          const nextPlan = s.pendingPlan ?? s.plan;
+          const planName = (loc === "ar" ? nextPlan?.nameAr : nextPlan?.nameEn) ?? "Moracat";
+          const mail = willCharge
+            ? renewalUpcomingTemplate(loc, s.user.firstName, catName, planName, endsStr, termTotal, s.renewalPaymentMethod?.last4 ?? "••••", manageUrl, `${manageUrl}?skip=${s.id}`)
+            : termEndInvitationTemplate(loc, s.user.firstName, catName, planName, endsStr, termTotal, renewUrl);
           await this.mail.send({ to: s.user.email, subject: mail.subject, html: mail.html, text: mail.text });
         }
       });
@@ -236,8 +251,13 @@ export class LifecycleService {
         status: "ACTIVE",
         autoRenew: true,
         cancelAtTermEnd: false,
-        endsAt: { lte: now },
         autoRenewNoticeAt: { not: null, lte: now },
+        // Dunning ladder (T7): the first attempt runs at term end; later
+        // attempts run when their scheduled retry is due, until exhausted.
+        OR: [
+          { endsAt: { lte: now }, dunningAttempts: 0 },
+          { nextDunningAt: { lte: now }, dunningAttempts: { gt: 0 } },
+        ],
       },
       take: BATCH,
       select: {
@@ -249,9 +269,11 @@ export class LifecycleService {
         endsAt: true,
         addressId: true,
         planId: true,
+        dunningAttempts: true,
         plan: { select: { nameEn: true, nameAr: true } },
+        pendingPlan: { select: { basePrice: true, modulePriceSar: true } },
         cats: { select: { catId: true, cat: { select: { name: true } } } },
-        renewalPaymentMethod: { select: { id: true, provider: true, token: true, last4: true } },
+        renewalPaymentMethod: { select: { id: true, provider: true, token: true, last4: true, deletedAt: true } },
         user: { select: { email: true, firstName: true, locale: true } },
       },
     });
@@ -262,7 +284,7 @@ export class LifecycleService {
 
       // No reusable credential (BNPL term, or the card was removed). Invite
       // instead of pretending — and stop claiming this membership auto-renews.
-      if (!pm?.token || !adapter?.supportsRecurring || !adapter.chargeStored) {
+      if (!pm?.token || pm.deletedAt || !adapter?.supportsRecurring || !adapter.chargeStored) {
         await this.once(
           `autorenew_uncharged:${sub.id}`,
           "autorenew_uncharged",
@@ -287,9 +309,15 @@ export class LifecycleService {
         continue;
       }
 
-      const termTotal = termUpfrontTotal(Number(sub.price), sub.termMonths ?? 1);
+      // The next term's price honours a requested plan change (T8, R021).
+      const monthly = sub.pendingPlan
+        ? householdMonthlyPrice(Number(sub.pendingPlan.basePrice), Number(sub.pendingPlan.modulePriceSar ?? 0), sub.cats.length)
+        : Number(sub.price);
+      const termTotal = termUpfrontTotal(monthly, sub.termMonths ?? 1);
+      const attempt = sub.dunningAttempts + 1;
+      const termEndsAt = sub.endsAt ?? now;
       await this.once(
-        `autorenew:${sub.id}:${sub.endsAt?.toISOString() ?? ""}`,
+        `autorenew:${sub.id}:${termEndsAt.toISOString()}:${attempt}`,
         "autorenew",
         { userId: sub.userId, subjectId: sub.id },
         async () => {
@@ -301,32 +329,46 @@ export class LifecycleService {
           });
 
           const loc = sub.user.locale === "en" ? "en" : "ar";
+          const catName = sub.cats[0]?.cat?.name ?? "your cat";
           if (result.ok) {
+            this.events.emit("renewal_succeeded", { userId: sub.userId, catId: sub.cats[0]?.catId, props: { attempt, amount: termTotal } });
             this.notifications.emit(sub.userId, {
               category: "BILLING",
               type: "membership_renewed",
-              params: {
-                name: sub.cats[0]?.cat?.name ?? "your cat",
-                total: termTotal,
-                currency: sub.currency,
-                endsAt: fmtDate(result.endsAt, loc),
-              },
+              params: { name: catName, total: termTotal, currency: sub.currency, endsAt: fmtDate(result.endsAt, loc) },
               data: { subscriptionId: sub.id },
             });
-          } else {
-            // Dunning, not death. The member keeps their records and their Cat
-            // ID while we retry; only a definitively failed ladder lapses.
-            this.notifications.emit(sub.userId, {
-              category: "BILLING",
-              type: "renewal_payment_failed",
-              params: {
-                name: sub.cats[0]?.cat?.name ?? "your cat",
-                total: termTotal,
-                currency: sub.currency,
-                last4: pm.last4 ?? "",
-              },
-              data: { subscriptionId: sub.id, updateUrl: `${SITE()}/portal/settings` },
-            });
+            return;
+          }
+
+          // Dunning, not death (T7). Advance the ladder in ONE write: attempt
+          // count, when to retry, and how long benefits stay on. The member
+          // keeps their records and their Cat ID throughout; only an exhausted
+          // ladder lets gracefulLapse() end the term — after the grace week.
+          const final = isFinalAttempt(attempt);
+          const grace = graceUntilFor(termEndsAt);
+          await this.prisma.subscription.update({
+            where: { id: sub.id },
+            data: {
+              dunningAttempts: attempt,
+              dunningStartedAt: attempt === 1 ? now : undefined,
+              nextDunningAt: nextDunningAt(termEndsAt, attempt),
+              graceUntil: grace,
+              events: { create: { type: "renewal_failed", metadata: { attempt, reason: result.reason } } },
+            },
+          });
+          this.events.emit("renewal_failed", { userId: sub.userId, catId: sub.cats[0]?.catId, props: { attempt, final } });
+          const graceStr = fmtDate(grace, loc);
+          const updateUrl = `${SITE()}/portal/settings`;
+          this.notifications.emit(sub.userId, {
+            category: "BILLING",
+            type: final ? "renewal_final_notice" : "renewal_payment_failed",
+            params: { name: catName, total: termTotal, currency: sub.currency, last4: pm.last4 ?? "", graceUntil: graceStr },
+            data: { subscriptionId: sub.id, updateUrl, attempt, graceDays: GRACE_DAYS },
+          });
+          if (sub.user.email && (await this.notifications.emailAllowed(sub.userId, "BILLING"))) {
+            const mail = renewalFailedTemplate(loc, sub.user.firstName, catName, pm.last4 ?? "••••", attempt, graceStr, updateUrl, final);
+            await this.mail.send({ to: sub.user.email, subject: mail.subject, html: mail.html, text: mail.text });
           }
         },
         // A renewal is a state transition: if it throws we must be able to try
@@ -399,7 +441,13 @@ export class LifecycleService {
   private async gracefulLapse() {
     const now = new Date();
     const subs = await this.prisma.subscription.findMany({
-      where: { status: "ACTIVE", endsAt: { lte: now } },
+      where: {
+        status: "ACTIVE",
+        endsAt: { lte: now },
+        // A renewal in dunning keeps its benefits through the grace week (T7):
+        // the term only lapses once the ladder is exhausted AND grace is over.
+        OR: [{ graceUntil: null }, { graceUntil: { lte: now } }],
+      },
       take: BATCH,
       select: {
         id: true,

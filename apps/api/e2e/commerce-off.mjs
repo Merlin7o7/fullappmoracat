@@ -65,6 +65,11 @@ ok(await blocked("/cart/any-id/coupon", "POST", { code: "WELCOME" }, C), "coupon
 console.log("━━ money paths are unreachable ━━");
 ok(await blocked("/checkout", "POST", { planId: "x" }, C), "POST /checkout blocked");
 ok(await blocked("/subscriptions/activate", "POST", { planId: "x" }, C), "membership activation blocked");
+// T7/T8 surfaces move money or membership state — frozen too.
+ok(await blocked("/subscriptions/order-status/MRQ-X/attach", "POST", { providerPaymentId: "mockpay_x" }, C), "form-payment attach blocked");
+ok(await blocked("/subscriptions/x/change-plan", "POST", { planId: "x" }, C), "plan change blocked");
+ok(await blocked("/subscriptions/x/cancel", "POST", { reason: "OTHER" }, C), "cancel blocked");
+ok((await call("/account/payment-methods", "GET", undefined, C)).status === 200, "saved cards still readable (record of what the member holds)");
 ok(await blocked("/orders", "GET", undefined, C), "GET /orders blocked (invoice totals + VAT)");
 ok(await blocked("/invoices", "GET", undefined, C), "GET /invoices blocked");
 // The webhook is gated too. This is SAFE ONLY while no real payment is in

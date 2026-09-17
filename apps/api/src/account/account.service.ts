@@ -435,6 +435,47 @@ export class AccountService {
    * Machine-readable export of everything we hold about the member — the PDPL
    * right of access. Secrets (password/2FA/token hashes) are never included.
    */
+  // ── Saved cards (T7) ───────────────────────────────────────────────────────
+  async paymentMethods(userId: string) {
+    const rows = await this.prisma.paymentMethod.findMany({
+      where: { userId, deletedAt: null },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true, provider: true, brand: true, last4: true, expMonth: true, expYear: true, isDefault: true, createdAt: true,
+        subscriptions: { where: { autoRenew: true, status: { in: ["ACTIVE", "PAUSED"] } }, select: { id: true } },
+      },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      provider: r.provider,
+      brand: r.brand,
+      last4: r.last4,
+      expMonth: r.expMonth,
+      expYear: r.expYear,
+      isDefault: r.isDefault,
+      createdAt: r.createdAt,
+      /** Memberships that will charge this card at renewal. */
+      renewingSubscriptionIds: r.subscriptions.map((s) => s.id),
+    }));
+  }
+
+  /**
+   * Soft-remove a card. Every membership set to renew on it drops back to an
+   * invitation in the same write — auto-renew never points at nothing (R025).
+   */
+  async removePaymentMethod(userId: string, id: string) {
+    const pm = await this.prisma.paymentMethod.findFirst({ where: { id, userId, deletedAt: null }, select: { id: true } });
+    if (!pm) throw new NotFoundException("Payment method not found");
+    await this.prisma.$transaction([
+      this.prisma.paymentMethod.update({ where: { id: pm.id }, data: { deletedAt: new Date(), isDefault: false } }),
+      this.prisma.subscription.updateMany({
+        where: { userId, renewalPaymentMethodId: pm.id },
+        data: { autoRenew: false, renewalPaymentMethodId: null, autoRenewNoticeAt: null },
+      }),
+    ]);
+    return { ok: true };
+  }
+
   async exportMyData(userId: string) {
     const [user, cats, addresses, orders, subscriptions, notifications, wallet, loyalty, likes] =
       await Promise.all([

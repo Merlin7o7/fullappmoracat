@@ -83,6 +83,16 @@ enum CatClaimStatus {
   PENDING_CLAIM
 }
 
+/// Why a member chose not to renew (T8). Asked once, never argued with (R068).
+enum CancelReason {
+  TOO_EXPENSIVE
+  MOVING
+  CAT_PASSED
+  NOT_USING
+  SERVICE_ISSUE
+  OTHER
+}
+
 /// How the cat came into the household — the kitten-year wedge's channel
 /// question (breeder / shelter / street) answered once, optionally, at the
 /// owner's pace. Aggregate only; never shown publicly.
@@ -667,6 +677,10 @@ model PaymentMethod {
   expYear    Int?
   holderName String?
   isDefault  Boolean         @default(false)
+  /// The PSP payment that minted this token (Moyasar payment id) — audit trail.
+  providerRef String?
+  /// Soft-removed by the member; renewals pointing here fall back to invitation.
+  deletedAt  DateTime?
   createdAt  DateTime        @default(now())
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1423,6 +1437,7 @@ model Plan {
 
   contents      PlanContent[]
   subscriptions Subscription[]
+  pendingFor    Subscription[] @relation("SubscriptionPendingPlan")
 
   @@map("plans")
 }
@@ -1504,12 +1519,30 @@ model Subscription {
   /// When the member was last told a renewal is coming. A renewal must never
   /// run without this being set and in the past.
   autoRenewNoticeAt    DateTime?
+  /// The member ticked "renew automatically" at checkout (opt-IN, T7). The
+  /// flag is only honoured once the first charge captures with a reusable
+  /// card token — settle() then flips autoRenew on and pins the method.
+  autoRenewRequestedAt DateTime?
+  /// Dunning ladder (T7): attempts made this term, when the ladder started,
+  /// when the next retry is due, and how long benefits stay on while we retry.
+  dunningAttempts      Int       @default(0)
+  dunningStartedAt     DateTime?
+  nextDunningAt        DateTime?
+  graceUntil           DateTime?
+  /// Honest cancel, with the reason kept for the founder (T8) — never a wall.
+  cancelReason         CancelReason?
+  cancelNote           String?
+  /// A plan change the member requested mid-term; applied at the next
+  /// successful renewal so a paid term is never re-priced underneath them.
+  pendingPlanId        String?
+  planChangeRequestedAt DateTime?
   vacationMode   Boolean            @default(false)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan                Plan?               @relation(fields: [planId], references: [id])
+  pendingPlan         Plan?               @relation("SubscriptionPendingPlan", fields: [pendingPlanId], references: [id], onDelete: SetNull)
   address             Address?            @relation(fields: [addressId], references: [id])
   renewalPaymentMethod PaymentMethod?     @relation(fields: [renewalPaymentMethodId], references: [id], onDelete: SetNull)
   items               SubscriptionItem[]
@@ -1523,6 +1556,7 @@ model Subscription {
   /// Drives the lapse pass and the auto-renew pass; status alone is too
   /// low-selectivity to serve either.
   @@index([status, endsAt])
+  @@index([nextDunningAt])
   @@map("subscriptions")
 }
 
