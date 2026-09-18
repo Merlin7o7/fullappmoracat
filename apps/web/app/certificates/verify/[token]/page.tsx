@@ -78,7 +78,7 @@ export default async function VerifyCertificatePage({ params }: { params: { toke
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <dt className="text-xs text-muted-foreground">{isAr ? "رقم الشهادة" : "Certificate no."}</dt>
-                  <dd className="font-mono" dir="ltr">{v.number}</dd>
+                  <dd className="font-mono text-xs" dir="ltr">{v.number}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">{isAr ? "تاريخ الإصدار" : "Issued"}</dt>

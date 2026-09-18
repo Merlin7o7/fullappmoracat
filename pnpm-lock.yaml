@@ -63,7 +63,7 @@ importers:
         specifier: ^6.2.1
         version: 6.5.0(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.22)(reflect-metadata@0.2.2)
       '@react-pdf/renderer':
-        specifier: '3'
+        specifier: ^3.4.5
         version: 3.4.5(react@18.3.1)
       '@sentry/node':
         specifier: '8'
@@ -77,6 +77,9 @@ importers:
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
+      fontkit:
+        specifier: '2'
+        version: 2.0.4
       helmet:
         specifier: ^8.0.0
         version: 8.2.0
@@ -126,6 +129,9 @@ importers:
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.6
+      '@types/fontkit':
+        specifier: ^2.0.9
+        version: 2.0.9
       '@types/node':
         specifier: ^20.16.10
         version: 20.19.43
@@ -1792,6 +1798,9 @@ packages:
   '@types/express@5.0.6':
     resolution: {integrity: sha512-sKYVuV7Sv9fbPIt/442koC7+IIwK5olP1KWeD88e/idgoJqDm3JV/YUiPwkoKK92ylff2MGxSz1CSjsXelx0YA==}
 
+  '@types/fontkit@2.0.9':
+    resolution: {integrity: sha512-qNYerFky3muCmZPq+R+B3cUDRA5OONw/oh6aGGFxx2LOBz6yu8eamKusrhkHnC6rc2fm76+G9z9QoWSB2SaQaw==}
+
   '@types/http-errors@2.0.5':
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
 
@@ -3248,8 +3257,8 @@ packages:
     resolution: {integrity: sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==}
     engines: {node: '>= 6'}
 
-  hyphen@1.14.1:
-    resolution: {integrity: sha512-kvL8xYl5QMTh+LwohVN72ciOxC0OEV79IPdJSTwEXok9y9QHebXGdFgrED4sWfiax/ODx++CAMk3hMy4XPJPOw==}
+  hyphen@1.6.6:
+    resolution: {integrity: sha512-XtqmnT+b9n5MX+MsqluFAVTIenbtC25iskW0Z+jLd+awfhA+ZbWKWQMIvLJccGoa2bM1R6juWJ27cZxIFOmkWw==}
 
   iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
@@ -6313,7 +6322,7 @@ snapshots:
       '@babel/runtime': 7.29.7
       '@react-pdf/fns': 2.2.1
       bidi-js: 1.1.0
-      hyphen: 1.14.1
+      hyphen: 1.6.6
       unicode-properties: 1.4.1
 
   '@react-pdf/types@2.14.0':
@@ -6729,6 +6738,10 @@ snapshots:
       '@types/body-parser': 1.19.6
       '@types/express-serve-static-core': 5.1.1
       '@types/serve-static': 2.2.0
+
+  '@types/fontkit@2.0.9':
+    dependencies:
+      '@types/node': 20.19.43
 
   '@types/http-errors@2.0.5': {}
 
@@ -8502,7 +8515,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  hyphen@1.14.1: {}
+  hyphen@1.6.6: {}
 
   iconv-lite@0.4.24:
     dependencies:
