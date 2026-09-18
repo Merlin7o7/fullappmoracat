@@ -1,0 +1,1199 @@
+<title>Moracat Dominance Strategy</title>
+<meta name="description" content="MRC-STRAT-001 — five-year category-dominance strategy for Moracat in Saudi Arabia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#FBF8F3; --paper-2:#F3EEE4; --ink:#1D221E; --ink-2:#4A534C; --ink-3:#6E766F;
+  --rule:#E2DBCD; --green:#1F4D36; --green-2:#2F6B4F; --green-soft:#DCE8DD;
+  --paw:#C85A22; --paw-soft:#F7E2D3; --butter:#F4E3A8;
+  --fact:#2F6B4F; --fact-bg:#E1EDE3; --assume:#8A6A12; --assume-bg:#F6EBC6;
+  --infer:#3F5A86; --infer-bg:#E2E8F3; --rec:#A5461A; --rec-bg:#F7E2D3;
+  --crit:#A3301F; --crit-bg:#F6DEDA;
+  --bar-1:#A9C6A8; --bar-2:#4F8A66; --bar-3:#1F4D36; --neg:#C85A22;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --arabic:"IBM Plex Sans Arabic","Geeza Pro","Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#121814; --paper-2:#1A221D; --ink:#ECE6DA; --ink-2:#BDC3BA; --ink-3:#8F978E;
+    --rule:#2C362F; --green:#8CC3A0; --green-2:#8CC3A0; --green-soft:#1F3328;
+    --paw:#F0925A; --paw-soft:#3A2518; --butter:#3A3320;
+    --fact:#9CD3AE; --fact-bg:#1E3527; --assume:#E6C66A; --assume-bg:#352D14;
+    --infer:#A9C0E8; --infer-bg:#1D2638; --rec:#F4A777; --rec-bg:#3A2518;
+    --crit:#F19A8C; --crit-bg:#3B1E19;
+    --bar-1:#4E6E57; --bar-2:#7FB592; --bar-3:#C4E6CE; --neg:#F0925A;
+  }
+}
+:root[data-theme="dark"]{
+    --paper:#121814; --paper-2:#1A221D; --ink:#ECE6DA; --ink-2:#BDC3BA; --ink-3:#8F978E;
+    --rule:#2C362F; --green:#8CC3A0; --green-2:#8CC3A0; --green-soft:#1F3328;
+    --paw:#F0925A; --paw-soft:#3A2518; --butter:#3A3320;
+    --fact:#9CD3AE; --fact-bg:#1E3527; --assume:#E6C66A; --assume-bg:#352D14;
+    --infer:#A9C0E8; --infer-bg:#1D2638; --rec:#F4A777; --rec-bg:#3A2518;
+    --crit:#F19A8C; --crit-bg:#3B1E19;
+    --bar-1:#4E6E57; --bar-2:#7FB592; --bar-3:#C4E6CE; --neg:#F0925A;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:15.5px/1.62 var(--body);padding-inline:16px;padding-block:0 80px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px}
+@media (max-width:940px){.wrap{grid-template-columns:minmax(0,1fr);gap:0}.toc{display:none}}
+.toc{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-top:40px;max-height:100vh;overflow:auto;font-size:13px}
+.toc b{display:block;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--ink-2);text-decoration:none;padding:4px 0;line-height:1.35}
+.toc a span:first-child{font-family:var(--mono);color:var(--paw)}
+.toc a:hover{color:var(--ink)}
+main{min-width:0}
+header.hero{padding:56px 0 36px;border-bottom:1px solid var(--rule);margin-bottom:12px}
+.docid{font:500 12px/1 var(--mono);letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;display:flex;flex-wrap:wrap;gap:6px 18px}
+h1{font:700 clamp(34px,5.4vw,58px)/1.02 var(--display);letter-spacing:-.02em;margin:18px 0 14px;text-wrap:balance;max-width:17ch}
+.ar{font-family:var(--arabic);direction:rtl;unicode-bidi:isolate}
+.lede{font-size:18px;color:var(--ink-2);max-width:62ch;margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;align-items:center;font-size:13px;color:var(--ink-3)}
+.t{display:inline-block;font:500 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 6px 3px;border-radius:3px;vertical-align:2px;white-space:nowrap}
+.t.f{color:var(--fact);background:var(--fact-bg)} .t.a{color:var(--assume);background:var(--assume-bg)}
+.t.i{color:var(--infer);background:var(--infer-bg)} .t.r{color:var(--rec);background:var(--rec-bg)}
+.t.x{color:var(--crit);background:var(--crit-bg)}
+section{padding:44px 0 8px;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+.sec-k{font:500 12px/1 var(--mono);color:var(--paw);letter-spacing:.08em;text-transform:uppercase}
+h2{font:600 clamp(26px,3.4vw,36px)/1.12 var(--display);letter-spacing:-.01em;margin:10px 0 18px;text-wrap:balance}
+h3{font:600 20px/1.25 var(--display);margin:34px 0 10px;text-wrap:balance}
+h4{font:600 13px/1.3 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin:22px 0 8px}
+p,li{max-width:70ch}
+p{margin:0 0 14px}
+ul,ol{padding-inline-start:20px;margin:0 0 16px}
+li{margin-bottom:6px}
+strong{font-weight:600}
+.thesis{font:400 19px/1.6 var(--body)}
+.thesis p{max-width:64ch}
+.pull{font:600 clamp(21px,2.6vw,27px)/1.3 var(--display);color:var(--green);border-inline-start:3px solid var(--paw);padding:4px 0 4px 20px;margin:26px 0;max-width:40ch;text-wrap:balance}
+.tw{overflow-x:auto;margin:14px 0 22px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.45}
+th,td{padding:9px 12px;text-align:start;vertical-align:top;border-bottom:1px solid var(--rule)}
+tr:last-child td{border-bottom:0}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);background:var(--paper-2);white-space:nowrap}
+td.n,th.n{text-align:end;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.hl td{background:var(--green-soft)}
+td.neg{color:var(--neg)}
+.score td.n{font-size:13px}
+.s5{background:var(--green-soft);font-weight:600}
+.callout{background:var(--paper-2);border-radius:6px;padding:18px 20px;margin:18px 0 22px}
+.callout.warn{background:var(--crit-bg)}
+.callout.warn .ck{color:var(--crit)}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+.ck{font:600 11px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--green-2);display:block;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:16px 0 22px}
+.panel{border:1px solid var(--rule);border-radius:6px;padding:16px 18px}
+.panel h4{margin-top:0}
+.panel p:last-child,.panel ul:last-child{margin-bottom:0}
+.year{display:grid;grid-template-columns:120px minmax(0,1fr);gap:24px;padding:26px 0;border-top:1px dashed var(--rule)}
+@media (max-width:640px){.year{grid-template-columns:minmax(0,1fr);gap:6px}}
+.year .yl{font:700 40px/1 var(--display);color:var(--paw)}
+.year .yl small{display:block;font:500 11px/1.4 var(--mono);color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;margin-top:8px}
+.year h3{margin-top:0}
+.gate{border:1.5px dashed var(--green-2);border-radius:6px;padding:12px 16px;margin-top:12px;font-size:14px}
+.gate b{font:600 11px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--green-2);display:block;margin-bottom:6px}
+figure{margin:18px 0 26px}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:8px;max-width:70ch}
+.fig{overflow-x:auto}
+svg text{fill:var(--ink-2);font-family:var(--body)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0;border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin:16px 0}
+.kpi{padding:14px 16px;border-bottom:1px solid var(--rule);border-inline-end:1px solid var(--rule)}
+.kpi .kn{font:500 11px/1.3 var(--mono);color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase}
+.kpi .kt{font:600 15px/1.3 var(--body);margin:4px 0}
+.kpi .kv{font:500 12.5px/1.45 var(--mono);color:var(--green-2)}
+.kpi .kd{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+.prio{counter-reset:p;list-style:none;padding:0}
+.prio li{counter-increment:p;position:relative;padding-inline-start:52px;margin-bottom:20px;max-width:74ch}
+.prio li::before{content:counter(p);position:absolute;inset-inline-start:0;top:-4px;font:700 34px/1 var(--display);color:var(--paw)}
+.check{list-style:none;padding:0;columns:2 300px;column-gap:28px}
+.check li{break-inside:avoid;padding:6px 0 6px 30px;position:relative;border-bottom:1px solid var(--rule);margin:0;font-size:14px}
+.check li::before{position:absolute;inset-inline-start:0;top:6px;font:600 13px/1.4 var(--mono)}
+.check li.y::before{content:"[✓]";color:var(--fact)} .check li.p::before{content:"[◐]";color:var(--assume)} .check li.o::before{content:"[ ]";color:var(--ink-3)}
+.final{background:var(--green);color:var(--paper);border-radius:8px;padding:32px clamp(18px,4vw,40px);margin:28px 0}
+:root:not([data-theme="light"]) .final{}
+.final h2,.final h3{color:inherit}
+.final p,.final li{color:inherit;opacity:.95}
+.final .sec-k{color:var(--butter)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .final{background:var(--green-soft);color:var(--ink)} :root:not([data-theme="light"]) .final .sec-k{color:var(--paw)}}
+:root[data-theme="dark"] .final{background:var(--green-soft);color:var(--ink)}
+:root[data-theme="dark"] .final .sec-k{color:var(--paw)}
+a{color:var(--green-2)}
+a:focus-visible{outline:2px solid var(--paw);outline-offset:2px}
+.src{font-size:12.5px;color:var(--ink-3)}
+.src li{max-width:none}
+code{font-family:var(--mono);font-size:.9em;background:var(--paper-2);padding:1px 4px;border-radius:3px}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <b>MRC-STRAT-001</b>
+  <a href="#a"><span>A</span><span>Executive thesis</span></a>
+  <a href="#b"><span>B</span><span>Market map</span></a>
+  <a href="#wedge"><span>B+</span><span>The wedge</span></a>
+  <a href="#c"><span>C</span><span>The moat &amp; flywheel</span></a>
+  <a href="#catid"><span>C+</span><span>Cat ID evolution</span></a>
+  <a href="#d"><span>D</span><span>5-year roadmap</span></a>
+  <a href="#member"><span>D+</span><span>Membership &amp; acquisition</span></a>
+  <a href="#e"><span>E</span><span>Financial model</span></a>
+  <a href="#f"><span>F</span><span>KPI dashboard</span></a>
+  <a href="#g"><span>G</span><span>Strategic priorities</span></a>
+  <a href="#h"><span>H</span><span>Kill zones &amp; anti-roadmap</span></a>
+  <a href="#i"><span>I</span><span>Competitor war games</span></a>
+  <a href="#j"><span>J</span><span>End-state &amp; options</span></a>
+  <a href="#k"><span>K</span><span>Monopoly checklist</span></a>
+  <a href="#q"><span>Q</span><span>The one thing</span></a>
+  <a href="#src"><span>§</span><span>Sources</span></a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="docid"><span>MRC-STRAT-001</span><span>Five-year strategy</span><span>2026-09-17</span><span>Supersedes GTM-001 economics</span></div>
+  <h1>Own the record, not the aisle.</h1>
+  <p class="lede">How Moracat becomes the hardest company to displace in Saudi cat care — <span class="ar">لِحياة قطّك كلّها</span> — built on the market as it actually is, the pricing Moracat has actually committed to (MRC-FIN-002), and what competitors are actually doing in September 2026.</p>
+  <div class="legend">Every claim is tagged:
+    <span class="t f">Fact</span> sourced
+    <span class="t a">Assumption</span> modelled input
+    <span class="t i">Inference</span> reasoned from facts
+    <span class="t r">Recommend</span> strategic call
+  </div>
+</header>
+
+<!-- ===================== A ===================== -->
+<section id="a">
+  <div class="sec-k">A · Executive thesis</div>
+  <h2>A replenishment business funds a registry. The registry is the company.</h2>
+  <div class="thesis">
+  <p>Saudi Arabia has roughly <strong>1.7M owned cats in ~850k households</strong> <span class="t i">Inference</span>, spending about <strong>SAR 1.0–1.3B a year</strong> on food and litter <span class="t i">Inference</span>. It has only <strong>~200–300 private veterinary clinics</strong> <span class="t f">Fact</span> (MEWA counted 196 in 2022), <strong>no national registry for resident cats</strong> <span class="t f">Fact</span>, and more than 1,000 pet stores competing on price <span class="t f">Fact</span>.</p>
+  <p>Selling cat food here is a commodity fight Moracat cannot win on its own. After VAT, the committed plans keep <strong>13–16% contribution</strong> <span class="t f">Fact (MRC-FIN-002)</span>. TwinCats already sells monthly bundles, vet booking and a "VIP membership" <span class="t f">Fact</span>. Amazon.sa already offers Subscribe &amp; Save at 10% off <span class="t f">Fact</span>. <strong>A subscription box is not a moat.</strong></p>
+  <p>What nobody in the Kingdom owns is the <strong>verified record of a cat's life</strong>: who the cat is, who its owner is, what vaccines it has had, which clinic gave them, what it eats, and what happened when it changed hands. That record has three properties a box lacks:</p>
+  <ul>
+    <li>It is <strong>written by a small, finite set of clinics</strong>, so a network of ~200 of them can be captured.</li>
+    <li>It <strong>gets more valuable every year it accumulates</strong>, and cannot be copied by a later entrant because history can't be backfilled.</li>
+    <li>It becomes <strong>the expected document at every hand-over</strong>: adoption, breeder sale, boarding, travel, insurance.</li>
+  </ul>
+  </div>
+  <p class="pull">The strategy: use the kitten's first year as the wedge, recurring essentials as the cash engine, and the clinic-written Cat ID as the moat.</p>
+  <div class="thesis">
+  <p><strong>Why the kitten year is the wedge.</strong> It is the one moment when an owner has no habits yet, the most questions, and a <em>mandatory</em> series of 3–4 clinic visits inside 16 weeks. Each visit is a chance for a clinic to write into a Moracat Cat ID. Moracat already has the only kitten tier in the Kingdom <span class="t f">Fact</span>.</p>
+  <p><strong>What makes it hard to copy.</strong> It is not a data network effect, which is weak <span class="t f">NFX</span>. It is a <strong>local two-sided record network</strong>: every clinic that writes to Cat ID makes the ID more useful to every owner who ever visits a second clinic, boards the cat or re-homes it. Every cat with history makes Moracat more useful to every clinic. The goal is to become <em>the CARFAX of cats</em> — the history report a buyer expects before accepting a kitten.</p>
+  <p><strong>The honest money.</strong> In the base case Moracat reaches <strong>~11,000 member households, ~230k registered cats and ~200 connected clinics</strong> by Year 5, on SAR 35M revenue. It needs <strong>~SAR 18M</strong> of cumulative funding and breaks even around <strong>month 60</strong>. That is a sturdy company, not yet a SAR-hundreds-of-millions one. The aggressive case (SAR 65M revenue, EBITDA-positive from month 50) gets there, and only if the registry is valued as infrastructure rather than as a store.</p>
+  <p><strong>Where the strategy must be ruthless:</strong> overhead discipline and acquisition volume through clinics swing the outcome more than margin does (§E sensitivity). Never own clinics, never lock owners' data in, never chase GCC expansion before Saudi is won.</p>
+  </div>
+</section>
+
+<!-- ===================== B ===================== -->
+<section id="b">
+  <div class="sec-k">B · Market map</div>
+  <h2>A big cat country with a small premium core and a tiny number of clinics</h2>
+
+  <h3>B.1 Market size — the sources disagree by 10×, so triangulate</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Measure</th><th class="n">Value</th><th>Source / method</th><th>Tag</th></tr></thead>
+    <tbody>
+      <tr><td>Saudi pet food market, 2024</td><td class="n">$275M ≈ SAR 1.03B</td><td>USDA FAS GAIN SA2025-0005, quoting Euromonitor; ~30% CAGR since 2019. <strong>Best anchor.</strong></td><td><span class="t f">Fact</span></td></tr>
+      <tr><td>Pet care retail growth, 2026</td><td class="n">+10%</td><td>Euromonitor "Pet Care in Saudi Arabia" (Jun 2026)</td><td><span class="t f">Fact</span></td></tr>
+      <tr><td>"Pet care $3.4–3.5B"</td><td class="n">—</td><td>IMARC / P&amp;S teasers; implies food 9× Euromonitor. <strong>Rejected.</strong></td><td><span class="t x">Unreliable</span></td></tr>
+      <tr><td>Cats vs dogs</td><td class="n">77% of owners own cats</td><td>King Saud Univ. Riyadh study (2022); TGM 2024 (76.9%, n=170)</td><td><span class="t f">Fact</span></td></tr>
+      <tr><td>Cat + dog population, 2023</td><td class="n">2.4M (from 0.8M in 2018)</td><td>Euromonitor via GlobalPETS / Arab News</td><td><span class="t f">Fact</span></td></tr>
+      <tr><td>Households, 2025–26</td><td class="n">~8.5–8.8M</td><td>GASTAT 2022 census (4.2M Saudi households) + income-survey weighting</td><td><span class="t i">Inference</span></td></tr>
+      <tr class="hl"><td><strong>Owned cats</strong></td><td class="n">1.2–2.2M · central 1.7M</td><td>2.4M × 75–85% cat share, checked against USDA's 1.8M all pets</td><td><span class="t i">Inference</span></td></tr>
+      <tr class="hl"><td><strong>Cat-owning households</strong></td><td class="n">0.7–1.2M · central 0.85M</td><td>Two methods: household ownership rate, and cats ÷ 1.8–2.3 per household</td><td><span class="t i">Inference</span></td></tr>
+      <tr class="hl"><td><strong>Cat food + litter spend, 2026</strong></td><td class="n">SAR 1.0–1.6B · central 1.15B</td><td>Food ≈ SAR 0.9B (Euromonitor × cat share × growth); litter ≈ SAR 0.25B (bottom-up, low confidence)</td><td><span class="t i">Inference</span></td></tr>
+      <tr><td>Average food spend per cat</td><td class="n">≈ SAR 44/mo</td><td>SAR 0.9B ÷ 1.7M cats. The UAE equivalent is ≈ SAR 106/mo.</td><td><span class="t i">Inference</span></td></tr>
+      <tr><td>Private vet clinics (2022)</td><td class="n">196 clinics + 3 hospitals</td><td>MEWA via Al Watan. Also 811 vet pharmacies; Riyadh 269, Makkah 210, Eastern 184 facilities; +17% 2020→22</td><td><span class="t f">Fact</span></td></tr>
+      <tr><td>Resident cat registry</td><td class="n">None</td><td>WEQAA runs a horse registry only; microchips required for imports only</td><td><span class="t f">Fact</span></td></tr>
+      <tr><td>Electronic share of retail payments</td><td class="n">85% (2025)</td><td>SAMA</td><td><span class="t f">Fact</span></td></tr>
+      <tr><td>Household disposable income</td><td class="n">Saudi median SAR 13,655/mo · non-Saudi 3,657</td><td>GASTAT HICES 2023 (n=122k)</td><td><span class="t f">Fact</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout">
+    <span class="ck">What the sizing means for Moracat <span class="t i">Inference</span></span>
+    <p>The average Saudi cat eats <strong>~SAR 44 of food a month</strong>. Moracat's average household box is ~SAR 350, which is <strong>premium-tail pricing</strong>.</p>
+    <ul>
+      <li><strong>Premium replenishment market:</strong> households in Riyadh, Makkah and the Eastern Province (68% of population) that spend ≥ SAR 200/month on cat essentials. That is roughly <strong>70–105k households</strong>.</li>
+      <li><strong>Mid-market autoship:</strong> another <strong>~80–100k</strong> households at SAR 120–200/month.</li>
+      <li><strong>Cat ID:</strong> addresses the whole ~1.7M-cat market, because it is free.</li>
+    </ul>
+    <p>That asymmetry is the strategy: <strong>the box can only ever reach a niche; the record can reach the country.</strong></p>
+  </div>
+
+  <h4>Geography</h4>
+  <div class="tw"><table>
+    <thead><tr><th>Region</th><th class="n">City pop.</th><th class="n">Vet facilities (2022)</th><th class="n">Pet-care CRs</th><th>Role in the plan</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td>Riyadh</td><td class="n">~6.9M</td><td class="n">269</td><td class="n">451</td><td>Years 1–2: the atomic networks. Highest Saudi-household income, HQ, same-day logistics.</td></tr>
+      <tr><td>Jeddah / Makkah region</td><td class="n">~3.7M</td><td class="n">210</td><td class="n">309</td><td>Year 2 second city. Expat-heavy, cat-café culture, a cat-only clinic chain (Kitty Cat, 3 branches).</td></tr>
+      <tr><td>Dammam / Khobar / Eastern</td><td class="n">~1.4M+</td><td class="n">184</td><td class="n">125</td><td>Year 3. Aramco-community density; Pets Houses (13 branches) is the incumbent.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">Population and region counts: GASTAT/DataSaudi; facilities: MEWA via Al Watan; commercial registrations (CRs): Ministry of Commerce via Al Eqtisadiah (2024).</p>
+
+  <h3>B.2 Customer segments</h3>
+  <p>Segments are defined by <em>job and moment</em>, not demographics. Where no Saudi evidence exists, the column is marked as an assumption to validate with the Census data Moracat already collects.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Segment</th><th>What they buy / where</th><th>Frequency</th><th>Biggest frustration</th><th>Switching &amp; churn trigger</th><th>What earns trust</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><strong>New kitten / first-time owners</strong></td><td>Kitten food by trial and error; supermarket + Instagram shops; vet for vaccines</td><td>High in months 0–6 (food changes, 3–4 vaccine visits)</td><td>Not knowing what's normal, what to feed, or which vaccines are due; fear of a sick kitten</td><td>No habits yet, so easy to capture. Churn when the cat "grows up" and needs change.</td><td>A vet's word; a clear schedule; a named human on WhatsApp</td><td><span class="t r">Wedge</span></td></tr>
+      <tr class="hl"><td><strong>Multi-cat households (2–6)</strong></td><td>Bulk litter, dry food in 7–10kg bags; Petzone/Zarafa/Amazon</td><td>Litter every 1–2 weeks</td><td>Carrying 20kg+ of litter; stock-outs; wide price variation</td><td>Price-sensitive per kg; leaves if delivery fails once</td><td>Reliability and a real per-cat saving</td><td><span class="t r">Cash core</span></td></tr>
+      <tr><td>Premium / high-income owners</td><td>Royal Canin, Hill's, Applaws, Josera; specialist shops, same-day delivery</td><td>Monthly</td><td>Fake or expired stock worries <span class="t a">Assumption</span>; inconsistent vet quality</td><td>Stays for convenience; leaves over a bad substitution</td><td>Authenticity guarantee, brand-exact fulfilment</td><td><span class="t r">Cash core</span></td></tr>
+      <tr><td>Busy professionals (Saudi &amp; expat)</td><td>Whatever arrives fastest: noon Minutes, Ninja</td><td>Reactive, emergency top-ups</td><td>Running out of litter</td><td>Very low switching cost; quick-commerce apps win the emergency</td><td>Never running out</td><td>Autoship tier</td></tr>
+      <tr><td>Rescue / adoption owners</td><td>Budget food; shelter or rescuer guidance</td><td>Monthly</td><td>Unknown medical history</td><td>Price-driven</td><td>Moral authority; transparency</td><td>Cat ID channel, low revenue</td></tr>
+      <tr><td>Breeders (Persian = 44% of breeds <span class="t f">TGM</span>)</td><td>Bulk kitten food; litter; vaccines for litters</td><td>Continuous</td><td>Proving kitten health to buyers; buyer disputes <span class="t a">Assumption</span></td><td>Relationship-bound to suppliers</td><td>Anything that raises kitten sale price and trust</td><td><span class="t r">B2B2C source</span></td></tr>
+      <tr><td>Expat owners</td><td>International brands they know</td><td>Monthly</td><td>Travel and relocation paperwork (chip + rabies)</td><td>Leave the country, and the relationship ends</td><td>English UX, travel-certificate readiness</td><td>Travel-record feature</td></tr>
+      <tr><td>Families</td><td>Supermarket mass brands (Whiskas holds 31% of pet food value <span class="t f">Euromonitor</span>)</td><td>With the weekly shop</td><td>Kids' cat gets sick; cost</td><td>Price and basket habit</td><td>Community, kids' content</td><td>Cat ID + community only</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Where they get vet care today.</strong> From an independent neighbourhood clinic chosen by proximity and word of mouth, with records kept on paper or in the clinic's own software. There is no cross-clinic history <span class="t f">Fact: no registry; no Saudi practice-management vendor found</span>. <strong>What owners lack:</strong> a vaccination schedule they can see, honest price benchmarks (MEWA itself surveyed vet prices), a portable history, and feeding guidance by life stage.</p>
+  <p><strong>Why they abandon subscriptions</strong> <span class="t f">McKinsey; Recurly</span>:</p>
+  <ul>
+    <li>More than 1/3 of cancellations happen within 3 months.</li>
+    <li>~1/3 of churn is involuntary (failed payments).</li>
+    <li>Replenishment boxes keep 45% of subscribers at 12 months, ~10 points better than curation boxes.</li>
+    <li>Saudi-specific triggers <span class="t a">Assumption</span>: a wrong substitution, a late delivery in summer heat, a box that doesn't last the month (the Catmer failure mode), and the cat simply refusing the food.</li>
+  </ul>
+
+  <h3>B.3 Competitive landscape</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Player</th><th>Model &amp; pricing</th><th>Tech / subscription</th><th>Vet link</th><th>Strength</th><th>Weakness / vulnerability</th><th>Likely response to Moracat</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><strong>TwinCats</strong> (twincats.sa)</td><td>Cat-only e-com; bundles SAR 200/230/299, annual box SAR 1,996; free delivery over 200; Tamara/Tabby</td><td>App (v1 Apr 2025, 1 App Store rating); pet profiles; "VIP membership"</td><td>Partner-clinic booking; chip + vaccine package SAR 129</td><td>Already pitching "store + vet + subscription"; Riyadh and Jeddah express delivery</td><td>Thin traction; unverified records; price-led, shallow brand</td><td>Copies Cat ID features within months and undercuts price. <strong>The most direct attacker.</strong></td></tr>
+      <tr><td><strong>Petzone</strong> (Kuwait HQ)</td><td>Generalist, 8–10k SKUs; online-only in Saudi Arabia; 5% points; free delivery over 200/350</td><td>App; no autoship</td><td>None</td><td>Assortment, distribution margin, capital; ~30 Saudi stores planned over 10 years, first in 2026</td><td>No identity or health layer; multi-species</td><td>Adds autoship + omnichannel loyalty; competes on price</td></tr>
+      <tr><td><strong>Amazon.sa</strong></td><td>Subscribe &amp; Save 10%; Prime</td><td>World-class logistics</td><td>None</td><td>Price, trust, speed</td><td>Will never build a cat record or a vet network</td><td>Passive price pressure on the commodity basket</td></tr>
+      <tr><td>noon Minutes / Ninja / Nana</td><td>15–30 min quick commerce; ~20 mass pet SKUs</td><td>On-demand, no autoship</td><td>None</td><td>Owns the emergency top-up</td><td>No premium range, no relationship</td><td>Ignores Moracat; wins "out of litter tonight"</td></tr>
+      <tr><td>Cat Park / Pet Arabia / Zarafa / Pet House / MyCat + Salla long tail</td><td>Bundles SAR 120–155 (Cat Park), 200-SAR free-delivery norm</td><td>Salla stores; simple bundles and quizzes</td><td>Grooming or boarding at most</td><td>Local, fast, cheap</td><td>No capital, no data, no vet</td><td>Price-match bundles; some become acquisition targets</td></tr>
+      <tr><td><strong>Pets Houses</strong></td><td>13 franchise stores (Eastern Province, Riyadh) + clinic</td><td>Basic</td><td>Own clinics</td><td>Only Saudi store+clinic chain</td><td>Franchise quality; not digital</td><td>"Clinic + food" plans in the Eastern Province</td></tr>
+      <tr><td>Pet Corner · The Pet Shop / Petsville (Aliph Capital)</td><td>UAE chains; Autoship &amp; Save; 15-min delivery</td><td>Autoship live in UAE</td><td>Petsville clinics</td><td>PE capital; stated Saudi intent</td><td>No Saudi base; UAE playbook</td><td>Enter via franchise or acquisition of a Saudi chain</td></tr>
+      <tr><td>LIQA (Royal Canin, since 1998) · Muntajat · PPTCO · Nestlé Purina direct</td><td>B2B distributors; no DTC</td><td>—</td><td>Supply clinics (vet diets)</td><td>Control premium supply and credit</td><td>Channel conflict if they go DTC</td><td>Squeeze supply terms; or a vet-channel autoship pilot</td></tr>
+      <tr><td>Vet clinics (Dr. Paws, Kitty Cat Clinic, Saudi Veterinary Clinic, independents)</td><td>Fee-for-service; small retail</td><td>Paper or global PMS (Provet, ezyVet)</td><td>—</td><td>Owner trust at moments of care</td><td>Fragmented; no records network; no reminders</td><td>A chain builds its own "pet ID" app (see war game C)</td></tr>
+      <tr><td>Pet apps: Petna, Wave4Pet, Vetwork (Purina-backed)</td><td>Booking, tele-vet, at-home vet</td><td>Profiles; bookings</td><td>Marketplace</td><td>Service convenience</td><td>No commerce engine; thin traction</td><td>Partner or fade</td></tr>
+      <tr><td>Tree Digital (insurance agency)</td><td>Saudi Arabia's first licensed pet insurance (2024)</td><td>Digital</td><td>Claims-based</td><td>Licence</td><td>Distribution; no health data to underwrite with</td><td><strong>Natural partner</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 720 470" width="100%" style="max-width:720px;min-width:560px" role="img" aria-labelledby="mapT">
+      <title id="mapT">Competitive map: purchase cadence against relationship depth</title>
+      <rect x="80" y="20" width="600" height="400" fill="var(--paper-2)" rx="6"/>
+      <line x1="380" y1="20" x2="380" y2="420" stroke="var(--rule)" stroke-width="2"/>
+      <line x1="80" y1="220" x2="680" y2="220" stroke="var(--rule)" stroke-width="2"/>
+      <text x="380" y="455" text-anchor="middle" font-size="13" font-weight="600">Relationship depth →  (basket / points  …  ID, records, clinic link)</text>
+      <text x="30" y="220" text-anchor="middle" font-size="13" font-weight="600" transform="rotate(-90 30 220)">Purchase cadence →  (on-demand … committed)</text>
+      <text x="96" y="44" font-size="11" letter-spacing="1" style="font-family:var(--mono)">RECURRING · TRANSACTIONAL</text>
+      <text x="396" y="44" font-size="11" letter-spacing="1" style="font-family:var(--mono)">RECURRING · RELATIONSHIP</text>
+      <text x="96" y="244" font-size="11" letter-spacing="1" style="font-family:var(--mono)">ON-DEMAND · TRANSACTIONAL</text>
+      <text x="396" y="244" font-size="11" letter-spacing="1" style="font-family:var(--mono)">ON-DEMAND · RELATIONSHIP</text>
+      <g font-size="12.5">
+        <circle cx="150" cy="95" r="6" fill="var(--ink-3)"/><text x="162" y="99">Amazon.sa S&amp;S</text>
+        <circle cx="200" cy="135" r="6" fill="var(--ink-3)"/><text x="212" y="139">Cat Park bundles</text>
+        <circle cx="265" cy="80" r="6" fill="var(--ink-3)"/><text x="277" y="84">Catmer (UAE)</text>
+        <circle cx="170" cy="175" r="6" fill="var(--ink-3)"/><text x="182" y="179">Pet Corner autoship (UAE)</text>
+        <circle cx="440" cy="120" r="7" fill="var(--infer)"/><text x="452" y="124">TwinCats (moving here)</text>
+        <circle cx="620" cy="60" r="11" fill="var(--paw)"/><text x="600" y="95" text-anchor="end" font-weight="600" style="fill:var(--ink)">Moracat target</text>
+        <circle cx="130" cy="300" r="6" fill="var(--ink-3)"/><text x="142" y="304">Petzone</text>
+        <circle cx="150" cy="350" r="6" fill="var(--ink-3)"/><text x="162" y="354">noon · Ninja · Nana</text>
+        <circle cx="240" cy="385" r="6" fill="var(--ink-3)"/><text x="252" y="389">Zarafa · Pet House · Salla tail</text>
+        <circle cx="440" cy="300" r="6" fill="var(--ink-3)"/><text x="452" y="304">Pets Houses (store+clinic)</text>
+        <circle cx="560" cy="345" r="6" fill="var(--ink-3)"/><text x="548" y="370" text-anchor="middle">Independent clinics</text>
+        <circle cx="470" cy="395" r="6" fill="var(--ink-3)"/><text x="482" y="399">Petna · Vetwork · Tree</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Axes chosen because price and assortment are already commoditised (SAR 200 free-delivery thresholds everywhere). The two things that compound are <em>cadence</em> (Chewy: 83% of net sales from Autoship customers) and <em>relationship depth</em>. The top-right corner is empty in Saudi Arabia; TwinCats is heading there without verified records.</figcaption>
+  </figure>
+
+  <div class="callout">
+    <span class="ck">White space — what nobody in Saudi Arabia does today</span>
+    <ul>
+      <li>A persistent Cat ID, <strong>verified by clinics</strong> and tied to the microchip, that <strong>transfers with ownership</strong>.</li>
+      <li>Clinic-written records that <strong>change what arrives at the door</strong>: a weight trend adjusts the feeding plan, a renal diagnosis triggers a food switch with vet sign-off.</li>
+      <li>A true-month box with a kitten tier and per-cat scaling (already Moracat's pricing position).</li>
+      <li>Preventive-care plans sold <em>by the clinic</em> but administered on a shared rail. Petlove, Brazil's leading online pet retailer, reached 220k+ pets on health plans <span class="t f">Fact</span>.</li>
+      <li>A cat "history report" at adoption and breeder sale.</li>
+    </ul>
+  </div>
+
+  <h3>B.4 GCC context (details in §J)</h3>
+  <p>UAE: 938k pets, ~310k cats, pet food $219M, e-commerce 9% of pet sales, and <strong>state-mandated cat registration in Dubai and Abu Dhabi</strong> <span class="t f">USDA / Dubai Municipality</span>. Kuwait, Qatar, Bahrain and Oman have no credible sizing; the teasers that exist are implausible <span class="t f">research gap</span>. Saudi Arabia has ~3× the UAE population with a cat-dominant mix.</p>
+</section>
+
+<!-- ===================== WEDGE ===================== -->
+<section id="wedge">
+  <div class="sec-k">B+ · The wedge</div>
+  <h2>The kitten's first year beats every single-feature wedge</h2>
+  <p>Scored 1–5 on each criterion; for capital, 5 means <em>least</em> capital needed. The scores are judgement, calibrated to the research above. <span class="t i">Inference</span></p>
+  <div class="tw"><table class="score">
+    <thead><tr><th>Wedge</th><th class="n">Freq</th><th class="n">Pain</th><th class="n">WTP</th><th class="n">Retain</th><th class="n">Data</th><th class="n">Network</th><th class="n">Switch</th><th class="n">Distrib</th><th class="n">Margin</th><th class="n">Capital</th><th class="n">Defend</th><th class="n">Σ</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><strong>7 · New-cat onboarding (kitten year)</strong></td><td class="n">4</td><td class="n s5">5</td><td class="n">4</td><td class="n">4</td><td class="n">4</td><td class="n">3</td><td class="n">4</td><td class="n">4</td><td class="n">2</td><td class="n">4</td><td class="n">3</td><td class="n"><strong>41</strong></td></tr>
+      <tr><td>3 · Veterinary integration</td><td class="n">2</td><td class="n">4</td><td class="n">2</td><td class="n">4</td><td class="n s5">5</td><td class="n">4</td><td class="n">4</td><td class="n">4</td><td class="n">3</td><td class="n">2</td><td class="n s5">5</td><td class="n">39</td></tr>
+      <tr><td>8 · Multi-cat management</td><td class="n s5">5</td><td class="n">4</td><td class="n">4</td><td class="n s5">5</td><td class="n">3</td><td class="n">1</td><td class="n">3</td><td class="n">2</td><td class="n">3</td><td class="n">3</td><td class="n">2</td><td class="n">35</td></tr>
+      <tr><td>11 · Breeder / rescue infrastructure</td><td class="n">2</td><td class="n">3</td><td class="n">2</td><td class="n">3</td><td class="n">4</td><td class="n">3</td><td class="n">3</td><td class="n s5">5</td><td class="n">2</td><td class="n">4</td><td class="n">3</td><td class="n">34</td></tr>
+      <tr><td>4 · Health records (owner-held)</td><td class="n">2</td><td class="n">3</td><td class="n">1</td><td class="n">4</td><td class="n">4</td><td class="n">2</td><td class="n">4</td><td class="n">2</td><td class="n">3</td><td class="n">4</td><td class="n">3</td><td class="n">32</td></tr>
+      <tr><td>1 · Recurring essentials</td><td class="n s5">5</td><td class="n">3</td><td class="n">4</td><td class="n">4</td><td class="n">3</td><td class="n">1</td><td class="n">2</td><td class="n">3</td><td class="n">2</td><td class="n">3</td><td class="n">1</td><td class="n">31</td></tr>
+      <tr><td>5 · Personalised nutrition</td><td class="n">4</td><td class="n">3</td><td class="n">3</td><td class="n">3</td><td class="n">4</td><td class="n">1</td><td class="n">3</td><td class="n">2</td><td class="n">3</td><td class="n">3</td><td class="n">2</td><td class="n">31</td></tr>
+      <tr><td>6 · Litter subscription</td><td class="n s5">5</td><td class="n">4</td><td class="n">3</td><td class="n">4</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n">3</td><td class="n">3</td><td class="n">3</td><td class="n">1</td><td class="n">31</td></tr>
+      <tr><td>2 · Cat ID (standalone)</td><td class="n">1</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n">3</td><td class="n">3</td><td class="n">3</td><td class="n s5">5</td><td class="n">3</td><td class="n s5">5</td><td class="n">2</td><td class="n">30</td></tr>
+      <tr><td>9 · Insurance / financial</td><td class="n">1</td><td class="n">4</td><td class="n">3</td><td class="n">4</td><td class="n">4</td><td class="n">1</td><td class="n">3</td><td class="n">2</td><td class="n">4</td><td class="n">2</td><td class="n">2</td><td class="n">30</td></tr>
+      <tr><td>12 · Vet loyalty / discounts</td><td class="n">2</td><td class="n">4</td><td class="n">3</td><td class="n">3</td><td class="n">3</td><td class="n">3</td><td class="n">2</td><td class="n">3</td><td class="n">2</td><td class="n">3</td><td class="n">2</td><td class="n">30</td></tr>
+      <tr><td>10 · Community</td><td class="n">3</td><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n">2</td><td class="n">3</td><td class="n">2</td><td class="n">4</td><td class="n">2</td><td class="n">4</td><td class="n">1</td><td class="n">25</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Why not simply the top score</h3>
+  <p><strong>Veterinary integration</strong> scores highest on moat criteria but is a bad <em>wedge</em>. It is a two-sided cold start:</p>
+  <ul>
+    <li>Clinics won't adopt a system their patients don't bring.</li>
+    <li>Patients won't bring an ID their clinic doesn't read.</li>
+    <li>Clinics pay nothing, so it funds nothing.</li>
+  </ul>
+  <p>Owner-held records apps that skipped the clinic side died: Pawprint became a content brand <span class="t f">Fact</span>. <strong>Recurring essentials</strong> is the revenue engine, but on its own it has no defensibility (Amazon S&amp;S, TwinCats, Salla bundles).</p>
+  <p><strong>The kitten year is the only wedge that <em>contains</em> the other two.</strong> <span class="t r">Recommend</span></p>
+  <ol>
+    <li><strong>The owner has no habits.</strong> No preferred store, brand or clinic yet, so switching cost from incumbents is near zero.</li>
+    <li><strong>Pain and information need peak.</strong> Food transitions, litter training, fear of illness.</li>
+    <li><strong>The vaccine series is mandatory.</strong> It forces 3–4 clinic visits in ~16 weeks. Each one is a natural moment for the clinic to write to a Cat ID and for Moracat to send the owner back to that clinic. That is how the atomic network forms: one clinic plus ~150–300 member cats within 5–10 km.</li>
+    <li><strong>Kittens enter through breeders, shelters and rescuers.</strong> That is a B2B2C channel with near-zero CAC, where a verified history adds sale or adoption value.</li>
+    <li><strong>The relationship lasts 12–15 years.</strong> Kitten 199 is priced as acquisition <span class="t f">MRC-FIN-002</span>, and graduation to Complete at ~9 months is built into the feeding engine.</li>
+  </ol>
+  <div class="callout warn">
+    <span class="ck">The wedge's failure condition</span>
+    <p>The kitten tier earns ~4% VAT-era contribution. If fewer than <strong>55% of kittens graduate</strong> to a paid adult plan or autoship by month 12, or fewer than <strong>40% of kitten members have at least one clinic-written entry</strong>, the wedge is subsidising a store rather than building a registry. Kill it or re-price it.</p>
+  </div>
+</section>
+
+<!-- ===================== C ===================== -->
+<section id="c">
+  <div class="sec-k">C · The moat</div>
+  <h2>What actually compounds — and what only sounds like it does</h2>
+
+  <div class="tw"><table>
+    <thead><tr><th>Moat layer</th><th>Mechanism</th><th>Verdict</th><th>What must be true</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><strong>Local record network</strong> (clinic ↔ owner)</td><td>Each clinic writing to Cat ID makes every ID more useful: second opinions, emergencies, boarding, travel, re-homing. Each cat with history makes Moracat more useful to every clinic, because patients arrive pre-verified. Reminders return patients to <em>their</em> clinic.</td><td><span class="t f">Real</span> but local</td><td>Density per district: ≥60% of cat-seeing clinics in a district writing entries within 12 months of entering it.</td></tr>
+      <tr class="hl"><td><strong>Accumulated history</strong> (switching cost)</td><td>Years of vaccinations, weights and diagnoses cannot be recreated by a new entrant. The value is in the <em>continuity</em>, not the file.</td><td><span class="t f">Real</span>, time-gated</td><td>Owners must be able to <strong>export</strong> everything. The lock-in is that nobody else keeps the record current, not that leaving is punished.</td></tr>
+      <tr class="hl"><td><strong>Hand-over standard</strong> (a convention effect)</td><td>When breeders and shelters issue Moracat IDs with verified vaccine history, buyers start to expect one. Like CARFAX: sellers adopt it because buyers ask for it.</td><td><span class="t i">Plausible</span>, the biggest prize</td><td>≥30 breeders and all major Riyadh/Jeddah rescues issuing IDs; a visible "Moracat-verified kitten" mark on Haraj and Instagram listings.</td></tr>
+      <tr><td><strong>Procurement &amp; private label</strong></td><td>Predictable demand from the feeding engine lets Moracat buy by the container. Private-label litter adds +8–10 points of gross margin <span class="t f">Chewy</span>; minimum orders of 3t (tofu) or 20t (bentonite) are affordable.</td><td><span class="t f">Real</span>, but copyable by Petzone</td><td>≥2,500 households before containers pay off <span class="t f">MRC-FIN-001</span>. SFDA feed registration is the barrier for food, so start with litter.</td></tr>
+      <tr><td><strong>Forecasting / inventory</strong></td><td>Subscription + cat age + weight = near-perfect demand visibility, so fewer stock-outs and less dead stock than retailers.</td><td><span class="t f">Real</span>, operational</td><td>Feeding engine in the fulfilment loop, not just in marketing copy.</td></tr>
+      <tr><td><strong>Brand</strong></td><td>"The one who knows your cat." Arabic-first, design-led, honest pricing (value ledger vs market basket).</td><td><span class="t i">Amplifier</span>, not a moat alone</td><td>Consistent honesty; one public price mistake costs more than a year of ads.</td></tr>
+      <tr><td>"Data network effect" from purchase data</td><td>More purchase data leads to better recommendations.</td><td><span class="t x">Weak</span></td><td>Value plateaus quickly <span class="t f">NFX</span>. Don't pitch it to investors as the moat.</td></tr>
+      <tr><td>Community</td><td>Profiles, likes, a cat feed.</td><td><span class="t x">Not a moat</span></td><td>Community is a <em>retention feature and a distribution surface</em> (public profiles, QR tags). It creates no real switching cost.</td></tr>
+      <tr><td>Vet discounts / loyalty</td><td>Member rates at partner clinics.</td><td><span class="t x">Copyable</span></td><td>Any retailer with cash can buy discounts. Use them as a sweetener, never the pitch.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>C.1 The data that gains value with scale</h3>
+  <div class="grid2">
+    <div class="panel"><h4>Compounds (build these)</h4><ul>
+      <li><strong>Clinic-authored vaccination and microchip records</strong>: the registry spine.</li>
+      <li><strong>Weight-by-age curves by breed</strong> from real Saudi cats. No one has these, and they power feeding plans and early vet flags.</li>
+      <li><strong>Ownership-transfer events</strong> (breeder → buyer, shelter → adopter).</li>
+      <li><strong>Consumption per cat per month</strong> by food type: drives forecasting and supplier negotiation.</li>
+      <li><strong>Life-stage transitions</strong>: kitten graduation, senior onset, neuter date.</li>
+    </ul></div>
+    <div class="panel"><h4>Plateaus (collect, don't overvalue)</h4><ul>
+      <li>Flavour preferences and SKU affinity.</li>
+      <li>Community engagement and likes.</li>
+      <li>Demographic profile of owners.</li>
+      <li>Site browsing behaviour.</li>
+      <li>Aggregated "insights" sold to brands. Legally risky under PDPL, and it erodes trust.</li>
+    </ul></div>
+  </div>
+
+  <h3>C.2 Switching costs — the ethical line</h3>
+  <div class="grid2">
+    <div class="panel"><h4>Legitimate (earned convenience)</h4><ul>
+      <li>An auto-adjusting feeding plan that already knows the cat.</li>
+      <li>One place clinics, boarders and groomers read.</li>
+      <li>Reminders that route to the owner's own clinic.</li>
+      <li>Founding price-lock and tenure recognition.</li>
+      <li>Household multi-cat module pricing.</li>
+    </ul></div>
+    <div class="panel"><h4>Forbidden (hostage lock-in)</h4><ul>
+      <li>Withholding record export or charging for it.</li>
+      <li>Making Cat ID access conditional on a paid plan.</li>
+      <li>Cancellation friction, "call to cancel", or hidden renewals.</li>
+      <li>Exclusivity clauses with clinics or breeders.</li>
+      <li>Forfeiting prepaid terms on cancel (flagged as a fire in the 2026-07-17 audit).</li>
+    </ul></div>
+  </div>
+  <p><strong>Ship full record export on day one</strong> (PDF plus a structured JSON format) <span class="t r">Recommend</span>. It sounds counter-intuitive. It removes the one argument a competitor or regulator could use against Moracat ("they hold your cat's history hostage"). It is the reason clinics can trust a third-party system: Vetsource and Covetrus both lead with "the practice owns its data" <span class="t f">Fact</span>. And it costs nothing, because the moat is that the record keeps getting <em>written</em> in Moracat, not that it is locked there.</p>
+
+  <h3>C.3 Veterinary moat — be useful before you ask</h3>
+  <p>Third-party systems get adopted by vets when they <strong>fill appointments, plug into software the clinic already uses, and leave the practice owning its data</strong> (PetDesk: 7M+ owners via reminders and booking) <span class="t f">Fact</span>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Stage</th><th>Value to the clinic</th><th>Value to Moracat</th><th>Money</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Free tool (Years 1–2)</td><td>5-second patient verification; clinic-created patients; <strong>vaccination and travel-certificate PDF</strong>; vaccine-due reminders that name the clinic</td><td>Clinic-written entries; clinic-sourced Cat IDs</td><td>None. Clinics set their own member rate if they want one.</td></tr>
+      <tr><td>2 · Recall engine (Years 2–3)</td><td>WhatsApp reminders, booking links and no-show reduction. A monthly report: "Moracat returned 41 patients to you."</td><td>Owners habituated to the ID; routing data</td><td>Still free, and measurable</td></tr>
+      <tr><td>3 · Clinic Pro (Year 3+)</td><td>Booking, SMS/WhatsApp credits, analytics, multi-branch, staff seats</td><td>Revenue that funds the network</td><td>Flat ~SAR 450/month SaaS. <strong>Never per-referral fees</strong>; their legality under MEWA/GCC vet law is unverified.</td></tr>
+      <tr><td>4 · Care Plans (Years 3–4)</td><td>Clinic-branded preventive plans (vaccines, 2 checks, dental), billed monthly by Moracat and paid out to the clinic</td><td>A second recurring rail; owners locked to their clinic, not to Moracat</td><td>~SAR 12/month admin per plan (~10%)</td></tr>
+      <tr><td>5 · Integrations (Year 4)</td><td>Read/write API to Provet, ezyVet and local PMS vendors</td><td>Becomes infrastructure</td><td>Free API for writes; paid for bulk reads</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Rule: Moracat never owns or operates clinics while it positions Cat ID as neutral infrastructure.</strong> <span class="t r">Recommend</span> Chewy can own 47 clinics <span class="t f">Fact</span> because it is not trying to be the records rail for competitors. The moment Moracat owns a clinic, every other clinic's reason to write into its system disappears.</p>
+
+  <h3>C.4 Supply moat</h3>
+  <ul>
+    <li><strong>Now:</strong> the −10% distributor negotiation is a launch gate. Use the direct-import quote as leverage <span class="t f">MRC-FIN-002</span>. Moracat pays ordinary retailer wholesale today, so it has no cost advantage <span class="t f">MRC-FIN-001</span>.</li>
+    <li><strong>~500–2,500 households:</strong> a SABER-cleared litter container, ~30–40% under distributor cost <span class="t f">MRC-FIN-001</span>. Then Moracat private-label tofu litter from a 3t minimum order <span class="t f">vendor data</span>.</li>
+    <li><strong>Exclusive SKUs, not exclusive distribution.</strong> Open brands with Saudi distribution gaps (Beaphar, Kit Cat, LindoCat, Zolux) can be Moracat-first. Don't pursue contracts that block rivals from a brand. That becomes abuse-of-dominance exposure once share passes 40% <span class="t f">GAC regulations</span>.</li>
+    <li><strong>Food private label: Year 3 at the earliest.</strong> SFDA feed registration, halal certification and Arabic labelling take months <span class="t f">SFDA</span>. Delicious Food Factory's 100k-t Riyadh plant (due 2026, unverified) is a potential co-packer.</li>
+    <li>Targets: private label at 5% of commerce revenue in Year 3 and 15–20% in Year 5 <span class="t a">Assumption, benchmarked to Chewy and Supertails</span>.</li>
+  </ul>
+
+  <h3>C.5 Distribution moat</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Channel</th><th>Mechanism</th><th>CAC profile</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td>Vet clinics</td><td>Clinic-created patients, counter mini-totem, vaccine PDF</td><td>Lowest; Chewy vet customers are ~40% new to the brand <span class="t a">Unverified</span></td><td>1</td></tr>
+      <tr class="hl"><td>Breeders</td><td>"Moracat-verified kitten" history report + Kitten Welcome box in the buyer's name</td><td>Very low; each breeder is a repeat source</td><td>1</td></tr>
+      <tr class="hl"><td>Shelters and rescues (REFQ, Rahmah)</td><td>Free adoption IDs + a first-month kitten plan donated per adoption</td><td>Low, and builds moral authority</td><td>2</td></tr>
+      <tr><td>Referral (عزيمة loop)</td><td>Shared cat profile + household invite; recognition, not cash</td><td>Low</td><td>2</td></tr>
+      <tr><td>Boarding, grooming, cat cafés</td><td>Check-in requires or offers a Cat ID; care notes written to the record</td><td>Low</td><td>3</td></tr>
+      <tr><td>Snapchat / TikTok / Instagram (licensed micro-creators, Mawthooq)</td><td>Cat ID reveal and "Census" content</td><td>SAR 250–400 per paying subscriber <span class="t a">Unverified</span></td><td>Fill gaps only</td></tr>
+      <tr><td>Residential developers, universities, corporates</td><td>Pet-friendly community launch kits; expat onboarding</td><td>Medium, slow</td><td>Year 3+</td></tr>
+      <tr><td>SEO (Arabic)</td><td>Vaccination schedules, kitten feeding, "Cat ID"; Moracat already ranks for Arabic pet-ID terms</td><td>Very low, slow</td><td>Always on</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>C.6 The flywheel to obsess over</h3>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 720 440" width="100%" style="max-width:720px;min-width:560px" role="img" aria-labelledby="fwT">
+      <title id="fwT">The clinic-record flywheel</title>
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--paw)"/></marker></defs>
+      <circle cx="360" cy="220" r="150" fill="none" stroke="var(--rule)" stroke-width="2" stroke-dasharray="4 6"/>
+      <g stroke="var(--paw)" stroke-width="2" fill="none" marker-end="url(#ah)">
+        <path d="M420,82 A150,150 0 0 1 492,150"/>
+        <path d="M508,262 A150,150 0 0 1 452,340"/>
+        <path d="M300,358 A150,150 0 0 1 222,300"/>
+        <path d="M212,178 A150,150 0 0 1 280,95"/>
+      </g>
+      <g font-size="13.5" text-anchor="middle">
+        <rect x="268" y="42" width="184" height="46" rx="6" fill="var(--green)"/><text x="360" y="62" style="fill:var(--paper);font-weight:600">Kitten enters via clinic,</text><text x="360" y="79" style="fill:var(--paper)">breeder or shelter</text>
+        <rect x="474" y="176" width="216" height="62" rx="6" fill="var(--paper-2)" stroke="var(--rule)"/><text x="582" y="198" style="fill:var(--ink);font-weight:600">Clinic writes the record</text><text x="582" y="215">vaccines · chip · weight</text><text x="582" y="231">→ reminder returns patient</text>
+        <rect x="272" y="352" width="176" height="62" rx="6" fill="var(--paper-2)" stroke="var(--rule)"/><text x="360" y="374" style="fill:var(--ink);font-weight:600">Record drives the box</text><text x="360" y="391">feeding engine · graduation</text><text x="360" y="407">→ recurring revenue</text>
+        <rect x="30" y="176" width="210" height="62" rx="6" fill="var(--paper-2)" stroke="var(--rule)"/><text x="135" y="198" style="fill:var(--ink);font-weight:600">History becomes the standard</text><text x="135" y="215">hand-over, boarding, travel</text><text x="135" y="231">→ more clinics &amp; breeders join</text>
+      </g>
+      <text x="360" y="212" text-anchor="middle" font-size="12" style="font-family:var(--mono);fill:var(--ink-3)">NORTH-STAR</text>
+      <text x="360" y="236" text-anchor="middle" font-size="18" style="font-family:var(--display);fill:var(--green);font-weight:700">clinic-verified</text>
+      <text x="360" y="258" text-anchor="middle" font-size="18" style="font-family:var(--display);fill:var(--green);font-weight:700">active cats</text>
+    </svg>
+    </div>
+    <figcaption>This improves on the ID → data → vets → pricing loop in the brief by naming the <em>one</em> event that turns the wheel: <strong>a clinic writing to a Cat ID</strong>. The purchasing-power loop is real, but any funded retailer can buy it. It sits beside the flywheel, not in it.</figcaption>
+  </figure>
+  <p><strong>The north-star metric: clinic-verified active cats (CVAC).</strong> A cat counts if it has at least one clinic-authored entry in the last 13 months and an owner active in the last 90 days. A registration is not an asset. A cat whose record a clinic keeps writing, and whose owner keeps acting on it, is. <span class="t r">Recommend</span></p>
+
+  <h3>C.7 Legitimate dominance vs. strategies to avoid</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Lever</th><th>Build it?</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Network effects, accumulated records, customer habit, brand authority, forecasting, private label</td><td><span class="t f">Yes</span></td><td>Earned through usefulness; defensible before GAC and the public</td></tr>
+      <tr><td>Open, portable record format; free clinic API</td><td><span class="t f">Yes</span></td><td>Makes Moracat the <em>default</em> without making it a <em>gate</em></td></tr>
+      <tr><td>Exclusive clinic contracts; MFN clauses with suppliers; exclusive brand distribution</td><td><span class="t x">No</span></td><td>Dominance is presumed at ≥40% share; exclusivity and tying by a dominant firm are violations <span class="t f">GAC regulations</span></td></tr>
+      <tr><td>Tying Cat ID or record access to buying a plan</td><td><span class="t x">No</span></td><td>A tying risk, and it destroys the registry's neutrality</td></tr>
+      <tr><td>Per-referral cash to vets</td><td><span class="t x">No</span></td><td>Legally unverified; corrupts clinical trust</td></tr>
+      <tr><td>Below-cost pricing to starve a rival</td><td><span class="t x">No</span></td><td>Predation exposure. Kitten tier pricing is a disclosed acquisition cost, not targeted.</td></tr>
+      <tr><td>Selling identifiable owner or health data to brands or insurers</td><td><span class="t x">No</span></td><td>PDPL (owner data is personal data); reputational ruin</td></tr>
+      <tr><td>Lobbying for a mandatory registry <em>run by Moracat</em></td><td><span class="t a">Careful</span></td><td>Offer the rails to WEQAA/municipalities as an open standard with public-interest governance. Seeking a legal monopoly invites backlash and nationalisation of the asset.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ===================== CAT ID ===================== -->
+<section id="catid">
+  <div class="sec-k">C+ · Cat ID evolution</div>
+  <h2>From a nice card to the passport clinics, breeders and cities read</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Version</th><th>What it is</th><th>What must be true for others to use it</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>V1 · Identity</strong></td><td>Numbered ID, photo, QR/NFC collar tag, public profile, lost-cat mode, founding number ≤1000</td><td>Registration under 2 minutes; a tag physically on the cat</td><td><span class="t f">Built</span></td></tr>
+      <tr><td><strong>V2 · Health record</strong></td><td>Vaccinations, weight, conditions; append-only; owner-visible access log; reminders</td><td>Entries written <em>by clinics</em>, not typed by owners; a vaccine PDF accepted by boarders and airlines</td><td><span class="t a">Built, unused</span> (vet portal live, clinic onboarding just shipped)</td></tr>
+      <tr><td><strong>V3 · Clinic network</strong></td><td>Consent tiers T0–T2, cross-clinic history, break-glass, reception scan, clinic-created patients</td><td>≥60% clinic density per district; reminders routed back to the authoring clinic; under 45 minutes to go live</td><td><span class="t a">Year 1–2</span></td></tr>
+      <tr><td><strong>V4 · Health intelligence</strong></td><td>Weight-curve deviation flags, overdue-care nudges, diet-change prompts with vet sign-off, senior transitions. Deterministic rules first; AI drafts clearly labelled "suggestion".</td><td>≥50k clinic-verified cats for Saudi reference curves; every flag routes <em>to a clinic</em>, never diagnoses</td><td><span class="t a">Year 3</span></td></tr>
+      <tr><td><strong>V5 · Universal cat identity</strong></td><td>Microchip ↔ Cat ID binding; ownership-transfer protocol; travel/import document pack; read access for boarding, insurers (Tree) and municipalities under owner consent; an open spec</td><td>Breeders and shelters issuing IDs at birth or adoption; WEQAA/MEWA recognising Cat ID records as valid evidence for travel certificates or TNR programmes</td><td><span class="t a">Years 4–5</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <span class="ck">How the Cat ID becomes a passport <span class="t i">Inference</span></span>
+    <p>Passports work because a <strong>trusted issuer</strong> vouches for the holder and <strong>many verifiers</strong> accept the document. For Cat ID:</p>
+    <ul>
+      <li><strong>Issuers:</strong> clinics (chip + vaccination), breeders (lineage + first vaccines), shelters (adoption).</li>
+      <li><strong>Verifiers:</strong> other clinics, boarders, groomers, airlines and travel agents, residential compounds with pet rules, insurers, and eventually municipalities.</li>
+    </ul>
+    <p>Moracat's job is to make issuing <em>free and faster than paper</em> and verifying <em>one scan</em>. The UK shows what goes wrong without this: 22 fragmented chip databases, 72% of chipped dogs with wrong details, 83% of those because the new keeper never updated them <span class="t f">Battersea</span>. <strong>An effortless ownership transfer is the single most important V5 feature.</strong></p>
+  </div>
+</section>
+
+<!-- ===================== D ===================== -->
+<section id="d">
+  <div class="sec-k">D · Five-year roadmap</div>
+  <h2>Win districts, then cities, then the standard</h2>
+  <p class="src">Year 1 = Q4-2026 → Q3-2027. Numbers are base case (§E). Each year ends with a gate: failing it means fixing, not expanding.</p>
+
+  <div class="year">
+    <div class="yl">Y1<small>Dominate the wedge<br>Q4-26 → Q3-27</small></div>
+    <div>
+      <h3>Prove the atomic network in three Riyadh districts</h3>
+      <div class="grid2">
+        <div class="panel"><h4>Product</h4><ul>
+          <li>Turn commerce on: Moyasar auto-renew, dunning, pause button, ZATCA e-invoicing, VAT registration.</li>
+          <li>Kitten 199 + Complete 329 as the hero pair; Essentials and Signature available but not pushed.</li>
+          <li>Vaccination/travel PDF; clinic-created patients; reminders naming the clinic.</li>
+          <li>Record export; ownership transfer v1.</li>
+          <li>Breeder portal lite: issue IDs for a litter.</li>
+        </ul></div>
+        <div class="panel"><h4>Acquisition &amp; geography</h4><ul>
+          <li>Riyadh only, 3 districts chosen by clinic density (e.g. north Riyadh corridors). Founder-led clinic sales.</li>
+          <li>20 clinics live; 10 breeders; 2 rescues.</li>
+          <li>Paid social capped at ~20% of adds and only above LTV:CAC 2.</li>
+          <li>Census content keeps free registrations flowing.</li>
+        </ul></div>
+        <div class="panel"><h4>Pricing &amp; membership</h4><ul>
+          <li>MRC-FIN-002 unchanged.</li>
+          <li>Close the −10% COGS gate or move Complete to 349.</li>
+          <li>Founding price-lock for the first 1,000 cats.</li>
+          <li>No membership fee layered on top.</li>
+        </ul></div>
+        <div class="panel"><h4>Team · tech · capital</h4><ul>
+          <li>6 people: founder/CEO, clinic partnerships lead (vet-trained), ops/fulfilment lead, full-stack engineer, growth and content (Arabic), CX (WhatsApp).</li>
+          <li>3PL hand-pack in Riyadh.</li>
+          <li><strong>Raise SAR 4–5M seed</strong> (burn ~2.0M + working capital + 12-month buffer).</li>
+        </ul></div>
+      </div>
+      <div class="gate"><b>Gate to Year 2</b>All of the following:
+        <ul>
+          <li>≥300 paying households.</li>
+          <li>Month-3 plan retention ≥75%.</li>
+          <li>Blended monthly plan churn ≤6%.</li>
+          <li>≥15 clinics each writing ≥20 entries a month.</li>
+          <li>≥40% of kitten members with a clinic-written entry.</li>
+          <li>COGS gate closed.</li>
+        </ul>
+        CVAC ≥1,500.</div>
+    </div>
+  </div>
+
+  <div class="year">
+    <div class="yl">Y2<small>Data &amp; network<br>Q4-27 → Q3-28</small></div>
+    <div>
+      <h3>Riyadh density plus Jeddah, and launch autoship for the mid-market</h3>
+      <div class="grid2">
+        <div class="panel"><h4>Product</h4><ul>
+          <li><strong>Moracat Refill</strong> (autoship of the owner's own brands at market price).</li>
+          <li>Multi-cat household modules with per-cat Cat ID foreign keys.</li>
+          <li>Recall engine for clinics (WhatsApp booking links).</li>
+          <li>Weight-curve capture at every visit.</li>
+          <li>Kitten auto-graduation ceremony.</li>
+        </ul></div>
+        <div class="panel"><h4>Network &amp; supply</h4><ul>
+          <li>60 clinics (Riyadh 40, Jeddah 20).</li>
+          <li>Breeder "verified kitten" mark.</li>
+          <li>REFQ/Rahmah adoption IDs.</li>
+          <li>Litter container pilot at ~500 households; private-label litter spec'd.</li>
+          <li>Boarding and grooming verifiers.</li>
+        </ul></div>
+        <div class="panel"><h4>Team</h4><ul>
+          <li>11 people.</li>
+          <li>Add: second clinic partnerships rep (Jeddah), data/analytics, supply/procurement, second engineer, CX.</li>
+        </ul></div>
+        <div class="panel"><h4>Capital</h4><ul>
+          <li>Burn ~3.5M.</li>
+          <li><strong>Series A of SAR 14–16M</strong> at month 18–21, <em>only</em> if the gate below is met.</li>
+        </ul></div>
+      </div>
+      <div class="gate"><b>Gate before aggressive expansion</b>All of the following:
+        <ul>
+          <li>≥1,400 member households.</li>
+          <li>Plan churn ≤5% and autoship churn ≤7%.</li>
+          <li>Plan LTV:CAC ≥3 on <em>paid</em> channels alone.</li>
+          <li>≥50% of new members from clinic, breeder, shelter or referral.</li>
+          <li>In the three launch districts, ≥60% of cat-seeing clinics writing.</li>
+          <li>VAT-era contribution ≥16%.</li>
+          <li>CVAC ≥8,000.</li>
+        </ul></div>
+    </div>
+  </div>
+
+  <div class="year">
+    <div class="yl">Y3<small>Category standard<br>Q4-28 → Q3-29</small></div>
+    <div>
+      <h3>Become the thing a normal pet retailer can't be</h3>
+      <p><strong>The Year-3 launch that changes category perception: <em>Moracat Care Plans</em>.</strong></p>
+      <ul>
+        <li>Preventive-care plans are sold by the owner's own clinic, under the clinic's name.</li>
+        <li>They are billed monthly on Moracat rails and bundled with the food plan in one monthly charge ("everything your cat needs, one number").</li>
+        <li>No Saudi retailer can offer this without a clinic network.</li>
+        <li>No clinic can offer it without a billing and records rail.</li>
+      </ul>
+      <p>Petlove's 220k+ pets on health plans alongside commerce is the emerging-market precedent <span class="t f">Fact</span>. In the UK, only 16% of health-plan members bought treatment elsewhere, against 49% of non-members <span class="t f">Simplyhealth</span>.</p>
+      <div class="grid2">
+        <div class="panel"><h4>Also</h4><ul>
+          <li>Private-label litter live.</li>
+          <li>Exclusive open-brand SKUs.</li>
+          <li>Eastern Province launch.</li>
+          <li>Clinic Pro SaaS (flat fee).</li>
+          <li>Health intelligence V4 (deterministic flags).</li>
+          <li>Corporate expat onboarding kits.</li>
+          <li>PMS integration with the top clinic software.</li>
+        </ul></div>
+        <div class="panel"><h4>Scale · team · KPIs</h4><ul>
+          <li>~3,900 member households.</li>
+          <li>~70k Cat IDs.</li>
+          <li>110 clinics.</li>
+          <li>Revenue ~SAR 9M.</li>
+          <li>18 people.</li>
+          <li>Care Plans ≥300.</li>
+          <li>Private label ≥5% of commerce revenue.</li>
+          <li>CVAC ≥25,000.</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="year">
+    <div class="yl">Y4<small>Ecosystem<br>Q4-29 → Q3-30</small></div>
+    <div>
+      <h3>Open the rails, but only where they feed the core</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Idea</th><th>Verdict</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td>Insurance via licensed partner (Tree / cooperative insurer)</td><td><span class="t f">Do</span></td><td>Records reduce underwriting uncertainty; commission only; no Insurance Authority licence needed</td></tr>
+          <tr><td>Care Plans scale-up</td><td><span class="t f">Do</span></td><td>Strengthens clinics and the record at the same time</td></tr>
+          <tr><td>Clinic API / PMS integrations</td><td><span class="t f">Do</span></td><td>Writes into Cat ID from software clinics already use; the infrastructure move</td></tr>
+          <tr><td>Ownership transfer + travel document pack (V5)</td><td><span class="t f">Do</span></td><td>The passport feature; breeder and expat pull</td></tr>
+          <tr><td>Vet financing / BNPL for procedures</td><td><span class="t a">Partner only</span></td><td>Tamara/Tabby already exist; Moracat supplies the rail and the context, never the credit</td></tr>
+          <tr><td>Anonymised aggregate health insights (e.g. breed weight curves) published as public reports</td><td><span class="t a">Brand, not revenue</span></td><td>Authority and PR; selling data to brands is off-limits</td></tr>
+          <tr><td>Own insurance underwriting, lending, a wallet or cards</td><td><span class="t x">No</span></td><td>Capital, licensing, and pure distraction</td></tr>
+          <tr><td>Dog vertical</td><td><span class="t x">No</span></td><td>Culturally smaller; dilutes the "cat people" identity (see anti-roadmap)</td></tr>
+        </tbody>
+      </table></div>
+      <p>Scale: ~7,300 member households, ~139k Cat IDs, 160 clinics, revenue ~SAR 20M, 24 people. Services revenue (Pro + Care Plans + insurance) ~SAR 0.8M. Small in money, large in lock-in.</p>
+    </div>
+  </div>
+
+  <div class="year">
+    <div class="yl">Y5<small>Dominance<br>Q4-30 → Q3-31</small></div>
+    <div>
+      <h3>Realistic dominance, sized against the market</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Characteristic</th><th class="n">Base Y5</th><th class="n">Aggressive Y5</th><th>Share of what</th></tr></thead>
+        <tbody>
+          <tr><td>Registered cats</td><td class="n">~229k</td><td class="n">~376k</td><td>~10% / ~16% of ~2.3M owned cats (2031, <span class="t a">+6%/yr</span>). <strong>Largest in Saudi Arabia by far.</strong></td></tr>
+          <tr><td>Clinic-verified active cats</td><td class="n">~70k</td><td class="n">~130k</td><td><span class="t a">~30–35% of registered</span></td></tr>
+          <tr><td>Connected clinics</td><td class="n">200</td><td class="n">260</td><td>~60–80% of an estimated ~300–330 clinics. <strong>Non-exclusive by design.</strong></td></tr>
+          <tr><td>Member households (plans + autoship)</td><td class="n">~11,000</td><td class="n">~19,600</td><td>~6% / ~11% of the ~180–200k serviceable premium + mid households</td></tr>
+          <tr><td>Revenue</td><td class="n">SAR 35M</td><td class="n">SAR 65M</td><td>~2–4% of ~SAR 1.6B cat food + litter</td></tr>
+          <tr><td>Private label share of commerce</td><td class="n">15%</td><td class="n">20%</td><td><span class="t a">Assumption</span></td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Read this honestly:</strong> Moracat will <em>not</em> dominate Saudi cat food by value. Supermarkets and Whiskas will still sell most of it. What Moracat can dominate is <strong>the record, the clinic network, the premium replenishment tier, and the moment a cat changes hands</strong>. That is the defensible category.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MEMBERSHIP & ACQUISITION ===================== -->
+<section id="member">
+  <div class="sec-k">D+ · Membership &amp; acquisition</div>
+  <h2>Four doors, one progression</h2>
+  <p>Register the cat → get value for free → let the record do the selling → become a member → bring the clinic and the household along.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Tier</th><th>Price</th><th>Benefits</th><th class="n">Contribution</th><th>Target</th><th>Converts via</th><th>Retains via</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Cat ID</strong> · free forever</td><td>SAR 0</td><td>ID + QR tag, health record, clinic verification, vaccine reminders, lost-cat mode, community profile, export, ownership transfer</td><td class="n">cost ≈ SAR 3–5/cat/yr <span class="t a">Assumption</span></td><td>Every cat in the Kingdom</td><td>Clinic, breeder, shelter, Census</td><td>Reminders; the record itself</td></tr>
+      <tr><td><strong>Moracat Refill</strong> · autoship</td><td>Market shelf price; free delivery over SAR 150 for members; 5% credit on each auto-order</td><td>Own brands, cadence set by the feeding engine, skip/pause, never-run-out guarantee</td><td class="n">12% → 21%</td><td>Experienced, brand-loyal owners; multi-cat</td><td>"Your vet said Renal: we'll keep it coming"</td><td>Cadence accuracy; pause instead of cancel</td></tr>
+      <tr class="hl"><td><strong>Plans</strong> (MRC-FIN-002)</td><td>Kitten 199 · Essentials 219 · <strong>Complete 329</strong> · Signature 479; household modules +180/+280/+400 per cat</td><td>True-month box, value ledger vs market, gifts on commitment, founding lock</td><td class="n">4% (Kitten) · 13–16% → ~27%</td><td>Kitten owners; premium; multi-cat</td><td>Kitten wedge; graduation ceremony</td><td>Feeding engine; household modules; tenure</td></tr>
+      <tr><td><strong>Care Plan</strong> · Year 3+</td><td>Set by the clinic (~SAR 79–119/mo <span class="t a">Assumption</span>); Moracat admin ~SAR 12</td><td>Vaccines, 2 checks, dental, member rate; one combined bill with food</td><td class="n">~85% of the admin fee</td><td>Members with a home clinic</td><td>The clinic recommends it at a vaccine visit</td><td>Keeps the clinic relationship and the record alive</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>What not to add:</strong></p>
+  <ul>
+    <li><strong>No paid "Premium membership fee"</strong> on top of a subscription. Chewy+ reached only ~4% penetration after its first year <span class="t f">Fact</span>.</li>
+    <li><strong>Watch Essentials 219.</strong> It is +8% vs DIY with no savings story. If it stays below 10% of the plan mix by Year 2, fold it into Refill <span class="t r">Recommend</span>.</li>
+  </ul>
+
+  <h3>The acquisition machine</h3>
+  <div class="grid2">
+    <div class="panel"><h4>Organic</h4><ul>
+      <li><strong>Snapchat</strong> (24.7M Saudi reach, 86.9% of adults <span class="t f">DataReportal</span>): Cat ID reveal lenses and stories.</li>
+      <li><strong>TikTok</strong>: kitten-year series ("week 8: first vaccine").</li>
+      <li><strong>Instagram</strong>: public cat profiles as UGC.</li>
+      <li><strong>SEO</strong>: Arabic vaccination schedules, feeding by age.</li>
+      <li>Every post ends at a registration, not a price.</li>
+    </ul></div>
+    <div class="panel"><h4>Partnerships</h4><ul>
+      <li>Clinics (priority 1).</li>
+      <li>Breeders with the verified-kitten mark.</li>
+      <li>REFQ/Rahmah adoption IDs.</li>
+      <li>Saudi Pet Expo (12k visitors) and the WCF cat show: register on site.</li>
+      <li>Boarding and grooming check-in.</li>
+      <li>Pet-friendly compounds.</li>
+      <li>University vet colleges (King Faisal, Qassim): students become clinic advocates.</li>
+    </ul></div>
+    <div class="panel"><h4>Referral — exploit how cat owners actually connect</h4><ul>
+      <li><strong>Household invite:</strong> a second family member joins the same cat's record (free), so owners pull in co-owners, not strangers.</li>
+      <li><strong>Litter-mates:</strong> a breeder's litter shares a "family" page. Buyers see siblings' progress and are invited to register.</li>
+      <li><strong>Cat-sitter handoff:</strong> sharing care instructions creates a read-only link, and the sitter meets Moracat.</li>
+      <li>Rewards are recognition plus box gifts, never cash or line-jumping (R006).</li>
+    </ul></div>
+    <div class="panel"><h4>The viral loop that needs no incentive</h4>
+      <p><strong>The record travels.</strong> Every time a Moracat cat is boarded, groomed, sees a new clinic, is sat for, or is re-homed, the record is shown to a new person <em>in a context where they need it</em>.</p>
+      <p>The QR tag on the collar, the vaccine PDF at the boarder, and the transfer link at adoption each expose a non-member at a moment of relevance. Target: ≥0.3 new registrations per active cat per year from "record shown" events <span class="t a">Assumption</span>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== E ===================== -->
+<section id="e">
+  <div class="sec-k">E · Financial model</div>
+  <h2>Three scenarios, one set of mechanics</h2>
+  <p>A monthly simulation with an annual roll-up. SAR, revenue <strong>net of 15% VAT</strong>.</p>
+  <ul>
+    <li><strong>Contribution</strong> = revenue − goods − packaging − shipping − fulfilment − payment fees.</li>
+    <li><strong>Gross profit</strong> = contribution + 85% of services revenue.</li>
+    <li>Plans are anchored to MRC-FIN-002: ~SAR 350/month gross per household ≈ 304 net, ~15% VAT-era contribution in Year 1.</li>
+    <li>Working capital is modelled at 2% of revenue.</li>
+    <li>Every input is an <span class="t a">Assumption</span> unless noted.</li>
+  </ul>
+
+  <h3>E.1 Key assumptions</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Input</th><th>Conservative</th><th>Base</th><th>Aggressive</th><th>Anchor</th></tr></thead>
+    <tbody>
+      <tr><td>Plan gross adds / month (Y1 → Y5 avg)</td><td class="n">25 → 140</td><td class="n">35 → 260</td><td class="n">50 → 430</td><td>Clinic + breeder capacity; 5–7% of registered cats pay</td></tr>
+      <tr><td>Refill (autoship) adds / month (Y2 → Y5)</td><td class="n">60 → 260</td><td class="n">120 → 520</td><td class="n">200 → 900</td><td>Mid-market SAM ~80–100k households</td></tr>
+      <tr><td>Plan monthly churn</td><td class="n">7.0% → 4.7%</td><td class="n">6.0% → 3.7%</td><td class="n">5.5% → 3.3%</td><td>Recurly e-com 4.25%; pet-subscription 3.4% (Recharge, unverified); FIN-002 planned 7%</td></tr>
+      <tr><td>Refill monthly churn</td><td class="n">9.0% → 6.0%</td><td class="n">8.0% → 5.0%</td><td class="n">7.5% → 4.5%</td><td>Lower commitment than a box</td></tr>
+      <tr><td>Plan ARPU net / month</td><td class="n">304 → 328</td><td class="n">304 → 336</td><td class="n">304 → 344</td><td>FIN-002 mix; multi-cat module growth</td></tr>
+      <tr><td>Refill ARPU net / month</td><td class="n">185 → 195</td><td class="n">190 → 205</td><td class="n">195 → 212</td><td>Premium brand basket at shelf price</td></tr>
+      <tr><td>Add-ons as % of commerce</td><td class="n">3% → 9%</td><td class="n">4% → 15%</td><td class="n">5% → 18%</td><td>Treats, vet diets, care</td></tr>
+      <tr><td>Plan contribution margin</td><td class="n">13% → 22%</td><td class="n">14% → 27%</td><td class="n">15% → 29%</td><td>FIN-002 VAT-era 13–16%, then Phase-2 COGS −20%, private label +8–10pts on its share, route density</td></tr>
+      <tr><td>Refill contribution margin</td><td class="n">10% → 17%</td><td class="n">12% → 21%</td><td class="n">13% → 23%</td><td>1.6× market markup (MRC-FIN-001) less shipping</td></tr>
+      <tr><td>Plan CAC (blended)</td><td class="n">360 → 300</td><td class="n">320 → 235</td><td class="n">300 → 210</td><td>Saudi paid SAR 250–400 (unverified); clinic channel cheaper</td></tr>
+      <tr><td>Refill CAC</td><td class="n">210 → 180</td><td class="n">180 → 140</td><td class="n">160 → 125</td><td>Lower-commitment offer</td></tr>
+      <tr><td>Connected clinics (end of year)</td><td class="n">12 → 110</td><td class="n">20 → 200</td><td class="n">30 → 260</td><td>~200–330 private clinics nationally</td></tr>
+      <tr><td>Cat IDs per clinic per year</td><td class="n">120 → 200</td><td class="n">150 → 260</td><td class="n">180 → 300</td><td>40 cat visits/day clinic × low registration share</td></tr>
+      <tr><td>Clinic Pro payers · Care Plans · insurance policies (Y5)</td><td class="n">70 · 1.5k · 1k</td><td class="n">170 · 6k · 3.5k</td><td class="n">240 · 12k · 8k</td><td>SAR 450/mo · SAR 12/mo admin · 18% of SAR 1,100 premium</td></tr>
+      <tr><td>Headcount (Y1 → Y5)</td><td class="n">5 → 18</td><td class="n">6 → 28</td><td class="n">7 → 38</td><td>Loaded SAR 19–23k/mo; 3PL, not an owned warehouse</td></tr>
+      <tr><td>Other fixed costs / month (Y1 → Y5)</td><td class="n">40k → 120k</td><td class="n">45k → 190k</td><td class="n">50k → 260k</td><td>Tech, rent, G&amp;A, brand/community</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>E.2 Output</h3>
+  <div class="tw"><table>
+    <thead><tr><th>SAR M unless noted</th><th class="n">Y1</th><th class="n">Y2</th><th class="n">Y3</th><th class="n">Y4</th><th class="n">Y5</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td colspan="6"><strong>Conservative</strong></td></tr>
+      <tr><td>Member households (end)</td><td class="n">230</td><td class="n">782</td><td class="n">1,956</td><td class="n">3,505</td><td class="n">5,123</td></tr>
+      <tr><td>Registered Cat IDs (cumulative)</td><td class="n">3.2k</td><td class="n">12.2k</td><td class="n">31.5k</td><td class="n">63.3k</td><td class="n">105k</td></tr>
+      <tr><td>Revenue</td><td class="n">0.4</td><td class="n">1.7</td><td class="n">4.6</td><td class="n">9.3</td><td class="n">15.0</td></tr>
+      <tr><td>Gross profit</td><td class="n">0.05</td><td class="n">0.25</td><td class="n">0.81</td><td class="n">1.91</td><td class="n">3.34</td></tr>
+      <tr><td>Marketing (CAC spend)</td><td class="n">0.1</td><td class="n">0.2</td><td class="n">0.5</td><td class="n">0.8</td><td class="n">1.0</td></tr>
+      <tr><td>Operating expenses</td><td class="n">1.6</td><td class="n">2.9</td><td class="n">4.4</td><td class="n">5.5</td><td class="n">6.4</td></tr>
+      <tr><td>EBITDA</td><td class="n neg">−1.7</td><td class="n neg">−2.9</td><td class="n neg">−4.1</td><td class="n neg">−4.4</td><td class="n neg">−4.0</td></tr>
+      <tr><td>Cumulative cash</td><td class="n neg">−1.7</td><td class="n neg">−4.7</td><td class="n neg">−8.8</td><td class="n neg">−13.4</td><td class="n neg">−17.7</td></tr>
+      <tr class="hl"><td colspan="6"><strong>Base</strong></td></tr>
+      <tr><td>Member households (end)</td><td class="n">334</td><td class="n">1,413</td><td class="n">3,879</td><td class="n">7,292</td><td class="n">11,018</td></tr>
+      <tr><td>Registered Cat IDs (cumulative)</td><td class="n">5.8k</td><td class="n">25.1k</td><td class="n">70.1k</td><td class="n">138.6k</td><td class="n">228.8k</td></tr>
+      <tr><td>Connected clinics</td><td class="n">20</td><td class="n">60</td><td class="n">110</td><td class="n">160</td><td class="n">200</td></tr>
+      <tr><td>Revenue</td><td class="n">0.6</td><td class="n">2.8</td><td class="n">9.1</td><td class="n">20.3</td><td class="n">34.9</td></tr>
+      <tr><td>&nbsp;&nbsp;of which services (Pro, Care, insurance)</td><td class="n">0</td><td class="n">0</td><td class="n">0.16</td><td class="n">0.78</td><td class="n">1.89</td></tr>
+      <tr><td>Gross profit</td><td class="n">0.08</td><td class="n">0.47</td><td class="n">1.88</td><td class="n">5.01</td><td class="n">9.56</td></tr>
+      <tr><td>Gross profit %</td><td class="n">14%</td><td class="n">17%</td><td class="n">21%</td><td class="n">25%</td><td class="n">27%</td></tr>
+      <tr><td>Marketing (CAC spend)</td><td class="n">0.1</td><td class="n">0.4</td><td class="n">0.8</td><td class="n">1.2</td><td class="n">1.5</td></tr>
+      <tr><td>Operating expenses</td><td class="n">1.9</td><td class="n">3.6</td><td class="n">6.0</td><td class="n">8.3</td><td class="n">10.0</td></tr>
+      <tr><td>EBITDA</td><td class="n neg">−2.0</td><td class="n neg">−3.5</td><td class="n neg">−4.9</td><td class="n neg">−4.4</td><td class="n neg">−1.9</td></tr>
+      <tr><td>Cumulative cash</td><td class="n neg">−2.0</td><td class="n neg">−5.5</td><td class="n neg">−10.5</td><td class="n neg">−15.3</td><td class="n neg">−17.9</td></tr>
+      <tr class="hl"><td colspan="6"><strong>Aggressive</strong></td></tr>
+      <tr><td>Member households (end)</td><td class="n">486</td><td class="n">2,285</td><td class="n">6,614</td><td class="n">12,763</td><td class="n">19,618</td></tr>
+      <tr><td>Registered Cat IDs (cumulative)</td><td class="n">8.9k</td><td class="n">41.3k</td><td class="n">117.2k</td><td class="n">230.4k</td><td class="n">375.8k</td></tr>
+      <tr><td>Revenue</td><td class="n">0.8</td><td class="n">4.6</td><td class="n">15.8</td><td class="n">36.9</td><td class="n">64.8</td></tr>
+      <tr><td>Gross profit</td><td class="n">0.12</td><td class="n">0.86</td><td class="n">3.63</td><td class="n">9.81</td><td class="n">18.92</td></tr>
+      <tr><td>Marketing (CAC spend)</td><td class="n">0.2</td><td class="n">0.5</td><td class="n">1.1</td><td class="n">1.7</td><td class="n">2.2</td></tr>
+      <tr><td>Operating expenses</td><td class="n">2.2</td><td class="n">4.5</td><td class="n">7.8</td><td class="n">11.0</td><td class="n">13.6</td></tr>
+      <tr><td>EBITDA</td><td class="n neg">−2.3</td><td class="n neg">−4.1</td><td class="n neg">−5.3</td><td class="n neg">−2.9</td><td class="n">+3.1</td></tr>
+      <tr><td>Cumulative cash</td><td class="n neg">−2.3</td><td class="n neg">−6.5</td><td class="n neg">−12.2</td><td class="n neg">−15.7</td><td class="n neg">−13.9</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 720 330" width="100%" style="max-width:720px;min-width:520px" role="img" aria-labelledby="revT">
+      <title id="revT">Revenue by year and scenario, SAR millions</title>
+      <!-- scale: 0..70 → y 270..30 ; 1M = 3.4286px -->
+      <g stroke="var(--rule)" stroke-width="1">
+        <line x1="60" y1="270" x2="700" y2="270"/><line x1="60" y1="201.4" x2="700" y2="201.4"/><line x1="60" y1="132.9" x2="700" y2="132.9"/><line x1="60" y1="64.3" x2="700" y2="64.3"/>
+      </g>
+      <g font-size="11" text-anchor="end" style="font-family:var(--mono)">
+        <text x="52" y="274">0</text><text x="52" y="205">20</text><text x="52" y="137">40</text><text x="52" y="68">60</text>
+      </g>
+      <g>
+        <!-- group width 128, bars 30 w, gap 2 -->
+        <g><rect x="95" y="268.6" width="30" height="1.4" fill="var(--bar-1)"><title>Y1 conservative: SAR 0.4M</title></rect><rect x="127" y="268.0" width="30" height="2.0" fill="var(--bar-2)"><title>Y1 base: SAR 0.6M</title></rect><rect x="159" y="267.3" width="30" height="2.7" fill="var(--bar-3)"><title>Y1 aggressive: SAR 0.8M</title></rect></g>
+        <g><rect x="223" y="264.2" width="30" height="5.8" fill="var(--bar-1)"><title>Y2 conservative: SAR 1.7M</title></rect><rect x="255" y="260.4" width="30" height="9.6" fill="var(--bar-2)"><title>Y2 base: SAR 2.8M</title></rect><rect x="287" y="254.2" width="30" height="15.8" fill="var(--bar-3)"><title>Y2 aggressive: SAR 4.6M</title></rect></g>
+        <g><rect x="351" y="254.2" width="30" height="15.8" fill="var(--bar-1)" rx="2"><title>Y3 conservative: SAR 4.6M</title></rect><rect x="383" y="238.8" width="30" height="31.2" fill="var(--bar-2)" rx="2"><title>Y3 base: SAR 9.1M</title></rect><rect x="415" y="215.8" width="30" height="54.2" fill="var(--bar-3)" rx="2"><title>Y3 aggressive: SAR 15.8M</title></rect></g>
+        <g><rect x="479" y="238.1" width="30" height="31.9" fill="var(--bar-1)" rx="2"><title>Y4 conservative: SAR 9.3M</title></rect><rect x="511" y="200.4" width="30" height="69.6" fill="var(--bar-2)" rx="2"><title>Y4 base: SAR 20.3M</title></rect><rect x="543" y="143.5" width="30" height="126.5" fill="var(--bar-3)" rx="2"><title>Y4 aggressive: SAR 36.9M</title></rect></g>
+        <g><rect x="607" y="218.6" width="30" height="51.4" fill="var(--bar-1)" rx="2"><title>Y5 conservative: SAR 15.0M</title></rect><rect x="639" y="150.3" width="30" height="119.7" fill="var(--bar-2)" rx="2"><title>Y5 base: SAR 34.9M</title></rect><rect x="671" y="47.8" width="30" height="222.2" fill="var(--bar-3)" rx="2"><title>Y5 aggressive: SAR 64.8M</title></rect></g>
+      </g>
+      <g font-size="11.5" text-anchor="middle" style="font-family:var(--mono)">
+        <text x="622" y="212">15.0</text><text x="654" y="144">34.9</text><text x="686" y="41">64.8</text>
+      </g>
+      <g font-size="12.5" text-anchor="middle">
+        <text x="142" y="292">Y1</text><text x="270" y="292">Y2</text><text x="398" y="292">Y3</text><text x="526" y="292">Y4</text><text x="654" y="292">Y5</text>
+      </g>
+      <g font-size="12.5">
+        <rect x="80" y="308" width="12" height="12" fill="var(--bar-1)"/><text x="98" y="318">Conservative</text>
+        <rect x="200" y="308" width="12" height="12" fill="var(--bar-2)"/><text x="218" y="318">Base</text>
+        <rect x="280" y="308" width="12" height="12" fill="var(--bar-3)"/><text x="298" y="318">Aggressive</text>
+        <text x="700" y="318" text-anchor="end" style="fill:var(--ink-3)">Revenue, SAR M (net of VAT) · hover for values</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Scenarios are ordered, so they share one green ramp (light → dark) rather than categorical hues. EBITDA is shown in the table above, not on a second axis.</figcaption>
+  </figure>
+
+  <h3>E.3 Unit economics, break-even, cash</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Metric</th><th class="n">Conservative</th><th class="n">Base</th><th class="n">Aggressive</th></tr></thead>
+    <tbody>
+      <tr><td>Plan LTV (contribution, undiscounted), Y1 → Y5</td><td class="n">SAR 582 → 1,673</td><td class="n">SAR 738 → 2,820</td><td class="n">SAR 870 → 3,567</td></tr>
+      <tr><td>Plan LTV:CAC, Y1 → Y5</td><td class="n">1.6 → 5.6</td><td class="n">2.3 → 12.0</td><td class="n">2.9 → 17.0</td></tr>
+      <tr><td>Refill LTV:CAC, Y2 → Y5</td><td class="n">1.1 → 3.1</td><td class="n">1.8 → 6.1</td><td class="n">2.4 → 8.7</td></tr>
+      <tr><td>First EBITDA-positive month</td><td class="n">not within 60</td><td class="n">just after month 60</td><td class="n">month 50</td></tr>
+      <tr><td>Exit run-rate revenue (month 60 × 12)</td><td class="n">SAR 17.5M</td><td class="n">SAR 41.3M</td><td class="n">SAR 77.2M</td></tr>
+      <tr><td>Exit run-rate EBITDA</td><td class="n neg">−3.5M</td><td class="n">≈ 0</td><td class="n">+6.7M</td></tr>
+      <tr class="hl"><td><strong>Peak cumulative burn (funding need)</strong></td><td class="n">SAR 17.7M+ and still falling</td><td class="n"><strong>SAR 17.9M</strong></td><td class="n">SAR 15.7M</td></tr>
+      <tr><td>Recommended raise (with ~25% buffer)</td><td class="n">Don't raise the A; fix or pivot</td><td class="n">Seed 4–5M + A 14–16M</td><td class="n">Seed 5M + A 16–20M (a faster Y2 expansion)</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Note the counter-intuitive result:</strong> the aggressive case needs <em>less</em> cumulative cash than base. <span class="t i">Inference</span> Growth isn't what burns money here; fixed cost carried on too few households is. Once gross profit per household is positive, faster density is cheaper, provided it comes from clinic, breeder and referral channels rather than paid social.</p>
+  <p><strong>Also note:</strong> late-year LTV:CAC of 12–17× means Moracat will be <em>under-investing</em> in growth, if those numbers are real. The constraint is channel capacity (clinic sales reps, breeder relationships), not cash. Treat any sustained LTV:CAC above 5 as a signal to hire another clinic partnerships rep.</p>
+
+  <h3>E.4 Which assumptions are most dangerous</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Sensitivity (base case)</th><th class="n">Y5 revenue</th><th class="n">Y5 EBITDA</th><th class="n">Peak burn</th></tr></thead>
+    <tbody>
+      <tr><td>Base</td><td class="n">34.9</td><td class="n">−1.9</td><td class="n">17.9</td></tr>
+      <tr class="hl"><td><strong>Overhead +25%</strong> (team and fixed costs creep)</td><td class="n">34.9</td><td class="n neg">−4.4</td><td class="n neg">25.4</td></tr>
+      <tr class="hl"><td><strong>Gross adds −30%</strong> (clinic channel underdelivers)</td><td class="n neg">25.0</td><td class="n neg">−3.9</td><td class="n neg">20.8</td></tr>
+      <tr><td>Churn +1.5 pts / month</td><td class="n neg">30.2</td><td class="n neg">−3.1</td><td class="n neg">19.6</td></tr>
+      <tr><td>Contribution −4 pts (Phase-2 COGS never lands)</td><td class="n">34.9</td><td class="n neg">−3.3</td><td class="n neg">20.5</td></tr>
+      <tr><td>CAC +40%</td><td class="n">34.9</td><td class="n neg">−2.5</td><td class="n neg">19.5</td></tr>
+      <tr><td>Churn −1 pt / month</td><td class="n">38.8</td><td class="n">−1.0</td><td class="n">16.5</td></tr>
+      <tr><td>Contribution +3 pts (private label on track)</td><td class="n">34.9</td><td class="n">−0.9</td><td class="n">16.0</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">Figures are the modelled base case run with one input changed. Earlier planning figures that this model supersedes:</p>
+  <ul class="src">
+    <li>GTM-001's LTV of SAR 1,700–2,300 assumed 55% margin; the VAT-era figure is ~SAR 600–740 in Year 1.</li>
+    <li>GTM-001's "stand payback in two weeks" relied on that LTV.</li>
+    <li>MRC-FIN-002's break-even at ~750 households excludes the team this strategy requires.</li>
+  </ul>
+</section>
+
+<!-- ===================== F ===================== -->
+<section id="f">
+  <div class="sec-k">F · KPI dashboard</div>
+  <h2>Eighteen numbers, reviewed monthly</h2>
+  <div class="kpis">
+    <div class="kpi"><div class="kn">North star</div><div class="kt">Clinic-verified active cats (CVAC)</div><div class="kv">Y1 1.5k · Y2 8k · Y3 25k · Y5 70k</div><div class="kd">Clinic-authored entry in last 13 months + owner active in last 90 days</div></div>
+    <div class="kpi"><div class="kn">Network</div><div class="kt">District clinic density</div><div class="kv">≥60% of cat-seeing clinics writing</div><div class="kd">Per launched district, not citywide</div></div>
+    <div class="kpi"><div class="kn">Network</div><div class="kt">Entries written per live clinic / month</div><div class="kv">≥20 (Y1) → ≥60 (Y3)</div><div class="kd">A clinic under 5 for 2 months is churning</div></div>
+    <div class="kpi"><div class="kn">Network</div><div class="kt">Patients returned to clinics</div><div class="kv">Reminder → booked visit rate ≥25%</div><div class="kd">The number clinics care about</div></div>
+    <div class="kpi"><div class="kn">Wedge</div><div class="kt">Kitten graduation rate</div><div class="kv">≥55% by month 12</div><div class="kd">Kitten → adult plan or Refill</div></div>
+    <div class="kpi"><div class="kn">Wedge</div><div class="kt">Kitten members with a clinic entry</div><div class="kv">≥40% (Y1) → ≥70% (Y3)</div><div class="kd">Wedge-to-moat conversion</div></div>
+    <div class="kpi"><div class="kn">Registry</div><div class="kt">IDs issued by breeders and shelters</div><div class="kv">≥15% of new IDs by Y3</div><div class="kd">Leading indicator of the hand-over standard</div></div>
+    <div class="kpi"><div class="kn">Registry</div><div class="kt">Ownership transfers completed</div><div class="kv">Count + % of adoptions via partners</div><div class="kd">V5 readiness</div></div>
+    <div class="kpi"><div class="kn">Growth</div><div class="kt">Member households (plan / Refill)</div><div class="kv">Base: 334 · 1.4k · 3.9k · 7.3k · 11k</div><div class="kd">End of each year</div></div>
+    <div class="kpi"><div class="kn">Growth</div><div class="kt">Registered → paid conversion (90 days)</div><div class="kv">≥5%</div><div class="kd">By source: clinic / breeder / social</div></div>
+    <div class="kpi"><div class="kn">Growth</div><div class="kt">Non-paid share of new members</div><div class="kv">≥50% (Y2) → ≥65%</div><div class="kd">Clinic + breeder + shelter + referral</div></div>
+    <div class="kpi"><div class="kn">Retention</div><div class="kt">Month-3 retention (plans)</div><div class="kv">≥75%</div><div class="kd">1/3 of all churn happens here</div></div>
+    <div class="kpi"><div class="kn">Retention</div><div class="kt">Monthly churn, voluntary / involuntary</div><div class="kv">Plans ≤5% · involuntary ≤1%</div><div class="kd">Involuntary = a dunning problem</div></div>
+    <div class="kpi"><div class="kn">Economics</div><div class="kt">VAT-era contribution per household</div><div class="kv">≥SAR 46/mo (Y1) → ≥SAR 90 (Y5)</div><div class="kd">After goods, pack, ship, fulfil, PSP</div></div>
+    <div class="kpi"><div class="kn">Economics</div><div class="kt">CAC payback (months), by channel</div><div class="kv">≤8 months</div><div class="kd">Paid social reported separately</div></div>
+    <div class="kpi"><div class="kn">Economics</div><div class="kt">Overhead per member household</div><div class="kv">Falls every quarter</div><div class="kd">The #1 sensitivity</div></div>
+    <div class="kpi"><div class="kn">Operations</div><div class="kt">Perfect-box rate</div><div class="kv">≥98% on time, exact SKUs, lasts the month</div><div class="kd">Substitutions are silent churn</div></div>
+    <div class="kpi"><div class="kn">Trust</div><div class="kt">Record exports · complaints · data incidents</div><div class="kv">Exports tracked; 0 incidents</div><div class="kd">Rising exports + falling churn = a healthy moat</div></div>
+  </div>
+</section>
+
+<!-- ===================== G ===================== -->
+<section id="g">
+  <div class="sec-k">G · Strategic priorities</div>
+  <h2>The five obsessions</h2>
+  <ol class="prio">
+    <li><strong>Clinics writing records, district by district.</strong> Not clinics "signed", not QR stands placed. Entries written. Win three Riyadh districts to ≥60% density before touching a fourth. This is the moat, and a later entrant cannot backfill it.</li>
+    <li><strong>The kitten year as a product, end to end.</strong> From breeder or shelter hand-over, to the vaccine series written by the clinic, to feeding transitions, to the graduation ceremony. Measure graduation and clinic-entry rates weekly. If this loop works, everything else is scaling. If it doesn't, nothing else matters.</li>
+    <li><strong>Unit economics before geography.</strong> Close the −10% COGS gate, then the litter container, then private label. Keep overhead growth below gross-profit growth every quarter; the sensitivity analysis says bloat kills Moracat faster than competitors do.</li>
+    <li><strong>The perfect box and zero involuntary churn.</strong> Exact SKUs, lasting a real month, on time in 45°C summers, with dunning and pause built in. Replenishment only wins on reliability, and reliability is what makes the record-driven box credible.</li>
+    <li><strong>Neutral, portable, honest infrastructure.</strong> Free export, no exclusivity, no clinic ownership, no data sales, no dark renewal patterns. Neutrality is what lets competitors' clinics, breeders and eventually regulators use Moracat's rails. It is the one thing a well-funded retailer structurally cannot copy.</li>
+  </ol>
+</section>
+
+<!-- ===================== H ===================== -->
+<section id="h">
+  <div class="sec-k">H · Kill zones &amp; anti-roadmap</div>
+  <h2>Ten ways Moracat dies, and what it must never do</h2>
+  <h3>H.1 Kill zones, most lethal first</h3>
+  <p>Ranked by <em>how irreversible the damage is</em> multiplied by <em>how likely it is given Moracat's current position</em>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Kill zone</th><th>Why it ranks here</th><th>Early warning</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td><strong>Overhead outruns gross profit</strong></td><td>The #1 sensitivity: +25% overhead adds SAR 7.5M of burn. At 13–16% contribution there is no margin for a big team. Already visible in history: a platform with 115 data models and 71 vet routes before a single paying member.</td><td>Headcount growth &gt; member growth for 2 quarters</td></tr>
+      <tr><td class="n">2</td><td><strong>Clinics sign but never write</strong></td><td>The moat is imaginary without entries; the cold start never breaks. The portal already exists but has no live clinical usage.</td><td>&lt;20 entries per clinic per month; CVAC flat</td></tr>
+      <tr><td class="n">3</td><td><strong>Expanding cities before district density</strong></td><td>Spreading 60 clinics across 3 cities gives zero atomic networks and all the cost of three.</td><td>Launching Jeddah with Riyadh density under 60%</td></tr>
+      <tr><td class="n">4</td><td><strong>A box that isn't worth it</strong></td><td>If boxes cost more than the DIY basket (the July finding: +34–45%), every price-comparison post is fatal and churn spikes.</td><td>Value ledger failing; "cheaper at Petzone" in CX tickets</td></tr>
+      <tr><td class="n">5</td><td><strong>Involuntary churn and fulfilment errors</strong></td><td>~1/3 of churn is failed payments; substitutions quietly kill trust.</td><td>Involuntary churn &gt;1%; perfect-box rate &lt;97%</td></tr>
+      <tr><td class="n">6</td><td><strong>A trust or data scandal</strong></td><td>One leak of owner addresses, or a "they sold my data" story, ends the registry thesis permanently. PDPL fines add to it.</td><td>Any unencrypted private documents (vet documents are currently in the public bucket)</td></tr>
+      <tr><td class="n">7</td><td><strong>Becoming "just another pet store"</strong></td><td>Opening a broad storefront (toys, dogs, aquariums) to chase GMV turns Moracat into Petzone's weaker twin.</td><td>SKU count rising faster than CVAC</td></tr>
+      <tr><td class="n">8</td><td><strong>Discount addiction</strong></td><td>At 13–16% contribution, a 20%-off first box wipes out a year of contribution and trains the wrong customer (FIN-002 R7).</td><td>Promo share of adds &gt;25%</td></tr>
+      <tr><td class="n">9</td><td><strong>Feature sprawl</strong></td><td>Community, AI, wallets, events and apps all at once. A 6-person team can maintain maybe 3 core loops.</td><td>Roadmap items without a CVAC or retention hypothesis</td></tr>
+      <tr><td class="n">10</td><td><strong>Weak supply terms</strong></td><td>Paying retail wholesale forever caps contribution at ~15%. Survivable but never scalable.</td><td>COGS gate still open at 500 households</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>H.2 The anti-roadmap</h3>
+  <div class="grid2">
+    <div class="panel"><h4>Markets not to enter</h4><ul>
+      <li>Dogs, birds, aquatics, exotics, before Year 5, and probably ever.</li>
+      <li>GCC before Saudi gates are met (§J).</li>
+      <li>Livestock or falcons. Tempting in Saudi Arabia, but a different regulator, customer and business.</li>
+      <li>Nationwide coverage before district density.</li>
+    </ul></div>
+    <div class="panel"><h4>Products not to sell</h4><ul>
+      <li>Broad toy and accessory catalogues; novelty boxes.</li>
+      <li>Prescription medicines (MEWA licensing, clinic conflict).</li>
+      <li>Own-brand food before SFDA registration and a reliable co-packer.</li>
+      <li>Live animals, or any breeder that can't pass verification.</li>
+    </ul></div>
+    <div class="panel"><h4>Features not to build</h4><ul>
+      <li>A full practice-management system that competes with clinics' own software. Integrate instead.</li>
+      <li>Tele-vet diagnosis inside Moracat, which competes with the clinic channel.</li>
+      <li>AI that diagnoses. Flags only, routed to the vet.</li>
+      <li>A wallet, points currency or NFT-style Cat IDs.</li>
+      <li>A native app before the web portal retains.</li>
+      <li>Social feeds, DMs, marketplaces.</li>
+    </ul></div>
+    <div class="panel"><h4>Customers not to chase</h4><ul>
+      <li>Deal-hunters who arrive through coupon aggregators.</li>
+      <li>Mass-market SAR 44/month households, with plans. Give them Cat ID, not boxes.</li>
+      <li>Large breeders wanting wholesale pricing without verification.</li>
+      <li>Corporates wanting white-label cat IDs under their own brand.</li>
+    </ul></div>
+    <div class="panel"><h4>Partnerships to reject</h4><ul>
+      <li>Any clinic exclusivity, in either direction.</li>
+      <li>A distributor or brand deal that forbids stocking competitors.</li>
+      <li>Data-sharing deals with brands or insurers using identifiable data.</li>
+      <li>Buying or co-owning clinics.</li>
+      <li>Influencers without a Mawthooq licence, or who promote unethical breeding.</li>
+    </ul></div>
+    <div class="panel"><h4>Growth tactics that damage the brand</h4><ul>
+      <li>Fake scarcity or "only 3 places left" (R006).</li>
+      <li>Hard-to-cancel renewals; forfeiting prepaid terms.</li>
+      <li>Cash-per-signup to vets.</li>
+      <li>Exploiting religious reverence for cats in ads.</li>
+      <li>Savings claims not backed by the market-basket ledger.</li>
+    </ul></div>
+  </div>
+  <p><strong>Revenue that distracts from the moat:</strong> grooming and boarding operations, events ticketing, merchandise, sponsored content from pet-food brands, B2B pet-food wholesale, and a general Salla-style marketplace. Each can be profitable, and each moves the team's attention away from the one thing a competitor can't copy.</p>
+</section>
+
+<!-- ===================== I ===================== -->
+<section id="i">
+  <div class="sec-k">I · Competitor war games</div>
+  <h2>When Moracat starts working, this is what comes</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Scenario</th><th>Likely attacker strategy</th><th>Moracat vulnerability</th><th>Defend</th><th>Counter-attack</th><th>Do NOT</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A · Big Saudi retailer clones Moracat</strong> (Petzone's stores, a hypermarket group, or TwinCats scaling)</td><td>Same bundles at −15%, a "pet ID" in their app, loyalty points, in-store sign-up</td><td>The box is copyable in weeks; price-sensitive members switch</td><td>Retention runs on the record: feeding plan, reminders, household modules. Publish the value ledger against <em>their</em> prices. Founding price-lock.</td><td>Their ID is an app profile no clinic writes to. Market "the only ID your vet writes in." Offer clinics a free <strong>import</strong> of their paper records.</td><td>Match price below contribution. Launch a broad catalogue to "look bigger."</td></tr>
+      <tr><td><strong>B · Amazon.sa or noon push pet subscriptions</strong></td><td>S&amp;S at 10–15% off; free fast delivery; Prime bundling</td><td>Refill (autoship) members on commodity brands</td><td>Concede pure commodity replenishment. Keep plans that carry kitten logic, household modules and clinic-driven diet changes. Reliability on heavy litter is a real edge.</td><td>Private-label litter and exclusive open-brand SKUs Amazon doesn't carry. Clinic-recommended diets auto-added.</td><td>A price war on Royal Canin SKUs. Advertise against Amazon.</td></tr>
+      <tr><td><strong>C · A vet chain builds its own Cat ID</strong></td><td>A chain-branded app with records, reminders, booking; tells patients "you don't need Moracat"</td><td>Clinics in that chain stop writing; its patients' records go dark</td><td>Neutrality: Moracat works for <em>every</em> clinic, and a chain ID stops at the chain's door. Keep T0 emergency data (allergies, conditions) readable anywhere.</td><td>Offer the chain a <strong>free write API</strong> so its app stays theirs but the record is portable. Enlist independents who don't want a rival chain holding their patients' history.</td><td>Sue, disparage, or sign exclusivity with the chain's rivals. Build a competing clinic.</td></tr>
+      <tr><td><strong>D · International player enters</strong> (Aliph/The Pet Shop, Pet Corner, a Chewy-style entrant, or Mars/IVC buying clinics)</td><td>Buys a Saudi chain; launches autoship + in-store clinic; outspends on media</td><td>Capital; supplier relationships (Mars owns Royal Canin)</td><td>Arabic-first UX, Saudi feeding data, local breeder and shelter ties, ZATCA/PDPL/SFDA-native operations. Keep supply diversified so no single brand owner can squeeze Moracat.</td><td>Position as the neutral registry their clinics can also write to. Become an <strong>acquisition target</strong>, not a victim: the entrant needs local records it can't backfill.</td><td>Raise panic capital to match spend; abandon the neutrality thesis to win a chain partnership.</td></tr>
+      <tr><td><strong>E · A competitor undercuts on price</strong></td><td>Bundles at SAR 199 or 20% off; "same food, cheaper"</td><td>Essentials and Refill tiers; first-3-month members</td><td>Identify it quickly (CX tags). Honest ledger comparison. Pause option. Kitten and household economics they can't match item-for-item.</td><td>Accelerate the COGS roadmap and private label; target their weak point: stock-outs and substitutions.</td><td>Blanket discounts; cutting box contents (breaks the "true month" promise).</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ===================== J ===================== -->
+<section id="j">
+  <div class="sec-k">J · End-state, expansion, M&amp;A &amp; outcomes</div>
+  <h2>What Moracat looks like if this works</h2>
+  <div class="callout">
+    <span class="ck">Year-5 portrait (base → aggressive)</span>
+    <ul>
+      <li><strong>Registry:</strong> 230–380k registered cats, the largest cat registry in Saudi Arabia. 70–130k are clinic-verified and active.</li>
+      <li><strong>Clinics:</strong> 200–260 connected, non-exclusive, with Care Plans running in many of them.</li>
+      <li><strong>Hand-over standard:</strong> the Moracat-verified kitten mark is expected at breeder sales in Riyadh and Jeddah.</li>
+      <li><strong>Members:</strong> 11–20k households on plans or Refill, SAR 35–65M revenue, 15–20% private label.</li>
+      <li><strong>Profitability:</strong> reached around month 50–64.</li>
+      <li><strong>Team:</strong> 28–38 people.</li>
+      <li><strong>Regulators:</strong> WEQAA and municipalities consult Moracat on cat registration, and are not threatened by it.</li>
+    </ul>
+    <p>The brand stands for one sentence: <em>the company that knows your cat — and so does your vet.</em></p>
+  </div>
+
+  <h3>J.1 GCC expansion — not before Saudi is won</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Market</th><th>Size signal</th><th>Registry situation</th><th>Competition</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>UAE</td><td>~310k cats; pet food $219M; highest spend per cat</td><td><strong>State-run</strong> mandatory registration (Dubai/Abu Dhabi), so Moracat's registry moat is neutralised</td><td>Pet Corner, The Pet Shop/Aliph, Catmer, strong autoship</td><td>Later, and only as a <strong>software/records licence</strong> or a premium-box entry; not a registry play</td></tr>
+      <tr><td>Kuwait</td><td>No credible sizing (teasers implausible)</td><td>None found</td><td>Petzone home base (14 stores + 30 outlets)</td><td>No, it would attack Petzone at home</td></tr>
+      <tr><td>Qatar</td><td>3.1M people; affluent; no credible sizing</td><td>None found</td><td>Fragmented</td><td>Possible Year 6+ test</td></tr>
+      <tr><td>Bahrain</td><td>1.6M people</td><td>None found</td><td>Petzone present</td><td>Serve from Eastern Province logistics if demand appears; don't "launch"</td></tr>
+      <tr><td>Oman</td><td>5.3M people; lower income</td><td>None found</td><td>Thin</td><td>No</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>When Saudi dominance beats geography:</strong> as long as <em>any</em> of these is true, the next riyal returns more in Saudi Arabia.</p>
+  <ul>
+    <li>Riyadh/Jeddah/Eastern clinic density is below 60%.</li>
+    <li>Plan churn is above 4%.</li>
+    <li>Premium replenishment share is below ~15% of Saudi Arabia's serviceable market.</li>
+    <li>EBITDA has not been positive for 2 consecutive quarters.</li>
+  </ul>
+  <p>Saudi Arabia has 3× the UAE's population and no state registry, so <strong>the registry moat only exists in Saudi Arabia.</strong> <span class="t r">Recommend</span> Expansion only once every one of these is false.</p>
+
+  <h3>J.2 Build · Partner · Buy</h3>
+  <div class="grid2">
+    <div class="panel"><h4>Build (the moat is never outsourced)</h4><ul>
+      <li>Cat ID, record, consent and transfer protocol.</li>
+      <li>Vet portal and clinic API.</li>
+      <li>Feeding engine and replenishment logic.</li>
+      <li>Care Plan billing rail.</li>
+      <li>Value ledger and pricing engine.</li>
+    </ul></div>
+    <div class="panel"><h4>Partner</h4><ul>
+      <li>Insurance (Tree / a licensed cooperative insurer).</li>
+      <li>BNPL and payments (Moyasar, Tamara, Tabby).</li>
+      <li>3PL and last-mile (SMSA, Aramex, then Riyadh route density).</li>
+      <li>Litter and food co-packers (Turkey; local Riyadh plant).</li>
+      <li>Practice-management software vendors.</li>
+      <li>Labs, REFQ/Rahmah, vet colleges.</li>
+    </ul></div>
+    <div class="panel"><h4>Buy (only when the math says so)</h4><ul>
+      <li><strong>A loyal Salla/Instagram cat store.</strong> Only if price &lt; ~0.5 × (active repeat customers × Moracat CAC) and the customers match the premium profile. A Year 2–3 option.</li>
+      <li><strong>A cat community or breeder network.</strong> Only if it brings issuer relationships (breeders), not just followers.</li>
+      <li><strong>A regional practice-software vendor.</strong> Only if it has more than 30% of Saudi clinics installed. It turns API integration into native write access, and could be worth a premium in Years 3–4.</li>
+      <li><strong>Never</strong> clinics, distributors or insurers.</li>
+    </ul></div>
+  </div>
+  <p><strong>When acquisition is economically rational</strong> <span class="t i">Inference</span>: when (a) buying a network node costs less than the CAC plus the <em>time</em> to build it, and time matters because records are time-gated; and (b) the target doesn't compromise neutrality. Before Year 3, Moracat's equity is too expensive a currency, so organic growth wins.</p>
+
+  <h3>J.3 Endgames (5–10 years)</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Outcome</th><th>What it requires</th><th>Milestones that make it plausible</th></tr></thead>
+    <tbody>
+      <tr><td>Profitable independent company</td><td>The base case plus overhead discipline</td><td>EBITDA-positive 4 quarters; plan churn ≤4%; private label ≥15%</td></tr>
+      <tr><td>Consumer subscription company (Saudi Chewy-lite)</td><td>Refill at scale; logistics density</td><td>≥50k households; ≥70% of revenue auto-replenished</td></tr>
+      <tr><td>Verticalised pet-health platform</td><td>Care Plans + insurance distribution + records at scale</td><td>≥25k active Care Plans; insurer partnership with loss-ratio evidence from Moracat records</td></tr>
+      <tr><td>Pet-health data infrastructure (the registry)</td><td>Neutral governance; open spec; regulator recognition</td><td>≥50% of Saudi clinics writing; WEQAA/MEWA using Cat ID records; ownership transfers standard</td></tr>
+      <tr><td>Regional category leader / GCC ecosystem</td><td>Saudi gates met; a UAE software play</td><td>≥2 GCC markets on licensed rails</td></tr>
+      <tr><td>Strategic acquisition</td><td>An asset an entrant cannot build in time</td><td>Inbound from Mars, Nestlé, IVC, a Gulf PE consolidator or a Saudi retail group. Value driven by CVAC, not GMV.</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Decisions that preserve optionality:</strong></p>
+  <ul>
+    <li>Keep the registry legally and technically separable from commerce (its own consent terms, its own API).</li>
+    <li>Never take exclusivity or equity from a brand owner, distributor or clinic chain.</li>
+    <li>Keep data in-Kingdom and PDPL-clean.</li>
+    <li>Report CVAC and clinic density as board metrics from Year 1, so the infrastructure value is documented, not asserted.</li>
+  </ul>
+  <p><strong>On the "hundreds of millions of riyals" ambition</strong> <span class="t i">Inference</span>:</p>
+  <ul>
+    <li><strong>As a store:</strong> the base case's ~SAR 41M exit run-rate at typical consumer-commerce revenue multiples (~1–2×) suggests SAR 40–85M.</li>
+    <li><strong>Crossing SAR 100M+</strong> requires the aggressive trajectory <em>and</em> buyers valuing the registry and clinic network as infrastructure (the endgame rows above).</li>
+    <li>That is why the one thing to build (§Q) is the record network and not the box.</li>
+  </ul>
+</section>
+
+<!-- ===================== K ===================== -->
+<section id="k">
+  <div class="sec-k">K · Monopoly checklist</div>
+  <h2>The assets of category dominance — and where Moracat stands today</h2>
+  <p class="src">✓ in place · ◐ partially / built but unproven · [ ] not started. Status as of 2026-09-17, from internal records.</p>
+  <ul class="check">
+    <li class="p">Cat ID adoption: built; registrations still in the dozens to hundreds</li>
+    <li class="p">Clinic record network: portal + invite-only onboarding shipped; no live writing clinics yet</li>
+    <li class="o">Clinic density ≥60% in one district</li>
+    <li class="o">Clinic-verified active cats (CVAC) as board metric</li>
+    <li class="o">Breeder &amp; shelter ID issuance (hand-over standard)</li>
+    <li class="o">Ownership-transfer protocol</li>
+    <li class="o">Record export (portability)</li>
+    <li class="p">Recurring revenue: pricing v2 + lifecycle engine built; commerce switched off</li>
+    <li class="o">Auto-renew + dunning live in production</li>
+    <li class="o">High retention (month-3 ≥75%, churn ≤5%)</li>
+    <li class="p">Strong unit economics: −10% COGS gate still open</li>
+    <li class="o">Supply advantage (litter container)</li>
+    <li class="o">Private-label products</li>
+    <li class="p">Forecasting: feeding engine designed, not in fulfilment</li>
+    <li class="o">Low CAC via non-paid channels (≥50%)</li>
+    <li class="p">Referral loops: recognition loop built</li>
+    <li class="p">Community: opt-out public profiles live</li>
+    <li class="y">Arabic-first, RTL-native product</li>
+    <li class="y">Brand system &amp; design authority</li>
+    <li class="y">Payment integrity &amp; money-as-Decimal engineering</li>
+    <li class="p">Regulatory resilience: VAT registration, ZATCA e-invoicing, vet-terms legal review, private document bucket outstanding</li>
+    <li class="o">PDPL data-transfer assessment &amp; in-Kingdom data posture</li>
+    <li class="o">Care Plan rail</li>
+    <li class="o">Insurance partnership</li>
+    <li class="o">Clinic API / practice-software integrations</li>
+    <li class="o">Regulator relationship (WEQAA / MEWA)</li>
+    <li class="o">Customer habit (≥12-month tenure cohort)</li>
+    <li class="o">Neutral governance charter for the registry</li>
+  </ul>
+</section>
+
+<!-- ===================== Q ===================== -->
+<section id="q">
+  <div class="final">
+    <div class="sec-k">Q · The founder's question</div>
+    <h2>If you could build only one thing in the next 24 months</h2>
+    <p><strong>Build the clinic write-path for the kitten year in Riyadh.</strong> Concretely: a network of about 60 Riyadh clinics that write every kitten's vaccinations, microchip and weights into a Moracat Cat ID, fed by 30+ breeders and the major rescues issuing IDs at hand-over, and paying back every clinic by returning its patients through reminders.</p>
+    <p><strong>Measure it with one number: clinic-verified active cats.</strong> Target: 8,000 by month 24, concentrated so that three to five districts pass 60% clinic density.</p>
+    <h3>Why this and not the box, the brand or the app</h3>
+    <ul>
+      <li><strong>It's the only asset that time protects.</strong> A competitor with SAR 100M can copy the box in a quarter, the app in six months and the brand in a year. It cannot copy three years of vaccination history for 70,000 cats, written by the clinics those owners trust. Records can't be backfilled.</li>
+      <li><strong>It sits on a small, finite set of nodes.</strong> Saudi Arabia has ~200–300 private clinics, and Riyadh has a fraction of them. Winning a majority of a finite, slow-growing supply side is achievable for a small team. Winning a majority of 1.7M cat owners through ads is not.</li>
+      <li><strong>It turns the commerce business from a cost centre into a moat-funding engine.</strong> Every kitten that enters through a clinic arrives at near-zero CAC and with the feeding engine already informed. That fixes the two biggest model sensitivities: acquisition volume and CAC.</li>
+      <li><strong>It sets up the one convention effect available in this market.</strong> Once breeders and shelters issue verified histories, buyers start asking for them, and supply follows demand. That is how a document becomes a standard.</li>
+      <li><strong>It is legitimate dominance.</strong> It is useful to vets, portable for owners and non-exclusive, so it survives GAC scrutiny, PDPL and a public story about "a company that owns cats' data."</li>
+      <li><strong>It's what makes Moracat worth hundreds of millions.</strong> A cat-food subscription gets priced like a retailer. A registry that clinics write to and the market relies on at every hand-over gets priced as infrastructure, and is the asset Mars, Nestlé, a Gulf consolidator or the state itself would need to buy rather than build.</li>
+    </ul>
+    <p><strong>What it costs you:</strong> saying no to Jeddah until Riyadh districts are dense, and no to a broad store, a native app or a GCC launch. Hire a clinic partnerships lead before a second marketer. Put CVAC ahead of GMV on every board slide.</p>
+  </div>
+</section>
+
+<section id="src">
+  <div class="sec-k">§ · Sources &amp; internal references</div>
+  <h2>Evidence base</h2>
+  <ul class="src">
+    <li>USDA FAS GAIN SA2025-0005, <em>An Overview of the Pet Food Market in Saudi Arabia</em> (May 2025), quoting Euromonitor — apps.fas.usda.gov</li>
+    <li>Euromonitor, <em>Pet Care in Saudi Arabia</em> teaser (Jun 2026) · GlobalPETS (2023, Feb 2026: Petzone CEO interview) · Arab News (Nov 2025)</li>
+    <li>MEWA 2022 veterinary facilities data via Al Watan (18 Sep 2023) · WEQAA/WOAH annex (2025) · SFDA feed registration and import conditions</li>
+    <li>GASTAT 2022 Census; Household Income &amp; Consumption Expenditure Survey 2023 · SAMA e-payments 2025 · DataReportal Digital 2026 Saudi Arabia</li>
+    <li>King Saud University zoonosis study, <em>Vector-Borne &amp; Zoonotic Diseases</em> (2022) · Nationwide rabies survey, <em>Trop. Med. Infect. Dis.</em> (2026) · TGM Global Pet Care Survey 2024</li>
+    <li>Competitor sites: twincats.sa, petzone.com/ksa, catpark.sa, pethouseksa.com, zarafaksa.com, petarabia.sa, pets-houses.com, liqa.sa, muntajat.sa · App Store (TwinCats) · Tree Digital (pet insurance launch, 2024) · Aliph Capital / The Pet Shop acquisition (GlobalPETS 2022) · Pet Corner (Khaleej Times)</li>
+    <li>Chewy FY2025 results and Modern Animal acquisition (investor.chewy.com, 2026) · Chewy Q4-2025 call (Chewy+ 4% penetration) · Petlove (Poder360, Exame 2025) · Supertails (Entrackr, Inc42) · BARK FY2025 · Butternut Box 2023 accounts</li>
+    <li>McKinsey, <em>Thinking inside the subscription box</em> (2018) · Recurly churn benchmarks (2026) · NFX Network Effects Manual · Andrew Chen, atomic networks (Lenny's Newsletter)</li>
+    <li>UK CMA veterinary market final report (Mar 2026) · Battersea microchipping data · BSAVA cat microchipping (2024) · Simplyhealth health-plan survey (Vet Times) · Dubai/Abu Dhabi pet registration</li>
+    <li>SDAIA PDPL guides; transfer regulation (2024–25) · Saudi Competition Law implementing regulations (dominance ≥40%) · GCC unified veterinary practice law (weqaa.gov.sa)</li>
+    <li>Internal: MRC-FIN-001, MRC-FIN-002, MRC-GTM-001, MRC-LAUNCH-001, MRC-VET-001/002, MRC-AUDIT-2026-07-19, design/DESIGN-AUTHORITY.md</li>
+  </ul>
+  <p class="src"><strong>Open research gaps worth paying to close:</strong></p>
+  <ul class="src">
+    <li>Buy the Euromonitor Saudi pet care report (~$2,450) to pin down the cat population and channel split.</li>
+    <li>Get Saudi counsel's view on auto-renewal rules, and on whether vets may receive referral fees under MEWA / GCC vet law.</li>
+    <li>Confirm whether cat litter falls under SABER.</li>
+    <li>Get an up-to-date Riyadh clinic count by district.</li>
+    <li>Check Amazon.sa Subscribe &amp; Save eligibility for pet food.</li>
+    <li>Get TwinCats VIP membership terms.</li>
+  </ul>
+</section>
+</main>
+</div>

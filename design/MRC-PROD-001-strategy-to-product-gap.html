@@ -1,0 +1,1009 @@
+<title>Moracat Build Map</title>
+<meta name="description" content="MRC-PROD-001 — what Moracat has built vs what the five-year strategy needs, and the 90-day product roadmap.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#FBF8F3; --paper-2:#F3EEE4; --ink:#1D221E; --ink-2:#4A534C; --ink-3:#6E766F;
+  --rule:#E2DBCD; --green:#1F4D36; --green-2:#2F6B4F; --green-soft:#DCE8DD;
+  --paw:#C85A22; --paw-soft:#F7E2D3; --butter:#F4E3A8;
+  --fact:#2F6B4F; --fact-bg:#E1EDE3; --assume:#8A6A12; --assume-bg:#F6EBC6;
+  --infer:#3F5A86; --infer-bg:#E2E8F3; --rec:#A5461A; --rec-bg:#F7E2D3;
+  --crit:#A3301F; --crit-bg:#F6DEDA;
+  --bar-1:#A9C6A8; --bar-2:#4F8A66; --bar-3:#1F4D36; --neg:#C85A22;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --arabic:"IBM Plex Sans Arabic","Geeza Pro","Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#121814; --paper-2:#1A221D; --ink:#ECE6DA; --ink-2:#BDC3BA; --ink-3:#8F978E;
+    --rule:#2C362F; --green:#8CC3A0; --green-2:#8CC3A0; --green-soft:#1F3328;
+    --paw:#F0925A; --paw-soft:#3A2518; --butter:#3A3320;
+    --fact:#9CD3AE; --fact-bg:#1E3527; --assume:#E6C66A; --assume-bg:#352D14;
+    --infer:#A9C0E8; --infer-bg:#1D2638; --rec:#F4A777; --rec-bg:#3A2518;
+    --crit:#F19A8C; --crit-bg:#3B1E19;
+    --bar-1:#4E6E57; --bar-2:#7FB592; --bar-3:#C4E6CE; --neg:#F0925A;
+  }
+}
+:root[data-theme="dark"]{
+    --paper:#121814; --paper-2:#1A221D; --ink:#ECE6DA; --ink-2:#BDC3BA; --ink-3:#8F978E;
+    --rule:#2C362F; --green:#8CC3A0; --green-2:#8CC3A0; --green-soft:#1F3328;
+    --paw:#F0925A; --paw-soft:#3A2518; --butter:#3A3320;
+    --fact:#9CD3AE; --fact-bg:#1E3527; --assume:#E6C66A; --assume-bg:#352D14;
+    --infer:#A9C0E8; --infer-bg:#1D2638; --rec:#F4A777; --rec-bg:#3A2518;
+    --crit:#F19A8C; --crit-bg:#3B1E19;
+    --bar-1:#4E6E57; --bar-2:#7FB592; --bar-3:#C4E6CE; --neg:#F0925A;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:15.5px/1.62 var(--body);padding-inline:16px;padding-block:0 80px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px}
+@media (max-width:940px){.wrap{grid-template-columns:minmax(0,1fr);gap:0}.toc{display:none}}
+.toc{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-top:40px;max-height:100vh;overflow:auto;font-size:13px}
+.toc b{display:block;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--ink-2);text-decoration:none;padding:4px 0;line-height:1.35}
+.toc a span:first-child{font-family:var(--mono);color:var(--paw)}
+.toc a:hover{color:var(--ink)}
+main{min-width:0}
+header.hero{padding:56px 0 36px;border-bottom:1px solid var(--rule);margin-bottom:12px}
+.docid{font:500 12px/1 var(--mono);letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;display:flex;flex-wrap:wrap;gap:6px 18px}
+h1{font:700 clamp(34px,5.4vw,58px)/1.02 var(--display);letter-spacing:-.02em;margin:18px 0 14px;text-wrap:balance;max-width:17ch}
+.ar{font-family:var(--arabic);direction:rtl;unicode-bidi:isolate}
+.lede{font-size:18px;color:var(--ink-2);max-width:62ch;margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;align-items:center;font-size:13px;color:var(--ink-3)}
+.t{display:inline-block;font:500 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 6px 3px;border-radius:3px;vertical-align:2px;white-space:nowrap}
+.t.f{color:var(--fact);background:var(--fact-bg)} .t.a{color:var(--assume);background:var(--assume-bg)}
+.t.i{color:var(--infer);background:var(--infer-bg)} .t.r{color:var(--rec);background:var(--rec-bg)}
+.t.x{color:var(--crit);background:var(--crit-bg)}
+section{padding:44px 0 8px;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+.sec-k{font:500 12px/1 var(--mono);color:var(--paw);letter-spacing:.08em;text-transform:uppercase}
+h2{font:600 clamp(26px,3.4vw,36px)/1.12 var(--display);letter-spacing:-.01em;margin:10px 0 18px;text-wrap:balance}
+h3{font:600 20px/1.25 var(--display);margin:34px 0 10px;text-wrap:balance}
+h4{font:600 13px/1.3 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin:22px 0 8px}
+p,li{max-width:70ch}
+p{margin:0 0 14px}
+ul,ol{padding-inline-start:20px;margin:0 0 16px}
+li{margin-bottom:6px}
+strong{font-weight:600}
+.thesis{font:400 19px/1.6 var(--body)}
+.thesis p{max-width:64ch}
+.pull{font:600 clamp(21px,2.6vw,27px)/1.3 var(--display);color:var(--green);border-inline-start:3px solid var(--paw);padding:4px 0 4px 20px;margin:26px 0;max-width:40ch;text-wrap:balance}
+.tw{overflow-x:auto;margin:14px 0 22px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.45}
+th,td{padding:9px 12px;text-align:start;vertical-align:top;border-bottom:1px solid var(--rule)}
+tr:last-child td{border-bottom:0}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);background:var(--paper-2);white-space:nowrap}
+td.n,th.n{text-align:end;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.hl td{background:var(--green-soft)}
+td.neg{color:var(--neg)}
+.score td.n{font-size:13px}
+.s5{background:var(--green-soft);font-weight:600}
+.callout{background:var(--paper-2);border-radius:6px;padding:18px 20px;margin:18px 0 22px}
+.callout.warn{background:var(--crit-bg)}
+.callout.warn .ck{color:var(--crit)}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+.ck{font:600 11px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--green-2);display:block;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:16px 0 22px}
+.panel{border:1px solid var(--rule);border-radius:6px;padding:16px 18px}
+.panel h4{margin-top:0}
+.panel p:last-child,.panel ul:last-child{margin-bottom:0}
+.year{display:grid;grid-template-columns:120px minmax(0,1fr);gap:24px;padding:26px 0;border-top:1px dashed var(--rule)}
+@media (max-width:640px){.year{grid-template-columns:minmax(0,1fr);gap:6px}}
+.year .yl{font:700 40px/1 var(--display);color:var(--paw)}
+.year .yl small{display:block;font:500 11px/1.4 var(--mono);color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;margin-top:8px}
+.year h3{margin-top:0}
+.gate{border:1.5px dashed var(--green-2);border-radius:6px;padding:12px 16px;margin-top:12px;font-size:14px}
+.gate b{font:600 11px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--green-2);display:block;margin-bottom:6px}
+figure{margin:18px 0 26px}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:8px;max-width:70ch}
+.fig{overflow-x:auto}
+svg text{fill:var(--ink-2);font-family:var(--body)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0;border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin:16px 0}
+.kpi{padding:14px 16px;border-bottom:1px solid var(--rule);border-inline-end:1px solid var(--rule)}
+.kpi .kn{font:500 11px/1.3 var(--mono);color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase}
+.kpi .kt{font:600 15px/1.3 var(--body);margin:4px 0}
+.kpi .kv{font:500 12.5px/1.45 var(--mono);color:var(--green-2)}
+.kpi .kd{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+.prio{counter-reset:p;list-style:none;padding:0}
+.prio li{counter-increment:p;position:relative;padding-inline-start:52px;margin-bottom:20px;max-width:74ch}
+.prio li::before{content:counter(p);position:absolute;inset-inline-start:0;top:-4px;font:700 34px/1 var(--display);color:var(--paw)}
+.check{list-style:none;padding:0;columns:2 300px;column-gap:28px}
+.check li{break-inside:avoid;padding:6px 0 6px 30px;position:relative;border-bottom:1px solid var(--rule);margin:0;font-size:14px}
+.check li::before{position:absolute;inset-inline-start:0;top:6px;font:600 13px/1.4 var(--mono)}
+.check li.y::before{content:"[✓]";color:var(--fact)} .check li.p::before{content:"[◐]";color:var(--assume)} .check li.o::before{content:"[ ]";color:var(--ink-3)}
+.final{background:var(--green);color:var(--paper);border-radius:8px;padding:32px clamp(18px,4vw,40px);margin:28px 0}
+:root:not([data-theme="light"]) .final{}
+.final h2,.final h3{color:inherit}
+.final p,.final li{color:inherit;opacity:.95}
+.final .sec-k{color:var(--butter)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .final{background:var(--green-soft);color:var(--ink)} :root:not([data-theme="light"]) .final .sec-k{color:var(--paw)}}
+:root[data-theme="dark"] .final{background:var(--green-soft);color:var(--ink)}
+:root[data-theme="dark"] .final .sec-k{color:var(--paw)}
+a{color:var(--green-2)}
+a:focus-visible{outline:2px solid var(--paw);outline-offset:2px}
+.src{font-size:12.5px;color:var(--ink-3)}
+.src li{max-width:none}
+code{font-family:var(--mono);font-size:.9em;background:var(--paper-2);padding:1px 4px;border-radius:3px}
+</style>
+<style>
+.st{display:inline-block;font:600 10.5px/1 var(--mono);letter-spacing:.05em;padding:4px 6px 3px;border-radius:3px;white-space:nowrap}
+.st.b{color:var(--fact);background:var(--fact-bg)} .st.p{color:var(--assume);background:var(--assume-bg)}
+.st.n{color:var(--crit);background:var(--crit-bg)} .st.u{color:var(--infer);background:var(--infer-bg)}
+.sc td.n{font-size:13px;text-align:center}
+.d3{background:var(--green-soft);font-weight:700}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 14px;font-size:13px}
+.flow span{border:1px solid var(--rule);border-radius:4px;padding:5px 8px;background:var(--paper)}
+.flow span.miss{border-style:dashed;border-color:var(--crit);color:var(--crit)}
+.flow span.part{border-color:var(--assume);color:var(--assume)}
+.flow i{font-style:normal;color:var(--ink-3)}
+.ticket{border:1px solid var(--rule);border-radius:6px;padding:18px 20px;margin:18px 0}
+.ticket h3{margin-top:0}
+.ticket .us{font-size:15.5px;background:var(--paper-2);border-radius:4px;padding:12px 14px;margin:10px 0 14px}
+.ticket ol li,.ticket ul li{max-width:none}
+.nav-demo{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0}
+.decision{border:1.5px solid var(--paw);border-radius:6px;padding:14px 18px;margin:14px 0}
+.decision b.k{font:600 11px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--paw);display:block;margin-bottom:6px}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <b>MRC-PROD-001</b>
+  <a href="#s0"><span>0</span><span>The verdict</span></a>
+  <a href="#s1"><span>1</span><span>What's built</span></a>
+  <a href="#s2"><span>2</span><span>Strategy gap</span></a>
+  <a href="#s3"><span>3</span><span>Missing features</span></a>
+  <a href="#s4"><span>4</span><span>Moat scorecard</span></a>
+  <a href="#s5"><span>5</span><span>Cat ID roadmap</span></a>
+  <a href="#s6"><span>6</span><span>Data moat</span></a>
+  <a href="#s7"><span>7</span><span>Journeys</span></a>
+  <a href="#s8"><span>8</span><span>Information architecture</span></a>
+  <a href="#s9"><span>9</span><span>Homepage</span></a>
+  <a href="#s10"><span>10</span><span>Membership</span></a>
+  <a href="#s11"><span>11</span><span>Personalisation</span></a>
+  <a href="#s12"><span>12</span><span>Retention &amp; referral</span></a>
+  <a href="#s14"><span>14</span><span>Vet ecosystem</span></a>
+  <a href="#s15"><span>15</span><span>Admin</span></a>
+  <a href="#s16"><span>16</span><span>Analytics events</span></a>
+  <a href="#s17"><span>17</span><span>Architecture</span></a>
+  <a href="#s18"><span>18</span><span>Prioritisation</span></a>
+  <a href="#s19"><span>19</span><span>90-day roadmap</span></a>
+  <a href="#s20"><span>20</span><span>Build-now tickets</span></a>
+  <a href="#s22"><span>22</span><span>Final table</span></a>
+  <a href="#one"><span>★</span><span>The one system</span></a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="docid"><span>MRC-PROD-001</span><span>Strategy → product gap</span><span>2026-09-17</span><span>Target state: MRC-STRAT-001</span></div>
+  <h1>The record exists. Nobody can see it yet.</h1>
+  <p class="lede">An audit of what Moracat has actually built, measured against the five-year strategy. The goal is the smallest set of capabilities that turns an impressive codebase into a working moat. Order of build: <strong>Foundation → Data → Habit → Network → Ecosystem</strong>.</p>
+  <div class="legend">Status:
+    <span class="st b">BUILT</span> wired end to end
+    <span class="st p">PARTIAL</span> something specific missing
+    <span class="st n">NOT BUILT</span>
+    <span class="st u">GATED</span> built, switched off in prod
+  </div>
+</header>
+
+<section id="s0">
+  <div class="sec-k">0 · The verdict</div>
+  <h2>Moracat has over-built the ecosystem and under-built the loop</h2>
+  <p>This audit covers <strong>56 web pages, 39 API controllers and 120 data models</strong>. Three parallel code audits did the reading, and I re-checked every critical claim against the source by hand. <span class="t f">Fact</span> The platform is technically deep:</p>
+  <ul>
+    <li>Append-only clinical records with consent tiers.</li>
+    <li>A capability-based vet portal with invite-only clinic onboarding.</li>
+    <li>A lifecycle engine, a feeding engine and household pricing.</li>
+  </ul>
+  <p>Roughly <strong>50 of the 120 models are schema-only</strong>: warehouse, drivers, loyalty, gift cards, referrals, badges, shipments.</p>
+  <p>The strategy's moat is one loop: <em>a clinic writes to a Cat ID → the owner sees it and acts → the owner returns to that clinic → more cats get written</em>. <strong>Every link in that loop is broken or missing today.</strong></p>
+  <div class="tw"><table>
+    <thead><tr><th>Link in the loop</th><th>Today</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>A walk-in cat enters the record</td><td><span class="st n">NOT BUILT</span> A clinic cannot create a patient that isn't already on Moracat.</td><td><code>vet-patients.controller.ts</code> has no create route</td></tr>
+      <tr><td>Owner sees what the clinic wrote</td><td><span class="st p">PARTIAL</span> Only vaccinations reach the owner. Visits, weights, prescriptions and entries do not. Notification links go to <code>/portal/cats/:id/health</code> and <code>/privacy</code>, and <strong>neither page exists</strong>.</td><td><code>vet-visits.service.ts:394</code>, <code>vet-consent.service.ts:104</code></td></tr>
+      <tr><td>A reminder returns the owner to the clinic</td><td><span class="st p">PARTIAL</span> Vaccination reminders go out by email and in-app. They don't name the clinic, and they depend on a cron job running on Render's <strong>free plan, which sleeps</strong>.</td><td><code>lifecycle.service.ts:442</code>, <code>render.yaml:11</code></td></tr>
+      <tr><td>The record proves something to others</td><td><span class="st n">NOT BUILT</span> There is no certificate PDF. The QR encodes <code>MRCV1:&lt;token&gt;</code>, which is not a URL, so a phone camera shows nothing.</td><td><code>cat-id-card.tsx:124</code></td></tr>
+      <tr><td>We can measure any of it</td><td><span class="st n">NOT BUILT</span> Three <code>dataLayer</code> pushes with no tag manager behind them, and no UTM capture. The July analytics work was rolled back.</td><td><code>lib/track.ts</code></td></tr>
+      <tr><td>It turns into recurring revenue</td><td><span class="st u">GATED</span> + <span class="st n">broken</span> <strong>No code ever creates a <code>PaymentMethod</code></strong>, so auto-renew cannot charge. Checkout is Tamara-only, and its copy promises "no automatic renewal — ever", contradicting MRC-FIN-002.</td><td><code>checkout/page.tsx:194, 638</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="pull">The next 90 days are not about new surfaces. They are about closing one loop and making it measurable.</p>
+  <p class="src">What was verified: code on <code>main</code> at <code>1ee08b9</code>. The live site (www.moracat.co) couldn't be loaded during the audit, so the homepage findings come from source. Two July security criticals are confirmed <strong>fixed</strong>: JSON-LD escaping (<code>lib/json-ld.ts:31</code>) and the JWT <code>typ</code> check (<code>jwt.strategy.ts:35</code>).</p>
+</section>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <div class="sec-k">1 · Current product map</div>
+  <h2>What Moracat can actually do today</h2>
+
+  <h3>Customer-facing</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Area</th><th>Status</th><th>What a user can actually do / what's missing</th></tr></thead>
+    <tbody>
+      <tr><td>Homepage</td><td><span class="st b">BUILT</span></td><td>Type your cat's name and watch a live Cat ID preview, with a census counter, benefits ribbon, how-it-works, census section, FAQ and closing invite. The CTA is Register, carrying the cat name through.</td></tr>
+      <tr><td>Registration / login</td><td><span class="st b">BUILT</span></td><td>Email and password, Google sign-in (if configured), email verification that doesn't block, password reset, optional TOTP. Phone OTP is hidden behind a flag. Turnstile bot protection was rolled back.</td></tr>
+      <tr><td>Cat ID</td><td><span class="st p">PARTIAL</span></td><td>Card, <code>MRC-XXXX-XXXX</code> number, founding badge, issue ceremony, personalisation, PNG/PDF/story export, Google Wallet (env-gated). <strong>Missing:</strong> a scannable public QR, lost-cat mode, collar tag, Apple Wallet.</td></tr>
+      <tr><td>Cat profile</td><td><span class="st p">PARTIAL</span></td><td>At creation: name, sex, age, city, photo. Later: birthday, breed, coat, weight, indoor/outdoor, neutered. <strong>No inputs for</strong> microchip, allergies, conditions, medications, emergency contacts, or current food. Saving the profile also sends <code>allergies: []</code>, which wipes the list.</td></tr>
+      <tr><td>Health records (owner)</td><td><span class="st p">PARTIAL</span></td><td>Add and list vaccinations, owner-logged visits and documents; reminders before a recorded due date. <strong>Missing:</strong> clinic entries, weight history, vaccination status badge, per-cat export or PDF, ownership transfer, co-owners.</td></tr>
+      <tr><td>Multi-cat</td><td><span class="st u">GATED</span></td><td>Unlimited cats with a switcher. Subscriptions cover up to 6 cats with per-cat module pricing.</td></tr>
+      <tr><td>Plans / checkout</td><td><span class="st u">GATED</span></td><td>Plan builder driven by <code>consumption-recommend</code>; 1/3/6/12-month terms; household pricing. <strong>Tamara only</strong>: the Moyasar (mada / Apple Pay) and Tabby adapters are never offered.</td></tr>
+      <tr><td>Subscription management</td><td><span class="st u">GATED</span> <span class="st p">PARTIAL</span></td><td>View, pause/resume, cancel (with pause and refund offered first). <strong>Missing:</strong> skip button (API only), plan change, delivery date or frequency, cancel reasons, working auto-renew, dunning ladder.</td></tr>
+      <tr><td>Store / cart</td><td><span class="st n">NOT BUILT</span> (UI)</td><td>Cart, coupon and checkout APIs exist; no web page calls them. Every product is unpublished.</td></tr>
+      <tr><td>Orders &amp; delivery</td><td><span class="st u">GATED</span> <span class="st p">PARTIAL</span></td><td>Order history and invoice dialog. Shipments, tracking, delivery zones, drivers and returns are <strong>schema-only</strong>.</td></tr>
+      <tr><td>Dashboard</td><td><span class="st b">BUILT</span></td><td>Greeting with member ID; a "value kept" strip; upcoming vaccinations; household cat rail; referral card. The savings tally appears only when commerce is on.</td></tr>
+      <tr><td>Community</td><td><span class="st b">BUILT</span></td><td>Public profiles (opt-out) with per-field privacy, feed with filters, likes, reports and moderation.</td></tr>
+      <tr><td>Referral</td><td><span class="st p">PARTIAL</span></td><td>Referral code, link and a "friends brought" count. No rewards; the <code>Referral</code>, loyalty, wallet, badge and gift-card models are all unused.</td></tr>
+      <tr><td>Notifications</td><td><span class="st p">PARTIAL</span></td><td>In-app inbox and email via Resend; SMS for OTP only. <strong>No WhatsApp or push.</strong> The notification preferences page saves settings that <strong>no sender reads</strong>.</td></tr>
+      <tr><td>Support</td><td><span class="st b">BUILT</span></td><td>Tickets with replies and close; contact page. The WhatsApp link is a <code>tel:</code> link.</td></tr>
+      <tr><td>Vet features (owner)</td><td><span class="st p">PARTIAL</span></td><td>Public clinic directory; <code>/portal/health-access</code> for grants, revokes and the access log. <strong>No member-rate verification.</strong></td></tr>
+      <tr><td>Feeding tool</td><td><span class="st p">PARTIAL</span></td><td>The engine computes kcal, dry grams, pouches, litter kg and SAR cost, and saves a recommendation per cat. It is not connected to box contents or reorder timing.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Veterinary-facing</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Area</th><th>Status</th><th>Reality</th></tr></thead>
+    <tbody>
+      <tr><td>Clinic onboarding</td><td><span class="st b">BUILT</span></td><td>Admin invite → wizard → document review → sandbox → go-live, which requires a test scan. A daily cron checks licence expiry.</td></tr>
+      <tr><td>Staff &amp; roles</td><td><span class="st b">BUILT</span></td><td>8 roles, a capability matrix shared by the API and UI, counter PIN mode, branches and devices.</td></tr>
+      <tr><td>Cat lookup</td><td><span class="st b">BUILT</span></td><td>By Cat ID, QR token, microchip or phone; name search only within the clinic's own patients. The camera scanner uses <code>BarcodeDetector</code>, which doesn't work on Safari or Firefox.</td></tr>
+      <tr><td>Clinic-created patient</td><td><span class="st n">NOT BUILT</span></td><td>Walk-ins without a Moracat account cannot be recorded.</td></tr>
+      <tr><td>Visits &amp; clinical entries</td><td><span class="st b">BUILT</span> / <span class="st p">PARTIAL</span></td><td>Open and close visits; 14 entry types, append-only with amend and retract; intern co-sign; prescriptions with allergy warnings; weight chart. <strong>No attachment upload UI</strong>, and uploads accept images only.</td></tr>
+      <tr><td>Vaccination write-through</td><td><span class="st b">BUILT</span></td><td>A clinic vaccination entry becomes a <code>CatVaccination</code>, which drives the owner's reminder.</td></tr>
+      <tr><td>Certificates (PDF)</td><td><span class="st n">NOT BUILT</span></td><td>—</td></tr>
+      <tr><td>Consent / emergency</td><td><span class="st p">PARTIAL</span></td><td>T0–T2 tiers, break-glass access, access log. <strong>Offline QR (<code>OfflinePassKey</code>) is unused.</strong> A consent request is only a notification, and it links to a page that doesn't exist.</td></tr>
+      <tr><td>Owner communication</td><td><span class="st p">PARTIAL</span></td><td>In-app visit summary only; no email or WhatsApp, and no booking link.</td></tr>
+      <tr><td>Clinic dashboard</td><td><span class="st n">NOT BUILT</span></td><td>The "Today" stats call <code>/vet/org/summary</code>, <strong>which doesn't exist</strong>, and the failure is hidden silently.</td></tr>
+      <tr><td>Member discounts / billing / integrations</td><td><span class="st n">NOT BUILT</span></td><td>The <code>ApiKey</code> and <code>Webhook</code> models are schema-only.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Internal / admin</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Area</th><th>Status</th><th>Reality</th></tr></thead>
+    <tbody>
+      <tr><td>Customer CRM</td><td><span class="st p">PARTIAL</span></td><td>Search and a customer file (cats, subscriptions, orders, payments, tickets); suspend. No notes, tags or editing.</td></tr>
+      <tr><td>Cat CRM</td><td><span class="st p">PARTIAL</span></td><td>Community moderation and a census summary. <strong>No Cat ID search, cat detail page or duplicate merge.</strong></td></tr>
+      <tr><td>Subscriptions</td><td><span class="st p">PARTIAL</span></td><td>Pause, resume and cancel from the customer file. No list view, plan change or dunning queue.</td></tr>
+      <tr><td>Orders / fulfilment</td><td><span class="st p">PARTIAL</span></td><td>Order list and status changes. No pick/pack list, labels, courier integration or tracking entry.</td></tr>
+      <tr><td>Inventory / procurement</td><td><span class="st n">NOT BUILT</span></td><td>Schema-only. Products can be created and hidden, but not edited in the UI.</td></tr>
+      <tr><td>Payments / invoices / ZATCA</td><td><span class="st p">PARTIAL</span></td><td>Refunds with reasons; invoice records. <strong>No invoice PDF and no ZATCA QR or XML.</strong></td></tr>
+      <tr><td>Vet partners</td><td><span class="st b">BUILT</span></td><td>Invite, review, approve, go live, suspend, access audit.</td></tr>
+      <tr><td>Support · CMS · staff · audit · flags · waitlist</td><td><span class="st b">BUILT</span> (basic)</td><td>No ticket assignment or SLA; the dashboard's waitlist tile calls a wrong URL.</td></tr>
+      <tr><td>Reports / metrics</td><td><span class="st p">PARTIAL</span></td><td><code>/admin/reports</code> is really a moderation queue. The dashboard shows MRR, AOV and a naive churn figure. No cohorts, LTV, CVAC or clinic density.</td></tr>
+      <tr><td>Referral / coupons / loyalty admin</td><td><span class="st n">NOT BUILT</span></td><td>—</td></tr>
+      <tr><td>Notifications broadcast</td><td><span class="st n">NOT BUILT</span></td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Infrastructure findings that change priorities</h3>
+  <ul>
+    <li><strong>The scheduler is unreliable.</strong> The API runs on Render's free plan (Frankfurt), which sleeps when idle; cron runs in-process on a single instance with no lock and no missed-run alert. Renewals, lapses and vaccination reminders can silently not happen.</li>
+    <li><strong>Data residency.</strong> The database (Neon), API and storage are all in the EU, clinical records included. There is no documented PDPL transfer basis.</li>
+    <li><strong>Resilience is on paper only.</strong> Neon point-in-time restore has never been tested; Sentry only runs if a DSN is set; there is no uptime monitor; web unit tests don't run in CI.</li>
+    <li><strong>Security posture.</strong> Tokens live in <code>localStorage</code>; staff 2FA is optional; rate limiting is in-memory; Turnstile was rolled back.</li>
+  </ul>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <div class="sec-k">2 · Strategy vs. website</div>
+  <h2>Gap analysis by strategic pillar</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Strategic requirement (MRC-STRAT-001)</th><th>Current capability</th><th>Gap</th><th>Importance</th><th>Timing</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><strong>Network effects</strong>: clinic writes → owner sees → owner returns</td><td>Clinic write path built; owner view is vaccinations only</td><td>Clinic-created patients, owner health timeline, reminders that name the clinic, clinic "patients returned" stat</td><td>Critical</td><td>Days 1–60</td></tr>
+      <tr class="hl"><td><strong>Cat health records</strong></td><td>Append-only store, consent tiers</td><td>Owner can't see most of it; key fields have no inputs; no certificate</td><td>Critical</td><td>Days 1–45</td></tr>
+      <tr class="hl"><td><strong>Veterinary network</strong> (the ~60% district density goal)</td><td>Invite-only onboarding and a full portal</td><td>Walk-ins can't be recorded; no clinic dashboard (the endpoint it calls doesn't exist); no measurement of density</td><td>Critical</td><td>Days 1–60</td></tr>
+      <tr class="hl"><td><strong>Data moat</strong> (CVAC north star)</td><td>Data exists but isn't measured</td><td>No event log, no attribution, no CVAC computation, no district on cats</td><td>Critical</td><td>Days 1–30</td></tr>
+      <tr><td><strong>Switching costs</strong> (earned, portable)</td><td>A whole-account JSON export exists</td><td>Per-cat record PDF, ownership transfer, household co-owners</td><td>High</td><td>Days 31–90</td></tr>
+      <tr><td><strong>Cat ID</strong> as passport</td><td>Card + ceremony + number</td><td>Public QR verify / lost page; certificate; transfer; microchip binding in the owner UI</td><td>High</td><td>Days 1–90</td></tr>
+      <tr><td><strong>Recurring essentials</strong></td><td>Plans, lifecycle engine, household pricing (gated)</td><td>No stored card, so auto-renew is impossible; Tamara only; renewal copy contradicts the model; no dunning ladder</td><td>High (revenue)</td><td>Days 31–60</td></tr>
+      <tr><td><strong>Wedge: the kitten year</strong></td><td>KITTEN tier in pricing; reminders</td><td>Kitten vaccination schedule, graduation flow, kitten entry path from clinics and breeders</td><td>High</td><td>Days 61–90</td></tr>
+      <tr><td><strong>Membership</strong></td><td>Plan builder, pause, cancel</td><td>Skip UI, cancel reasons, plan change, value ledger, renewal notice</td><td>High</td><td>Days 31–60</td></tr>
+      <tr><td><strong>Customer retention</strong></td><td>Reminders, birthdays, anniversaries</td><td>A reliable scheduler; WhatsApp; the preferences screen actually respected</td><td>High</td><td>Days 1–90</td></tr>
+      <tr><td><strong>Personalisation</strong></td><td>Feeding engine; recommendation copy</td><td>Life-stage rules; the feeding engine driving box contents and reorder timing</td><td>Medium</td><td>Days 61–90+</td></tr>
+      <tr><td><strong>Multi-cat</strong></td><td>Unlimited cats; modules (gated)</td><td>Co-owners / carers; per-cat modules tied to each Cat ID (Phase 2)</td><td>Medium</td><td>Days 61–90 / later</td></tr>
+      <tr><td><strong>Distribution</strong> (clinics, breeders, shelters)</td><td>Clinic onboarding only</td><td>Clinic claim links; breeder/shelter batch ID issuance</td><td>High</td><td>Days 1–30 (clinic) · 61–90 (breeder)</td></tr>
+      <tr><td><strong>Referral loops</strong></td><td>Code + brought count</td><td>Invite paths that emerge from using the record (co-owner, clinic claim, QR page). Cash rewards are not needed.</td><td>Medium</td><td>Days 1–90</td></tr>
+      <tr><td><strong>Community</strong></td><td>Built (opt-out)</td><td>None needed now. Don't expand.</td><td>Low</td><td>Freeze</td></tr>
+      <tr><td><strong>Supply advantages / private label</strong></td><td>Catalogue importer, market price field (schema)</td><td>Fulfilment basics now; inventory, procurement and private-label tooling only after about 500 households</td><td>Medium</td><td>Days 31–60 (fulfilment) · later</td></tr>
+      <tr><td><strong>Brand</strong></td><td>Strong design system and ceremony</td><td>Homepage tells the identity story but not the health / vet story</td><td>Medium</td><td>Days 31–60</td></tr>
+      <tr><td><strong>Regulatory resilience</strong> (PDPL, ZATCA, VAT)</td><td>VAT toggle; invoice records</td><td>ZATCA-compliant invoice, PDPL transfer assessment, private bucket</td><td>High (gate to commerce)</td><td>Days 31–60</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <div class="sec-k">3 · The most important missing features</div>
+  <h2>Twelve capabilities, not a wishlist</h2>
+  <p>Each one below passed the founder test in §21: it either makes Moracat harder to replace, or it is required for revenue, operations or basic trust. The legend for the effects column: <strong>Acq</strong> acquisition · <strong>Conv</strong> conversion · <strong>Ret</strong> retention · <strong>Rev</strong> revenue · <strong>Data</strong> · <strong>Switch</strong> switching cost · <strong>Net</strong> network effect · <strong>Vet</strong> clinic adoption · <strong>Supply</strong>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Feature</th><th>User</th><th>Problem solved / why Moracat needs it</th><th>Increases</th><th>If we don't build it</th><th>Difficulty</th><th>Depends on</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><strong>F1 · Clinic-created patient + owner claim</strong></td><td>Reception, vet, owner</td><td>Most clinic patients aren't on Moracat, so the clinic can't write about them. This turns every clinic visit into a Cat ID and makes the clinic an acquisition channel.</td><td>Acq · Data · Net · Vet · Switch</td><td>Clinics log in, find nobody, and stop. The moat never starts.</td><td>L (3–4 wks)</td><td>SMS (Twilio exists), claim token, dedupe/merge, events</td></tr>
+      <tr class="hl"><td><strong>F2 · Owner health record page</strong> (<code>/portal/cats/[id]/health</code>)</td><td>Owner</td><td>Owners can't see what their vet wrote, and two notifications link to a 404. It is the visible half of the record: the reason an owner keeps the ID and tells the next clinic about it.</td><td>Ret · Switch · Net · Data</td><td>The record stays invisible to the person who decides whether to use it.</td><td>M (2 wks)</td><td>Owner-safe serializer for clinical entries</td></tr>
+      <tr class="hl"><td><strong>F3 · Reliability floor + event log</strong></td><td>Team</td><td>The cron can sleep, and nothing is measured. Without this, no reminder is dependable and CVAC can't be computed.</td><td>Ret · Data (all metrics)</td><td>Silent missed reminders and renewals; decisions made blind.</td><td>S–M (1–2 wks)</td><td>Render paid plan, a <code>ProductEvent</code> model</td></tr>
+      <tr class="hl"><td><strong>F4 · Reminders that route back to the clinic</strong></td><td>Owner, clinic</td><td>A reminder today is generic. Naming the clinic and linking to its contact is what makes clinics <em>want</em> Moracat ("we return your patients to you").</td><td>Ret · Vet · Net</td><td>Clinics see no benefit, so they stop writing.</td><td>S (3–5 days)</td><td>F3; clinic phone and WhatsApp on the branch record</td></tr>
+      <tr class="hl"><td><strong>F5 · Scannable QR → public cat page</strong></td><td>Anyone who finds or verifies a cat; clinics</td><td>The QR is unreadable by a phone. A URL QR does the Safety job (R040) and exposes Moracat to non-members at a relevant moment.</td><td>Acq · Net · Brand</td><td>The collar tag and printed card do nothing in the real world.</td><td>S–M (1 wk)</td><td>Token → URL; owner contact relay</td></tr>
+      <tr><td><strong>F6 · Vaccination certificate PDF + verify page</strong></td><td>Owner, boarder, airline, vet</td><td>Boarding and travel need proof. A document signed by clinic entries is the first time a third party relies on Moracat.</td><td>Switch · Net · Acq</td><td>The record has no external use, so it can't become a standard.</td><td>M (Arabic PDF shaping)</td><td>F2; HTML→PDF in the API container</td></tr>
+      <tr><td><strong>F7 · Recurring payments that actually recur</strong></td><td>Owner</td><td>No card is ever tokenized, so renewal is impossible. Adds mada and Apple Pay via Moyasar, the renewal model decision, and a dunning ladder.</td><td>Rev · Ret · Conv</td><td>Every renewal is manual; LTV roughly halves (July audit).</td><td>M–L</td><td>Moyasar live keys; founder renewal decision</td></tr>
+      <tr><td><strong>F8 · Subscription self-service completion</strong></td><td>Owner</td><td>Adds skip UI, cancel reasons, next-cycle plan change and a renewal notice. Leaving and adjusting must be easy (R010, R062).</td><td>Ret · Data</td><td>Cancellations instead of pauses; no churn diagnosis.</td><td>S–M</td><td>F7</td></tr>
+      <tr><td><strong>F9 · ZATCA invoice + minimum fulfilment</strong></td><td>Owner, ops</td><td>Commerce can't legally or operationally switch on without a compliant invoice, tracking entry, pick list and an admin subscriptions list.</td><td>Rev · Ops</td><td>Commerce stays off, or goes live non-compliant.</td><td>M</td><td>VAT registration; accountant sign-off</td></tr>
+      <tr><td><strong>F10 · Clinic "Today" dashboard</strong></td><td>Clinic owner, vet</td><td>Implements the missing <code>/vet/org/summary</code>: verifications, entries written, patients returned and reminders sent. It is the clinic's reason to stay.</td><td>Vet · Net · Ret (clinic)</td><td>Clinics can't see value; churn from the network.</td><td>S–M</td><td>F3, F4</td></tr>
+      <tr><td><strong>F11 · Kitten-year path</strong></td><td>New owner, clinic</td><td>Adds a vaccination schedule from birth date, a first-year timeline, graduation at ~9 months, and kitten plan entry. This is the strategy's wedge.</td><td>Acq · Conv · Ret · Data</td><td>The wedge exists only as a price.</td><td>M</td><td>F2, F4; vet-approved schedule table</td></tr>
+      <tr><td><strong>F12 · Household co-owners + ownership transfer</strong></td><td>Families, breeders, adopters</td><td>A cat has one account today. Families share care; breeders and shelters hand cats over. This keeps records accurate across hand-overs, the UK microchip lesson.</td><td>Net · Switch · Acq</td><td>Stale records; the hand-over standard can't form.</td><td>M</td><td>New <code>CatMember</code> / <code>CatTransfer</code> models</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <div class="sec-k">4 · Moracat moat scorecard</div>
+  <h2>Every feature, scored for what it compounds</h2>
+  <p class="src">Scale 0–3. Columns: Rev · Ret(ention) · Acq(uisition) · Data · Pers(onalisation) · Vet network · Switch(ing costs) · Net(work effects) · Brand · Ops. <span class="t i">Inference</span></p>
+  <div class="tw"><table class="sc">
+    <thead><tr><th>Feature</th><th>Status</th><th class="n">Rev</th><th class="n">Ret</th><th class="n">Acq</th><th class="n">Data</th><th class="n">Pers</th><th class="n">Vet</th><th class="n">Switch</th><th class="n">Net</th><th class="n">Brand</th><th class="n">Ops</th><th>Class</th></tr></thead>
+    <tbody>
+      <tr><td>Clinic-created patient + claim</td><td><span class="st n">NOT</span></td><td class="n">1</td><td class="n">2</td><td class="n d3">3</td><td class="n d3">3</td><td class="n">1</td><td class="n d3">3</td><td class="n">2</td><td class="n d3">3</td><td class="n">1</td><td class="n">1</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Owner health record page</td><td><span class="st p">PART</span></td><td class="n">0</td><td class="n d3">3</td><td class="n">1</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n d3">3</td><td class="n">2</td><td class="n">2</td><td class="n">0</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Clinic-routed reminders</td><td><span class="st p">PART</span></td><td class="n">1</td><td class="n d3">3</td><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n d3">3</td><td class="n">2</td><td class="n d3">3</td><td class="n">1</td><td class="n">0</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Vaccination certificate + verify</td><td><span class="st n">NOT</span></td><td class="n">0</td><td class="n">2</td><td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">2</td><td class="n d3">3</td><td class="n d3">3</td><td class="n">2</td><td class="n">1</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Ownership transfer + co-owners</td><td><span class="st n">NOT</span></td><td class="n">0</td><td class="n">2</td><td class="n">2</td><td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n d3">3</td><td class="n d3">3</td><td class="n">1</td><td class="n">0</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Scannable QR public page</td><td><span class="st n">NOT</span></td><td class="n">0</td><td class="n">1</td><td class="n d3">3</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n d3">3</td><td class="n">0</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Clinic Today dashboard</td><td><span class="st n">NOT</span></td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n d3">3</td><td class="n">2</td><td class="n">2</td><td class="n">0</td><td class="n">1</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Kitten-year path</td><td><span class="st n">NOT</span></td><td class="n">2</td><td class="n d3">3</td><td class="n">2</td><td class="n">2</td><td class="n d3">3</td><td class="n">2</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n">0</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Consent tiers + access log</td><td><span class="st b">BUILT</span></td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n d3">3</td><td class="n">2</td><td class="n">2</td><td class="n d3">3</td><td class="n">0</td><td><span class="t r">High-moat</span></td></tr>
+      <tr><td>Breeder / shelter batch issuance</td><td><span class="st n">NOT</span></td><td class="n">1</td><td class="n">1</td><td class="n d3">3</td><td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n d3">3</td><td class="n">2</td><td class="n">0</td><td><span class="t r">High-moat</span> (days 61–90+)</td></tr>
+      <tr><td>Recurring payments + dunning</td><td><span class="st n">BROKEN</span></td><td class="n d3">3</td><td class="n d3">3</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">2</td><td><span class="t f">Core</span></td></tr>
+      <tr><td>Subscription self-service</td><td><span class="st p">PART</span></td><td class="n">2</td><td class="n d3">3</td><td class="n">0</td><td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">2</td><td class="n">2</td><td><span class="t f">Core</span></td></tr>
+      <tr><td>ZATCA invoice + fulfilment minimum</td><td><span class="st n">NOT</span></td><td class="n d3">3</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n d3">3</td><td><span class="t f">Core</span></td></tr>
+      <tr><td>Reliability floor + event log</td><td><span class="st n">NOT</span></td><td class="n">1</td><td class="n">2</td><td class="n">1</td><td class="n d3">3</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n d3">3</td><td><span class="t f">Core</span></td></tr>
+      <tr><td>Feeding engine → box &amp; reorder</td><td><span class="st p">PART</span></td><td class="n">2</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n d3">3</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">2</td><td><span class="t f">Core</span></td></tr>
+      <tr><td>Admin Cat CRM (search, merge)</td><td><span class="st p">PART</span></td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n d3">3</td><td><span class="t f">Core</span></td></tr>
+      <tr><td>WhatsApp channel</td><td><span class="st n">NOT</span></td><td class="n">1</td><td class="n d3">3</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">2</td><td class="n">1</td><td><span class="t f">Core</span></td></tr>
+      <tr><td>Refill (autoship) + cart UI</td><td><span class="st n">NOT</span></td><td class="n d3">3</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td><span class="t f">Core</span> (year 2)</td></tr>
+      <tr><td>Google / Apple Wallet pass</td><td><span class="st p">PART</span></td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td><span class="t a">Nice-to-have</span></td></tr>
+      <tr><td>Annual cat summary / year-in-review</td><td><span class="st n">NOT</span></td><td class="n">0</td><td class="n">2</td><td class="n">2</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td><span class="t a">Nice-to-have</span></td></tr>
+      <tr><td>Clinic member-rate redemption</td><td><span class="st n">NOT</span></td><td class="n">1</td><td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td><span class="t a">Nice-to-have</span> (after live clinics)</td></tr>
+      <tr><td>Community expansion (comments, DMs, feed algorithm)</td><td>—</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td><span class="t x">Distraction</span></td></tr>
+      <tr><td>Points / wallet balance / badges / gift cards</td><td>schema only</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td><span class="t x">Distraction</span> (R041 bans points)</td></tr>
+      <tr><td>AI recommendation engine</td><td>—</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">2</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td><span class="t x">Distraction</span> (no data yet)</td></tr>
+      <tr><td>Native mobile app</td><td>—</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td><span class="t x">Distraction</span></td></tr>
+      <tr><td>Inventory / procurement modules</td><td>schema only</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">2</td><td><span class="t x">Distraction</span> until ~500 households</td></tr>
+      <tr><td>Practice-management features / tele-vet</td><td>—</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td><span class="t x">Distraction</span> (competes with clinics)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <div class="sec-k">5 · The Cat ID roadmap</div>
+  <h2>Build V2–V3 now, the V4 hooks next, and don't build V5 yet</h2>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>V1 · Identity</th><th>V2 · Ownership + essentials</th><th>V3 · Health record</th><th>V4 · Vet ecosystem</th><th>V5 · Long-term identity</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Status</strong></td><td><span class="st b">BUILT</span></td><td><span class="st p">PARTIAL</span></td><td><span class="st p">PARTIAL</span></td><td><span class="st p">PARTIAL</span> (vet side)</td><td><span class="st n">NOT</span></td></tr>
+      <tr><td><strong>Fields</strong></td><td>catNumber, name, photo, sex, birthDate, breed, coat, city, founding flag (derived)</td><td>+ microchipNo, neutered, indoor/outdoor, <strong>district</strong>, current food (brand/SKU), acquisition source (breeder / shelter / street / gift / other), emergency contact, household members (roles)</td><td>+ vaccinations (author clinic, batch, next due), weights (date, source), conditions, allergies, medications, visits (owner-safe summary), documents, vaccination status</td><td>+ home clinic, consent grants, clinic-authored entries visible by tier, prescriptions (owner view), certificates, reminder routing</td><td>+ transfer history, chip ↔ ID binding attestations, issuer (clinic / breeder / shelter), verifier reads, travel pack</td></tr>
+      <tr><td><strong>Screens</strong></td><td>Card, ceremony, share, community profile</td><td><code>/portal/cats/[id]</code> overview + "profile" tab; <strong>public <code>/c/[token]</code></strong> page</td><td><strong><code>/portal/cats/[id]/health</code></strong>: timeline, vaccines, weight chart, conditions; <strong><code>/portal/cats/[id]/privacy</code></strong> (per-cat consent)</td><td>Vet: create patient, Today dashboard. Owner: certificate download, clinic card on the cat</td><td>Transfer wizard, verifier portal, travel pack</td></tr>
+      <tr><td><strong>Flows</strong></td><td>Register → issue → ceremony</td><td>Scan QR → found-cat page → contact owner (relay); invite co-owner</td><td>Clinic writes → owner notified → opens health → acts (book / reorder / download)</td><td>Walk-in → clinic creates patient → SMS claim → owner account → ceremony</td><td>Breeder issues → buyer accepts transfer → record continues</td></tr>
+      <tr><td><strong>Permissions</strong></td><td>Owner only; public profile opt-out</td><td>OWNER (all) · CO_OWNER (all except delete/transfer) · CARER (read + care notes). Public page shows only name, photo, "registered", and a contact-relay button.</td><td>Owner sees everything; T0 is readable by any live clinic; T1/T2 by grant</td><td>Existing capability matrix; clinic always sees its own records</td><td>Transfer needs the current owner's action plus the receiver's acceptance</td></tr>
+      <tr><td><strong>Owner can</strong></td><td>Personalise, share, export card</td><td>Add chip, household, emergency contact; toggle lost mode</td><td>See and add records, download the vaccination summary, see who accessed what</td><td>Grant or revoke, get a certificate, reply to consent requests</td><td>Transfer, receive, attach chip proof</td></tr>
+      <tr><td><strong>Vet can</strong></td><td>—</td><td>Read T0 incl. chip and emergency contact</td><td>Write entries (existing)</td><td>Create patient, send claim, see patients returned</td><td>Attest chip implant; issue travel pack</td></tr>
+      <tr><td><strong>Data structure</strong></td><td><code>Cat</code> (exists)</td><td><code>Cat.district</code>, <code>Cat.acquisitionSource</code>, <code>Cat.currentFood</code>; <code>CatMember{catId,userId,role}</code>; <code>CatEmergencyContact</code> (write path); <code>Cat.lostModeAt</code></td><td>Existing <code>ClinicalEntry</code> / <code>CatVaccination</code> / <code>CatWeightRecord</code> + an owner-safe projection (no internal notes)</td><td><code>ClaimInvite{catId,branchId,phoneHash,tokenHash,expiresAt,claimedAt}</code>; <code>Certificate{catId,number,verifyToken,pdfKey}</code></td><td><code>CatTransfer{catId,from,to,status,tokenHash}</code>; issuer attestations</td></tr>
+      <tr><td><strong>Notifications</strong></td><td>ID issued</td><td>Co-owner invited / joined; lost-mode contact relay</td><td>New clinic entry; vaccine due (<strong>names the clinic</strong>); weight recorded</td><td>Claim SMS; consent request; visit summary</td><td>Transfer requested / accepted</td></tr>
+      <tr><td><strong>Integrations</strong></td><td>Google Wallet</td><td>SMS relay (Twilio)</td><td>PDF service</td><td>WhatsApp Business (days 61–90)</td><td>Practice software API; WEQAA (later)</td></tr>
+      <tr><td><strong>Privacy / security</strong></td><td>Opt-out public; photo attestation (R106)</td><td>Public page never shows owner name, phone or district; relay masks numbers; rate-limited</td><td>Internal vet notes never in the owner projection; access log stays visible</td><td>Pre-claim records are held by the clinic; the phone is hashed; claim tokens are single-use with 14-day expiry; clinic attests the owner agreed at the counter</td><td>Transfer freezes the old owner's access at acceptance; history preserved (R064)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><span class="ck">Build now <span class="t r">Recommend</span></span>
+    <p><strong>Finish V2 and V3 on the owner side, and add the single V4 feature that feeds the network: clinic-created patient + claim.</strong> V3 is already written by vets but invisible to owners, which is wasted value. The claim flow is the only piece that grows the record without paid acquisition.</p>
+    <p><strong>Defer V5</strong> (transfer, travel pack, verifier portal) to days 61–90+. It only matters once breeders and boarders are involved.</p>
+  </div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <div class="sec-k">6 · The data moat</div>
+  <h2>Collect only what gives the owner something back immediately</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Data point</th><th>Why</th><th>When / how</th><th>Who can access</th><th>Owner gets in exchange</th><th>How it improves Moracat</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td colspan="6"><strong>Essential</strong>: needed to operate</td></tr>
+      <tr><td>Owner name + mobile</td><td>Claim links, reminders, delivery</td><td>Registration (already collected) / clinic counter</td><td>Owner, Moracat ops; clinic at T1</td><td>Reminders, lost-cat contact</td><td>Reachability; channel for WhatsApp</td></tr>
+      <tr><td>Cat name, sex, approximate birth date</td><td>Identity, life stage</td><td>Registration (already)</td><td>Owner; T0 clinics</td><td>Ceremony, age-right advice</td><td>Life-stage rules, kitten wedge</td></tr>
+      <tr><td>City <strong>+ district</strong></td><td>Measure atomic networks; delivery coverage</td><td>Registration: replace the city picker with one searchable "city — district" field (no extra input, R016)</td><td>Moracat (aggregate); never public</td><td>"Clinics near you" in the directory</td><td>District density KPI, clinic sales targeting</td></tr>
+      <tr><td>Delivery address, payment token</td><td>Fulfil and charge</td><td>Checkout only, never up-front</td><td>Owner, ops</td><td>Delivery, renewals</td><td>Revenue</td></tr>
+      <tr class="hl"><td colspan="6"><strong>Strategic</strong>: personalisation and retention, collected now</td></tr>
+      <tr><td>Vaccinations with authoring clinic</td><td>The registry spine</td><td>Clinic entry (exists); owner add (exists)</td><td>Owner; T0 clinics see status; history by tier</td><td>Reminders, certificate</td><td><strong>CVAC</strong>, clinic routing</td></tr>
+      <tr><td>Weight records (date, source)</td><td>Growth curve, feeding amounts</td><td>Every clinic visit (exists); owner optional</td><td>Owner; clinics by tier</td><td>Chart, feeding adjustments</td><td>Saudi breed and age curves (future V4)</td></tr>
+      <tr><td>Microchip number</td><td>Lost cat, travel, identity binding</td><td>Clinic entry or owner in the health tab</td><td>Owner; T0 clinics (exact-match lookup only)</td><td>Findable if lost; travel-ready</td><td>ID ↔ chip standard</td></tr>
+      <tr><td>Allergies, conditions, current medications</td><td>Safety (T0)</td><td>Health tab; clinic entries</td><td>Owner; all live clinics (T0, by design)</td><td>An emergency vet knows immediately</td><td>Trust; diet exclusions in the box</td></tr>
+      <tr><td>Emergency contact</td><td>Safety when the owner can't be reached</td><td>Health tab (currently no write path)</td><td>Owner; clinics on break-glass</td><td>Peace of mind</td><td>—</td></tr>
+      <tr><td>Neutered, indoor/outdoor</td><td>Calories, vaccine risk</td><td>"Complete the file" (exists)</td><td>Owner; T0/T1</td><td>Accurate portions</td><td>Feeding engine accuracy</td></tr>
+      <tr><td>Current food (brand / product)</td><td>Refill, box match, transitions</td><td>One optional picker in the health or feeding tab</td><td>Owner; Moracat</td><td>"Keep it coming" reorder; allergy-safe swaps</td><td>Demand forecasting; Refill conversion</td></tr>
+      <tr><td>How the cat came to you (breeder / shelter / street / gift)</td><td>Channel attribution for breeder and shelter strategy; kitten-schedule confidence</td><td>One optional chip at creation</td><td>Moracat (aggregate)</td><td>Tailored first-year guidance</td><td>Breeder and shelter pipeline sizing</td></tr>
+      <tr><td>Home clinic</td><td>Reminder routing</td><td>Set automatically on first clinic entry; owner can change</td><td>Owner; that clinic</td><td>Reminders from "their" clinic</td><td>Patients-returned metric</td></tr>
+      <tr><td>Acquisition source (<code>src</code>, <code>utm_*</code>, referrer, claim clinic)</td><td>CAC by channel</td><td>First-touch cookie → attached to the user at registration</td><td>Moracat</td><td>—</td><td>Channel allocation</td></tr>
+      <tr class="hl"><td colspan="6"><strong>Future</strong>: collect only when a feature uses it</td></tr>
+      <tr><td>Body condition score, coded diagnoses, lab results</td><td>Health intelligence (V4)</td><td>Clinic entries (types exist)</td><td>By tier</td><td>Early flags routed to the vet</td><td>Saudi reference data</td></tr>
+      <tr><td>Litter type and consumption per cat</td><td>Household litter switch, forecasting</td><td>Derived from subscription contents</td><td>Moracat</td><td>Right litter at 2–3 cats</td><td>Private-label sizing</td></tr>
+      <tr><td>Transfer events, issuer attestations</td><td>V5 hand-over standard</td><td>Transfer flow</td><td>Parties to the transfer</td><td>Continuity of the record</td><td>Convention effect</td></tr>
+      <tr class="hl"><td colspan="6"><strong>Never collect</strong>: National ID/Iqama, income, precise GPS, contact lists, religion or demographics (Authority onboarding rules); identifiable data for sale to brands or insurers.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section id="s7">
+  <div class="sec-k">7 · Customer journeys</div>
+  <h2>Where each journey breaks today</h2>
+  <p class="src">Legend: solid = works · amber = partial · dashed red = missing.</p>
+
+  <h3>A · New cat owner (kitten)</h3>
+  <div class="flow"><span>Content / clinic / ad</span><i>→</i><span>Home: name the cat</span><i>→</i><span>Register</span><i>→</i><span>Cat ID ceremony</span><i>→</i><span class="part">Profile (no chip, food, source)</span><i>→</i><span class="miss">Kitten first-year plan &amp; schedule</span><i>→</i><span class="part">First box (gated; Tamara only)</span><i>→</i><span class="miss">Delivery tracking</span><i>→</i><span class="miss">Clinic connection (claim / home clinic)</span><i>→</i><span class="part">Reminders (no clinic named)</span><i>→</i><span class="miss">Graduation at ~9 months</span></div>
+  <p><strong>Friction:</strong> after the ceremony, the owner lands on a dashboard with nothing time-sensitive to do. No vaccination schedule exists for a kitten with no recorded vaccines, so the product is silent during the highest-need weeks. <strong>Missing:</strong> the life-stage schedule, a "find a clinic near you" step (directory by district), and kitten plan entry.</p>
+
+  <h3>B · Existing cat owner</h3>
+  <div class="flow"><span>Landing</span><i>→</i><span>Register cat</span><i>→</i><span class="part">Build health profile (vaccines only; key fields not editable)</span><i>→</i><span class="miss">Import history (photo of vaccine card → document)</span><i>→</i><span class="part">Recommendation (feeding engine, not tied to food they already use)</span><i>→</i><span class="part">Purchase (gated)</span><i>→</i><span class="part">Vet ecosystem (directory + consent, no visible clinic records)</span></div>
+  <p><strong>Friction:</strong> experienced owners already have a food brand and a vet. They need <em>"keep my brand coming"</em> (Refill, year 2) and <em>"my vet's records, in one place"</em> (health page + clinic claim). <strong>Quick win:</strong> let the owner upload a photo of the paper vaccine card as a document <em>and</em> enter the next due date. That feeds reminders without pretending the upload is verified.</p>
+
+  <h3>C · Multi-cat owner</h3>
+  <div class="flow"><span>Account</span><i>→</i><span>Add several cats</span><i>→</i><span>Individual profiles</span><i>→</i><span class="part">Different diets (engine per cat; not in the box)</span><i>→</i><span class="miss">Different replenishment schedules</span><i>→</i><span class="part">Consolidated checkout (household pricing, gated)</span><i>→</i><span class="miss">Co-owners / carers in the household</span></div>
+  <p><strong>Friction:</strong> adding cat #2 goes through the full creation wizard again, with no "add another" shortcut that copies the household city and district. <strong>Decision:</strong> keep one household delivery cadence (monthly). Per-cat schedules are a <em>do-not-build</em>: they multiply shipping cost on thin margins (FIN-002 shared-box logic).</p>
+
+  <h3>D · Veterinary clinic</h3>
+  <div class="flow"><span>Invite</span><i>→</i><span>Registration wizard</span><i>→</i><span>Review &amp; verify</span><i>→</i><span>Sandbox test scan</span><i>→</i><span>Go live</span><i>→</i><span class="part">Search Cat ID (walk-ins not found)</span><i>→</i><span class="miss">Create patient + claim SMS</span><i>→</i><span>Record visit &amp; entries</span><i>→</i><span class="part">Update health (no attachments UI)</span><i>→</i><span class="part">Recommend care (in-app summary only)</span><i>→</i><span class="miss">Owner returns (reminder naming clinic)</span><i>→</i><span class="miss">Clinic sees "patients returned"</span></div>
+  <p><strong>Friction:</strong> onboarding is excellent, and then the clinic's first real patient isn't in the system. <strong>This is the single highest-leverage break in the whole product.</strong></p>
+</section>
+
+<!-- ============ 8 ============ -->
+<section id="s8">
+  <div class="sec-k">8 · Information architecture</div>
+  <h2>Organise around the cat, not around the store</h2>
+  <p>Current public nav: Plans and Products (hidden when commerce is off), plus about, community and blog. Current portal nav: account-centric lists (cats, orders, subscriptions, community, notifications, settings). <span class="t r">Recommend</span> Move to <strong>cat-first</strong> structure: every care surface hangs off a cat, and account admin sits in one place.</p>
+  <div class="nav-demo">
+    <div class="panel"><h4>Public · primary</h4><ol>
+      <li><strong>Cat ID</strong> · هوية القط: what it does, and the 4 jobs</li>
+      <li><strong>Health record</strong> · السجل الصحي: how vets write it, privacy tiers</li>
+      <li><strong>Monthly care</strong> · العناية الشهرية: plans (hidden until commerce is on)</li>
+      <li><strong>Clinics</strong> · العيادات: directory by district, plus "For clinics"</li>
+      <li><strong>Community</strong> · المجتمع</li>
+    </ol><p>CTA button: <strong>«سجّل قطتك — مجاناً»</strong>. Secondary: Log in.</p></div>
+    <div class="panel"><h4>Public · secondary (footer)</h4><ul>
+      <li>For clinics (login, how it works)</li>
+      <li>Feeding calculator</li>
+      <li>Blog / guides (kitten year, vaccinations)</li>
+      <li>About, Contact, Legal, Privacy &amp; data</li>
+      <li>Found a cat? (scan / enter Cat ID)</li>
+    </ul></div>
+    <div class="panel"><h4>Portal · household home</h4><ul>
+      <li><strong>Up next</strong>: the single most time-sensitive action across all cats (a vaccine due, a box shipping, a claim to accept)</li>
+      <li>Cat rail (tap → cat)</li>
+      <li>Value kept strip (records, reminders honoured; savings once commerce is on, R041)</li>
+      <li>Household and referral card</li>
+    </ul></div>
+    <div class="panel"><h4>Portal · per cat (tabs)</h4><ol>
+      <li><strong>Overview</strong>: ID card, next due, home clinic</li>
+      <li><strong>Health</strong>: timeline, vaccines, weight, conditions, certificate</li>
+      <li><strong>Care</strong>: feeding plan, box / Refill contents</li>
+      <li><strong>Privacy</strong>: clinic access, public profile, lost mode</li>
+      <li><strong>Profile</strong>: details, household members</li>
+    </ol></div>
+    <div class="panel"><h4>Portal · account</h4><ul>
+      <li>Membership &amp; billing (subscriptions, orders, invoices, payment method)</li>
+      <li>Notifications</li>
+      <li>Settings (language, channels, security, export)</li>
+      <li>Support</li>
+    </ul></div>
+    <div class="panel"><h4>Mobile bottom pill (5)</h4><ol>
+      <li>Home</li><li>Cats</li><li>Health <small>(of the selected cat)</small></li><li>Care</li><li>Account</li>
+    </ol><p>Thumb-zone (R100). Community moves under Cats → share, and the public Community page.</p></div>
+    <div class="panel"><h4>Vet portal</h4><ol>
+      <li><strong>Today</strong>: queue of open visits, stats, patients returned</li>
+      <li><strong>Find / scan</strong>: with a <strong>"New patient"</strong> button</li>
+      <li>Patients</li><li>Visits</li>
+      <li>Clinic (branches, staff, devices, report)</li>
+    </ol></div>
+    <div class="panel"><h4>Admin</h4><ol>
+      <li>Metrics (CVAC, density, retention)</li>
+      <li>Cats (search by ID / chip / phone, merge)</li>
+      <li>Members (customers)</li>
+      <li>Subscriptions &amp; orders (fulfilment)</li>
+      <li>Clinics &amp; partners</li>
+      <li>Support · Content · Moderation · System</li>
+    </ol></div>
+  </div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section id="s9">
+  <div class="sec-k">9 · Homepage audit</div>
+  <h2>In 10 seconds: "a cute ID card" — not yet "the record my vet writes"</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Element</th><th>Today (from source)</th><th>Assessment</th></tr></thead>
+    <tbody>
+      <tr><td>Hero</td><td>Type your cat's name → live Cat ID card preview + census counter</td><td><strong>Strong</strong> for pride and belonging (R009). It shows the <em>Identity</em> job only.</td></tr>
+      <tr><td>Value proposition</td><td>Identity + census framing</td><td>Doesn't say why this is more than a novelty card. Safety and Health jobs are absent above the fold.</td></tr>
+      <tr><td>Cat ID</td><td>Central</td><td>Keep</td></tr>
+      <tr><td>Membership / essentials</td><td>Replaced by the census section when commerce is off</td><td>Correct while off (R040: don't claim a job it can't do)</td></tr>
+      <tr><td>Veterinary ecosystem</td><td>Not on the homepage</td><td><strong>The biggest miss.</strong> It's the differentiator no pet store has.</td></tr>
+      <tr><td>Trust</td><td>FAQ</td><td>No privacy-tier explainer; no "your data stays yours, export anytime"</td></tr>
+      <tr><td>Social proof</td><td>Census count; testimonials only with commerce on</td><td>Add live counts of clinics and registered cats (real numbers only, R006)</td></tr>
+      <tr><td>Saudi identity</td><td>Arabic-first, cities</td><td>Good</td></tr>
+      <tr><td>CTA / funnel</td><td>Register carrying the cat name</td><td>Good; keep one action (R005)</td></tr>
+    </tbody>
+  </table></div>
+  <h3>The homepage, section by section</h3>
+  <ol>
+    <li><strong>Hero:</strong> the name → card interaction stays. Headline shifts from identity to <em>a lifelong record</em>. Example: «هوية قطتك وسجلّها الصحي — يحفظه طبيبك، وتملكه أنت» ("Your cat's identity and health record — kept by your vet, owned by you"). The card preview gains a vaccination row. CTA: "Issue {name}'s Cat ID — free".</li>
+    <li><strong>What the ID does (4 jobs):</strong> Safety (scan to reach you), Health (vet-written record + reminders), Identity. Add Value only when commerce is live (R040).</li>
+    <li><strong>Your vet writes it:</strong> a 3-step visual (scan → clinic records the vaccine → reminder names the clinic), a live count of connected clinics, "Find a clinic in your district", and a link to For clinics.</li>
+    <li><strong>New kitten?</strong> The first-year path: vaccine schedule preview from an entered age. This is the wedge entry, even before commerce.</li>
+    <li><strong>Monthly care</strong> (commerce on only): a true-month box, the value ledger versus market, one plan highlighted.</li>
+    <li><strong>Privacy you control:</strong> consent tiers in plain words, access log, export, "leaving is easy" (R010, R106).</li>
+    <li><strong>Community proof:</strong> real registered cats with photos, and the census count.</li>
+    <li><strong>FAQ</strong></li>
+    <li><strong>For clinics band:</strong> "Return your patients to you" → clinic info page.</li>
+    <li><strong>Closing invite:</strong> name field again.</li>
+  </ol>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <div class="sec-k">10 · Membership product</div>
+  <h2>Make recurring revenue real before making it richer</h2>
+  <div class="decision"><b class="k">Founder decision required first</b>
+    <p>The checkout promises <strong>"No automatic renewal — ever"</strong> (<code>checkout/page.tsx:638</code>). MRC-FIN-002 commits to <strong>default monthly auto-renew</strong> with notice at T-7 days. The API implements auto-renew, but it can never charge.</p>
+    <p><span class="t r">Recommend</span> <strong>Explicit opt-in auto-renew</strong>: a visible, unticked-by-default choice at checkout. Show full price, cycle and next charge date on one line (R021). Send a WhatsApp and email notice 7 days and 1 day before each charge (R025). Skip or pause in one tap from the notice. Keep "invite to renew" for anyone who doesn't opt in. Honest, compliant with the authority, and still recovers most of the LTV.</p>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h4>Build (days 31–60)</h4><ul>
+      <li><strong>Moyasar tokenized card</strong> (3-D Secure) with mada, Apple Pay and Visa/MC; write <code>PaymentMethod</code>; Tamara stays for prepaid terms</li>
+      <li>Opt-in auto-renew toggle at checkout and in subscriptions</li>
+      <li>Renewal notices T-7 / T-1 with skip and pause links</li>
+      <li>Dunning ladder: retry day 0 / 2 / 5, a grace week, then a dignified lapse (R118)</li>
+      <li>Skip-next-box button (the API exists)</li>
+      <li>Cancel with one optional reason chip (no guilt, R068)</li>
+      <li>Plan change effective next cycle</li>
+      <li>Value ledger on the subscription page (market basket vs price), from <code>marketPrice</code></li>
+      <li>Payment method management (replace card)</li>
+    </ul></div>
+    <div class="panel"><h4>Don't build yet</h4><ul>
+      <li>Custom delivery frequencies or per-cat schedules</li>
+      <li>À-la-carte cart and add-on marketplace (Refill is year 2)</li>
+      <li>Gift subscriptions</li>
+      <li>Loyalty points, wallet credit, status tiers</li>
+      <li>Prepay gift machinery (needs physical gift SKUs)</li>
+      <li>A paid membership fee on top of a plan (Chewy+ reached 4%)</li>
+      <li>Referral cash credits</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <div class="sec-k">11 · Personalisation engine</div>
+  <h2>V1 is five deterministic rules in <code>packages/core</code></h2>
+  <p>No machine learning until there are about 50,000 clinic-verified cats. Every rule is pure, tested and bilingual, and imported by both the API and the web app, the same pattern as <code>vet-permissions.ts</code>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Rule</th><th>Inputs</th><th>Output</th><th>Surfaces</th></tr></thead>
+    <tbody>
+      <tr><td><strong>life-stage</strong></td><td>birthDate</td><td>KITTEN (&lt;12 mo) · ADULT · SENIOR (≥10 y)</td><td>Home "up next", plan recommendation, content</td></tr>
+      <tr><td><strong>vaccine-schedule</strong></td><td>birthDate, recorded vaccinations, lifestyle (indoor/outdoor)</td><td>Next due items with windows; overdue state</td><td>Health tab, reminders, kitten path. <em>The schedule table needs sign-off from a Saudi vet before launch</em> (core series 8/12/16 weeks, then booster; rabies per MEWA rules).</td></tr>
+      <tr><td><strong>feeding</strong> (exists)</td><td>weight, age, activity, neutered, indoor, dry share, cats</td><td>Daily grams, pouches, litter kg</td><td>Care tab; box contents (days 61–90)</td></tr>
+      <tr><td><strong>reorder-timing</strong></td><td>Box contents ÷ feeding output per cat</td><td>Days of supply left → "renewal ships on"</td><td>Renewal notice; later Refill</td></tr>
+      <tr><td><strong>weight-watch</strong></td><td>≥2 weight records</td><td>"Changed more than 10% in 3 months — worth mentioning at the next visit" (never a diagnosis)</td><td>Health tab; reminder routes to the home clinic</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 12 & 13 ============ -->
+<section id="s12">
+  <div class="sec-k">12–13 · Retention engine &amp; viral loop</div>
+  <h2>Useful reasons to come back, and invitations that come from use</h2>
+  <div class="grid2">
+    <div class="panel"><h4>Genuinely useful: build</h4><ul>
+      <li>Vaccination reminders naming the clinic (exists; fix it)</li>
+      <li>Renewal notice with skip and pause</li>
+      <li>Health timeline with new-entry notification</li>
+      <li>Kitten graduation moment (a real stage change)</li>
+      <li>Birthday and membership anniversary (exists)</li>
+      <li>Delivery "shipped / arriving" status</li>
+      <li>Honest value ledger (commerce on)</li>
+      <li>Pause instead of cancel (R062)</li>
+    </ul></div>
+    <div class="panel"><h4>Gimmicks: don't build</h4><ul>
+      <li>Points, streaks, badges, spin-to-win</li>
+      <li>Community likes as a retention lever</li>
+      <li>"We miss you" discount win-backs (R069)</li>
+      <li>Weekly generic content emails</li>
+      <li>Annual summary: <em>later</em>, once there's a year of real records</li>
+    </ul></div>
+  </div>
+  <h3>The simplest viable referral mechanism</h3>
+  <p>No rewards engine. Four invitations that happen naturally while using the record:</p>
+  <ol>
+    <li><strong>Clinic claim link</strong> (F1): the clinic invites the owner. This is the largest channel.</li>
+    <li><strong>Household invite</strong> (F12): "Add Sara as a co-owner of Luna." Co-owners register.</li>
+    <li><strong>Public QR page</strong> (F5): the finder sees "Give your cat an ID like Luna's."</li>
+    <li><strong>Share card / story</strong> (exists), with <code>?ref=</code> attached (exists).</li>
+  </ol>
+  <p>Measure each with <code>invite_sent</code> / <code>invite_accepted</code> by type. When commerce is on, add a first-box gift for both parties (recognition, not cash).</p>
+</section>
+
+<!-- ============ 14 ============ -->
+<section id="s14">
+  <div class="sec-k">14 · Veterinary ecosystem</div>
+  <h2>What each side needs, now versus later</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Interface</th><th>Build now (≤60 days)</th><th>Later</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Owner</strong></td><td>Health page (owner-safe projection of entries, vaccinations, weights, prescriptions summary); per-cat privacy page (grants, access log, pending consent requests); claim acceptance; certificate download; home clinic card with contact / WhatsApp</td><td>Consent request queue model; booking; member-rate proof; transfer</td></tr>
+      <tr><td><strong>Vet</strong></td><td>"New patient" (cat + owner mobile) → claim SMS; attachment upload via presigned URL (PDF and images); certificate print; reminder routing to own clinic</td><td>Owner messaging thread; recall lists; practice-software sync; offline signed QR</td></tr>
+      <tr><td><strong>Clinic admin</strong></td><td><code>/vet/org/summary</code>: verifications, entries written, new patients created, claims accepted, reminders sent, patients returned (reminder → contact tap); clinic contact and WhatsApp fields used in reminders</td><td>Clinic Pro (flat SaaS); Care Plans; multi-branch analytics; staff 2FA required</td></tr>
+      <tr><td><strong>Moracat admin</strong></td><td>Network page: clinics live, entries per clinic per month (flag if &lt;5), CVAC by clinic and district; duplicate cat merge (claim flow creates duplicates)</td><td>Density map; clinic health score; payouts (only with Care Plans)</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Visibility rules stay as built:</strong> T0 is universal; the clinic sees its own entries; T1/T2 are by grant; break-glass is audit-only. Owner projection rule: <strong>internal notes and drafts are never shown to owners</strong>; amended entries show their latest revision with an "amended" marker; retracted entries are hidden.</p>
+  <p><strong>Discount verification: defer.</strong> This conflicts with DESIGN-AUTHORITY "Critical v1: one-tap redemption". There are no live clinics honouring member rates, and R040 says never claim a job the ID can't do yet. <span class="t r">Recommend</span> A dated amendment to the Authority moving redemption behind "≥15 live clinics".</p>
+</section>
+
+<!-- ============ 15 ============ -->
+<section id="s15">
+  <div class="sec-k">15 · Admin &amp; backend</div>
+  <h2>Internal tools the strategy actually needs</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Tool</th><th>Gap</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td>Cat CRM</td><td>Search by Cat ID, chip or phone; cat detail with record summary; <strong>merge duplicates</strong></td><td>Days 1–30 (claim flow creates duplicates)</td></tr>
+      <tr><td>Metrics</td><td>CVAC, district density, claims, entries per clinic, registrations by source, graduation, month-3 retention, churn voluntary/involuntary. Rename <code>/admin/reports</code> to Moderation.</td><td>Days 1–30 (core), 61–90 (full)</td></tr>
+      <tr><td>Subscriptions</td><td>List with filters; dunning queue; change plan; auto-renew state</td><td>Days 31–60</td></tr>
+      <tr><td>Orders / fulfilment</td><td>Pick/pack list (CSV/print), tracking number entry that writes <code>Shipment</code>, shipped/delivered notifications</td><td>Days 31–60</td></tr>
+      <tr><td>Payments</td><td>Payments list; invoice PDF with ZATCA QR; credit notes on refund</td><td>Days 31–60</td></tr>
+      <tr><td>Clinics</td><td>Exists; add a network health view</td><td>Days 31–60</td></tr>
+      <tr><td>Support</td><td>Assignment and internal notes</td><td>Days 61–90</td></tr>
+      <tr><td>Notifications</td><td>WhatsApp template registry; send log per member</td><td>Days 61–90</td></tr>
+      <tr><td>Inventory / procurement</td><td>Schema only. Keep using spreadsheet and distributor until ~500 households.</td><td>Later</td></tr>
+      <tr><td>Referral / loyalty / coupons admin</td><td>Not needed</td><td>Don't build</td></tr>
+      <tr><td>Broadcast marketing</td><td>Not needed; use the email provider's tools</td><td>Don't build</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">Housekeeping (not roadmap): fix the dashboard waitlist tile URL; delete the <code>/vet/apply</code> page (its API returns 410); fix the <code>/plans</code> 403 on the coming-soon page; stop the profile journey sending <code>allergies: []</code>. Freeze the ~50 schema-only models, and don't build on them without a roadmap item.</p>
+</section>
+
+<!-- ============ 16 ============ -->
+<section id="s16">
+  <div class="sec-k">16 · Analytics</div>
+  <h2>A first-party event log, not a tag zoo</h2>
+  <p><strong>Architecture</strong> <span class="t r">Recommend</span></p>
+  <ul>
+    <li>A <code>ProductEvent</code> table: <code>id, name, occurredAt, userId?, catId?, orgId?, anonId?, props jsonb, source(web|api|cron)</code>. Written <strong>server-side</strong> from services, so it works with ad-blockers and without consent-dependent pixels.</li>
+    <li>A nightly <code>metrics</code> cron rolls it into <code>MetricSnapshot(date, key, dims, value)</code> for the admin metrics page.</li>
+    <li>Client-side marketing pixels (Snap, TikTok, Meta) stay consent-gated and optional for paid campaigns only. Restore them with the rolled-back work once a consent banner is live.</li>
+    <li>Pseudonymous IDs only in <code>props</code>; no phone or email.</li>
+  </ul>
+  <div class="tw"><table>
+    <thead><tr><th>Domain</th><th>Events (<code>snake_case</code>) · key props</th></tr></thead>
+    <tbody>
+      <tr><td>Acquisition</td><td><code>visit_landed</code> {src, utm_source, utm_medium, utm_campaign, referrer, path} (client → first-touch cookie) · <code>registration_started</code> {method} · <code>registration_completed</code> {method, src, first_touch} · <code>referral_link_opened</code> {code} · <code>invite_sent</code> / <code>invite_accepted</code> {type: clinic_claim|household|qr|share}</td></tr>
+      <tr><td>Cat</td><td><code>cat_id_issued</code> {origin: owner|clinic_claim|breeder, city, district, life_stage, is_first} · <code>cat_profile_updated</code> {fields} · <code>cat_claimed</code> {branch_id, hours_to_claim} · <code>cat_merged</code> · <code>cat_qr_scanned</code> {context: public|vet} · <code>lost_mode_toggled</code> · <code>household_member_added</code> {role}</td></tr>
+      <tr><td>Health &amp; vet</td><td><code>clinic_patient_created</code> {branch_id} · <code>claim_sms_sent</code> · <code>clinical_entry_written</code> {type, branch_id, role} · <code>vaccination_recorded</code> {source: clinic|owner} · <code>health_page_viewed</code> {cat_id} · <code>certificate_generated</code> {by: owner|vet} · <code>certificate_verified</code> · <code>reminder_sent</code> {kind, channel, branch_id} · <code>reminder_clicked</code> {action: contact_clinic|open_record} · <code>consent_granted</code> / <code>consent_revoked</code> {tier} · <code>emergency_access_used</code> · <code>clinic_went_live</code> · <code>clinic_summary_viewed</code></td></tr>
+      <tr><td>Membership</td><td><code>plan_viewed</code> {tier} · <code>checkout_started</code> {tier, cats, term} · <code>payment_method_saved</code> {brand: mada|applepay|card} · <code>subscription_activated</code> {tier, cats, term, provider, auto_renew} · <code>renewal_notice_sent</code> {days_before} · <code>renewal_charged</code> / <code>renewal_failed</code> {attempt} · <code>subscription_paused</code> / <code>resumed</code> / <code>skipped</code> · <code>subscription_cancelled</code> {reason} · <code>plan_changed</code> {from, to} · <code>kitten_graduated</code> {to} · <code>order_shipped</code> / <code>order_delivered</code></td></tr>
+      <tr><td>Product</td><td><code>portal_active</code> (daily, dedupe) · <code>notification_opened</code> {kind, channel} · <code>support_ticket_opened</code> {category} · <code>record_exported</code> · <code>error_shown</code> {code, surface}</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Derived nightly:</strong> CVAC; district clinic density; registrations by origin and source; claim rate (claims ÷ patients created) and hours-to-claim; reminder → clinic contact rate; free → paid conversion within 90 days; month-3 retention; voluntary/involuntary churn; kitten graduation; cats per household; feature adoption (health page views per active owner).</p>
+</section>
+
+<!-- ============ 17 ============ -->
+<section id="s17">
+  <div class="sec-k">17 · Technical architecture</div>
+  <h2>Extend the stack; change almost nothing</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Layer</th><th>Keep</th><th>Change / add</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td>Hosting &amp; scheduler</td><td>Render (API), Vercel (web), Neon</td><td><strong>Render paid instance (no sleep)</strong>; Postgres advisory lock around each cron job; dead-man heartbeat alert (e.g. Healthchecks) per job; uptime monitor on <code>/health</code></td><td>Days 1–7</td></tr>
+      <tr><td>Database</td><td>Prisma schema</td><td><code>ProductEvent</code>, <code>MetricSnapshot</code>, <code>ClaimInvite</code>, <code>Cat.district</code>, <code>Cat.acquisitionSource</code>, <code>Cat.currentFood</code>, <code>User.firstTouch</code> (json); later <code>CatMember</code>, <code>CatTransfer</code>, <code>Certificate</code>. Start writing the existing <code>PaymentMethod</code>, <code>Shipment</code> and <code>CatEmergencyContact</code> models.</td><td>Days 1–90</td></tr>
+      <tr><td>Backups</td><td>Neon</td><td>Confirm PITR retention; run and document a restore drill</td><td>Days 1–14</td></tr>
+      <tr><td>Auth</td><td>JWT + refresh + TOTP</td><td>Require TOTP for admin and clinic OWNER/MANAGER; restore Turnstile on registration and the claim endpoint (both hostnames allowed). Move to httpOnly cookie refresh once the API is on <code>api.moracat.co</code>.</td><td>Days 31–90</td></tr>
+      <tr><td>Payments</td><td>Adapter factory, webhooks, idempotency</td><td>Moyasar token flow (mada / Apple Pay) in checkout; <code>PaymentMethod</code> writes; retry ladder in lifecycle</td><td>Days 31–60</td></tr>
+      <tr><td>Notifications</td><td>Resend email, in-app, Twilio</td><td>A <code>Channel</code> abstraction (email / sms / whatsapp / in-app) that <strong>reads <code>NotificationPreference</code></strong>; SMS for claim links now; WhatsApp Business Cloud API templates in days 61–90; quiet hours around prayer times (R107)</td><td>Days 1–90</td></tr>
+      <tr><td>Documents / PDF</td><td>—</td><td>HTML → PDF with headless Chromium in the API Docker image (correct Arabic shaping; react-pdf mangles it); stored in the <strong>private bucket</strong>; verify page by token</td><td>Days 31–45</td></tr>
+      <tr><td>File storage</td><td>R2</td><td>Set <code>S3_PRIVATE_BUCKET</code> (open ops item); presigned PUT for vet attachments (PDF + images)</td><td>Days 1–45</td></tr>
+      <tr><td>Cat ID / QR</td><td>Opaque token</td><td>QR encodes <code>https://moracat.co/c/&lt;token&gt;</code>; the vet scanner accepts both formats; public route is rate-limited</td><td>Days 1–30</td></tr>
+      <tr><td>Search</td><td>Prisma <code>contains</code></td><td><code>pg_trgm</code> index on cat name, owner phone and chip once admin search is slow. Not needed now.</td><td>Later</td></tr>
+      <tr><td>Recommendations</td><td>Core feeding engine</td><td>Rule modules in <code>packages/core</code> (§11). No ML service.</td><td>Days 61–90</td></tr>
+      <tr><td>Analytics</td><td><code>track.ts</code></td><td><code>ProductEvent</code> service + nightly rollup + admin metrics page</td><td>Days 1–30</td></tr>
+      <tr><td>Monitoring</td><td>Sentry wiring</td><td>Set DSNs in both apps; alert on cron heartbeat misses and webhook failures; run web unit tests in CI</td><td>Days 1–14</td></tr>
+      <tr><td>Data residency (PDPL)</td><td>EU hosting</td><td><strong>Now:</strong> a written transfer risk assessment and SDAIA-compliant transfer contracts, plus a privacy page that says so plainly (R106). <strong>Don't re-host yet</strong>; revisit at about 10k CVAC or at a regulator or partner request.</td><td>Days 1–30 (legal)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 18 ============ -->
+<section id="s18">
+  <div class="sec-k">18 · Prioritisation</div>
+  <h2>Four buckets</h2>
+  <div class="grid2">
+    <div class="panel"><h4>Build now · days 1–30</h4><ol>
+      <li><strong>Reliability floor</strong>: every reminder and renewal depends on a scheduler that currently sleeps.</li>
+      <li><strong>Event log + attribution + CVAC</strong>: every later decision needs it, and CVAC is the north star.</li>
+      <li><strong>Owner health page + per-cat privacy page + health field inputs</strong>: makes existing vet data visible, fixes two 404 links and the allergy wipe.</li>
+      <li><strong>Clinic-created patient + SMS claim + duplicate merge</strong>: the break that stops the network from forming.</li>
+      <li><strong>Reminders that name and route to the clinic</strong> (+ preferences respected): the clinic's reason to use Moracat.</li>
+      <li><strong>Scannable QR → public cat page</strong>: the Safety job becomes real, and it acquires new owners.</li>
+    </ol></div>
+    <div class="panel"><h4>Build next · days 31–90</h4><ol>
+      <li>Recurring payments (Moyasar token, opt-in auto-renew, dunning) — after the founder decision</li>
+      <li>Subscription self-service completion</li>
+      <li>Vaccination certificate PDF + verify</li>
+      <li>Clinic Today dashboard (<code>/vet/org/summary</code>)</li>
+      <li>ZATCA invoice + fulfilment minimum + admin subscriptions</li>
+      <li>Kitten-year path (schedule, graduation)</li>
+      <li>Household co-owners + ownership transfer</li>
+      <li>WhatsApp channel + quiet hours</li>
+      <li>Vet attachment upload (presigned)</li>
+      <li>Homepage re-sequence (vet story, kitten entry)</li>
+    </ol><p>Why here: each depends on a Build-now item, or on a business gate (VAT registration, Moyasar live keys, COGS negotiation).</p></div>
+    <div class="panel"><h4>Build later · scale, data or partner dependent</h4><ul>
+      <li>Breeder / shelter batch issuance (needs 10+ willing breeders)</li>
+      <li>Refill autoship + cart UI (year 2)</li>
+      <li>Clinic member-rate redemption (≥15 live clinics)</li>
+      <li>Care Plans, Clinic Pro billing (year 3)</li>
+      <li>Practice-software API, API keys, webhooks</li>
+      <li>Weight-curve intelligence (≥50k CVAC)</li>
+      <li>Travel pack, WEQAA integration</li>
+      <li>Inventory / procurement tooling (~500 households)</li>
+      <li>Apple Wallet pass, annual cat summary</li>
+      <li>In-Kingdom hosting</li>
+    </ul></div>
+    <div class="panel"><h4>Do not build yet</h4><ul>
+      <li>Native app: the web portal hasn't proven retention.</li>
+      <li>AI recommendations or a chat assistant: no data, and clinical liability.</li>
+      <li>Community comments, DMs, feed ranking: no moat, adds moderation load.</li>
+      <li>Points, wallet balance, badges, gift cards: the Authority bans points; zero moat.</li>
+      <li>Per-cat delivery schedules: shipping cost on thin margins.</li>
+      <li>Tele-vet or practice-management features: compete with the clinics we need.</li>
+      <li>Broad catalogue store: turns Moracat into a weak Petzone.</li>
+      <li>Insurance quote flows: year 4.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- ============ 19 ============ -->
+<section id="s19">
+  <div class="sec-k">19 · 90-day product roadmap</div>
+  <h2>Foundation → Data → Habit, in three sprints</h2>
+  <p class="src">Days 1–30 features are ticketed in full in §20. Effort: S ≤1 week · M 1–2 weeks · L 3–4 weeks, for one engineer working with Claude Code. Days 1–30 total roughly 7–9 engineer-weeks, so it is tight: <strong>cut QR (F5) to day 35 before cutting anything else</strong>.</p>
+
+  <h3>Days 1–30 · Foundation + the record loop</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Feature</th><th>User</th><th>Purpose</th><th>Key events</th><th>Effort</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td>T1 · Reliability floor</td><td>Team</td><td>Reminders and renewals never silently skip</td><td><code>cron_run</code> (internal)</td><td>S</td><td>P0</td></tr>
+      <tr><td>T2 · Event log, attribution, CVAC</td><td>Team</td><td>Measure the loop</td><td>All §16 acquisition + cat events</td><td>M</td><td>P0</td></tr>
+      <tr><td>T3 · Owner health &amp; privacy pages</td><td>Owner</td><td>Make vet-written records visible</td><td><code>health_page_viewed</code>, <code>cat_profile_updated</code></td><td>M</td><td>P0</td></tr>
+      <tr><td>T4 · Clinic-created patient + claim + merge</td><td>Reception, owner, ops</td><td>Walk-ins enter the record</td><td><code>clinic_patient_created</code>, <code>claim_sms_sent</code>, <code>cat_claimed</code>, <code>cat_merged</code></td><td>L</td><td>P0</td></tr>
+      <tr><td>T5 · Clinic-routed reminders</td><td>Owner, clinic</td><td>Return patients to their clinic</td><td><code>reminder_sent</code>, <code>reminder_clicked</code></td><td>S</td><td>P0</td></tr>
+      <tr><td>T6 · Scannable QR public page</td><td>Finder, owner, clinic</td><td>Safety job; exposure to non-members</td><td><code>cat_qr_scanned</code>, <code>lost_mode_toggled</code></td><td>S–M</td><td>P1</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Days 31–60 · Habit: money that recurs, proof that travels</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Feature</th><th>User · story</th><th>Acceptance (key)</th><th>Backend</th><th>Frontend</th><th>Events</th><th>Deps</th><th>Pri</th></tr></thead>
+    <tbody>
+      <tr><td>T7 · Recurring payments</td><td>Owner: "pay with mada or Apple Pay once and choose whether my plan renews"</td><td>Card tokenized with 3DS; <code>PaymentMethod</code> saved; auto-renew is off unless ticked; T-7 and T-1 notices; retries on day 0/2/5; lapse after the grace week with records kept</td><td>Moyasar token adapter in checkout; lifecycle retry ladder; notice jobs</td><td>Payment step (mada / Apple Pay first); auto-renew toggle with the R021 line; card management</td><td><code>payment_method_saved</code>, <code>renewal_*</code></td><td>Founder decision; Moyasar live keys</td><td>P0</td></tr>
+      <tr><td>T8 · Subscription self-service</td><td>Owner: "skip, pause, change or cancel without contacting anyone"</td><td>Skip button; cancel with optional reason; plan change applies next cycle and shows the new price before confirming</td><td>Plan-change endpoint; reason enum</td><td>Subscription page actions</td><td><code>subscription_*</code>, <code>plan_changed</code></td><td>T7</td><td>P1</td></tr>
+      <tr><td>T9 · Vaccination certificate + verify</td><td>Owner: "show a boarder proof Luna is vaccinated"</td><td>Bilingual PDF lists clinic-authored vaccinations only (owner-entered ones marked "self-reported"); QR opens a verify page showing validity and issue date, with no owner data</td><td><code>Certificate</code> model; Chromium PDF; private bucket; verify route</td><td>Health tab "Download certificate"; vet print button</td><td><code>certificate_generated</code>, <code>certificate_verified</code></td><td>T3</td><td>P1</td></tr>
+      <tr><td>T10 · Clinic Today dashboard</td><td>Clinic owner: "see what Moracat did for my clinic this month"</td><td><code>/vet/org/summary</code> returns verifications, entries, patients created, claims, reminders sent and contact taps for 7 and 30 days; the page renders it; no silent 404</td><td>Summary query over events and records</td><td>Today stat cards</td><td><code>clinic_summary_viewed</code></td><td>T2, T5</td><td>P1</td></tr>
+      <tr><td>T11 · ZATCA invoice + fulfilment minimum</td><td>Ops: "ship boxes and issue compliant invoices"</td><td>Simplified tax invoice PDF with ZATCA QR (seller, VAT no., time, total, VAT); credit note on refund; pick list CSV; tracking entry writes <code>Shipment</code> and notifies the owner; admin subscriptions list</td><td>Invoice generator; <code>Shipment</code> writes; list endpoints</td><td>Admin fulfilment and subscriptions pages; portal tracking</td><td><code>order_shipped</code>, <code>order_delivered</code></td><td>VAT registration; accountant confirms the phase (wave)</td><td>P0 for commerce</td></tr>
+      <tr><td>T12 · Vet attachment upload</td><td>Vet: "attach a lab PDF to the entry"</td><td>Presigned upload for PDF or image up to 10MB into the private bucket; attachment visible by tier</td><td>Presign endpoint; MIME check</td><td>Entry composer file picker</td><td><code>clinical_entry_written</code> {has_attachment}</td><td>Private bucket</td><td>P2</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Days 61–90 · Network: the wedge and hand-overs</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Feature</th><th>User · story</th><th>Acceptance (key)</th><th>Backend</th><th>Frontend</th><th>Events</th><th>Deps</th><th>Pri</th></tr></thead>
+    <tbody>
+      <tr><td>T13 · Kitten-year path</td><td>New owner: "know exactly what my kitten needs this month"</td><td>For a cat under 12 months: schedule shown with windows; reminders for each dose; kitten plan recommended; at 9 months a graduation prompt with a plan comparison</td><td><code>core/vaccine-schedule</code>, <code>core/life-stage</code>; lifecycle graduation job</td><td>Health tab kitten timeline; home "up next"; graduation moment (motion rationed, R073)</td><td><code>kitten_graduated</code>, <code>reminder_*</code></td><td>T3, T5; vet sign-off on the schedule</td><td>P0</td></tr>
+      <tr><td>T14 · Co-owners + transfer</td><td>Family: "my wife sees Luna's record"; breeder: "hand the kitten's record to the buyer"</td><td>Invite by mobile with a role; the invitee accepts; transfer requires both sides; old owner loses access; history kept</td><td><code>CatMember</code>, <code>CatTransfer</code>; authorisation moves from <code>Cat.userId</code> to membership</td><td>Profile → Household; Transfer wizard</td><td><code>household_member_added</code>, <code>invite_*</code>, <code>cat_transferred</code></td><td>T3</td><td>P1</td></tr>
+      <tr><td>T15 · WhatsApp channel</td><td>Owner: "get reminders where I actually read them"</td><td>Approved Arabic and English templates for vaccine due, renewal notice, claim link and shipped; opt-in respected; quiet hours; falls back to SMS or email</td><td>Channel abstraction + WhatsApp Cloud API provider; template registry</td><td>Settings channel choice</td><td><code>notification_opened</code> {channel}</td><td>Meta Business verification</td><td>P1</td></tr>
+      <tr><td>T16 · Admin metrics + network</td><td>Founder: "see CVAC, density and retention weekly"</td><td>Metrics page from <code>MetricSnapshot</code>; clinic list with entries per month and a &lt;5 flag</td><td>Nightly rollup</td><td>Admin metrics and network pages</td><td>—</td><td>T2</td><td>P1</td></tr>
+      <tr><td>T17 · Homepage re-sequence</td><td>Visitor: "understand in 10 seconds this is more than a pet shop"</td><td>§9 sections live in Arabic and English; real counts only; one CTA; the Authority checklist passes</td><td>Public counts endpoint (clinics live, cats)</td><td>Home sections</td><td><code>visit_landed</code>, <code>registration_started</code></td><td>T10 counts</td><td>P2</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 20 ============ -->
+<section id="s20">
+  <div class="sec-k">20 · Build-now tickets</div>
+  <h2>Development tickets for days 1–30</h2>
+
+  <div class="ticket">
+    <h3>Feature: T1 · Reliability floor</h3>
+    <div class="us">As the <strong>Moracat team</strong>, I want every scheduled job to run on time or alert us, so that no vaccination reminder or renewal notice is ever silently missed.</div>
+    <h4>Acceptance criteria</h4><ol>
+      <li>The API runs on an always-on Render instance; <code>/health</code> is monitored every minute with an alert on failure.</li>
+      <li>Each lifecycle job takes a Postgres advisory lock, so two instances can never double-run it.</li>
+      <li>Each job pings a heartbeat on success; a missed run alerts within 2 hours.</li>
+      <li>Sentry DSNs are set in web and API; a test error appears in Sentry.</li>
+      <li>A Neon point-in-time restore is performed into a branch, documented in <code>DEPLOY.md</code>.</li>
+    </ol>
+    <h4>Backend</h4><ul><li><code>withJobLock(name, fn)</code> wrapper using <code>pg_try_advisory_lock</code>; heartbeat URL per job from env; <code>render.yaml</code> plan change.</li></ul>
+    <h4>Frontend</h4><ul><li>None.</li></ul>
+    <h4>Analytics</h4><ul><li><code>cron_run</code> {job, duration_ms, ok}, internal only.</li></ul>
+    <h4>Dependencies</h4><ul><li>Render billing; Sentry project; heartbeat service account.</li></ul>
+  </div>
+
+  <div class="ticket">
+    <h3>Feature: T2 · Event log, first-touch attribution and CVAC</h3>
+    <div class="us">As the <strong>founder</strong>, I want every registration, record write and reminder recorded with its source, so that I can see clinic-verified active cats and CAC by channel every week.</div>
+    <h4>Acceptance criteria</h4><ol>
+      <li>A <code>ProductEvent</code> row is written server-side for every event in §16's acquisition, cat and health groups; failures never break the user's action.</li>
+      <li>A first visit stores <code>src</code>, <code>utm_*</code>, referrer and landing path in a first-party cookie; registration copies it to <code>User.firstTouch</code>.</li>
+      <li>A nightly job writes <code>MetricSnapshot</code> rows for CVAC (clinic entry ≤13 months and owner active ≤90 days), cats by origin and source, and claims.</li>
+      <li><code>/admin</code> shows CVAC, cats registered (7/30 days) and registrations by source, from snapshots.</li>
+      <li>No phone numbers, emails or names appear in <code>props</code>.</li>
+    </ol>
+    <h4>Backend</h4><ul><li>Models <code>ProductEvent</code>, <code>MetricSnapshot</code>, <code>User.firstTouch</code>; <code>EventsService.emit()</code> (fire-and-forget, batched); calls in auth, cats, vet-records, lifecycle; rollup job (uses T1 lock).</li></ul>
+    <h4>Frontend</h4><ul><li>Middleware or client script sets the first-touch cookie; the <code>track.ts</code> helpers post <code>visit_landed</code> to <code>POST /events</code> (rate-limited, allow-listed names).</li></ul>
+    <h4>Analytics</h4><ul><li>This ticket <em>is</em> the analytics.</li></ul>
+    <h4>Dependencies</h4><ul><li>T1 (the rollup job needs a reliable scheduler).</li></ul>
+  </div>
+
+  <div class="ticket">
+    <h3>Feature: T3 · Owner health and privacy pages</h3>
+    <div class="us">As a <strong>cat owner</strong>, I want to see everything my vet recorded about Luna and control who can read it, so that her record is complete, trustworthy and mine.</div>
+    <h4>Acceptance criteria</h4><ol>
+      <li><code>/portal/cats/[id]/health</code> shows a timeline of clinic visits and entries (owner-safe projection: no drafts or internal notes; amended entries show the latest version; retracted entries hidden), vaccinations with authoring clinic and next due, a vaccination status badge from <code>vaccination-status.ts</code>, and a weight chart from <code>CatWeightRecord</code>.</li>
+      <li>The owner can add or edit microchip, allergies, conditions, current medications, one emergency contact and current food. Saving the profile no longer resets allergies.</li>
+      <li><code>/portal/cats/[id]/privacy</code> shows clinic grants (grant/revoke), the access log for that cat, public profile toggle and lost mode (T6).</li>
+      <li>Existing notification links (<code>vet-visits.service.ts:394</code>, <code>vet-records.service.ts:661</code>, <code>vet-consent.service.ts:104</code>, <code>vet-emergency.service.ts:173</code>) open these pages, with no 404s.</li>
+      <li>Empty state for a cat with no records invites the owner to add a vaccine or photograph the paper card (R111). Arabic/RTL correct, 44px targets, contrast ≥4.5:1.</li>
+    </ol>
+    <h4>Backend</h4><ul><li><code>GET /cats/:id/health</code> (owner-safe projection; owner or co-owner only); <code>PUT /cats/:id/emergency-contact</code>; <code>PATCH /cats/:id/health-profile</code> (chip, allergies, conditions, meds, current food) with patch semantics; fix the journey payload; migration for <code>Cat.currentFood</code>.</li></ul>
+    <h4>Frontend</h4><ul><li>Two new routes under the cat; reuse <code>cat-health-panel</code>, the access ledger and consent card; a weight chart in tokens; per-cat tabs (§8).</li></ul>
+    <h4>Analytics</h4><ul><li><code>health_page_viewed</code>, <code>cat_profile_updated</code> {fields}, <code>consent_granted</code> / <code>consent_revoked</code>.</li></ul>
+    <h4>Dependencies</h4><ul><li>T2 (events). The Design Authority review checklist.</li></ul>
+  </div>
+
+  <div class="ticket">
+    <h3>Feature: T4 · Clinic-created patient, SMS claim and duplicate merge</h3>
+    <div class="us">As a <strong>receptionist</strong>, I want to register a walk-in cat with just its name and the owner's mobile, so that the vet can record the visit now and the owner receives the Cat ID afterwards.</div>
+    <h4>Acceptance criteria</h4><ol>
+      <li>On a live clinic, "New patient" takes cat name, sex, approximate age, optional chip, and owner mobile. Before creating, it runs the existing phone and chip lookup and offers an existing match instead.</li>
+      <li>This creates a Cat with <code>origin=clinic_claim</code> and a <code>catNumber</code>. The owner is left unset, and the clinic can open visits and write entries immediately. The clinic confirms "owner agreed at the counter" (stored with staff and time).</li>
+      <li>The owner receives an SMS in Arabic (English if chosen) naming the clinic, with a single-use claim link that expires in 14 days. The link lands on a registration page pre-filled with the cat's name and ends in the ID ceremony.</li>
+      <li>If the claiming account already has a cat with the same name, the owner can merge ("this is Luna"), keeping the older ID number and moving all records. Admin can also merge by Cat ID with an audit entry.</li>
+      <li>Unclaimed patients stay visible only to the creating clinic. A resend is possible after 24 hours, at most 3 sends. Rate-limited per branch.</li>
+    </ol>
+    <h4>Backend</h4><ul><li><code>POST /vet/patients</code> (new capability <code>patient.create</code>: RECEPTION and above, not counter mode); <code>ClaimInvite</code> model (hashed phone and token); Twilio send; <code>POST /claims/:token/accept</code>; <code>CatsService.merge(sourceId, targetId)</code> moving vaccinations, entries, weights, documents, grants and access logs in one transaction; admin merge endpoint; demo quarantine respected.</li></ul>
+    <h4>Frontend</h4><ul><li>Vet: "New patient" sheet from Find/Scan with a no-results state; pending claim chip on the patient. Owner: <code>/claim/[token]</code> landing → register or log in → merge choice → ceremony. Admin: cat search by ID, chip or phone, plus a merge dialog.</li></ul>
+    <h4>Analytics</h4><ul><li><code>clinic_patient_created</code>, <code>claim_sms_sent</code>, <code>cat_claimed</code> {hours_to_claim}, <code>cat_merged</code>, <code>invite_accepted</code> {type: clinic_claim}.</li></ul>
+    <h4>Dependencies</h4><ul><li>T2; Twilio production sender; counsel's view on pre-claim data held by the clinic (see §22 decisions).</li></ul>
+  </div>
+
+  <div class="ticket">
+    <h3>Feature: T5 · Reminders that name and route to the clinic</h3>
+    <div class="us">As a <strong>clinic owner</strong>, I want vaccine reminders to tell my patients to come back to my clinic, so that using Moracat brings patients back to me.</div>
+    <h4>Acceptance criteria</h4><ol>
+      <li>A vaccination-due reminder names the clinic that recorded the previous dose (else the owner's home clinic, else none) and includes one action: call or WhatsApp that branch.</li>
+      <li>The home clinic is set on the first clinic-authored entry; the owner can change it on the cat overview.</li>
+      <li>All senders read <code>NotificationPreference</code>; turning off email for a category stops those emails; in-app always remains.</li>
+      <li>The reminder action link goes through a tracked redirect that records <code>reminder_clicked</code>, then opens <code>tel:</code> or <code>wa.me</code>.</li>
+    </ol>
+    <h4>Backend</h4><ul><li><code>Cat.homeBranchId</code>; lifecycle reminder builder resolves the branch; <code>NotificationsService</code> checks preferences; redirect endpoint <code>/r/:id</code>.</li></ul>
+    <h4>Frontend</h4><ul><li>Home clinic card on the cat overview; email and in-app template with a clinic block.</li></ul>
+    <h4>Analytics</h4><ul><li><code>reminder_sent</code> {kind, channel, branch_id}, <code>reminder_clicked</code> {action}.</li></ul>
+    <h4>Dependencies</h4><ul><li>T1 (scheduler), T2.</li></ul>
+  </div>
+
+  <div class="ticket">
+    <h3>Feature: T6 · Scannable QR → public cat page and lost mode</h3>
+    <div class="us">As <strong>someone who finds a cat</strong>, I want to scan its tag and reach the owner without seeing their number, so that the cat gets home.</div>
+    <h4>Acceptance criteria</h4><ol>
+      <li>New cards and exports encode <code>https://moracat.co/c/&lt;token&gt;</code>. The vet scanner still accepts <code>MRCV1:</code> tokens.</li>
+      <li>The public page shows the cat's name, photo, "Registered with Moracat" and, if lost mode is on, a prominent "I found this cat" form (finder's phone + message) relayed by SMS to the owner. It never shows owner name, phone, city or district.</li>
+      <li>A clinic user who is logged in sees "Open in clinic portal".</li>
+      <li>The page carries one invitation: "Give your cat an ID". Rate-limited; tokens can be rotated by the owner.</li>
+    </ol>
+    <h4>Backend</h4><ul><li><code>GET /public/cats/:token</code> (minimal projection); <code>Cat.lostModeAt</code>; <code>POST /public/cats/:token/found</code> (Turnstile + rate limit) → SMS relay; token rotate endpoint.</li></ul>
+    <h4>Frontend</h4><ul><li><code>/c/[token]</code> page (server-rendered, noindex); card QR value change; lost-mode toggle on the privacy page.</li></ul>
+    <h4>Analytics</h4><ul><li><code>cat_qr_scanned</code> {context}, <code>lost_mode_toggled</code>, <code>invite_accepted</code> {type: qr} on registrations from this page.</li></ul>
+    <h4>Dependencies</h4><ul><li>T3 (privacy page), Twilio.</li></ul>
+  </div>
+</section>
+
+<!-- ============ 21 + 22 ============ -->
+<section id="s22">
+  <div class="sec-k">21–22 · Founder test &amp; final table</div>
+  <h2>Every item, justified</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Priority</th><th>Feature</th><th>Strategic purpose</th><th>User</th><th>Effort</th><th>Dependency</th><th>Target</th><th>Harder to replace?</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td>P0 · Now</td><td>T4 Clinic-created patient + claim + merge</td><td>Network formation; clinic-sourced acquisition</td><td>Reception, owner</td><td>L</td><td>T2, Twilio, counsel view</td><td>Day 30</td><td>Yes</td></tr>
+      <tr class="hl"><td>P0 · Now</td><td>T3 Owner health + privacy pages</td><td>Visible record; switching cost; fixes 404s</td><td>Owner</td><td>M</td><td>T2</td><td>Day 21</td><td>Yes</td></tr>
+      <tr class="hl"><td>P0 · Now</td><td>T5 Clinic-routed reminders</td><td>Vet adoption; retention</td><td>Owner, clinic</td><td>S</td><td>T1, T2</td><td>Day 25</td><td>Yes</td></tr>
+      <tr class="hl"><td>P0 · Now</td><td>T2 Event log + attribution + CVAC</td><td>Data moat measurement</td><td>Team</td><td>M</td><td>T1</td><td>Day 14</td><td>No: needed for operations and decisions</td></tr>
+      <tr class="hl"><td>P0 · Now</td><td>T1 Reliability floor</td><td>Reminders and renewals actually run</td><td>Team</td><td>S</td><td>Render billing</td><td>Day 7</td><td>No: needed for operations</td></tr>
+      <tr class="hl"><td>P1 · Now</td><td>T6 Scannable QR + lost mode</td><td>Safety job; organic acquisition</td><td>Finder, owner</td><td>S–M</td><td>T3</td><td>Day 30 (slip to 35 OK)</td><td>Yes (weak)</td></tr>
+      <tr><td>P0 · Next</td><td>T7 Recurring payments (opt-in auto-renew, mada/Apple Pay, dunning)</td><td>Revenue; LTV</td><td>Owner</td><td>M–L</td><td>Founder decision, Moyasar</td><td>Day 55</td><td>No: needed for revenue</td></tr>
+      <tr><td>P0 · Next</td><td>T11 ZATCA invoice + fulfilment minimum</td><td>Legal commerce; operations</td><td>Ops, owner</td><td>M</td><td>VAT registration</td><td>Day 60</td><td>No: needed for revenue and compliance</td></tr>
+      <tr><td>P0 · Next</td><td>T13 Kitten-year path</td><td>The wedge</td><td>New owner</td><td>M</td><td>T3, T5, vet sign-off</td><td>Day 80</td><td>Yes</td></tr>
+      <tr><td>P1 · Next</td><td>T9 Vaccination certificate + verify</td><td>External proof; standard formation</td><td>Owner, boarder</td><td>M</td><td>T3</td><td>Day 45</td><td>Yes</td></tr>
+      <tr><td>P1 · Next</td><td>T10 Clinic Today dashboard</td><td>Clinic retention</td><td>Clinic owner</td><td>S–M</td><td>T2, T5</td><td>Day 50</td><td>Yes</td></tr>
+      <tr><td>P1 · Next</td><td>T8 Subscription self-service</td><td>Retention; churn diagnosis</td><td>Owner</td><td>S–M</td><td>T7</td><td>Day 60</td><td>No: needed for customer experience</td></tr>
+      <tr><td>P1 · Next</td><td>T14 Co-owners + ownership transfer</td><td>Hand-over standard; household</td><td>Family, breeder</td><td>M</td><td>T3</td><td>Day 85</td><td>Yes</td></tr>
+      <tr><td>P1 · Next</td><td>T15 WhatsApp channel</td><td>Reminder reach in KSA</td><td>Owner</td><td>M</td><td>Meta verification</td><td>Day 90</td><td>No: needed for retention</td></tr>
+      <tr><td>P1 · Next</td><td>T16 Admin metrics + network view</td><td>Steer by CVAC and density</td><td>Founder</td><td>S–M</td><td>T2</td><td>Day 75</td><td>No: needed for operations</td></tr>
+      <tr><td>P2 · Next</td><td>T12 Vet attachments</td><td>Record completeness</td><td>Vet</td><td>S</td><td>Private bucket</td><td>Day 60</td><td>Yes (weak)</td></tr>
+      <tr><td>P2 · Next</td><td>T17 Homepage re-sequence</td><td>Positioning; conversion</td><td>Visitor</td><td>S–M</td><td>T10 counts</td><td>Day 90</td><td>No: needed for conversion</td></tr>
+      <tr><td>Later</td><td>Breeder / shelter batch issuance</td><td>Kitten supply channel</td><td>Breeder, shelter</td><td>M</td><td>T14, partners</td><td>Q1 2027</td><td>Yes</td></tr>
+      <tr><td>Later</td><td>Refill autoship + cart</td><td>Mid-market revenue</td><td>Experienced owner</td><td>L</td><td>T7, T11, &gt;300 households</td><td>Year 2</td><td>No: needed for revenue</td></tr>
+      <tr><td>Later</td><td>Clinic member-rate redemption</td><td>Value job (R040)</td><td>Owner, clinic</td><td>M</td><td>≥15 live clinics; Authority amendment</td><td>When the gate is met</td><td>Weak</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="decision"><b class="k">Decisions the founder must make before day 30</b><ol>
+    <li><strong>Renewal model:</strong> opt-in auto-renew (recommended) versus invite-only. The current copy and the API disagree.</li>
+    <li><strong>Pre-claim clinic records:</strong> confirm with Saudi counsel that a clinic may create a patient record and send an SMS at the owner's verbal request, and who is the controller before the owner claims.</li>
+    <li><strong>PDPL transfer posture:</strong> commission the transfer risk assessment; keep EU hosting for now.</li>
+    <li><strong>Design Authority amendment:</strong> move clinic member-rate redemption behind "≥15 live clinics", and state that the Cat ID's Health job is now the primary promise.</li>
+    <li><strong>Kitten vaccination schedule:</strong> have a named Saudi veterinarian review the schedule table.</li>
+  </ol></div>
+
+  <h3>The 10 most important things Moracat still needs to build</h3>
+  <ol class="prio">
+    <li><strong>Clinic-created patients with an SMS claim link.</strong> Without it the vet network can't record the cats that walk in.</li>
+    <li><strong>An owner-facing health record.</strong> Vets already write it; owners can't see it.</li>
+    <li><strong>Reminders that return owners to their clinic.</strong> This is the clinic's reason to participate.</li>
+    <li><strong>A scheduler that doesn't sleep, plus a first-party event log with CVAC.</strong> Nothing above is reliable or measurable without it.</li>
+    <li><strong>Recurring payments that can actually recur:</strong> a stored mada / Apple Pay card, honest opt-in renewal, dunning.</li>
+    <li><strong>A verifiable vaccination certificate.</strong> The first time someone outside Moracat relies on the record.</li>
+    <li><strong>The kitten-year path:</strong> schedule, reminders, graduation. The wedge becomes a product, not a price.</li>
+    <li><strong>ZATCA-compliant invoicing and minimum fulfilment tooling.</strong> The legal and operational gate to switching commerce on.</li>
+    <li><strong>Household co-owners and ownership transfer.</strong> Records stay accurate across hand-overs.</li>
+    <li><strong>A clinic dashboard that shows patients returned.</strong> Proof of value that keeps clinics writing.</li>
+  </ol>
+</section>
+
+<section id="one">
+  <div class="final">
+    <div class="sec-k">★ · The one system</div>
+    <h2>If the website disappeared: rebuild the Living Cat Record</h2>
+    <p><strong>The system:</strong> one record per cat that clinics write, owners hold, and reminders turn into return visits. It is the product version of MRC-STRAT-001's north star, and everything else (the box, community, homepage) is a surface on top of it.</p>
+    <h3>What it contains</h3>
+    <ol>
+      <li><strong>Identity core:</strong> Cat ID number, photo, sex, birth date, district, microchip, household members with roles, and a URL QR token.</li>
+      <li><strong>Two write paths into one record:</strong> clinic entries (append-only, consent-tiered, the existing engine) and owner entries (marked self-reported). Includes the <strong>clinic-created patient</strong> with an SMS claim link, so walk-ins enter the record on day one.</li>
+      <li><strong>The owner view:</strong> a timeline, vaccination status, weight chart, conditions and allergies, a privacy page with the access log, and a verifiable certificate.</li>
+      <li><strong>The rules engine</strong> (<code>packages/core</code>): life stage, vaccination schedule, weight watch. Deterministic and vet-approved.</li>
+      <li><strong>The return loop:</strong> a reliable scheduler sends reminders that name the clinic, by SMS/WhatsApp/email, and link to that clinic. The clinic sees "patients returned".</li>
+      <li><strong>The measurement spine:</strong> a first-party event log computing CVAC, claim rate, district density and reminder → return.</li>
+    </ol>
+    <h3>How people use it</h3>
+    <ul>
+      <li><strong>Reception</strong> scans or types a Cat ID. If the cat isn't found: "New patient" → name + owner mobile → the vet records the vaccine.</li>
+      <li><strong>The owner</strong> gets an SMS naming the clinic, taps, registers in under two minutes, sees the ceremony, and finds the vaccine already on Luna's record with the next dose date.</li>
+      <li><strong>Weeks later</strong> a reminder says "Luna's booster is due at Al-Olaya Vet" → one tap to WhatsApp the clinic. The clinic writes again, and CVAC ticks up.</li>
+      <li><strong>A boarder</strong> scans the certificate QR and sees "vaccinations verified". A finder scans the collar and messages the owner without seeing their number.</li>
+    </ul>
+    <h3>Why this creates leverage</h3>
+    <ul>
+      <li><strong>It uses what's already built.</strong> The append-only clinical engine, consent tiers, invite-only clinic onboarding and lifecycle reminders are the hard parts, and they exist. Roughly 60% of this system is wiring and surfaces, not new engines.</li>
+      <li><strong>It creates the only asset time protects.</strong> A competitor can copy a box in a quarter; it cannot backfill years of clinic-written history.</li>
+      <li><strong>It acquires owners for free.</strong> Every clinic visit becomes a claim link, fixing the strategy's biggest sensitivity (acquisition volume) without paid media.</li>
+      <li><strong>It gives the box a reason to exist.</strong> The record knows the cat's age, weight and stage, so the plan is computed from the cat, as the Design Authority's 2026-07-10 amendment requires. The commerce engine switches on as a feature of the record, not a separate store.</li>
+      <li><strong>It is honest infrastructure.</strong> Portable, consent-first and non-exclusive, so clinics, regulators and eventually breeders can adopt it without fearing it.</li>
+    </ul>
+    <p><strong>Ninety days, in order:</strong> make it reliable and measurable (week 1–2) → make the record visible (week 2–4) → let clinics create patients and send owners home with an ID (week 3–5) → route reminders back (week 4) → make it verifiable (week 6–7) → turn the kitten year into a schedule (week 9–12). Commerce rails run in parallel from week 5, once the renewal decision is made.</p>
+  </div>
+</section>
+</main>
+</div>
