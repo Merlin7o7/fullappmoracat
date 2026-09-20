@@ -76,7 +76,13 @@ interface AuthContextValue extends AuthState {
   /** Patch the cached user (e.g. after changing the primary cat). */
   updateUser: (patch: Partial<AuthUser>) => void;
   /** Authenticated fetch against the API that refreshes on 401. */
-  authedFetch: <T = unknown>(path: string, init?: RequestInit) => Promise<T>;
+  /**
+   * `timeoutMs` overrides the default 10s ceiling for the rare call that is
+   * legitimately slow — an admin action that provisions something, not a page
+   * read. Everything else should stay on the default: a screen that hangs for
+   * thirty seconds is worse than one that admits it failed (R112).
+   */
+  authedFetch: <T = unknown>(path: string, init?: RequestInit, timeoutMs?: number) => Promise<T>;
   /** Authenticated download — returns the raw response Blob (e.g. CSV export). */
   authedBlob: (path: string) => Promise<Blob>;
   /** Multipart upload (FormData) with the same token-attach + refresh flow. */
@@ -229,16 +235,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const authedFetch = React.useCallback<AuthContextValue["authedFetch"]>(
-    async (path, init = {}) => {
+    async (path, init = {}, timeoutMs) => {
       const doFetch = (token: string) =>
-        fetchWithTimeout(`${BASE}/api${path}`, {
-          ...init,
-          headers: {
-            "content-type": "application/json",
-            ...(init.headers ?? {}),
-            authorization: `Bearer ${token}`,
+        fetchWithTimeout(
+          `${BASE}/api${path}`,
+          {
+            ...init,
+            headers: {
+              "content-type": "application/json",
+              ...(init.headers ?? {}),
+              authorization: `Bearer ${token}`,
+            },
           },
-        });
+          timeoutMs
+        );
 
       const tokens = tokensRef.current;
       if (!tokens) throw new Error("Not authenticated");

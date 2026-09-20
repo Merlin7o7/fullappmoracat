@@ -66,7 +66,7 @@ export function friendly(kind: "timeout" | "network"): string {
 export async function fetchWithTimeout(
   url: string,
   init: RequestInit = {},
-  timeoutMs = REQUEST_TIMEOUT_MS
+  timeoutMs: number = REQUEST_TIMEOUT_MS
 ): Promise<Response> {
   const timeout = AbortSignal.timeout(timeoutMs);
   const signal = init.signal ? anySignal([init.signal, timeout]) : timeout;

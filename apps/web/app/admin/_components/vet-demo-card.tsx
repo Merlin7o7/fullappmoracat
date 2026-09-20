@@ -20,12 +20,18 @@ interface DemoStatus {
   branches?: number;
   staff?: number;
   patients?: number;
+  /** The demo has its patients and staff — safe to walk into. */
+  ready?: boolean;
+  /** A background fill is running right now. */
+  filling?: boolean;
 }
 
 interface DemoEntry {
   orgId: string;
   nameAr: string;
   nameEn: string;
+  /** False means the clinic exists but is still being furnished. */
+  ready: boolean;
   credentials: { password: string; pin: string; accounts: { email: string; role: string }[] };
 }
 
@@ -37,6 +43,15 @@ interface DemoEntry {
  * worth stating before it happens rather than discovering afterwards. The card
  * says what it will do, what it is isolated from, and how to come back — then
  * does it in one tap (R004 trust precedes the ask, R006 honest by default).
+ *
+ * WHY IT WAITS INSTEAD OF HANGING
+ * Entering is two phases server-side: the clinic and this admin's membership
+ * come back immediately, and the patients are written in the background. This
+ * card waits on `ready` with a progress line that names what is happening,
+ * because the first version put the whole provision inside one request and hit
+ * the client's 10-second ceiling — the admin saw a bare timeout while the
+ * server was still working, and clicking again started a second provision
+ * (R119: a loading state must say what it is waiting for).
  *
  * WHAT MAKES IT SAFE (and why the copy says so out loud)
  * The demo clinic is flagged `isDemo`, and the API's clinic guard quarantines
@@ -53,6 +68,8 @@ export function VetDemoCard() {
   const { toast } = useToast();
   const [creds, setCreds] = React.useState<DemoEntry["credentials"] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  /** True while the background fill is being waited on (first run only). */
+  const [waiting, setWaiting] = React.useState(false);
 
   const status = useQuery({
     queryKey: ["vet-demo-status"],
@@ -63,11 +80,27 @@ export function VetDemoCard() {
   });
 
   const enter = useMutation({
-    mutationFn: () => authedFetch<DemoEntry>("/admin/vet-demo/enter", { method: "POST" }),
-    onSuccess: (res) => {
-      // Point the portal's org switcher at the demo clinic before we land
-      // there, so it opens on the demo rather than asking which clinic.
+    mutationFn: async () => {
+      // 45s, not the default 10s: this is a deliberate admin action that may
+      // land on a cold container, and the honest thing is to wait rather than
+      // to claim a timeout while the server is mid-provision.
+      const res = await authedFetch<DemoEntry>(
+        "/admin/vet-demo/enter",
+        { method: "POST" },
+        45_000
+      );
       rememberVetOrg(res.orgId);
+
+      // The portal is already usable, but a demo with no patients in it is not
+      // worth showing anyone — so wait for the fill, visibly, with a cap.
+      if (!res.ready) {
+        setWaiting(true);
+        await waitUntilReady(() => authedFetch<DemoStatus>("/admin/vet-demo"));
+      }
+      return res;
+    },
+    onSuccess: (res) => {
+      setWaiting(false);
       setCreds(res.credentials);
       toast({
         title: isAr ? "العيادة التجريبية جاهزة" : "The demo clinic is ready",
@@ -77,7 +110,10 @@ export function VetDemoCard() {
       });
       router.push("/vet");
     },
-    onError: (err) => setError(friendlyMessage(err, isAr)),
+    onError: (err) => {
+      setWaiting(false);
+      setError(friendlyMessage(err, isAr));
+    },
   });
 
   const leave = useMutation({
@@ -123,6 +159,13 @@ export function VetDemoCard() {
                 : `${status.data.staff ?? 0} staff · ${status.data.branches ?? 0} branches · ${status.data.patients ?? 0} demo patients`}
             </p>
           )}
+          {waiting && (
+            <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
+              {isAr
+                ? "أول مرة تستغرق لحظات — نكتب المرضى وسجلاتهم. لا تغلق الصفحة."
+                : "The first run takes a few moments — we're writing the patients and their records. Don't close the page."}
+            </p>
+          )}
           {error && (
             <p role="alert" className="mt-2 text-sm text-destructive">
               {error}
@@ -139,8 +182,22 @@ export function VetDemoCard() {
             disabled={enter.isPending}
           >
             {enter.isPending ? <Loader2 className="size-4 animate-spin" /> : <Stethoscope className="size-4" />}
-            {inside ? (isAr ? "افتح البوابة" : "Open the portal") : isAr ? "افتح العرض التجريبي" : "Open Vet Demo"}
-            <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
+            {enter.isPending
+              ? waiting
+                ? isAr
+                  ? "نجهّز المرضى…"
+                  : "Filling the clinic…"
+                : isAr
+                  ? "نفتح العيادة…"
+                  : "Opening the clinic…"
+              : inside
+                ? isAr
+                  ? "افتح البوابة"
+                  : "Open the portal"
+                : isAr
+                  ? "افتح العرض التجريبي"
+                  : "Open Vet Demo"}
+            {!enter.isPending && <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />}
           </Button>
           {inside && (
             <Button variant="ghost" size="sm" onClick={() => leave.mutate()} disabled={leave.isPending}>
@@ -220,4 +277,27 @@ function CopyChip({
       <Copy className="size-3.5 text-muted-foreground" aria-hidden />
     </button>
   );
+}
+
+/**
+ * Poll `status` until the demo reports `ready`.
+ *
+ * Capped rather than open-ended: if the fill is wedged or the instance that
+ * started it went away, the admin still lands in the portal — a demo clinic
+ * with a thin day-book beats a button that never returns (R112). Each poll
+ * carries the default timeout; a single failed poll is not fatal.
+ */
+async function waitUntilReady(
+  fetchStatus: () => Promise<DemoStatus>,
+  { attempts = 20, everyMs = 1_500 } = {}
+): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    await new Promise((r) => setTimeout(r, everyMs));
+    try {
+      const s = await fetchStatus();
+      if (s.ready) return;
+    } catch {
+      // A blip mid-fill is expected on a waking container — keep waiting.
+    }
+  }
 }

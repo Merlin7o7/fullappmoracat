@@ -28,6 +28,21 @@
  * not a bypass, not an impersonation token. The vet portal's authorisation is
  * untouched: the admin is simply, actually, staff at a fictional clinic, and
  * leaving offboards them the same way any clinic offboards anyone.
+ *
+ * WHY ENTERING IS TWO PHASES
+ * The first version did everything in the request and timed out in production.
+ * Every browser call is capped at 10s, and a first run cost ~60-70 sequential
+ * Neon round trips plus two bcrypt cost-12 hashes — half a second of CPU on a
+ * laptop, but 2.4-4.8s on Render's throttled 0.1 CPU, before a cold start is
+ * even considered. The browser gave up while the server carried on working, so
+ * the admin saw a timeout and clicked again, starting a second provision.
+ *
+ * So `enter()` now does only what opening the portal actually requires — the
+ * clinic, its branches, and this admin's membership, about six round trips and
+ * no hashing — and the expensive fill (staff logins, households, clinical
+ * history) runs in the background behind an in-flight guard. `status()` reports
+ * `ready`, and the admin card waits on that with a real progress line instead
+ * of a spinner that lies (R119).
  */
 import { Injectable, Logger } from "@nestjs/common";
 import { hash } from "bcryptjs";
@@ -107,14 +122,28 @@ const OWNERS = [
 export class VetDemoService {
   private readonly logger = new Logger("VetDemo");
 
+  /**
+   * The in-flight background fill, if one is running.
+   *
+   * A single promise rather than a boolean, so a second click AWAITS the first
+   * run instead of starting a rival one. Two concurrent provisions would race
+   * on the same upserts and could interleave a history rebuild with its own
+   * deletes — the one bug in here that could destroy data it did not create.
+   */
+  private filling: Promise<void> | null = null;
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * The button. Provision (or refresh) the demo clinic, then put this admin on
-   * its team so the vet portal recognises them the ordinary way.
+   * The button. Opens the door immediately; the furniture arrives behind it.
+   *
+   * Returns as soon as the clinic and this admin's membership exist — that is
+   * everything the vet portal needs to let them in. The demo's patients and
+   * history are filled in by `fill()` in the background; `ready` says whether
+   * that has already happened, and the card polls `status()` for the rest.
    */
   async enter(adminUserId: string) {
-    const org = await this.ensure();
+    const org = await this.ensureShell();
 
     const staff = await this.prisma.partnerStaff.upsert({
       where: { orgId_userId: { orgId: org.id, userId: adminUserId } },
@@ -141,6 +170,14 @@ export class VetDemoService {
       },
     });
 
+    // Is the demo already furnished? One cheap count decides whether the card
+    // can go straight in or should wait on the fill.
+    const ready = await this.isFurnished(org.id);
+
+    // Fire-and-forget: the response must not wait on this. Errors are logged,
+    // never thrown at the admin — a half-filled demo is still a working portal.
+    if (!ready) void this.startFill();
+
     return {
       orgId: org.id,
       slug: DEMO_ORG_SLUG,
@@ -148,9 +185,52 @@ export class VetDemoService {
       nameEn: org.nameEn,
       role: staff.role,
       isDemo: true,
+      /** False means the patients are still being written; poll `status`. */
+      ready,
       /** Surfaced in the admin UI so a demo can be handed to a colleague. */
       credentials: { password: DEMO_PASSWORD, pin: DEMO_PIN, accounts: STAFF.map((s) => ({ email: s.email, role: s.role })) },
     };
+  }
+
+  /**
+   * Run the background fill, at most one at a time.
+   *
+   * A second caller joins the run already in progress rather than starting its
+   * own — see the `filling` field for why that matters.
+   */
+  private startFill(): Promise<void> {
+    if (this.filling) return this.filling;
+    this.filling = this.fill()
+      .catch((err: Error) => {
+        // Logged, not thrown: the portal is already usable without this.
+        this.logger.error(`demo fill failed: ${err.message}`);
+      })
+      .finally(() => {
+        this.filling = null;
+      });
+    return this.filling;
+  }
+
+  /**
+   * Whether the demo has the patients and staff the fill produces.
+   *
+   * Counted by the CURATED microchips and the named staff emails, not by
+   * "how many isDemo cats exist". A demo clinic accumulates other demo cats
+   * over time — a colleague creating a walk-in at the counter, an e2e run —
+   * and a loose count would read "furnished" while the three consent-tier
+   * households the demo exists to show were missing entirely.
+   */
+  private async isFurnished(orgId: string): Promise<boolean> {
+    const chips = OWNERS.flatMap((o) => o.cats.map((c) => c.chip));
+    const [patients, staff] = await Promise.all([
+      this.prisma.cat.count({
+        where: { isDemo: true, deletedAt: null, microchipNo: { in: chips } },
+      }),
+      this.prisma.partnerStaff.count({
+        where: { orgId, status: "ACTIVE", user: { email: { in: STAFF.map((x) => x.email) } } },
+      }),
+    ]);
+    return patients >= chips.length && staff >= STAFF.length;
   }
 
   /** Leave the demo — the admin is offboarded exactly as any clinic offboards. */
@@ -183,7 +263,7 @@ export class VetDemoService {
         _count: { select: { branches: true, staff: true } },
       },
     });
-    if (!org) return { provisioned: false, inside: false };
+    if (!org) return { provisioned: false, inside: false, ready: false, filling: false };
     const patients = await this.prisma.cat.count({ where: { isDemo: true, deletedAt: null } });
     return {
       provisioned: true,
@@ -194,6 +274,15 @@ export class VetDemoService {
       branches: org._count.branches,
       staff: org._count.staff,
       patients,
+      /**
+       * The card polls this after entering, and goes in when it flips true.
+       * Read LAST on purpose: a fill running underneath us moves these numbers,
+       * and a "ready" that is newer than the counts beside it is the honest
+       * way round — the counts catch up on the next poll, a second apart.
+       */
+      ready: await this.isFurnished(org.id),
+      /** A fill is running on THIS instance right now (best-effort signal). */
+      filling: this.filling !== null,
     };
   }
 
@@ -202,10 +291,14 @@ export class VetDemoService {
    * ────────────────────────────────────────────────────────────────────*/
 
   /**
-   * Idempotent. Creates what is missing, refreshes the clinical history when it
-   * has gone stale, and never touches anything it did not create.
+   * The cheap half: the clinic and its two branches, and nothing else.
+   *
+   * About six round trips and no password hashing, so it comfortably fits
+   * inside the browser's 10-second budget even on a cold Render container
+   * talking to a waking Neon. This is all the vet portal needs to let someone
+   * in; everything a DEMO needs to be worth showing is `fill()`.
    */
-  async ensure() {
+  async ensureShell() {
     const org = await this.prisma.partnerOrg.upsert({
       where: { slug: DEMO_ORG_SLUG },
       update: { status: "LIVE", verifiedAt: new Date(), isDemo: true, suspendedAt: null },
@@ -229,7 +322,9 @@ export class VetDemoService {
     }
 
     const city = await this.prisma.city.findFirst({ select: { id: true } });
-    const branchMain = await this.prisma.branch.upsert({
+    // The branch ids are derived from the org id, so fill() looks them up
+    // rather than being handed them across the two phases.
+    await this.prisma.branch.upsert({
       where: { id: `${org.id}-main` },
       update: {},
       create: {
@@ -262,17 +357,59 @@ export class VetDemoService {
       },
     });
 
-    const passwordHash = await hash(DEMO_PASSWORD, 12);
-    const pinHash = await hash(DEMO_PIN, 12);
+    return org;
+  }
+
+  /**
+   * The expensive half: staff logins, the three households, and the flagship
+   * patient's clinical history. Runs in the background — see `startFill()`.
+   */
+  private async fill(): Promise<void> {
+    const org = await this.prisma.partnerOrg.findUnique({
+      where: { slug: DEMO_ORG_SLUG },
+      select: { id: true, isDemo: true },
+    });
+    if (!org) return;
+    if (!org.isDemo) {
+      throw new Error(`Refusing to fill: PartnerOrg ${DEMO_ORG_SLUG} is not flagged isDemo.`);
+    }
+
+    const branchMain = await this.prisma.branch.findUnique({
+      where: { id: `${org.id}-main` },
+      select: { id: true },
+    });
+    if (!branchMain) return;
+
+    // Hash ONLY when a demo login actually needs one. bcrypt at cost 12 is
+    // ~250ms on a laptop and several seconds on Render's throttled 0.1 CPU, and
+    // the old code paid it on every single click even though the hashes never
+    // change. After the first run this is zero CPU.
+    const existing = await this.prisma.user.findMany({
+      where: { email: { in: STAFF.map((x) => x.email) } },
+      select: { email: true, passwordHash: true },
+    });
+    const missingPassword = existing.length < STAFF.length || existing.some((u) => !u.passwordHash);
+    const needsPin =
+      missingPassword ||
+      (await this.prisma.partnerStaff.count({
+        where: { orgId: org.id, pinHash: null, user: { email: { startsWith: "demo." } } },
+      })) > 0;
+
+    const [passwordHash, pinHash] = await Promise.all([
+      missingPassword ? hash(DEMO_PASSWORD, 12) : Promise.resolve(null),
+      needsPin ? hash(DEMO_PIN, 12) : Promise.resolve(null),
+    ]);
 
     const staffByRole: Record<string, string> = {};
     for (const s of STAFF) {
       const user = await this.prisma.user.upsert({
         where: { email: s.email },
-        update: {},
+        // A demo login whose password was never set gets one now; an existing
+        // one is left exactly as it is.
+        update: passwordHash ? { passwordHash } : {},
         create: {
           email: s.email,
-          passwordHash,
+          passwordHash: passwordHash ?? undefined,
           firstName: s.first,
           lastName: s.last,
           emailVerified: new Date(),
@@ -283,7 +420,7 @@ export class VetDemoService {
       });
       const staff = await this.prisma.partnerStaff.upsert({
         where: { orgId_userId: { orgId: org.id, userId: user.id } },
-        update: { role: s.role, status: "ACTIVE", pinHash, offboardedAt: null },
+        update: { role: s.role, status: "ACTIVE", ...(pinHash ? { pinHash } : {}), offboardedAt: null },
         create: {
           orgId: org.id,
           userId: user.id,
@@ -291,7 +428,7 @@ export class VetDemoService {
           status: "ACTIVE",
           title: s.title,
           licenceNo: s.licence,
-          pinHash,
+          pinHash: pinHash ?? undefined,
           joinedAt: ago(120),
         },
         select: { id: true },
@@ -322,7 +459,7 @@ export class VetDemoService {
       await this.rebuildHistory(org.id, branchMain.id, catIds, flagshipCatId, staffByRole);
     }
 
-    return org;
+    this.logger.log('Demo clinic filled: ' + catIds.length + ' patients, ' + STAFF.length + ' staff.');
   }
 
   /** The demo households and their cats. Every cat flagged `isDemo`. */

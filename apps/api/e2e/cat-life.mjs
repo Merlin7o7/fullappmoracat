@@ -556,9 +556,32 @@ console.log("━━ the vet demo is staff-only and quarantined ━━");
   if (!admin?.accessToken) {
     console.log("  ⓘ skipped: seeded admin not present in this database");
   } else {
+    // The button must answer fast enough for a browser. Every client call is
+    // capped at 10s, and the first version did the whole provision inline —
+    // ~60 sequential round trips plus two bcrypt cost-12 hashes — so it timed
+    // out in production while the server carried on working. Entering now does
+    // only the clinic + this admin's membership; the rest fills in behind it.
+    const enterStarted = Date.now();
     const entered = (await call("/admin/vet-demo/enter", "POST", {}, admin.accessToken)).json;
+    const enterMs = Date.now() - enterStarted;
     ok(entered.isDemo === true && !!entered.orgId, "an admin can enter the demo clinic");
+    ok(enterMs < 5_000, `entering answers well inside the browser's budget (${enterMs}ms)`);
+    ok(typeof entered.ready === "boolean", "entering says whether the demo is already furnished");
     ok(entered.credentials?.accounts?.length >= 3, "the demo hands back its own logins for a walkthrough");
+
+    // Whatever `ready` said, the demo must converge — this is the poll the
+    // admin card runs, with the same cap.
+    let furnished = entered.ready;
+    for (let i = 0; i < 20 && !furnished; i++) {
+      await new Promise((r) => setTimeout(r, 1_000));
+      furnished = (await call("/admin/vet-demo", "GET", undefined, admin.accessToken)).json?.ready;
+    }
+    ok(furnished === true, "the background fill finishes and the demo reports itself ready");
+
+    // Readiness must mean the CURATED demo is there, not merely that some demo
+    // cat exists — a walk-in created at the counter must not satisfy it.
+    const demoState = (await call("/admin/vet-demo", "GET", undefined, admin.accessToken)).json;
+    ok((demoState.staff ?? 0) >= 5, "the five demo staff exist once the fill is done");
 
     const ctx = (await call("/vet/auth/context", "POST", {}, admin.accessToken)).json;
     const demoOrg = ctx.memberships?.find((m) => m.org.id === entered.orgId);
