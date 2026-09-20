@@ -6,7 +6,8 @@ import { Button } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CommunityBrowse } from "@/components/community-browse";
-import { IlloCat, IlloHeart, Sticker } from "@/components/illustrations";
+import { IlloHeart, Sticker } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 
@@ -27,7 +28,7 @@ export default function CommunityPage() {
               <IlloHeart tone="pink" className="size-9 opacity-80" />
             </Sticker>
             <Sticker rotate={12} className="end-10 bottom-8 hidden md:block">
-              <IlloCat tone="orange" className="h-14 w-auto opacity-80" />
+              <Illo3D name="cat" className="size-20" px={80} shadow={false} />
             </Sticker>
             <h1 className="mx-auto max-w-xl font-display text-4xl font-semibold tracking-tight sm:text-5xl">
               {isAr ? "مجتمع مرقط — قطط بهوية" : "The Moracat community — cats with an identity"}

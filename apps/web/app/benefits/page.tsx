@@ -5,7 +5,8 @@ import { ArrowRight, IdCard, BadgeCheck, Stethoscope, Scissors, ShoppingBag, Hom
 import { Button } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { IlloCat, IlloPaw } from "@/components/illustrations";
+import { IlloPaw } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { PARTNERS, CATEGORY_LABEL, partnerCategories, type PartnerCategory } from "@/lib/partners";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
@@ -140,7 +141,7 @@ export default function BenefitsPage() {
           ) : (
             /* Honest, warm "coming" state — a welcome, not an empty grid (R111). */
             <div className="mt-8 flex flex-col items-center gap-4 rounded-3xl border border-dashed border-border bg-card/60 p-10 text-center sm:p-14">
-              <IlloCat tone="green" className="h-24 w-auto" />
+              <Illo3D name="cat" className="size-32" px={128} />
               <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
                 {isAr
                   ? "نوقّع أول شركائنا المؤسّسين الآن — عيادات وعناية ومتاجر نختارها بعناية عشان قطك يستاهل الأفضل. أول ما نجهّز شريكاً، يظهر هنا، ونخبر الأعضاء أول بأول."

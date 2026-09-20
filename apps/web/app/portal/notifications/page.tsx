@@ -11,7 +11,8 @@ import { Card, Button, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { QueryError } from "@/components/query-error";
-import { IlloMouse, IlloPaw } from "@/components/illustrations";
+import { IlloPaw } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { notificationText, notificationHref } from "@/lib/notifications";
 import { formatDateTime } from "@/lib/datetime";
 
@@ -182,7 +183,7 @@ export default function NotificationsPage() {
         <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
           <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
           <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
-          <IlloMouse tone="sage" className="h-16 w-auto" />
+          <Illo3D name="mouse" variant="green" directional className="size-24" px={96} />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "كل شي تمام — حين يحدث شيء يخص قطك ستجده هنا" : "You're all caught up — when something happens for your cat, it lands here"}
           </p>

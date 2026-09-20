@@ -32,7 +32,8 @@ import { useCats } from "@/lib/cat-context";
 import { formatDate } from "@/lib/datetime";
 import { friendlyError } from "@/lib/errors";
 import { QueryError } from "@/components/query-error";
-import { IlloCat, IlloPaw } from "@/components/illustrations";
+import { IlloPaw } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { ConfirmDialog } from "@/app/admin/_components/confirm";
 import { AccessLedger } from "./access-ledger";
 import {
@@ -98,7 +99,7 @@ function NoCatsYet({ isAr }: { isAr: boolean }) {
   return (
     <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
       <IlloPaw tone="peach" aria-hidden className="pointer-events-none absolute start-8 top-6 size-7 -rotate-12 opacity-50" />
-      <IlloCat tone="sage" aria-hidden className="h-16 w-auto" />
+      <Illo3D name="cat" className="size-24" px={96} />
       <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
         {isAr
           ? "أضف قطك أولاً، وبعدها تقدر تقرّر أي عيادة تفتح سجله الطبي."

@@ -10,7 +10,8 @@ import { formatDateTime } from "@/lib/datetime";
 import { Field, SelectField } from "@/components/field";
 import { TicketStatusBadge } from "@/components/ticket-status-badge";
 import { QueryError } from "@/components/query-error";
-import { IlloHeart, IlloPaw } from "@/components/illustrations";
+import { IlloPaw } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { commerceEnabled } from "@/lib/features";
 import { friendlyMessage } from "@/lib/errors";
 
@@ -99,7 +100,7 @@ export default function SupportPage() {
         <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
           <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
           <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
-          <IlloHeart tone="pink" className="size-16" />
+          <Illo3D name="heart" className="size-24" px={96} />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "لا توجد تذاكر — كل شيء تمام 🎉" : "No tickets — everything's purring 🎉"}
           </p>

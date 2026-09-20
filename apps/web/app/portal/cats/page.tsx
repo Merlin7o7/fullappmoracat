@@ -16,7 +16,8 @@ import { CatIdCard } from "@/components/cat-id-card";
 import { CatIdStory } from "@/components/cat-id-story";
 import { CatManageDrawer } from "@/components/cat-manage-drawer";
 import { QueryError } from "@/components/query-error";
-import { IlloCat, IlloMouse, IlloPaw } from "@/components/illustrations";
+import { IlloMouse, IlloPaw } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 
 interface Recommendation {
   dailyCalories: number;
@@ -162,7 +163,7 @@ export default function CatsPage() {
         <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
           <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
           <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
-          <IlloCat tone="green" className="h-24 w-auto" />
+          <Illo3D name="cat" className="size-32" px={128} />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "أول قط تضيفه يحصل على هويته الرسمية فوراً" : "The first cat you add gets an official Cat ID, instantly"}
           </p>

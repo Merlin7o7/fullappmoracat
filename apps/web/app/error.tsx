@@ -2,7 +2,7 @@
 
 import { RotateCcw } from "lucide-react";
 import { Button } from "@moraqat/ui";
-import { IlloMouse } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 
 /**
  * Every error is a recovery (R112) — warm, blameless copy (R084/R113),
@@ -13,7 +13,7 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
   return (
     <div className="mesh-bg grid min-h-dvh place-items-center px-4">
       <div className="flex max-w-md flex-col items-center text-center">
-        <IlloMouse tone="sage" className="h-14 w-auto animate-bob" />
+        <Illo3D name="mouse" className="size-28 animate-bob" px={112} />
         <h1 className="mt-7 font-display text-2xl font-semibold tracking-tight" lang="ar" dir="rtl">
           حدث خطأ ما — ليس منك
         </h1>

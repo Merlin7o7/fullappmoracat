@@ -10,6 +10,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloCan, IlloFish, IlloMouse, IlloPaw, Sticker } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { useLocale } from "@/app/providers";
 import { api, PRODUCT_TYPES, type ProductListItem } from "@/lib/api";
 import { commerceEnabled } from "@/lib/features";
@@ -71,7 +72,7 @@ export default function ProductsPage() {
         {/* ── Census mode: an honest forthcoming page, not an empty grid ────── */}
         {!commerce ? (
           <div className="mx-auto max-w-md rounded-[2rem] bg-cream/60 px-6 py-14 text-center dark:bg-cream/40">
-            <IlloCan tone="green" className="mx-auto mb-5 h-14 w-auto" />
+            <Illo3D name="can" className="mx-auto mb-5 block size-24" px={96} />
             <h2 className="font-display text-xl font-semibold tracking-tight">
               {isAr ? "لا شيء معروض للبيع بعد" : "Nothing is for sale yet"}
             </h2>

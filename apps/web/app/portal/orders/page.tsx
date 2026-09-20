@@ -22,7 +22,8 @@ import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
 import { MembershipsClosedNotice } from "@/components/membership";
 import { commerceEnabled } from "@/lib/features";
-import { IlloCan, IlloPaw } from "@/components/illustrations";
+import { IlloPaw } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 
 interface OrderRow {
   orderNumber: string;
@@ -147,7 +148,7 @@ export default function OrdersPage() {
         <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
           <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
           <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
-          <IlloCan tone="pink" className="h-24 w-auto" />
+          <Illo3D name="can" className="size-28" px={112} />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "لا توجد طلبات بعد — أول صندوق يبدأ من باقة قطك" : "No orders yet — your first box starts with your cat's plan"}
           </p>

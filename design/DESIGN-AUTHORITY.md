@@ -80,6 +80,27 @@ Warm & composed · quietly premium (restraint + craft, no "luxury" gold) ·
 **not** a cutesy toy (affectionate, never infantilising).
 Premium is a **subtraction discipline**: spacious, certain, uncluttered.
 
+### Illustration tiers (brand assets, added 2026-09-20)
+
+The brand has two illustration tiers built from the same seven characters
+(cat, mouse, can, heart, fish, paw, leaf). They never compete on one screen.
+
+- **3D objects — the hero tier** (`apps/web/components/illo-3d.tsx`, files in
+  `apps/web/public/brand/3d/`). Two finishes: **plush** (stitched fabric — the
+  light theme's voice) and **metal** (satin green / copper — the dark theme's
+  voice); `finish="auto"` pairs them by theme. **One per screen, 64 px or
+  larger**, at moments that deserve a character: empty states, 404/error,
+  welcomes, celebrations, a cat with no photo. Never recoloured, outlined,
+  cropped or captioned on the object; tint the ground behind it instead.
+- **Flat stickers — the accent tier** (`illustrations.tsx`). Small, tonal,
+  decorative: corner paws, marquees, chips, anything under 64 px.
+
+Guardrails: the plush objects are affectionate, so rationing is what keeps them
+from tipping into "cutesy toy" — one object, generous space, calm copy (R111).
+Copper is a warm metal, not luxury gold: it appears only as the dark-theme
+mouse and never as a finish on UI, type or the Cat ID. Motion is a slow float
+or bob at most, and reduced-motion is honoured.
+
 ## The two moments that decide everything
 
 Over-invest here before anything else:

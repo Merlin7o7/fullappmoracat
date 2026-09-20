@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Home } from "lucide-react";
 import { Button } from "@moraqat/ui";
-import { IlloCat } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 
 /**
  * 404 — a signature moment, not a dead end (R111/R112). The lost cat is the
@@ -12,7 +12,7 @@ export default function NotFound() {
   return (
     <div className="mesh-bg grid min-h-dvh place-items-center px-4">
       <div className="flex max-w-md flex-col items-center text-center">
-        <IlloCat tone="green" className="h-28 w-auto animate-float" />
+        <Illo3D name="cat" className="size-40 animate-float" px={160} priority />
         <p aria-hidden className="mt-8 font-display text-6xl font-semibold leading-none tracking-tight text-primary/15" dir="ltr">
           404
         </p>

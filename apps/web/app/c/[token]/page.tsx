@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FoundCatForm } from "./found-cat-form";
+import { Illo3D } from "@/components/illo-3d";
 
 /**
  * The page a phone camera opens from the collar QR (MRC-PROD-001 T6).
@@ -61,7 +62,7 @@ export default async function PublicCatPage({ params }: { params: { token: strin
               // eslint-disable-next-line @next/next/no-img-element
               <img src={card.photoUrl} alt="" className="size-full object-cover" />
             ) : (
-              <div className="grid size-full place-items-center text-6xl">🐈</div>
+              <div className="grid size-full place-items-center bg-cream/60"><Illo3D name="cat" className="size-44" px={176} priority /></div>
             )}
             {card.isLost && (
               <div className="absolute inset-x-0 top-0 bg-destructive px-4 py-2 text-center text-sm font-semibold text-destructive-foreground">
