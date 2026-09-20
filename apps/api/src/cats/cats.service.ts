@@ -361,6 +361,14 @@ export class CatsService implements OnModuleInit {
       await this.prisma.user.update({ where: { id: userId }, data: { onboardedAt: new Date() } });
     }
 
+    // Someone who joined saying "I don't have a cat yet" now does. Clearing the
+    // flag here rather than asking them to is the point of having it: the
+    // explore home turns into a real home by itself (R002).
+    await this.prisma.user.updateMany({
+      where: { id: userId, noCatYetAt: { not: null } },
+      data: { noCatYetAt: null },
+    });
+
     // Celebrate the Cat ID the moment it's issued (R031/R073 — the reveal is the
     // hero moment; the email + in-app note are its echo). Fire-and-forget so they
     // never block or fail the create; dev/log mail is a no-op without a key.

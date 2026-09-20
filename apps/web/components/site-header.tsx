@@ -67,6 +67,11 @@ export function SiteHeader() {
     ...(commerce ? [{ href: "/#plans", label: t.nav.plans }] : []),
     { href: "/benefits", label: t.nav.benefits },
     { href: "/community", label: t.nav.community },
+    // Adoption and Lost & Found are community surfaces, not commerce — they
+    // stay in the nav whatever the commerce switch says, because a lost cat
+    // does not wait for a launch (2026-09-20).
+    { href: "/adopt", label: t.nav.adopt },
+    { href: "/lost-found", label: t.nav.lostFound },
     ...(commerce ? [{ href: "/products", label: t.nav.products }] : []),
     { href: "/blog", label: t.nav.blog },
     { href: "/tools/feeding", label: t.nav.tools },

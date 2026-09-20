@@ -95,7 +95,12 @@ export default function VetPatientsPage() {
 
       {patients.isSuccess && items.length === 0 && (
         <EmptyState
-          icon={Cat}
+          // A clinic with no patients at all is the one screen in this portal
+          // that is entirely empty, so it earns the hero illustration tier. A
+          // search that found nothing keeps the plain icon: it is a result,
+          // not a welcome (brand: one object per screen, and only where it
+          // means something).
+          {...(debounced ? { icon: Cat } : { illo: "cat" as const })}
           title={
             debounced
               ? isAr

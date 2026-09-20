@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing, UserCog, Flag, ScrollText, SlidersHorizontal, Stethoscope, ScanLine,
+  LayoutDashboard, Users, ShoppingBag, Boxes, FileText, LifeBuoy, LogOut, ShieldAlert, Loader2, Cat, BellRing, UserCog, Flag, ScrollText, SlidersHorizontal, Stethoscope, ScanLine, Heart,
 } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
@@ -35,6 +35,9 @@ const NAV = [
   { href: "/admin/content", icon: FileText, en: "Content", ar: "المحتوى", perm: "cms.read" },
   { href: "/admin/community", icon: Cat, en: "Community", ar: "المجتمع", perm: "cms.read" },
   { href: "/admin/reports", icon: Flag, en: "Reports", ar: "البلاغات", perm: "cms.read" },
+  // Adoption + Lost & Found: two more member-authored public surfaces, so two
+  // more that staff must be able to take something down on (2026-09-20).
+  { href: "/admin/boards", icon: Heart, en: "Boards", ar: "اللوحات", perm: "cms.read" },
   { href: "/admin/waitlist", icon: BellRing, en: "Waitlist", ar: "قائمة الانتظار", perm: "customers.read" },
   { href: "/admin/support", icon: LifeBuoy, en: "Support", ar: "الدعم", perm: "support.read" },
   { href: "/admin/staff", icon: UserCog, en: "Staff", ar: "الفريق", perm: "settings.write" },

@@ -6,7 +6,8 @@ import { ArrowRight } from "lucide-react";
 import { useLocale } from "@/app/providers";
 import { Logo } from "./logo";
 import { CatIdCard } from "./cat-id-card";
-import { IlloCat, IlloHeart, IlloMouse, IlloPaw, IlloSprig, Sticker } from "./illustrations";
+import { IlloHeart, IlloMouse, IlloPaw, IlloSprig, Sticker } from "./illustrations";
+import { Illo3D } from "./illo-3d";
 
 /**
  * Auth shell — a split stage. The brand side is a deep-green field where the
@@ -55,7 +56,17 @@ export function AuthShell({
           {previewCatName ? (
             <CatIdCard catName={previewCatName} catIdNumber="MRC-····-····" isAr={isAr} preview className="mx-auto shadow-glow" />
           ) : (
-            <IlloCat tone="peach" className="mx-auto h-52 w-auto" />
+            // No cat has been named yet, so the brand side IS the cat — the
+            // hero illustration tier at full size, on the deep-green field.
+            // The metal finish is the dark voice of the brand and reads
+            // correctly against primary; the flat stickers around it stay flat.
+            <Illo3D
+              name="cat"
+              finish="metal"
+              px={224}
+              className="mx-auto size-56 motion-safe:animate-float"
+              priority
+            />
           )}
 
           <p className="mt-10 text-center font-display text-3xl font-semibold leading-snug tracking-tight">

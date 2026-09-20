@@ -10,6 +10,7 @@ import * as bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
+import { EventsService } from "../events/events.service";
 import type { ChangePasswordDto, DeleteAccountDto, UpdateProfileDto } from "./dto/account.dto";
 
 interface UploadedImage {
@@ -22,7 +23,8 @@ interface UploadedImage {
 export class AccountService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly storage: StorageService
+    private readonly storage: StorageService,
+    private readonly events: EventsService
   ) {}
 
   async profile(userId: string) {
@@ -48,8 +50,28 @@ export class AccountService {
       emailVerified: !!user.emailVerified,
       phoneVerified: !!user.phoneVerified,
       twoFactorEnabled: user.twoFactor?.enabled ?? false,
+      noCatYet: !!user.noCatYetAt,
       createdAt: user.createdAt,
     };
+  }
+
+  /**
+   * "I don't have a cat yet."
+   *
+   * A first-class answer, not a skipped step (R111). Setting it lets the portal
+   * greet someone who joined to look around — to follow the census, browse the
+   * community, watch adoption — instead of showing them a cat-shaped hole.
+   * Clearing it is what "register my first cat" does, and CatsService clears it
+   * automatically the moment a Cat ID is issued.
+   */
+  async setNoCatYet(userId: string, value: boolean) {
+    const cats = await this.prisma.cat.count({ where: { userId, deletedAt: null } });
+    // Someone who already has a cat cannot be "catless" — refusing to store a
+    // lie is cheaper than rendering around one later.
+    const noCatYetAt = value && cats === 0 ? new Date() : null;
+    await this.prisma.user.update({ where: { id: userId }, data: { noCatYetAt } });
+    if (noCatYetAt) this.events.emit("no_cat_yet_joined", { userId });
+    return { noCatYet: !!noCatYetAt };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
@@ -135,7 +157,7 @@ export class AccountService {
         // (Recognition first, Principle 01). Both travel on the user record.
         this.prisma.user.findUnique({
           where: { id: userId },
-          select: { firstName: true, gender: true, primaryCatId: true, createdAt: true },
+          select: { firstName: true, gender: true, primaryCatId: true, createdAt: true, noCatYetAt: true },
         }),
         this.prisma.subscription.findFirst({
           where: { userId, status: "ACTIVE" },
@@ -213,7 +235,16 @@ export class AccountService {
 
     return {
       // Everything the greeting needs, resolved server-side (يبو/أم {primary}).
-      owner: { firstName: user?.firstName ?? null, gender: user?.gender ?? "UNSPECIFIED", memberSince: user?.createdAt ?? null },
+      owner: {
+        firstName: user?.firstName ?? null,
+        gender: user?.gender ?? "UNSPECIFIED",
+        memberSince: user?.createdAt ?? null,
+        // "I don't have a cat yet" — a deliberate way in, not an abandoned
+        // registration. The portal renders an explore home for these members
+        // instead of an empty-cats void (R111). Self-heals: once a cat exists
+        // the flag is meaningless, so it is reported as cleared.
+        noCatYet: !!user?.noCatYetAt && cats.length === 0,
+      },
       primaryCat: primaryCat
         ? {
             id: primaryCat.id,

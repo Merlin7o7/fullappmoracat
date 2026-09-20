@@ -29,6 +29,7 @@ import {
   Building2,
   ClipboardCheck,
   Clock,
+  FlaskConical,
   Loader2,
   LogOut,
   Mail,
@@ -229,6 +230,9 @@ function VetShell({ children }: { children: React.ReactNode }) {
     );
   }
   const inSetup = actor.org?.org.status === "APPROVED";
+  // A demo clinic looks exactly like a real one — which is the point, and the
+  // reason it must announce itself (R006).
+  const isDemoOrg = !!actor.org?.org.isDemo;
 
   const isActive = (item: VetNavItem) =>
     item.exact ? pathname === item.href : pathname.startsWith(item.href);
@@ -343,6 +347,35 @@ function VetShell({ children }: { children: React.ReactNode }) {
             {isAr
               ? "لا يوجد اتصال — التحقق يحتاج الشبكة، ونعيد المحاولة تلقائياً عند عودته."
               : "Offline — verification needs the network; we'll retry automatically."}
+          </div>
+        )}
+
+        {/* Demo mode. The loudest non-error banner in the product, on purpose:
+            a person being shown this screen cannot tell a fictional patient
+            from a real one by looking, so the portal says it instead. The way
+            back to the admin dashboard lives here too, because an admin who
+            walked in through the demo door needs a door out (2026-09-20). */}
+        {isDemoOrg && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 border-b-2 border-accent bg-accent/15 px-4 py-2 text-center text-xs"
+          >
+            <FlaskConical className="size-3.5 shrink-0 text-accent-foreground" aria-hidden />
+            <span className="font-semibold">
+              {isAr ? "عيادة تجريبية — كل المرضى هنا وهميون" : "Demo clinic — every patient here is fictional"}
+            </span>
+            <span className="text-muted-foreground">
+              {isAr ? "لا يمكن الوصول لأي سجل حقيقي من هنا." : "No real member record is reachable from here."}
+            </span>
+            {user.isStaff && (
+              <Link
+                href="/admin"
+                className="inline-flex min-h-[32px] items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                {isAr ? "رجوع للوحة الإدارة" : "Back to the admin dashboard"}
+                <ArrowRight className="size-3 rtl:rotate-180" aria-hidden />
+              </Link>
+            )}
           </div>
         )}
 

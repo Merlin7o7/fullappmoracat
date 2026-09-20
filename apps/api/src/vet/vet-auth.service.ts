@@ -93,6 +93,9 @@ export class VetAuthService {
             status: true,
             verifiedAt: true,
             suspendedAt: true,
+            // Demo clinics are quarantined by VetStaffGuard; the portal needs
+            // to know so it can SAY so, in a banner nobody can miss.
+            isDemo: true,
           },
         },
         branches: { select: { id: true, nameEn: true, nameAr: true } },
@@ -132,6 +135,9 @@ export class VetAuthService {
             status: true,
             verifiedAt: true,
             suspendedAt: true,
+            // Demo clinics are quarantined by VetStaffGuard; the portal needs
+            // to know so it can SAY so, in a banner nobody can miss.
+            isDemo: true,
           },
         },
         branches: { select: { id: true, nameEn: true, nameAr: true } },
@@ -193,6 +199,7 @@ export class VetAuthService {
       status: string;
       verifiedAt: Date | null;
       suspendedAt: Date | null;
+      isDemo: boolean;
     };
     branches: { id: string; nameEn: string; nameAr: string }[];
   }) {
@@ -213,6 +220,7 @@ export class VetAuthService {
         logoUrl: m.org.logoUrl,
         status: m.org.status,
         verified: !!m.org.verifiedAt,
+        isDemo: m.org.isDemo,
         suspended: !!m.org.suspendedAt,
       },
       /** Empty = org-wide scope, matching the schema's convention. */

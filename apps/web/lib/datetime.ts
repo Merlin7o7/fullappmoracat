@@ -80,3 +80,34 @@ export function monthUnit(n: number, locale: UiLocale): string {
   if (locale !== "ar") return n === 1 ? "month" : "months";
   return n === 1 ? "شهر" : "أشهر";
 }
+
+/**
+ * "3 days ago" / "قبل ٣ أيام" — via Intl.RelativeTimeFormat, so the plural and
+ * the numerals are the language's own, not a template with English grammar
+ * (R110). Used where recency is the fact that matters more than the date: a
+ * lost-cat notice, a message on a board, an enquiry waiting for an answer.
+ *
+ * Deliberately calendar-agnostic: "two days ago" means the same thing in Hijri
+ * and Gregorian, so this never needs the calendar preference.
+ */
+export function relativeTime(value: string | Date, isAr: boolean): string {
+  const then = new Date(value).getTime();
+  if (Number.isNaN(then)) return "";
+  const seconds = Math.round((then - Date.now()) / 1000);
+  const rtf = new Intl.RelativeTimeFormat(isAr ? "ar" : "en", { numeric: "auto" });
+
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["year", 31_536_000],
+    ["month", 2_592_000],
+    ["week", 604_800],
+    ["day", 86_400],
+    ["hour", 3_600],
+    ["minute", 60],
+  ];
+  const abs = Math.abs(seconds);
+  for (const [unit, size] of units) {
+    if (abs >= size) return rtf.format(Math.round(seconds / size), unit);
+  }
+  // Under a minute reads better as a phrase than as "in 0 seconds".
+  return isAr ? "الآن" : "just now";
+}

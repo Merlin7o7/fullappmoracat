@@ -10,7 +10,7 @@ export const dict = {
   ar: {
     dir: "rtl" as const,
     brand: "مرقط",
-    nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية", community: "المجتمع", benefits: "مزايا الأعضاء" },
+    nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية", community: "المجتمع", benefits: "مزايا الأعضاء", adopt: "تبنَّ قطاً", lostFound: "مفقود وموجود" },
     announce: "نرحّب بقططكم في كل مدن السعودية — انضمّ للمجتمع",
     hero: {
       badge: "التعداد الوطني للقطط",
@@ -126,7 +126,7 @@ export const dict = {
   en: {
     dir: "ltr" as const,
     brand: "Moracat",
-    nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in", blog: "Journal", tools: "Feeding calculator", community: "Community", benefits: "Member benefits" },
+    nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in", blog: "Journal", tools: "Feeding calculator", community: "Community", benefits: "Member benefits", adopt: "Adopt", lostFound: "Lost & Found" },
     announce: "Now welcoming cats across Saudi Arabia — join the community",
     hero: {
       badge: "The Saudi Cat Census",

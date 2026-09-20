@@ -29,7 +29,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // asking Google to index a priced page during the Census would advertise what
   // we can't deliver (R040). /benefits carries no price, so it always stays.
   const commerceRoutes = commerceEnabled() ? ["/products"] : [];
-  const staticRoutes = ["", "/about", "/benefits", "/community", ...commerceRoutes, "/blog", "/tools/feeding", "/contact", "/register"].map(
+  // /adopt and /lost-found are public, useful and genuinely searched for
+  // ("قط ضايع الرياض") — they belong in the index whatever commerce is doing.
+  const staticRoutes = ["", "/about", "/benefits", "/community", "/adopt", "/lost-found", ...commerceRoutes, "/blog", "/tools/feeding", "/contact", "/register"].map(
     (path) => ({
       url: `${SITE}${path}`,
       lastModified: now,

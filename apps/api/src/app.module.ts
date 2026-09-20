@@ -49,6 +49,11 @@ import { SmsModule } from "./sms/sms.module";
 import { ClaimsModule } from "./claims/claims.module";
 import { PublicCatsModule } from "./public-cats/public-cats.module";
 import { LinksModule } from "./links/links.module";
+// The cat's life beyond one household (2026-09-20): rehoming, the hand-over of
+// the Cat ID itself, and the reunion board.
+import { OwnershipModule } from "./ownership/ownership.module";
+import { AdoptionModule } from "./adoption/adoption.module";
+import { LostFoundModule } from "./lost-found/lost-found.module";
 
 @Module({
   imports: [
@@ -135,6 +140,9 @@ import { LinksModule } from "./links/links.module";
     // actions at /r/:id (T5).
     PublicCatsModule,
     LinksModule,
+    OwnershipModule,
+    AdoptionModule,
+    LostFoundModule,
   ],
   providers: [
     // Order matters: rate-limit → Community-Mode kill-switch → authenticate →

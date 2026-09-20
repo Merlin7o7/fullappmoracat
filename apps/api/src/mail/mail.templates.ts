@@ -723,3 +723,245 @@ export function refundRequestedTemplate(
     text: toText(heading, body, cta),
   };
 }
+
+// ── The cat's life beyond one household (2026-09-20) ────────────────────────
+// Rehoming, the hand-over of the Cat ID itself, and the reunion board.
+//
+// Everything below interpolates member-authored text (a cat's name, a handover
+// note, a neighbour's message). Those go through `esc()` — an email is still
+// HTML, and a name containing "<" must read as a name, not as markup.
+
+function esc(value: string | null | undefined): string {
+  if (!value) return "";
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** A quoted block for someone else's words (a note, a message). */
+function quoted(text: string, rtl: boolean): string {
+  const align = rtl ? "right" : "left";
+  const side = rtl ? "border-right" : "border-left";
+  return `<div class="em-panel" style="margin:6px 0 14px;padding:14px 16px;border-radius:14px;background:${BRAND.chipBg};${side}:3px solid ${BRAND.green};text-align:${align};">
+      <p class="em-ink" style="margin:0;font-size:14px;line-height:1.7;color:${BRAND.ink};white-space:pre-wrap;">${esc(text)}</p>
+    </div>`;
+}
+
+const fmtDate = (locale: Locale, at: Date) =>
+  new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(at);
+
+/**
+ * "Someone wants to hand you their cat." The most consequential email Moracat
+ * sends to a non-member: it may arrive before the recipient has an account, so
+ * it explains what a Cat ID *is* before it asks for anything.
+ */
+export function ownershipTransferTemplate(
+  locale: Locale,
+  i: {
+    catName: string;
+    catIdNumber: string | null;
+    fromName: string | null;
+    note: string | null;
+    url: string;
+    expiresAt: Date;
+  }
+): BuiltEmail {
+  const ar = locale === "ar";
+  const who = i.fromName ? esc(i.fromName) : ar ? "أحد أعضاء مُرقّط" : "a Moracat member";
+  const cat = esc(i.catName);
+  const heading = ar ? `${who} يسلّمك ${cat} 🐾` : `${who} is handing ${cat} over to you 🐾`;
+  const body = [
+    ar
+      ? `${who} يريد نقل ملكية ${cat} إليك في مُرقّط. لو وافقت، تنتقل لك هوية ${cat} بنفس رقمها — ومعها سجلها كامل: التطعيمات، الوزن، وملاحظات الطبيب. ما يبدأ شي من الصفر.`
+      : `${who} would like to transfer ${cat} to you on Moracat. If you accept, ${cat}'s Cat ID comes to you with the same number — and the whole record with it: vaccinations, weights, vet notes. Nothing starts from scratch.`,
+    ar
+      ? "افتح الرابط وشوف الملف قبل ما تقرّر. القبول أو الرفض بضغطة، ولا يصير شي إلا لما تختار بنفسك."
+      : "Open the link and look at the record before you decide. Accepting or declining is one tap, and nothing happens until you choose.",
+  ];
+  const extra =
+    (i.catIdNumber ? chip(ar ? "رقم الهوية" : "Cat ID", esc(i.catIdNumber)) : "") +
+    (i.note ? quoted(i.note, ar) : "");
+  const cta = { label: ar ? `شوف ملف ${cat}` : `See ${cat}'s record`, url: i.url };
+  const footnote = ar
+    ? `الرابط صالح حتى ${fmtDate(locale, i.expiresAt)}. لو ما تعرف المُرسل، تجاهل الرسالة ولا ينتقل شي.`
+    : `This link is valid until ${fmtDate(locale, i.expiresAt)}. If you don't know the sender, ignore this email — nothing moves.`;
+  return {
+    subject: ar ? `${cat} بانتظارك — مُرقّط` : `${cat} is waiting for you — Moracat`,
+    html: layout({ locale, preheader: heading, heading, body, extra, cta, footnote }),
+    text: toText(heading, body, cta, i.note ? [i.note] : []),
+  };
+}
+
+/** The hand-over landed. Sent to both sides, in each one's own words. */
+export function ownershipTransferDoneTemplate(
+  locale: Locale,
+  i: { role: "from" | "to"; catName: string; catIdNumber: string | null; otherName: string | null }
+): BuiltEmail {
+  const ar = locale === "ar";
+  const cat = esc(i.catName);
+  const other = i.otherName ? esc(i.otherName) : ar ? "العضو الجديد" : "the other member";
+  const toNew = i.role === "to";
+
+  const heading = toNew
+    ? ar
+      ? `${cat} صار لك 🎉`
+      : `${cat} is yours 🎉`
+    : ar
+      ? `تم نقل ${cat} إلى ${other}`
+      : `${cat} has been transferred to ${other}`;
+
+  const body = toNew
+    ? [
+        ar
+          ? `مبروك — ${cat} انتقل لعضويتك. هويته بنفس الرقم، وسجله الصحي كامل معك من اليوم.`
+          : `Congratulations — ${cat} is now part of your membership. Same Cat ID number, and the full health record came with them.`,
+        ar
+          ? "أول شي ننصح فيه: راجع بيانات التواصل للطوارئ، واختر مين من العيادات يشوف سجل قطك. القرار صار لك وحدك."
+          : "First thing worth doing: set the emergency contacts, and choose which clinics may open the record. That's yours to decide now, and only yours.",
+      ]
+    : [
+        ar
+          ? `اكتمل نقل ملكية ${cat} إلى ${other}. ما عاد لك وصول لملفه — وهذا مقصود: القط صار في بيت غيره.`
+          : `${cat}'s transfer to ${other} is complete. You no longer have access to their record — by design: they're in another home now.`,
+        ar
+          ? `سجل ${cat} كامل انتقل معه، وسنوات عنايتك فيه محفوظة في سجل الملكية. شكراً لك على الاعتناء فيه.`
+          : `${cat}'s whole record went with them, and your years of care stay recorded in their ownership history. Thank you for looking after them.`,
+      ];
+
+  const cta = toNew
+    ? { label: ar ? `افتح هوية ${cat}` : `Open ${cat}'s Cat ID`, url: `${siteUrl()}/portal/cats` }
+    : undefined;
+
+  return {
+    subject: toNew
+      ? ar
+        ? `${cat} صار لك — مُرقّط`
+        : `${cat} is yours — Moracat`
+      : ar
+        ? `تم نقل ${cat} — مُرقّط`
+        : `${cat} has been transferred — Moracat`,
+    html: layout({
+      locale,
+      preheader: heading,
+      heading,
+      body,
+      extra: toNew && i.catIdNumber ? chip(ar ? "رقم الهوية" : "Cat ID", esc(i.catIdNumber)) : undefined,
+      cta,
+    }),
+    text: toText(heading, body, cta),
+  };
+}
+
+/** Someone would like to adopt a listed cat. Sent to the listing owner. */
+export function adoptionRequestTemplate(
+  locale: Locale,
+  i: { catName: string; requesterName: string | null; message: string; url: string }
+): BuiltEmail {
+  const ar = locale === "ar";
+  const cat = esc(i.catName);
+  const who = i.requesterName ? esc(i.requesterName) : ar ? "أحد الأعضاء" : "A member";
+  const heading = ar ? `${who} يسأل عن ${cat}` : `${who} asked about ${cat}`;
+  const body = [
+    ar
+      ? `وصلك طلب تبنٍّ لـ${cat}. اقرأ رسالته، وإذا ارتحت له وافق — وبعدها تقدر تنقل هوية ${cat} له بنفسك.`
+      : `You've had an adoption enquiry about ${cat}. Read what they wrote, and if it feels right, accept — then you can hand ${cat}'s Cat ID over yourself.`,
+  ];
+  const cta = { label: ar ? "افتح الطلب" : "Open the request", url: i.url };
+  return {
+    subject: ar ? `طلب تبنٍّ لـ${cat} — مُرقّط` : `An adoption enquiry for ${cat} — Moracat`,
+    html: layout({ locale, preheader: heading, heading, body, extra: quoted(i.message, ar), cta }),
+    text: toText(heading, body, cta, [i.message]),
+  };
+}
+
+/** The owner said yes. Sent to the would-be adopter. */
+export function adoptionAcceptedTemplate(
+  locale: Locale,
+  i: { catName: string; ownerName: string | null; ownerNote: string | null; url: string }
+): BuiltEmail {
+  const ar = locale === "ar";
+  const cat = esc(i.catName);
+  const who = i.ownerName ? esc(i.ownerName) : ar ? "صاحب القط" : "the owner";
+  const heading = ar ? `${who} وافق — ${cat} بانتظارك` : `${who} said yes — ${cat} is waiting`;
+  const body = [
+    ar
+      ? `خبر حلو: ${who} وافق على طلبك لتبنّي ${cat}. تقدرون تتفقون على التفاصيل، وبعدها يرسل لك نقل الهوية — وتنتقل لك هوية ${cat} وسجله كامل.`
+      : `Good news: ${who} accepted your enquiry about ${cat}. Agree the details between you, then they'll send the Cat ID transfer — ${cat}'s ID and full record come to you with it.`,
+  ];
+  const cta = { label: ar ? "افتح المحادثة" : "Open the conversation", url: i.url };
+  return {
+    subject: ar ? `${cat} — تمت الموافقة على طلبك` : `${cat} — your enquiry was accepted`,
+    html: layout({
+      locale,
+      preheader: heading,
+      heading,
+      body,
+      extra: i.ownerNote ? quoted(i.ownerNote, ar) : undefined,
+      cta,
+    }),
+    text: toText(heading, body, cta, i.ownerNote ? [i.ownerNote] : []),
+  };
+}
+
+/**
+ * "I think I've seen this cat." Relayed to whoever filed the lost/found notice.
+ * The sender's number is included when they left one — that is the entire
+ * point of the board, and it is their own number, given deliberately.
+ */
+export function lostFoundMessageTemplate(
+  locale: Locale,
+  i: {
+    kind: "LOST" | "FOUND";
+    catName: string | null;
+    message: string;
+    senderName: string | null;
+    senderPhone: string | null;
+    url: string;
+  }
+): BuiltEmail {
+  const ar = locale === "ar";
+  const cat = i.catName ? esc(i.catName) : ar ? "القط" : "the cat";
+  const heading =
+    i.kind === "LOST"
+      ? ar
+        ? `أحدهم شاف ${cat} 🐾`
+        : `Someone may have seen ${cat} 🐾`
+      : ar
+        ? `وصلتك رسالة عن القط اللي لقيته`
+        : `A message about the cat you found`;
+  const body = [
+    ar
+      ? "وصلتك رسالة على إعلانك في «مفقود وموجود». اقرأها بسرعة — الوقت مهم."
+      : "You've had a message on your Lost & Found notice. Read it soon — time matters here.",
+    ...(i.senderPhone
+      ? [ar ? `رقم المُرسل: <strong dir="ltr">${esc(i.senderPhone)}</strong>` : `Their number: <strong dir="ltr">${esc(i.senderPhone)}</strong>`]
+      : []),
+  ];
+  const cta = { label: ar ? "افتح الإعلان" : "Open the notice", url: i.url };
+  const from = i.senderName ? `${esc(i.senderName)}: ` : "";
+  return {
+    subject:
+      i.kind === "LOST"
+        ? ar
+          ? `رسالة عن ${cat} — مُرقّط`
+          : `A message about ${cat} — Moracat`
+        : ar
+          ? "رسالة على إعلانك — مُرقّط"
+          : "A message on your notice — Moracat",
+    html: layout({
+      locale,
+      preheader: `${from}${esc(i.message).slice(0, 90)}`,
+      heading,
+      body,
+      extra: quoted(i.message, ar),
+      cta,
+    }),
+    text: toText(heading, [i.senderPhone ? `${i.senderName ?? ""} ${i.senderPhone}`.trim() : i.senderName ?? ""], cta, [i.message]),
+  };
+}

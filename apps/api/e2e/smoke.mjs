@@ -342,8 +342,25 @@ console.log("━━ demo quarantine ━━");
     const own = await call("/vet/patients/search?q=968000011122233", "GET", undefined, DT, H);
     ok((own.json?.results ?? []).length === 1, "demo clinic CAN find its own demo patient (quarantine isn't a wall)");
     // Demo data must never reach a public surface.
+    //
+    // Asserted on the DEMO CAT'S OWN ROW, not on the name. The old version read
+    // "no public cat is called مشمش", which is not the property we mean and is
+    // one of the most common cat names in the country — the first real member
+    // to name their cat مشمش and share it would have turned this green test
+    // red, for a system that was working perfectly. The cat CRM reports
+    // visibility, so we ask about the row itself.
+    // Looked up by MICROCHIP, which is unique — a name query returns every cat
+    // in the database that shares the name, paginated, and the demo cat would
+    // simply not be on page one.
+    const demoRows = (await call("/admin/cats?q=968000011122233", "GET", undefined, A)).json;
+    const demoCat = (demoRows?.items ?? []).find((c) => c.isDemo);
+    ok(!!demoCat, "the demo cat مشمش is visible to the cat CRM (flagged isDemo)");
+    ok(demoCat?.isPublic === false && demoCat?.publicSlug === null,
+      "the demo cat is not public — demo data never reaches the community feed");
+    // And the feed itself agrees: nothing it returns is that cat.
     const feed = await call("/community/cats?search=%D9%85%D8%B4%D9%85%D8%B4");
-    ok(!(feed.json?.items ?? []).some((c) => c.name === "مشمش"), "demo cats never appear in the community feed");
+    ok(!(feed.json?.items ?? []).some((c) => c.slug && c.slug === demoCat?.publicSlug),
+      "the demo cat is absent from the community feed");
     const dir = await call("/vet/directory");
     ok(!JSON.stringify(dir.json ?? {}).includes("demo-alnoor-vet"), "demo clinic never appears in the public directory");
 

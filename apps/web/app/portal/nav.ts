@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users, LifeBuoy, Bell, Info, ShieldCheck,
+  Heart, Search, ArrowRightLeft,
 } from "lucide-react";
 import { commerceEnabled } from "@/lib/features";
 
@@ -26,6 +27,14 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { href: "/portal", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة", exact: true, primary: true },
   { href: "/portal/cats", icon: Cat, en: "My Cats", ar: "قططي", primary: true },
   { href: "/portal/community", icon: Users, en: "Community", ar: "المجتمع", primary: true },
+  // The cat's life beyond this household (2026-09-20). Adoption and Lost &
+  // Found sit beside Community because they are the same idea — this cat, and
+  // the people around them — not a separate marketplace section.
+  { href: "/portal/adoption", icon: Heart, en: "Adoption", ar: "التبني" },
+  { href: "/portal/lost-found", icon: Search, en: "Lost & Found", ar: "مفقود وموجود" },
+  // Hand-overs in flight. Quiet by design: most members never see one, but a
+  // cat waiting to be accepted must never be invisible.
+  { href: "/portal/transfers", icon: ArrowRightLeft, en: "Hand-overs", ar: "نقل الملكية" },
   { href: "/portal/notifications", icon: Bell, en: "Notifications", ar: "الإشعارات" },
   // Who may open your cat's medical record — and a ledger of everyone who has.
   // Privacy is only real if the member can find it (R106).

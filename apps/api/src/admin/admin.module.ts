@@ -6,6 +6,10 @@ import { AdminCatsService } from "./admin-cats.service";
 import { CmsController } from "./cms.controller";
 import { AdminCommunityController } from "./admin-community.controller";
 import { AdminStaffController } from "./staff.controller";
+import { AdminVetDemoController } from "./vet-demo.controller";
+import { AdminListingsController } from "./admin-listings.controller";
+import { AdminListingsService } from "./admin-listings.service";
+import { VetDemoService } from "./vet-demo.service";
 import { FeatureFlagsController } from "./feature-flags.controller";
 import { AdminAnalyticsService } from "./analytics.service";
 import { AdminMetricsService } from "./metrics.service";
@@ -20,7 +24,7 @@ import { CmsService } from "./cms.service";
 
 @Module({
   imports: [CatsModule, LifecycleModule],
-  controllers: [AdminController, CmsController, AdminCommunityController, AdminStaffController, FeatureFlagsController],
+  controllers: [AdminController, CmsController, AdminCommunityController, AdminStaffController, AdminVetDemoController, AdminListingsController, FeatureFlagsController],
   providers: [
     AdminAnalyticsService,
     AdminMetricsService,
@@ -33,6 +37,8 @@ import { CmsService } from "./cms.service";
     AdminCommunityService,
     AdminStaffService,
     CmsService,
+    VetDemoService,
+    AdminListingsService,
   ],
 })
 export class AdminModule {}

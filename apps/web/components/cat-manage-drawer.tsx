@@ -14,6 +14,7 @@ import { CatIdCard } from "@/components/cat-id-card";
 import { CatHealthPanel } from "@/components/cat-health-panel";
 import { CatPhotosPanel } from "@/components/cat-photos-panel";
 import { CatCommunityPanel } from "@/components/cat-community-panel";
+import { CatHandoverPanel } from "@/components/cat-handover-panel";
 
 export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: boolean; onClose: () => void }) {
   const { authedFetch } = useAuth();
@@ -141,6 +142,14 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
           </div>
           <CatHealthPanel catId={cat.id} isAr={isAr} />
         </div>
+
+        {/* Handing the cat on — the Cat ID and the record go with them.
+            Sits ABOVE lifecycle on purpose: rehoming is not a kind of deletion,
+            and a member looking for "how do I pass my cat on" should find it
+            before they find "remove" (R010, P09). */}
+        {cat.status === "ACTIVE" && (
+          <CatHandoverPanel catId={cat.id} catName={cat.name} isAr={isAr} onDone={onClose} />
+        )}
 
         {/* Lifecycle */}
         <div className="space-y-2 rounded-2xl border border-border p-4">

@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
 import { AccountService } from "./account.service";
-import { ChangePasswordDto, DeleteAccountDto, UpdateProfileDto } from "./dto/account.dto";
+import { ChangePasswordDto, DeleteAccountDto, NoCatYetDto, UpdateProfileDto } from "./dto/account.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 
 interface UploadedImageFile {
@@ -33,6 +33,17 @@ export class AccountController {
   @ApiOperation({ summary: "Update profile details" })
   updateProfile(@CurrentUser("id") userId: string, @Body() dto: UpdateProfileDto) {
     return this.account.updateProfile(userId, dto);
+  }
+
+  /**
+   * "I don't have a cat yet" — a way in, not a skipped step (R111). Sets or
+   * clears the explore posture; registering a cat clears it automatically.
+   */
+  @Post("no-cat-yet")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Join (or stop) exploring Moracat without a cat registered" })
+  noCatYet(@CurrentUser("id") userId: string, @Body() dto: NoCatYetDto) {
+    return this.account.setNoCatYet(userId, dto.value ?? true);
   }
 
   @Post("avatar")

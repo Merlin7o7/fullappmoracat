@@ -816,6 +816,14 @@ function IssueIdFlow() {
           <p className="mt-3 text-center text-xs text-muted-foreground">
             {isAr ? "رقمه الحقيقي ينطبع لحظة الإصدار" : "The real number is stamped the moment it's issued"}
           </p>
+
+          {/* "I don't have a cat yet" — a real door, not an escape hatch.
+              Shown only to someone with no cats at all, because for everyone
+              else it is noise. Registration deliberately does not gate on a
+              cat existing: the census wants the people too, and a person who
+              joins to look around today is a member who registers a cat in
+              three weeks (R002, R111). */}
+          {cats.length === 0 && <NoCatYetDoor isAr={isAr} />}
         </div>
       </div>
 
@@ -903,4 +911,49 @@ function IssueIdFlow() {
  */
 function CompleteFileForm({ catId }: { catId: string }) {
   return <CatOnboardingJourney catId={catId} />;
+}
+
+/**
+ * "I don't have a cat yet."
+ *
+ * A first-class answer to the registration question, not a way to abandon it.
+ * Someone can arrive at Moracat because they are ABOUT to have a cat — browsing
+ * adoption, following the census, reading the journal — and the product used to
+ * have nothing to say to them except a form they couldn't fill in.
+ *
+ * It is deliberately quiet and deliberately NOT a button that looks like the
+ * primary action: the page still has one clear action (issue the ID), and this
+ * is the honest alternative sitting beside it (R005, R006, R111).
+ */
+function NoCatYetDoor({ isAr }: { isAr: boolean }) {
+  const router = useRouter();
+  const { authedFetch } = useAuth();
+  const [pending, setPending] = React.useState(false);
+
+  const go = async () => {
+    setPending(true);
+    try {
+      // Recorded so the portal can greet them as someone exploring rather than
+      // showing a cat-shaped hole. Failure is non-fatal — they still get there.
+      await authedFetch("/account/no-cat-yet", { method: "POST", body: JSON.stringify({ value: true }) });
+    } catch {
+      /* the explore home works either way */
+    }
+    router.push("/portal");
+  };
+
+  return (
+    <div className="mt-5 rounded-2xl border border-dashed border-border p-4 text-center">
+      <p className="text-sm font-medium">{isAr ? "ما عندك قط بعد؟" : "Don't have a cat yet?"}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        {isAr
+          ? "تقدر تنضم بدون قط — تتابع التعداد، وتتصفح القطط اللي تدوّر بيتاً، وتسجّل أول قط لك متى ما جاك."
+          : "You can join without one — follow the census, browse the cats looking for a home, and register your first cat whenever they arrive."}
+      </p>
+      <Button variant="ghost" size="sm" className="mt-2" onClick={() => void go()} disabled={pending}>
+        {pending && <Loader2 className="size-4 animate-spin" />}
+        {isAr ? "أكمل بدون قط" : "Continue without a cat"}
+      </Button>
+    </div>
+  );
 }

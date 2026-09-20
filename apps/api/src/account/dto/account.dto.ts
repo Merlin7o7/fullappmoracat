@@ -1,5 +1,6 @@
 import { ApiPropertyOptional, ApiProperty } from "@nestjs/swagger";
 import {
+  IsBoolean,
   IsIn,
   IsOptional,
   IsString,
@@ -79,4 +80,16 @@ export class ChangePasswordDto {
   @Matches(/[A-Za-z]/, { message: "Password must contain a letter" })
   @Matches(/\d/, { message: "Password must contain a number" })
   newPassword!: string;
+}
+
+/**
+ * "I don't have a cat yet." Sent as `true` when someone deliberately joins to
+ * look around, and as `false` when they leave that state by other means. The
+ * server refuses to store `true` for an account that already has a cat.
+ */
+export class NoCatYetDto {
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  value?: boolean;
 }

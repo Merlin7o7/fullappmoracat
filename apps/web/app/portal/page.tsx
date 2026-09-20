@@ -18,6 +18,7 @@ import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
 import { IlloFish, IlloPaw } from "@/components/illustrations";
 import { Illo3D } from "@/components/illo-3d";
+import { ExploreHome } from "@/components/explore-home";
 
 /** Quiet paw watermark for the value strip. */
 function IlloPawSticker() {
@@ -31,7 +32,13 @@ function IlloPawSticker() {
 
 interface Completion { percent: number; done: number; total: number; missing: string[] }
 interface Overview {
-  owner: { firstName: string | null; gender: Gender; memberSince: string | null };
+  owner: {
+    firstName: string | null;
+    gender: Gender;
+    memberSince: string | null;
+    /** They joined deliberately without a cat — the home becomes an explore. */
+    noCatYet?: boolean;
+  };
   primaryCat: { id: string; name: string; catIdNumber: string | null; photoUrl: string | null; completion: Completion | null } | null;
   activeSubscription: null | {
     id: string;
@@ -216,6 +223,13 @@ export default function OverviewPage() {
           />
         </div>
       ) : (
+        data?.owner.noCatYet ? (
+          /* They joined on purpose without a cat (R111). The dashboard is built
+             around a Cat ID, so without one it reads as a cat-shaped hole — and
+             a hole is not a welcome. This is a real home instead, with the
+             register door inside it rather than instead of it. */
+          <ExploreHome isAr={isAr} firstName={data.owner.firstName} />
+        ) : (
         /* Empty state = a welcome, not a void (R111). */
         <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
           <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
@@ -226,7 +240,13 @@ export default function OverviewPage() {
           </p>
           {/* Straight to the add-cat flow — never a hop through another list page (R002). */}
           <Link href="/portal/cats/new"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>
+          {/* Even here the other door exists — someone can reach this screen
+              without ever having been asked (R111). */}
+          <Link href="/adopt" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
+            {isAr ? "أو شوف القطط اللي تدوّر بيتاً" : "Or see the cats looking for a home"}
+          </Link>
         </Card>
+        )
       )}
 
       {/* "Coming up" — the forward glance of a care dashboard (R049/P8): the next

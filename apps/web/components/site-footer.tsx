@@ -41,6 +41,8 @@ export function SiteFooter() {
         { href: "/tools/feeding", label: t.nav.tools },
         { href: "/blog", label: t.nav.blog },
         { href: "/vet-directory", label: isAr ? "دليل العيادات الموثّقة" : "Verified clinics" },
+        { href: "/adopt", label: isAr ? "تبنَّ قطاً" : "Adopt a cat" },
+        { href: "/lost-found", label: isAr ? "مفقود وموجود" : "Lost & Found" },
       ],
     },
     {

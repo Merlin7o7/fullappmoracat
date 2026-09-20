@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
+import { VetDemoCard } from "./_components/vet-demo-card";
 
 interface Dashboard {
   kpis: {
@@ -96,6 +97,11 @@ export default function AdminDashboard() {
         <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
       ) : (
         <>
+
+      {/* The vet portal demo — the one thing on this dashboard that is a door
+          rather than a number. High on the page because it is what an admin
+          reaches for when a clinic is on the phone (2026-09-20). */}
+      <VetDemoCard />
 
       {/* The living record — what the strategy steers by (MRC-STRAT-001 §F). */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

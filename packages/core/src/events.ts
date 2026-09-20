@@ -48,6 +48,22 @@ export const SERVER_EVENTS = [
   "lost_mode_toggled",
   "clinic_summary_viewed",
   "clinic_patient_created",
+  // ── The cat's life beyond one household (2026-09-20) ──────────────────
+  // Rehoming, the hand-over of the Cat ID itself, and the reunion board.
+  // These are the facts that prove the ID belongs to the CAT: a transfer
+  // accepted is an identity surviving a change of household.
+  "adoption_listed",
+  "adoption_requested",
+  "adoption_request_accepted",
+  "adoption_completed",
+  "ownership_transfer_started",
+  "ownership_transfer_accepted",
+  "ownership_transfer_declined",
+  "lost_post_created",
+  "found_post_created",
+  "lost_found_message_sent",
+  "lost_found_reunited",
+  "no_cat_yet_joined",
 ] as const;
 export type ServerEvent = (typeof SERVER_EVENTS)[number];
 export type EventName = ClientEvent | ServerEvent;

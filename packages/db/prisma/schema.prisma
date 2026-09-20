@@ -387,6 +387,11 @@ model User {
   /// (Stage 4 ceremony hand-off). Null = never onboarded yet, so the very next
   /// Cat ID issuance routes them to /portal/welcome exactly once.
   onboardedAt   DateTime?
+  /// "I don't have a cat yet." Set when someone deliberately joins before a cat
+  /// exists — a first-class way in, not an abandoned registration (R002/R111).
+  /// Cleared the moment their first Cat ID is issued, so the portal knows to
+  /// stop offering the explore state and start being a home.
+  noCatYetAt    DateTime?
   /// Referral: this member's own shareable code, and the code that referred them
   /// (captured from ?ref= at signup). Powers the invite loop + "invited N friends".
   referralCode   String?   @unique
@@ -445,6 +450,17 @@ model User {
   partnerInvitesSent PartnerInvite[]     @relation("PartnerInviteSender")
 
   certificatesIssued Certificate[]
+
+  // ── Adoption, ownership & lost-and-found (2026-09-20) ──────────────────
+  adoptionListings  AdoptionListing[]      @relation("AdoptionOwner")
+  adoptionsMade     AdoptionListing[]      @relation("AdoptionAdopter")
+  adoptionRequests  AdoptionRequest[]
+  transfersSent     CatOwnershipTransfer[] @relation("TransferFrom")
+  transfersReceived CatOwnershipTransfer[] @relation("TransferTo")
+  ownershipGiven    CatOwnershipRecord[]   @relation("OwnershipFrom")
+  ownershipReceived CatOwnershipRecord[]   @relation("OwnershipTo")
+  lostFoundPosts    LostFoundPost[]
+  lostFoundMessages LostFoundMessage[]
 
   @@index([status])
   @@index([createdAt])
@@ -901,6 +917,11 @@ model Cat {
   claimInvites      ClaimInvite[]
   foundReports      FoundReport[]
   certificates      Certificate[]
+  // ── Adoption, ownership & lost-and-found (2026-09-20) ──────────────────
+  adoptionListings  AdoptionListing[]
+  transfers         CatOwnershipTransfer[]
+  ownershipRecords  CatOwnershipRecord[]
+  lostFoundPosts    LostFoundPost[]
 
   @@index([userId])
   @@index([homeBranchId])
@@ -3388,4 +3409,331 @@ model CatEmergencyContact {
 
   @@index([catId])
   @@map("cat_emergency_contacts")
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  THE CAT'S LIFE BEYOND ONE HOUSEHOLD (2026-09-20)
+//
+//  Three surfaces that all lean on the same idea: the Cat ID belongs to the
+//  CAT, not to the account that happens to hold it today. A cat can be rehomed,
+//  can go missing, can be found by a stranger — and through all of it the
+//  identity, the number and the medical record stay with the animal (P09, R040).
+//
+//    · Adoption     — a member rehomes a cat; the ID travels with them.
+//    · Ownership    — the transactional hand-over itself, with provenance kept
+//                     forever so "whose cat was this?" always has an answer.
+//    · Lost & Found — the safety job of the Cat ID, made a place rather than
+//                     only a QR scan.
+//
+//  PRIVACY POSTURE (shared by all three): the CAT is public, the PERSON is not.
+//  Nothing here ever selects owner email, phone or address into a public read;
+//  contact reaches the owner through an in-app relay unless the owner
+//  explicitly chose to publish a number (R106, community principle #9).
+// ════════════════════════════════════════════════════════════════════════════
+
+/// How a listing owner or a lost/found reporter wants to be reached. IN_APP is
+/// the default and the only one that reveals nothing: Moracat relays the
+/// message. The others are an explicit, revocable choice by the owner.
+enum ContactPreference {
+  IN_APP
+  PHONE
+  WHATSAPP
+  EMAIL
+}
+
+/// Where a rehoming listing stands. WITHDRAWN is the owner changing their mind
+/// — always one tap, never a trap (R010/R063).
+enum AdoptionStatus {
+  AVAILABLE
+  RESERVED
+  ADOPTED
+  WITHDRAWN
+}
+
+/// One person's interest in one listing.
+enum AdoptionRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+  COMPLETED
+}
+
+/// A cat offered for adoption by its current owner.
+///
+/// The listing is a VIEW onto a real Cat row — never a copy. That is the whole
+/// point: the adopter receives the same cat, the same Cat ID, the same
+/// vaccination history, rather than a fresh record that pretends the first
+/// years never happened.
+model AdoptionListing {
+  id       String         @id @default(cuid())
+  catId    String
+  ownerId  String
+  status   AdoptionStatus @default(AVAILABLE)
+  /// Census city code (packages/core SAUDI_CITIES) — copied from the cat at
+  /// listing time but separately editable: people rehome when they move.
+  cityCode String?
+  district String?
+  /// The owner's own words. The single most important field on the page —
+  /// this is where a cat stops being a row and becomes someone's cat.
+  story    String
+  /// Why they are rehoming. Shown plainly; honesty is the posture (R006).
+  reason   String?
+  /// Rehoming fee in SAR. 0 = free to a good home, which is the default and
+  /// the expected case. Never VAT-bearing: Moracat takes no part in it.
+  feeSar   Int            @default(0)
+  /// Household fit — tri-state on purpose: "unknown" is an honest answer.
+  goodWithKids Boolean?
+  goodWithCats Boolean?
+  goodWithDogs Boolean?
+  /// How the owner wants adopters to reach them. IN_APP reveals nothing.
+  contactPref  ContactPreference @default(IN_APP)
+  /// Only ever populated when contactPref is PHONE/WHATSAPP — and even then it
+  /// is released to an adopter the owner ACCEPTED, never to the public page.
+  contactPhone String?
+
+  publishedAt DateTime  @default(now())
+  reservedAt  DateTime?
+  adoptedAt   DateTime?
+  withdrawnAt DateTime?
+  /// The member who ended up adopting — set atomically with the transfer.
+  adoptedByUserId String?
+
+  viewCount    Int       @default(0)
+  /// Moderation, mirroring the community feed: post-moderation, admins hide.
+  hiddenAt     DateTime?
+  hiddenReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cat        Cat                    @relation(fields: [catId], references: [id], onDelete: Cascade)
+  owner      User                   @relation("AdoptionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  adoptedBy  User?                  @relation("AdoptionAdopter", fields: [adoptedByUserId], references: [id], onDelete: SetNull)
+  requests   AdoptionRequest[]
+  transfers  CatOwnershipTransfer[]
+
+  // The browse board: live listings, newest first.
+  @@index([status, publishedAt])
+  @@index([cityCode, status])
+  @@index([ownerId])
+  @@index([catId])
+  @@map("adoption_listings")
+}
+
+/// "I'd like to adopt them." A message plus a state, never a bidding war.
+model AdoptionRequest {
+  id          String                @id @default(cuid())
+  listingId   String
+  requesterId String
+  message     String
+  status      AdoptionRequestStatus @default(PENDING)
+  /// The owner's reply when they decline — optional, and never required.
+  ownerNote   String?
+  /// Stamped when the owner accepted and the two sides were introduced.
+  contactSharedAt DateTime?
+  createdAt   DateTime              @default(now())
+  decidedAt   DateTime?
+
+  listing   AdoptionListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  requester User            @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+
+  // One request per person per listing — a second tap edits, never duplicates.
+  @@unique([listingId, requesterId])
+  @@index([requesterId, status])
+  @@index([listingId, status])
+  @@map("adoption_requests")
+}
+
+/// Where a hand-over stands.
+enum OwnershipTransferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+/// Why the cat is changing hands. Kept for the provenance record, never shown
+/// to strangers.
+enum OwnershipTransferReason {
+  ADOPTION
+  GIFT
+  REHOME
+  OTHER
+}
+
+/// A pending hand-over of a cat from one member to another.
+///
+/// TRANSACTIONAL BY CONSTRUCTION: acceptance moves the cat, writes the
+/// provenance row, closes the listing and clears the old owner's primary-cat
+/// pointer inside ONE database transaction. There is no window in which a cat
+/// has two owners or none.
+///
+/// The recipient is addressed by EMAIL, because that is what a person knows
+/// about the person they are handing their cat to. The row resolves to a real
+/// user at acceptance time, so an invitation can be sent before the adopter has
+/// an account.
+model CatOwnershipTransfer {
+  id         String                  @id @default(cuid())
+  catId      String
+  fromUserId String
+  /// Lower-cased at write time; the invitation is addressed here.
+  toEmail    String
+  /// Resolved when the recipient exists (at creation if they already do,
+  /// otherwise at acceptance).
+  toUserId   String?
+  /// SHA-256 of the acceptance token. The plaintext is only ever in the link.
+  tokenHash  String                  @unique
+  status     OwnershipTransferStatus @default(PENDING)
+  reason     OwnershipTransferReason @default(REHOME)
+  /// A note from the outgoing owner to the incoming one — the handover letter.
+  note       String?
+  /// Set when this transfer came out of an adoption listing.
+  listingId  String?
+
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  declinedAt  DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  cat      Cat              @relation(fields: [catId], references: [id], onDelete: Cascade)
+  fromUser User             @relation("TransferFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User?            @relation("TransferTo", fields: [toUserId], references: [id], onDelete: SetNull)
+  listing  AdoptionListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  record   CatOwnershipRecord?
+
+  // Only one live hand-over per cat at a time — enforced in the service inside
+  // the same transaction that creates one; these serve the lookups.
+  @@index([catId, status])
+  @@index([fromUserId, status])
+  @@index([toUserId, status])
+  @@index([toEmail, status])
+  @@map("cat_ownership_transfers")
+}
+
+/// The provenance chain of a Cat ID — append-only, kept forever.
+///
+/// A medical record is only trustworthy if you can say who held the cat when
+/// each line was written. Rows are never deleted or edited; a transfer appends.
+model CatOwnershipRecord {
+  id         String                  @id @default(cuid())
+  catId      String
+  /// Null for the very first row (registration — the cat entered the record).
+  fromUserId String?
+  toUserId   String
+  reason     OwnershipTransferReason @default(REHOME)
+  transferId String?                 @unique
+  at         DateTime                @default(now())
+
+  cat      Cat                   @relation(fields: [catId], references: [id], onDelete: Cascade)
+  fromUser User?                 @relation("OwnershipFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUser   User                  @relation("OwnershipTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  transfer CatOwnershipTransfer? @relation(fields: [transferId], references: [id], onDelete: SetNull)
+
+  @@index([catId, at])
+  @@index([toUserId])
+  @@map("cat_ownership_records")
+}
+
+/// A lost cat or a found one.
+enum LostFoundKind {
+  LOST
+  FOUND
+}
+
+/// REUNITED is the only ending worth celebrating; CLOSED is everything else
+/// (a duplicate, a post the reporter no longer wants up). Neither deletes.
+enum LostFoundStatus {
+  ACTIVE
+  REUNITED
+  CLOSED
+}
+
+/// A lost-cat or found-cat notice.
+///
+/// A LOST post may be attached to a registered cat (`catId`), which is what
+/// makes Moracat different from a notice board: the post carries the Cat ID's
+/// identifying marks and flips the cat into lost mode in the same action. A
+/// FOUND post is by definition about a cat nobody has claimed yet, so it is
+/// free-form — and the microchip number is the field that actually reunites.
+model LostFoundPost {
+  id         String          @id @default(cuid())
+  kind       LostFoundKind
+  status     LostFoundStatus @default(ACTIVE)
+  /// Set only on a LOST post about a registered cat (owner-verified).
+  catId      String?
+  reporterId String
+
+  /// Shown as the heading. A FOUND cat usually has no name.
+  catName     String?
+  description String
+  /// Census city code + free-text neighbourhood. Location is deliberately
+  /// coarse — a district, never a home address.
+  cityCode    String?
+  district    String?
+  areaNote    String?
+  gender      CatGender @default(UNKNOWN)
+  colorNote   String?
+  hasCollar   Boolean?
+  /// The single identifier that reunites a cat with no Cat ID.
+  microchipNo String?
+  photoUrl    String?
+  /// Extra photos (object-storage URLs), capped in the service.
+  extraPhotos String[]
+  /// When it was lost / when it was found.
+  happenedAt  DateTime
+
+  /// How the reporter wants to be reached about this cat. IN_APP relays
+  /// through Moracat and reveals nothing (the default).
+  contactPref  ContactPreference @default(IN_APP)
+  contactPhone String?
+  contactEmail String?
+
+  reunitedAt DateTime?
+  closedAt   DateTime?
+  viewCount  Int       @default(0)
+  /// Moderation — same post-moderation posture as the community feed.
+  hiddenAt     DateTime?
+  hiddenReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cat      Cat?               @relation(fields: [catId], references: [id], onDelete: SetNull)
+  reporter User               @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  messages LostFoundMessage[]
+
+  // The board: live notices of a kind, newest event first.
+  @@index([kind, status, happenedAt])
+  @@index([cityCode, status])
+  @@index([reporterId])
+  @@index([catId])
+  // Chip search is THE reunion query; without an index it seq-scans.
+  @@index([microchipNo])
+  @@map("lost_found_posts")
+}
+
+/// "I think I've seen this cat." Relayed to the reporter; the sender's details
+/// are stored for the reporter to answer, never published.
+model LostFoundMessage {
+  id          String   @id @default(cuid())
+  postId      String
+  /// Null when a signed-out visitor sends it (a neighbour who found the cat
+  /// should not have to make an account first — the reunion outranks the funnel).
+  senderId    String?
+  senderName  String?
+  senderPhone String?
+  message     String
+  /// Coarse anti-abuse fingerprint, never an IP in the clear.
+  ipHash      String?
+  createdAt   DateTime @default(now())
+
+  post   LostFoundPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sender User?         @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([postId, createdAt])
+  @@map("lost_found_messages")
 }

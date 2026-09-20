@@ -14,6 +14,7 @@ import {
   IlloCat, IlloCan, IlloFish, IlloHeart, IlloMouse, IlloPaw, IlloSprig,
   Sticker, PawTrail, type Tone,
 } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { useLocale } from "@/app/providers";
 import { PLANS } from "@/lib/plans";
 import { api } from "@/lib/api";
@@ -266,6 +267,11 @@ export function HomeView() {
             <IlloMouse tone="peach" className="h-10 w-auto" />
           </Sticker>
 
+          {/* The second — and last — 3D object on this page, a full screen
+              away from the first. It marks the invitation itself: the moment
+              the page stops explaining and starts asking. */}
+          <Illo3D name="heart" px={112} className="mx-auto mb-6 block size-28" />
+
           <h2 className="mx-auto max-w-xl font-display text-4xl font-semibold tracking-tight sm:text-5xl">
             {closingTitle}
           </h2>
@@ -358,10 +364,16 @@ function BenefitsRibbon({ items }: { items: string[] }) {
 
 const FEATURE_ART: { tint: string; art: React.ReactNode }[] = [
   {
+    // The identity pillar — the product's central claim, so it gets the HERO
+    // illustration tier. The flat cat that stood here read as decoration; the
+    // plush one reads as a character, which is what "the cat is the hero"
+    // (P09) asks for at the one moment on this page that carries the promise.
+    // The stickers around it stay flat: the two tiers never compete, they
+    // stack (DESIGN-AUTHORITY, "Illustration tiers").
     tint: "bg-cream",
     art: (
       <>
-        <IlloCat tone="green" className="h-40 w-auto sm:h-48" />
+        <Illo3D name="cat" px={224} className="size-44 motion-safe:animate-float sm:size-56" priority />
         <Sticker rotate={12} className="end-8 top-8"><IlloPaw tone="butter" className="size-10" /></Sticker>
         <Sticker rotate={-10} className="bottom-8 start-10"><IlloHeart tone="orange" className="size-8" /></Sticker>
       </>

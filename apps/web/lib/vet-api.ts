@@ -101,6 +101,13 @@ export interface VetMembershipOrg {
   status: VetOrgStatus;
   verified: boolean;
   suspended: boolean;
+  /**
+   * A demo clinic. Quarantined by the API guard so it can only ever resolve
+   * demo cats — but the portal must still SAY so, unmissably, because someone
+   * being shown this screen has no way to tell fictional records from real ones
+   * by looking at them (R006).
+   */
+  isDemo?: boolean;
 }
 
 /**

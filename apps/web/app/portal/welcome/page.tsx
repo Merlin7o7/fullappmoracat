@@ -16,6 +16,7 @@ import { MEMBERSHIP_BENEFITS } from "@/components/membership";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { shareStoryPng, exportSafeSrc } from "@/lib/card-export";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 
 interface WelcomeCat {
   id: string;
@@ -109,6 +110,10 @@ function WelcomeInner() {
       <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-primary/[0.07] to-transparent p-8 sm:p-12">
         <IlloPaw tone="butter" className="pointer-events-none absolute -top-2 end-10 size-12 rotate-[16deg] opacity-40" />
         <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 start-8 size-9 rotate-[-12deg] opacity-40" />
+        {/* The ceremony's hand-off is one of the two moments the whole product
+            is built around (Dossier Stage 4), so it gets the hero illustration
+            tier — one object, floating, above the congratulation. */}
+        <Illo3D name="heart" px={96} className="mb-4 block size-24 motion-safe:animate-float" priority />
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_minmax(0,20rem)]">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">

@@ -45,6 +45,10 @@ export class AdminCatsService {
         select: {
           id: true, name: true, catIdNumber: true, catNumber: true, microchipNo: true, photoUrl: true,
           origin: true, claimStatus: true, status: true, isDemo: true, createdAt: true, claimedAt: true,
+          // Whether this cat is in the public community, and under what slug.
+          // A cat CRM that cannot answer "is this one visible to the world?"
+          // makes an admin open a second tab to handle a moderation report.
+          isPublic: true, publicSlug: true, hiddenAt: true,
           user: { select: { id: true, email: true, firstName: true, lastName: true, phone: true } },
           _count: { select: { vaccinations: true, clinicalEntries: true, visits: true } },
         },
@@ -62,6 +66,8 @@ export class AdminCatsService {
         claimStatus: c.claimStatus,
         status: c.status,
         isDemo: c.isDemo,
+        isPublic: c.isPublic && !c.hiddenAt,
+        publicSlug: c.isPublic && !c.hiddenAt ? c.publicSlug : null,
         createdAt: c.createdAt,
         claimedAt: c.claimedAt,
         owner: c.claimStatus === "PENDING_CLAIM"

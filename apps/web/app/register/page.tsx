@@ -47,7 +47,7 @@ function safeNext(): string | null {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, requestOtp, loginWithGoogle } = useAuth();
+  const { register, requestOtp, loginWithGoogle, authedFetch } = useAuth();
   // Referral code from ?ref= — read from the URL without useSearchParams so the
   // page needn't be wrapped in a Suspense boundary at build time.
   const [refCode, setRefCode] = React.useState<string | undefined>(undefined);
@@ -73,6 +73,10 @@ export default function RegisterPage() {
   React.useEffect(() => {
     try { setPendingCat(sessionStorage.getItem("moraqat.pendingCatName")); } catch { /* ignore */ }
   }, []);
+  // "I don't have a cat yet" — chosen BEFORE the account exists, so it is held
+  // here and applied the moment there is an account to apply it to. It changes
+  // where registration lands: the explore home instead of the Cat ID wizard.
+  const [noCatYet, setNoCatYet] = React.useState(false);
   const [otp, setOtp] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -122,6 +126,12 @@ export default function RegisterPage() {
     ? (isAr ? `متابعة لهوية ${pendingCat}` : `Continue to ${pendingCat}'s ID`)
     : (isAr ? "إنشاء الحساب" : "Create account");
 
+  /** Record the explore posture on the account we just created. */
+  const markNoCatYet = React.useCallback(
+    () => authedFetch("/account/no-cat-yet", { method: "POST", body: JSON.stringify({ value: true }) }),
+    [authedFetch]
+  );
+
   async function doRegister(withOtp?: string) {
     const firstTouch = readFirstTouch();
     await register({
@@ -137,7 +147,20 @@ export default function RegisterPage() {
     });
     // Account created — the draft has done its job.
     clearSignupDraft();
-    track("registration_completed");
+    track("registration_completed", noCatYet ? { noCatYet: true } : undefined);
+
+    // Someone who told us they have no cat yet should not land on a form they
+    // cannot fill in (R111). Recorded server-side so the portal greets them as
+    // someone exploring; a failure here is never worth blocking a signup over.
+    if (noCatYet) {
+      try {
+        await markNoCatYet();
+      } catch {
+        /* the explore home still works without the flag */
+      }
+      router.push(safeNext() ?? "/portal");
+      return;
+    }
     // Straight to the Cat ID (north star: holding it in under two minutes).
     // Email verification runs in parallel — a quiet portal banner invites it;
     // it gates only community interactions (likes/reports), never the ID or
@@ -189,8 +212,15 @@ export default function RegisterPage() {
     try {
       await loginWithGoogle(idToken);
       clearSignupDraft();
-      track("registration_completed", { google: true });
-      router.push(safeNext() ?? (pendingCat ? "/portal/cats/new" : "/portal"));
+      track("registration_completed", { google: true, ...(noCatYet ? { noCatYet: true } : {}) });
+      if (noCatYet) {
+        try {
+          await markNoCatYet();
+        } catch {
+          /* non-fatal */
+        }
+      }
+      router.push(safeNext() ?? (noCatYet ? "/portal" : pendingCat ? "/portal/cats/new" : "/portal"));
     } catch (err) {
       setError(friendlyError(err, isAr).message);
     }
@@ -285,10 +315,24 @@ export default function RegisterPage() {
           </span>
         </label>
 
+        {/* "I don't have a cat yet" — a deliberate way in, disclosed at the
+            moment it applies. It does not change what we ask for; it changes
+            where this lands, so nobody is dropped onto a Cat ID form with
+            nothing to put in it (R002/R111). */}
+        <NoCatYetChoice isAr={isAr} checked={noCatYet} onChange={setNoCatYet} />
+
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button type="submit" size="lg" disabled={loading} className="mt-1">
           {loading ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-          {smsEnabled ? (isAr ? "تحقّق من الجوال وأكمل" : "Verify mobile & continue") : continueLabel}
+          {smsEnabled
+            ? isAr
+              ? "تحقّق من الجوال وأكمل"
+              : "Verify mobile & continue"
+            : noCatYet
+              ? isAr
+                ? "انضم واستكشف"
+                : "Join and explore"
+              : continueLabel}
           {!loading && <ArrowRight className="size-4 rtl:rotate-180" />}
         </Button>
       </form>
@@ -353,4 +397,51 @@ function registerErrorMessage(err: unknown, isAr: boolean): string {
       : `${fe.message} Your details are kept safe here.`;
   }
   return fe.message;
+}
+
+/**
+ * "I don't have a cat yet."
+ *
+ * Moracat's front door is the census, and the census question is about a cat —
+ * which quietly told anyone without one that they were in the wrong place. They
+ * aren't: someone about to adopt, someone who just lost a cat, someone helping
+ * a neighbour. They all have a reason to be here today.
+ *
+ * Rendered as a considered choice rather than an apology: a bordered panel with
+ * a real 44px control, stating what changes (where you land) and what doesn't
+ * (everything else). It never appears pre-ticked — this is a statement about
+ * someone's life, and the product does not get to assume it (R006, R111).
+ */
+function NoCatYetChoice({
+  isAr,
+  checked,
+  onChange,
+}: {
+  isAr: boolean;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3 transition-colors",
+        checked ? "border-primary bg-primary/5" : "border-dashed border-border hover:bg-muted/50"
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 size-4 rounded border-input accent-primary"
+      />
+      <span className="min-w-0 text-sm">
+        <span className="block font-medium">{isAr ? "ما عندي قط بعد" : "I don't have a cat yet"}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+          {isAr
+            ? "انضم الحين وتصفّح القطط اللي تدوّر بيتاً، وتابع التعداد — وسجّل أول قط لك متى ما جاك."
+            : "Join now, browse the cats looking for a home, follow the census — and register your first cat whenever they arrive."}
+        </span>
+      </span>
+    </label>
+  );
 }

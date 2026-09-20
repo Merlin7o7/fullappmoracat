@@ -199,10 +199,22 @@ const killSwitchCode = await runSuite({
   extraEnv: { COMMERCE_ENABLED: "false" },
 });
 
-const code = smokeCode || killSwitchCode;
+// Pass 3 — the cat's life beyond one household. Runs with commerce ON so a
+// transfer can be refused for an ACTIVE membership (the one assertion that
+// needs the payment engine present), and separate from the smoke suite because
+// its failure modes are about a cat having two owners or none, not about a
+// route returning the wrong shape.
+const catLifeCode = await runSuite({
+  label: "adoption · ownership transfer · lost & found",
+  suiteFile: "cat-life.mjs",
+  port: Number(port) + 200,
+  extraEnv: { COMMERCE_ENABLED: "true" },
+});
+
+const code = smokeCode || killSwitchCode || catLifeCode;
 console.log(
   code === 0
-    ? "\n✅ ALL SUITES PASSED (commerce on + commerce off)"
+    ? "\n✅ ALL SUITES PASSED (commerce on + commerce off + cat life)"
     : "\n❌ SUITE FAILURES — see above"
 );
 process.exit(code);

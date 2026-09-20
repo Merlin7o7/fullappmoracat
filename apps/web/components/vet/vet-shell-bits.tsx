@@ -16,6 +16,7 @@ import { Check, ChevronDown, Lock, LockOpen, ShieldCheck } from "lucide-react";
 import { Badge, Button, Card, Dialog, cn, useToast } from "@moraqat/ui";
 import { VET_ROLE_LABELS, type VetRole } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
+import { Illo3D, type Illo3DName } from "@/components/illo-3d";
 import {
   getVetDeviceId,
   useVetActor,
@@ -71,6 +72,7 @@ export function SectionCard({
 
 export function EmptyState({
   icon: Icon,
+  illo,
   title,
   body,
   action,
@@ -78,6 +80,16 @@ export function EmptyState({
   tone = "calm",
 }: {
   icon?: React.ComponentType<{ className?: string }>;
+  /**
+   * A brand object instead of an icon — the hero illustration tier.
+   *
+   * Reserved for a screen that is genuinely, wholly empty (a clinic with no
+   * patients yet, a day-book before the first check-in), never for an empty
+   * panel inside a populated screen: one object per screen is the rule, and a
+   * clinical surface has less room for warmth than a member one. The icon
+   * stays the default precisely so this has to be asked for.
+   */
+  illo?: Illo3DName;
   title: string;
   /** Say what will fill this space, and why it's empty — honestly. */
   body?: string;
@@ -94,15 +106,22 @@ export function EmptyState({
         className,
       )}
     >
-      {Icon && (
-        <span
-          className={cn(
-            "grid size-11 place-items-center rounded-2xl",
-            tone === "boundary" ? "bg-info/12 text-info" : "bg-background text-muted-foreground",
-          )}
-        >
-          <Icon className="size-5" />
+      {illo ? (
+        <span className="relative grid size-24 place-items-center">
+          <span aria-hidden className="absolute size-20 rounded-full bg-cream opacity-70 blur-xl" />
+          <Illo3D name={illo} px={96} className="relative size-24" />
         </span>
+      ) : (
+        Icon && (
+          <span
+            className={cn(
+              "grid size-11 place-items-center rounded-2xl",
+              tone === "boundary" ? "bg-info/12 text-info" : "bg-background text-muted-foreground",
+            )}
+          >
+            <Icon className="size-5" />
+          </span>
+        )
       )}
       <p className="text-sm font-medium text-foreground">{title}</p>
       {body && <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">{body}</p>}

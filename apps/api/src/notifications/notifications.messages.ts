@@ -34,7 +34,22 @@ export type NotificationType =
   | "cat_birthday"
   | "member_anniversary"
   | "refund_requested"
-  | "refund_requested_staff";
+  | "refund_requested_staff"
+  // ── The cat's life beyond one household (2026-09-20) ────────────────────
+  // Rehoming, the hand-over of the Cat ID, and the reunion board.
+  | "ownership_transfer_offered"
+  | "ownership_transfer_cancelled"
+  | "ownership_transfer_declined"
+  | "ownership_transfer_completed_from"
+  | "ownership_transfer_completed_to"
+  | "adoption_request_received"
+  | "adoption_request_accepted"
+  | "adoption_request_declined"
+  | "lost_found_message"
+  | "lost_found_possible_match"
+  // Moderation on the new public boards. A hidden post is never a silent
+  // disappearance — the person who wrote it hears what happened, and why.
+  | "listing_hidden";
 
 export type NotificationParams = Record<string, string | number>;
 
@@ -374,6 +389,142 @@ export function buildNotificationText(
           body: params.reason
             ? `${p(params, "who")} requested a refund of their remaining term. Reason: ${p(params, "reason")}`
             : `${p(params, "who")} requested a refund of their remaining term.`,
+        },
+      };
+
+    // ── The cat's life beyond one household (2026-09-20) ──────────────────
+    // Every line here is about a cat moving between people. The voice stays
+    // warm and factual: a hand-over is not a transaction to congratulate, and
+    // a lost cat is not a moment for exclamation marks (R081, R087).
+    case "ownership_transfer_offered":
+      return {
+        ar: {
+          title: `${p(params, "from") || "أحد الأعضاء"} يسلّمك ${p(params, "name")}`,
+          body: `لو وافقت، تنتقل لك هوية ${p(params, "name")} بنفس رقمها — ومعها سجلها كامل. شوف الملف قبل ما تقرّر.`,
+        },
+        en: {
+          title: `${p(params, "from") || "A member"} is handing you ${p(params, "name")}`,
+          body: `If you accept, ${p(params, "name")}'s Cat ID comes to you with the same number — and the whole record with it. Look before you decide.`,
+        },
+      };
+    case "ownership_transfer_cancelled":
+      return {
+        ar: {
+          title: `تم سحب عرض نقل ${p(params, "name")}`,
+          body: "صاحب القط سحب العرض. ما انتقل شي، والملف باقٍ عنده.",
+        },
+        en: {
+          title: `The offer for ${p(params, "name")} was withdrawn`,
+          body: "The owner took the offer back. Nothing moved — the record stayed with them.",
+        },
+      };
+    case "ownership_transfer_declined":
+      return {
+        ar: {
+          title: `${p(params, "name")} باقٍ عندك`,
+          body: "العضو الآخر اعتذر عن استلام القط. ملفه وهويته ما تغيّر فيهم شي.",
+        },
+        en: {
+          title: `${p(params, "name")} is staying with you`,
+          body: "The other member declined. Nothing about their Cat ID or record changed.",
+        },
+      };
+    case "ownership_transfer_completed_from":
+      return {
+        ar: {
+          title: `تم نقل ${p(params, "name")}`,
+          body: `${p(params, "to") || "العضو الجديد"} استلم ${p(params, "name")} وسجله كامل. سنوات عنايتك محفوظة في سجل ملكيته.`,
+        },
+        en: {
+          title: `${p(params, "name")} has moved`,
+          body: `${p(params, "to") || "Their new owner"} now holds ${p(params, "name")} and the full record. Your years of care stay in their ownership history.`,
+        },
+      };
+    case "ownership_transfer_completed_to":
+      return {
+        ar: {
+          title: `${p(params, "name")} صار لك 🎉`,
+          body: `هويته ${p(params, "id")} انتقلت لك بنفس الرقم، ومعها سجله الصحي. ابدأ بجهات الطوارئ ومن يشوف سجله.`,
+        },
+        en: {
+          title: `${p(params, "name")} is yours 🎉`,
+          body: `Cat ID ${p(params, "id")} came to you with the same number, and the health record with it. Start with emergency contacts and record access.`,
+        },
+      };
+    case "adoption_request_received":
+      return {
+        ar: {
+          title: `طلب تبنٍّ لـ${p(params, "name")}`,
+          body: `${p(params, "who") || "أحد الأعضاء"} يسأل عن ${p(params, "name")}. اقرأ رسالته وقرّر على راحتك — ما في استعجال.`,
+        },
+        en: {
+          title: `An adoption enquiry for ${p(params, "name")}`,
+          body: `${p(params, "who") || "A member"} asked about ${p(params, "name")}. Read what they wrote and take your time.`,
+        },
+      };
+    case "adoption_request_accepted":
+      return {
+        ar: {
+          title: `تمت الموافقة على طلبك لـ${p(params, "name")}`,
+          body: `صاحب ${p(params, "name")} وافق. اتفقوا على التفاصيل، وبعدها يرسل لك نقل الهوية.`,
+        },
+        en: {
+          title: `Your enquiry about ${p(params, "name")} was accepted`,
+          body: `${p(params, "name")}'s owner said yes. Agree the details between you, then they'll send the Cat ID transfer.`,
+        },
+      };
+    case "adoption_request_declined":
+      return {
+        ar: {
+          title: `${p(params, "name")} لقى بيت ثاني`,
+          body: params.note
+            ? `صاحب القط ردّ: «${p(params, "note")}». في قطط ثانية تنتظر بيت — شوف الباقي.`
+            : "في قطط ثانية تنتظر بيتاً — شوف الباقي متى ما حبيت.",
+        },
+        en: {
+          title: `${p(params, "name")} found another home`,
+          body: params.note
+            ? `The owner wrote: “${p(params, "note")}”. Other cats are still waiting for a home.`
+            : "Other cats are still waiting for a home — have a look whenever you like.",
+        },
+      };
+    case "lost_found_message":
+      return {
+        ar: {
+          title: params.name ? `رسالة عن ${p(params, "name")} 🐾` : "رسالة على إعلانك 🐾",
+          body: `«${p(params, "message")}»${p(params, "phone") ? ` — تواصل على ${p(params, "phone")}` : ""}`,
+        },
+        en: {
+          title: params.name ? `A message about ${p(params, "name")} 🐾` : "A message on your notice 🐾",
+          body: `“${p(params, "message")}”${p(params, "phone") ? ` — reach them on ${p(params, "phone")}` : ""}`,
+        },
+      };
+    case "listing_hidden":
+      return {
+        ar: {
+          title: params.name ? `أخفينا إعلان ${p(params, "name")}` : "أخفينا إعلانك",
+          body: params.reason
+            ? `أخفى أحد المشرفين هذا الإعلان. السبب: ${p(params, "reason")}. تواصل مع الدعم لأي استفسار.`
+            : "أخفى أحد المشرفين هذا الإعلان. تواصل مع الدعم لأي استفسار.",
+        },
+        en: {
+          title: params.name ? `${p(params, "name")}'s listing was hidden` : "Your listing was hidden",
+          body: params.reason
+            ? `A moderator took this down. Reason: ${p(params, "reason")}. Contact support if you have questions.`
+            : "A moderator took this down. Contact support if you have questions.",
+        },
+      };
+    case "lost_found_possible_match":
+      // Only ever raised on an exact microchip match — a guess dressed as a
+      // reunion would be cruel (R006).
+      return {
+        ar: {
+          title: "قد يكون هذا قطك",
+          body: `أحدهم نشر إعلان «وجدت قطاً» برقم شريحة يطابق ${p(params, "name")}. افتح الإعلان وتأكد.`,
+        },
+        en: {
+          title: "This might be your cat",
+          body: `Someone posted a found-cat notice with a microchip number matching ${p(params, "name")}. Open it and check.`,
         },
       };
   }

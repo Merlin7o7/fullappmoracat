@@ -83,10 +83,21 @@ console.log("━━ no response leaks a price ━━");
 // pull for a SAR amount or a known plan price. A route that 403s can't leak,
 // but a route someone forgets to gate would show up right here.
 const openPaths = ["/census", "/content/faqs", "/content/announcements", "/content/testimonials", "/content/blog", "/community/cats", "/community/facets"];
+//
+// COUNTS ARE NOT PRICES. The bare-number scan below used to run over the whole
+// body, which meant this assertion failed the day the census reached its 329th
+// cat — a false alarm, and the expensive kind: the next person to see this test
+// go red has no reason to believe it. Numeric values under known count keys are
+// blanked first; the key scan still catches every real price field.
+const COUNT_VALUES =
+  /"(registered|foundingLimit|latestPublicCatNumber|catNumber|total|totalPages|count|likeCount|viewCount|page|limit|lost|found|reunited)"\s*:\s*-?\d+/g;
 for (const p of openPaths) {
   const r = await call(p);
   const body = JSON.stringify(r.json ?? "");
-  const leak = /\b(199|219|329|479)\b/.test(body) || /"price"|"grandTotal"|"termTotal"|"compareAtPrice"/.test(body);
+  const scannable = body.replace(COUNT_VALUES, '"n":0');
+  const leak =
+    /\b(199|219|329|479)\b/.test(scannable) ||
+    /"price"|"grandTotal"|"termTotal"|"compareAtPrice"/.test(body);
   ok(!leak, `no price leaks from ${p}`);
 }
 
