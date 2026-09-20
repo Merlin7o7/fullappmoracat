@@ -86,5 +86,8 @@ export class FilesService {
 }
 
 export function apiBase(): string {
-  return (process.env.API_PUBLIC_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000").replace(/\/+$/, "");
+  // Production sets API_BASE_URL (the Tamara adapter already relies on it); the
+  // other two names are accepted so local/dev envs keep working unchanged.
+  const base = process.env.API_PUBLIC_URL || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+  return base.replace(/\/+$/, "");
 }
