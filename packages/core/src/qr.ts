@@ -27,14 +27,13 @@ export function parseQrValue(raw: string): string | null {
     return QR_TOKEN_RE.test(t) ? t : null;
   }
   if (/^https?:\/\//i.test(value)) {
-    try {
-      const url = new URL(value);
-      const m = /^\/c\/([^/?#]+)/.exec(url.pathname);
-      const t = (m?.[1] ?? url.searchParams.get("t") ?? "").toUpperCase();
-      return QR_TOKEN_RE.test(t) ? t : null;
-    } catch {
-      return null;
-    }
+    // Parsed by hand: @moraqat/core is platform-free (no DOM or Node typings),
+    // so the global `URL` is not available to it in a clean build.
+    const m =
+      /^https?:\/\/[^/?#]+\/c\/([^/?#]+)/i.exec(value) ??
+      /^https?:\/\/[^?#]*\?(?:[^#]*&)?t=([^&#]+)/i.exec(value);
+    const t = (m?.[1] ?? "").toUpperCase();
+    return QR_TOKEN_RE.test(t) ? t : null;
   }
   const t = value.replace(/[\s-]/g, "").toUpperCase();
   return QR_TOKEN_RE.test(t) ? t : null;
