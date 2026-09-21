@@ -1,5 +1,6 @@
 "use client";
 
+import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -101,7 +102,7 @@ export default function LoginPage() {
 
   async function sendOtp() {
     clearError();
-    if (phone.replace(/\D/g, "").length < 8) { setError(isAr ? "رقم الجوال غير صحيح" : "Enter a valid mobile number"); return; }
+    if (digitsOnly(phone).length < 8) { setError(isAr ? "رقم الجوال غير صحيح" : "Enter a valid mobile number"); return; }
     setLoading(true);
     try {
       const { devCode } = await requestOtp(fullPhone, "LOGIN");
@@ -215,7 +216,7 @@ export default function LoginPage() {
         <form onSubmit={onPhoneLogin} className="mt-5 flex flex-col gap-4">
           <PhoneField isAr={isAr} label={isAr ? "رقم الجوال" : "Mobile number"} required dialCode={dialCode} onDialCode={setDialCode} value={phone} onValue={setPhone} />
           {otpSent && (
-            <Field label={isAr ? "رمز الدخول" : "Login code"} value={otp} onChange={(v) => setOtp(v.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" required placeholder="••••••" hint={isAr ? "أرسلناه برسالة نصية" : "Sent to you by SMS"} />
+            <Field label={isAr ? "رمز الدخول" : "Login code"} value={otp} onChange={(v) => setOtp(digitsOnly(v).slice(0, 6))} inputMode="numeric" required placeholder="••••••" hint={isAr ? "أرسلناه برسالة نصية" : "Sent to you by SMS"} />
           )}
           <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={openForgotPrefilled} />
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

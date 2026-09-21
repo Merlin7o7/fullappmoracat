@@ -350,7 +350,7 @@ export function ChangesRequestedBanner({ state, isAr }: { state: RegistrationSta
     .map((s) => (isAr ? s!.ar : s!.en));
   return (
     <div role="status" className="flex gap-3 rounded-2xl border border-warning/40 bg-warning/[0.08] p-4 sm:p-5">
-      <MessageSquareWarning className="mt-0.5 size-5 shrink-0 text-[hsl(38_92%_32%)] dark:text-warning" aria-hidden />
+      <MessageSquareWarning className="mt-0.5 size-5 shrink-0 text-[hsl(38_92%_32%)] dark:text-warning-ink" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="font-display text-base font-semibold">{isAr ? "طلب فريق المراجعة بعض التعديلات" : "The review team asked for a few changes"}</p>
         {state.org.changesRequestedNote && (

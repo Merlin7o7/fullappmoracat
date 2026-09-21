@@ -148,6 +148,12 @@ export class CatsController {
     return this.cats.setLostMode(userId, id, body?.enabled === true);
   }
 
+  @Get(":id/found-reports")
+  @ApiOperation({ summary: "Messages finders left by scanning this cat's QR — the owner's inbox for them" })
+  foundReports(@CurrentUser("id") userId: string, @Param("id") id: string) {
+    return this.cats.foundReports(userId, id);
+  }
+
   // ── Health record ────────────────────────────────────────────────────────
   @Get(":id/vaccinations")
   @ApiOperation({ summary: "List a cat's vaccination history" })

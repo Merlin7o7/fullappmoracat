@@ -18,6 +18,19 @@ export const LEGAL_ENTITY = {
   en: "Abdulrahman Mansour Alghamdi Trading Establishment",
 } as const;
 
+/**
+ * Official registration numbers — what a Saudi consumer looks for before
+ * trusting a site with their data. Read from the environment and shown ONLY
+ * when set: a registration number is never guessed, defaulted or hard-coded
+ * (R006 honest by default). Set NEXT_PUBLIC_CR_NUMBER / NEXT_PUBLIC_VAT_NUMBER
+ * in the web environment to publish them in the footer.
+ */
+const cleanReg = (v: string | undefined) => (v && /^[0-9]{6,15}$/.test(v.trim()) ? v.trim() : null);
+export const REGISTRATION = {
+  crNumber: cleanReg(process.env.NEXT_PUBLIC_CR_NUMBER),
+  vatNumber: cleanReg(process.env.NEXT_PUBLIC_VAT_NUMBER),
+} as const;
+
 const PHONE_E164 = "+966551094814";
 
 export const CONTACT = {

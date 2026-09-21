@@ -26,8 +26,11 @@ export const PASSWORD_RULES: ReadonlyArray<{ id: PasswordRuleId; value?: number 
 export function passwordRuleFailures(password: string): PasswordRuleId[] {
   const failed: PasswordRuleId[] = [];
   if (password.length < PASSWORD_POLICY.minLength) failed.push("minLength");
-  if (!/[A-Za-z]/.test(password)) failed.push("letter");
-  if (!/\d/.test(password)) failed.push("number");
-  if (password.length > PASSWORD_POLICY.maxLength) failed.push("maxLength");
+  // Any script counts: an Arabic-keyboard member types Arabic letters and ٠–٩,
+  // and "one letter, one number" must tick for them too (R101).
+  if (!/\p{L}/u.test(password)) failed.push("letter");
+  if (!/\p{Nd}/u.test(password)) failed.push("number");
+  // bcrypt's limit is 72 BYTES, and an Arabic letter is two — measure bytes.
+  if (Buffer.byteLength(password, "utf8") > PASSWORD_POLICY.maxLength) failed.push("maxLength");
   return failed;
 }

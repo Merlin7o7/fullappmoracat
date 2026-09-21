@@ -304,6 +304,15 @@ export class DirectoryQueryDto {
   @MaxLength(40)
   cityId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      "City by name, as a member would type it (Arabic or English) — the public directory's search box.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  city?: string;
+
   @ApiPropertyOptional({ description: "Only clinics open 24/7 for emergencies." })
   @IsOptional()
   @IsIn(["true", "false"])

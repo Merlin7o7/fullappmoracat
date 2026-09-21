@@ -36,7 +36,7 @@ export function PortalMobileNav({ items, isAr, isStaff, onLogout }: PortalMobile
 
   const tabClass = (active: boolean) =>
     cn(
-      "flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.35rem] py-1.5 text-[0.625rem] font-medium leading-none transition-colors",
+      "flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.35rem] py-1.5 text-[0.6875rem] font-medium leading-tight transition-colors",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
     );

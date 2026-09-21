@@ -28,6 +28,9 @@ import {
 } from "./vet-patients.service";
 import type { EmergencyAccessDto } from "./dto/vet-consent.dto";
 
+/** How long a break-glass audit grant reads as "live" on the owner's screen. */
+const EMERGENCY_GRANT_TTL_MS = 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class VetEmergencyService {
   constructor(
@@ -128,6 +131,11 @@ export class VetEmergencyService {
           grantedById: null,
           emergency: true,
           reason,
+          // An emergency is an event, not a standing relationship. Without an
+          // expiry the owner's permissions screen showed this as a PERMANENT
+          // live grant they never gave; a day covers the treatment window and
+          // then it reads as history, which is what it is.
+          expiresAt: new Date(Date.now() + EMERGENCY_GRANT_TTL_MS),
         },
         select: { id: true, grantedAt: true },
       }),

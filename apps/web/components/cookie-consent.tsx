@@ -40,17 +40,19 @@ export function CookieConsent() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 p-3 sm:p-4" role="dialog" aria-label={isAr ? "إشعار ملفات الارتباط" : "Cookie notice"}>
-      <div className="mx-auto flex max-w-3xl flex-col items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-e3 sm:flex-row sm:items-center">
-        <Cookie className="size-5 shrink-0 text-primary" />
-        <p className="flex-1 text-sm text-muted-foreground">
+      {/* One compact row at every width: on a phone a stacked card took a fifth
+          of the first screen — and hid the page's one action behind a notice. */}
+      <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-e3 sm:p-4">
+        <Cookie className="hidden size-5 shrink-0 text-primary sm:block" />
+        <p className="flex-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">
           {isAr
-            ? "نستخدم تخزيناً محلياً أساسياً فقط لتشغيل الموقع — بلا إعلانات تتبّع. "
-            : "We use only essential local storage to run the site — no ad trackers. "}
+            ? "نستخدم تخزيناً محلياً لتشغيل الموقع ولقياس استخدامه بشكل مجهول — بلا إعلانات ولا تتبّع خارج مرقط. "
+            : "We use local storage to run the site and to measure its use anonymously — no ads, no tracking beyond Moracat. "}
           <Link href="/legal/cookies" className="font-medium text-primary hover:underline">
             {isAr ? "اعرف أكثر" : "Learn more"}
           </Link>
         </p>
-        <Button size="sm" onClick={accept} className="shrink-0">
+        <Button size="sm" onClick={accept} className="min-h-11 shrink-0">
           {isAr ? "تمام" : "Got it"}
         </Button>
       </div>

@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
-import { PhoneField, composePhone } from "@/components/phone-field";
+import { PhoneField, composePhone, nationalNumberOk } from "@/components/phone-field";
 import { CatIdCeremony, type ShareChoice } from "@/components/cat-id-ceremony";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatOnboardingJourney } from "@/components/cat-onboarding-journey";
@@ -18,7 +18,7 @@ import { useCats, type PortalCat } from "@/lib/cat-context";
 import { friendlyMessage } from "@/lib/errors";
 import { consumeSource } from "@/lib/source";
 import { track } from "@/lib/track";
-import { SAUDI_CITIES } from "@moraqat/core";
+import { SAUDI_CITIES, digitsOnly } from "@moraqat/core";
 
 /**
  * Issuing a Cat ID — the cat's name comes FIRST, and almost nothing else is
@@ -66,7 +66,7 @@ function CatAge({
   onChange: (years: string, months: string) => void;
 }) {
   const clamp = (v: string, max: number) => {
-    const digits = v.replace(/\D/g, "").slice(0, 2);
+    const digits = digitsOnly(v).slice(0, 2);
     if (digits === "") return "";
     return String(Math.min(Number(digits), max));
   };
@@ -472,7 +472,7 @@ function IssueIdFlow() {
   const ageKnown = (f.ageYears !== "" || f.ageMonths !== "") && ageTotalMonths > 0;
   const catStepReady = Boolean(catName) && f.gender !== "" && ageKnown;
   const ownerStepReady =
-    Boolean(f.ownerName.trim()) && f.ownerPhone.replace(/\D/g, "").length >= 9 && f.cityCode !== "";
+    Boolean(f.ownerName.trim()) && nationalNumberOk(f.ownerDialCode, f.ownerPhone) && f.cityCode !== "";
   const allReady = catStepReady && ownerStepReady;
 
   /** What's still missing, named plainly so the button never just sits dead (R084/R113). */
@@ -482,10 +482,10 @@ function IssueIdFlow() {
     if (f.gender === "") gaps.push(isAr ? "الجنس" : "sex");
     if (!ageKnown) gaps.push(isAr ? "العمر" : "age");
     if (!f.ownerName.trim()) gaps.push(isAr ? "اسمك" : "your name");
-    if (f.ownerPhone.replace(/\D/g, "").length < 9) gaps.push(isAr ? "رقم جوالك" : "your mobile");
+    if (!nationalNumberOk(f.ownerDialCode, f.ownerPhone)) gaps.push(isAr ? "رقم جوالك" : "your mobile");
     if (f.cityCode === "") gaps.push(isAr ? "المدينة" : "your city");
     return gaps.length ? gaps.join(isAr ? " · " : " · ") : null;
-  }, [catName, f.gender, ageKnown, f.ownerName, f.ownerPhone, f.cityCode, isAr]);
+  }, [catName, f.gender, ageKnown, f.ownerName, f.ownerPhone, f.ownerDialCode, f.cityCode, isAr]);
   // Another living, active cat already carrying this exact name?
   const duplicateName = React.useMemo(
     () => cats.some((c) => c.status === "ACTIVE" && c.name.trim().toLowerCase() === catName.toLowerCase()),

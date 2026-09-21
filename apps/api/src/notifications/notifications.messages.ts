@@ -356,7 +356,7 @@ export function buildNotificationText(
     case "member_anniversary":
       return {
         ar: {
-          title: `سنة مع مُرقّط 🐾`,
+          title: `سنة مع مرقط 🐾`,
           body: `اليوم تكتمل ${p(params, "years")} منذ انضمام ${p(params, "name")}. شكراً لأنك جزء من العائلة.`,
         },
         en: {

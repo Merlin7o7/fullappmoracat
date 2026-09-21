@@ -278,7 +278,7 @@ function BranchCard({ branch: b, isAr }: { branch: OrgBranch; isAr: boolean }) {
               licence === "expired" || licence === "critical"
                 ? "bg-destructive/10 text-destructive"
                 : licence === "soon"
-                  ? "bg-warning/15 text-[hsl(38_92%_26%)] dark:text-warning"
+                  ? "bg-warning/15 text-[hsl(38_92%_26%)] dark:text-warning-ink"
                   : "bg-muted text-muted-foreground",
             )}
           >

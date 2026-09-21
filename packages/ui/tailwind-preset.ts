@@ -53,6 +53,7 @@ const preset: Partial<Config> = {
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          ink: "hsl(var(--warning-ink))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",

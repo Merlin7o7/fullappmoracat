@@ -52,8 +52,8 @@ import {
 
 type Friendly = { title: string; message: string; code?: string } | null;
 
-/** Mirrors apps/api/src/auth/password-policy.ts: ≥ 8 chars, a Latin letter and a digit. */
-const PASSWORD_OK = (p: string) => p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p);
+/** Mirrors apps/api/src/auth/password-policy.ts: ≥ 8 chars, a letter and a digit — in any script. */
+const PASSWORD_OK = (p: string) => p.length >= 8 && /\p{L}/u.test(p) && /\p{Nd}/u.test(p);
 
 export default function VetInvitePage() {
   const { locale } = useLocale();

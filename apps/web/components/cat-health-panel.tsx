@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Syringe, Stethoscope, FileText, Plus, Loader2, Camera } from "lucide-react";
 import { Badge, Button, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { friendlyError } from "@/lib/errors";
 import { formatDate } from "@/lib/datetime";
 import { formatSAR } from "@/lib/money";
 import { Field, SelectField } from "@/components/field";
@@ -45,23 +46,28 @@ export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ["cat", catId] });
+    // The record above this panel (standing badge, "next dose") and the home
+    // screen's "coming up" read different queries — a dose just logged must
+    // update all three, or the page contradicts itself.
+    void qc.invalidateQueries({ queryKey: ["cat-health", catId] });
+    void qc.invalidateQueries({ queryKey: ["overview"] });
     setAdding(false);
   };
 
   const addVax = useMutation({
     mutationFn: (b: Record<string, unknown>) => authedFetch(`/cats/${catId}/vaccinations`, { method: "POST", body: JSON.stringify(b) }),
     onSuccess: invalidate,
-    onError: (e: Error) => toast({ title: e.message, variant: "error" }),
+    onError: (e: unknown) => { const f = friendlyError(e, isAr); toast({ title: f.title, description: f.message, variant: "error" }); },
   });
   const addVisit = useMutation({
     mutationFn: (b: Record<string, unknown>) => authedFetch(`/cats/${catId}/vet-visits`, { method: "POST", body: JSON.stringify(b) }),
     onSuccess: invalidate,
-    onError: (e: Error) => toast({ title: e.message, variant: "error" }),
+    onError: (e: unknown) => { const f = friendlyError(e, isAr); toast({ title: f.title, description: f.message, variant: "error" }); },
   });
   const addDoc = useMutation({
     mutationFn: (b: Record<string, unknown>) => authedFetch(`/cats/${catId}/documents`, { method: "POST", body: JSON.stringify(b) }),
     onSuccess: invalidate,
-    onError: (e: Error) => toast({ title: e.message, variant: "error" }),
+    onError: (e: unknown) => { const f = friendlyError(e, isAr); toast({ title: f.title, description: f.message, variant: "error" }); },
   });
 
   const fmt = (d: string | null) =>
@@ -230,7 +236,9 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
           ref={fileRef}
           type="file"
           accept="image/*"
-          capture="environment"
+          // No `capture`: forcing the camera blocked the commonest case — the
+          // clinic already sent the report as a photo in WhatsApp. Without it
+          // iOS and Android offer BOTH "take photo" and "choose from library".
           className="sr-only"
           aria-label={isAr ? "صوّر المستند أو ارفعه" : "Photograph or upload the document"}
           onChange={(e) => void handleFile(e.target.files?.[0])}

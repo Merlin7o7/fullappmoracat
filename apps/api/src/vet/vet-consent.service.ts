@@ -101,7 +101,11 @@ export class VetConsentService {
         orgId: actor.orgId,
         requestedTier: dto.tier,
         reason: dto.reason ?? null,
-        link: `/portal/cats/${cat.id}/privacy`,
+        // Straight to the decision: the permissions screen opens on this cat
+        // with this clinic's request waiting for a yes or a no. The clinic's
+        // NAME is never carried in the link — the page resolves it from the
+        // org id, so a crafted link cannot dress one clinic up as another.
+        link: `/portal/health-access?cat=${cat.id}&org=${actor.orgId}&tier=${dto.tier}`,
       },
     });
 
@@ -205,6 +209,27 @@ export class VetConsentService {
   }
 
   /** The member grants access. This is the only path that raises a tier. */
+  /**
+   * Who is asking? The owner's approval screen resolves a clinic by id so the
+   * name it shows is the registry's, never something a link supplied. Only
+   * clinics that could actually be granted access resolve at all.
+   */
+  async clinicForOwner(orgId: string) {
+    const org = await this.prisma.partnerOrg.findFirst({
+      where: { id: orgId, status: { in: ["APPROVED", "LIVE"] } },
+      select: { id: true, nameEn: true, nameAr: true, logoUrl: true },
+    });
+    if (!org) {
+      throw vetNotFound("VET_PATIENT_NOT_FOUND", "No such active clinic", {
+        hint: {
+          ar: "هذه العيادة غير متاحة حاليًا في شبكة مرقط.",
+          en: "That clinic isn't currently active in the Moracat network.",
+        },
+      });
+    }
+    return { id: org.id, ar: org.nameAr, en: org.nameEn, logoUrl: org.logoUrl };
+  }
+
   async grant(userId: string, dto: GrantConsentDto) {
     const cat = await this.requireOwnedCat(userId, dto.catId);
     const org = await this.prisma.partnerOrg.findFirst({
@@ -214,7 +239,7 @@ export class VetConsentService {
     if (!org) {
       throw vetNotFound("VET_PATIENT_NOT_FOUND", "No such active clinic", {
         hint: {
-          ar: "هذه العيادة غير متاحة حاليًا في شبكة مُراقط.",
+          ar: "هذه العيادة غير متاحة حاليًا في شبكة مرقط.",
           en: "That clinic isn't currently active in the Moracat network.",
         },
       });

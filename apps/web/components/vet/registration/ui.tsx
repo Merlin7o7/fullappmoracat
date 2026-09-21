@@ -340,7 +340,7 @@ export function Notice({
       <Icon
         className={cn(
           "mt-0.5 size-4 shrink-0",
-          tone === "warning" && "text-[hsl(38_92%_32%)] dark:text-warning",
+          tone === "warning" && "text-[hsl(38_92%_32%)] dark:text-warning-ink",
           tone === "success" && "text-success",
           tone === "info" && "text-info"
         )}

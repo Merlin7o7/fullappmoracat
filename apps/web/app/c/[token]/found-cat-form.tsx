@@ -5,6 +5,7 @@ import { MessageSquareHeart, CheckCircle2 } from "lucide-react";
 import { Button } from "@moraqat/ui";
 import { Field } from "@/components/field";
 import { track } from "@/lib/track";
+import { latinizeDigits } from "@moraqat/core";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
@@ -27,15 +28,24 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
       const res = await fetch(`${BASE}/api/public/cats/${encodeURIComponent(token)}/found`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: message.trim(), ...(phone.trim() ? { finderPhone: phone.trim() } : {}) }),
+        // ٠–٩ from an Arabic keyboard are digits too — the API only knows Latin.
+        body: JSON.stringify({ message: message.trim(), ...(phone.trim() ? { finderPhone: latinizeDigits(phone.trim()) } : {}) }),
       });
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { code?: string } | null;
+        throw new Error(res.status === 429 || body?.code === "FOUND_REPORT_LIMIT" ? "limit" : res.status === 400 ? "invalid" : "failed");
+      }
       setDone(true);
     } catch (err) {
+      // Three different problems need three different next steps (R084): a
+      // mistyped number must never be told "too many messages".
+      const kind = (err as Error).message;
       setError(
-        String((err as Error).message) === "429" || String((err as Error).message) === "400"
+        kind === "limit"
           ? isAr ? "وصلت رسائل كثيرة لهذا القط اليوم — جرّب لاحقاً." : "Too many messages for this cat today — try again later."
-          : isAr ? "تعذّر الإرسال. حاول مرة أخرى." : "Couldn't send. Please try again."
+          : kind === "invalid"
+            ? isAr ? "تأكد من الرسالة (حرفين على الأقل) ومن رقم الجوال لو كتبته — أو اتركه فاضي." : "Check the message (at least two characters) and the phone number if you gave one — or leave it empty."
+            : isAr ? "تعذّر الإرسال. تأكد من اتصالك وحاول مرة أخرى." : "Couldn't send. Check your connection and try again."
       );
     } finally {
       setBusy(false);

@@ -1742,10 +1742,13 @@ export function useVetApi(): VetApi {
           `/vet/consent${catId ? `?catId=${encodeURIComponent(catId)}` : ""}`,
         ),
 
-      requestConsent: (input) =>
+      requestConsent: ({ catId, tier }) =>
         vetFetch<VetConsentGrant>("/vet/consent/request", {
           method: "POST",
-          body: JSON.stringify(input),
+          // Only what RequestConsentDto declares: the API rejects unknown keys
+          // (forbidNonWhitelisted), and `scope` is not one of them — sending it
+          // turned every clinic request into a 400.
+          body: JSON.stringify({ catId, tier }),
         }),
 
       listAccessLog: (params) => {

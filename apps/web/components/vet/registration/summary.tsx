@@ -55,7 +55,7 @@ export function SummaryCard({
           {gaps === 0 ? (
             <CheckCircle2 className="size-4 text-success" aria-hidden />
           ) : (
-            <AlertCircle className="size-4 text-[hsl(38_92%_32%)] dark:text-warning" aria-hidden />
+            <AlertCircle className="size-4 text-[hsl(38_92%_32%)] dark:text-warning-ink" aria-hidden />
           )}
           {meta ? (isAr ? meta.ar : meta.en) : step}
           {gaps > 0 && (

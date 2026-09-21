@@ -127,7 +127,7 @@ function layout(i: LayoutInput): string {
     ? `<p class="em-muted em-line" style="margin:18px 0 0;padding-top:16px;border-top:1px solid ${BRAND.hairline};font-size:12px;line-height:1.6;color:${BRAND.muted};text-align:${align};">${i.footnote}</p>`
     : "";
 
-  const promise = rtl ? "مُرقّط — هوية قطك تبدأ من هنا." : "Moracat — where your cat's identity begins.";
+  const promise = rtl ? "مرقط — هوية قطك تبدأ من هنا." : "Moracat — where your cat's identity begins.";
   const help = rtl ? "تحتاج مساعدة؟" : "Need a hand?";
   const helpLink = rtl ? "الدعم" : "Contact support";
   const entity = rtl ? LEGAL_ENTITY.ar : LEGAL_ENTITY.en;
@@ -206,12 +206,12 @@ export function verifyEmailTemplate(locale: Locale, name: string | null, url: st
   const body = [
     hiName(ar, name),
     ar
-      ? "خطوة أخيرة صغيرة لتأمين حسابك في مُرقّط — أكّد بريدك بالضغط على الزر أدناه. الرابط صالح لمدة ٢٤ ساعة."
+      ? "خطوة أخيرة صغيرة لتأمين حسابك في مرقط — أكّد بريدك بالضغط على الزر أدناه. الرابط صالح لمدة ٢٤ ساعة."
       : "One small step to secure your Moracat account — confirm your email using the button below. This link is valid for 24 hours.",
   ];
   const cta = { label: ar ? "تأكيد البريد" : "Confirm email", url };
   return {
-    subject: ar ? "أكّد بريدك — مُرقّط" : "Confirm your email — Moracat",
+    subject: ar ? "أكّد بريدك — مرقط" : "Confirm your email — Moracat",
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "إذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة." : "If you didn't create this account, you can safely ignore this email." }),
     text: toText(heading, body, cta),
   };
@@ -222,11 +222,11 @@ export function otpEmailTemplate(locale: Locale, name: string | null, code: stri
   const heading = ar ? "رمز تأكيد بريدك" : "Your verification code";
   const body = [
     hiName(ar, name),
-    ar ? "استخدم هذا الرمز لتأكيد بريدك في مُرقّط. صالح لمدة ١٠ دقائق." : "Use this code to confirm your email on Moracat. It's valid for 10 minutes.",
+    ar ? "استخدم هذا الرمز لتأكيد بريدك في مرقط. صالح لمدة ١٠ دقائق." : "Use this code to confirm your email on Moracat. It's valid for 10 minutes.",
   ];
   const codeBlock = `<div style="margin:14px 0 4px;text-align:center;"><span style="display:inline-block;padding:14px 22px;border-radius:14px;background:${BRAND.chipBg};border:1px solid ${BRAND.hairline};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:10px;color:${BRAND.green};">${code}</span></div>`;
   return {
-    subject: ar ? `رمز التأكيد: ${code} — مُرقّط` : `Your code: ${code} — Moracat`,
+    subject: ar ? `رمز التأكيد: ${code} — مرقط` : `Your code: ${code} — Moracat`,
     html: layout({ locale, preheader: `${heading}: ${code}`, heading, body, extra: codeBlock, footnote: ar ? "إذا لم تطلب ذلك، تجاهل هذه الرسالة." : "If you didn't request this, you can ignore this email." }),
     text: toText(heading, body, undefined, [code]),
   };
@@ -234,11 +234,11 @@ export function otpEmailTemplate(locale: Locale, name: string | null, code: stri
 
 export function welcomeTemplate(locale: Locale, name: string | null): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? "أهلاً بك في مُرقّط 🐾" : "Welcome to Moracat 🐾";
+  const heading = ar ? "أهلاً بك في مرقط 🐾" : "Welcome to Moracat 🐾";
   const body = [
     name ? (ar ? `أهلاً ${name} 🐾` : `Welcome, ${name} 🐾`) : ar ? "أهلاً بك 🐾" : "Welcome 🐾",
     ar
-      ? "سعداء بانضمامك. سجّل قطك، أنشئ هويته الرسمية، وشاركه مع مجتمع مُرقّط — كل قط يستاهل هوية تخصّه."
+      ? "سعداء بانضمامك. سجّل قطك، أنشئ هويته الرسمية، وشاركه مع مجتمع مرقط — كل قط يستاهل هوية تخصّه."
       : "We're glad you're here. Register your cat, issue their official Cat ID, and share it with the Moracat community — every cat deserves an identity of their own.",
   ];
   const cta = { label: ar ? "ابدأ بهوية قطك" : "Create your Cat ID", url: `${siteUrl()}/portal/cats` };
@@ -254,12 +254,12 @@ export function passwordResetTemplate(locale: Locale, url: string): BuiltEmail {
   const heading = ar ? "إعادة تعيين كلمة المرور" : "Reset your password";
   const body = [
     ar
-      ? "طلبت إعادة تعيين كلمة المرور لحسابك في مُرقّط. اضغط الزر أدناه لاختيار كلمة مرور جديدة. الرابط صالح لمدة ساعة واحدة."
+      ? "طلبت إعادة تعيين كلمة المرور لحسابك في مرقط. اضغط الزر أدناه لاختيار كلمة مرور جديدة. الرابط صالح لمدة ساعة واحدة."
       : "You asked to reset your Moracat password. Use the button below to choose a new one. This link is valid for one hour.",
   ];
   const cta = { label: ar ? "إعادة تعيين كلمة المرور" : "Reset password", url };
   return {
-    subject: ar ? "إعادة تعيين كلمة المرور — مُرقّط" : "Reset your password — Moracat",
+    subject: ar ? "إعادة تعيين كلمة المرور — مرقط" : "Reset your password — Moracat",
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "إذا لم تطلب ذلك، تجاهل هذه الرسالة وستبقى كلمة مرورك كما هي." : "If you didn't request this, ignore this email and your password stays unchanged." }),
     text: toText(heading, body, cta),
   };
@@ -271,11 +271,11 @@ export function passwordChangedTemplate(locale: Locale, name: string | null): Bu
   const body = [
     hiName(ar, name),
     ar
-      ? "نأكّد أنه تم تغيير كلمة مرور حسابك في مُرقّط للتو. إذا كنت أنت من قام بذلك، فلا حاجة لأي إجراء."
+      ? "نأكّد أنه تم تغيير كلمة مرور حسابك في مرقط للتو. إذا كنت أنت من قام بذلك، فلا حاجة لأي إجراء."
       : "We're confirming that your Moracat password was just changed. If this was you, there's nothing else to do.",
   ];
   return {
-    subject: ar ? "تم تغيير كلمة المرور — مُرقّط" : "Your password was changed — Moracat",
+    subject: ar ? "تم تغيير كلمة المرور — مرقط" : "Your password was changed — Moracat",
     html: layout({ locale, preheader: heading, heading, body, footnote: ar ? "إذا لم تكن أنت، غيّر كلمة مرورك فوراً وتواصل مع الدعم." : "If this wasn't you, reset your password immediately and contact support." }),
     text: toText(heading, body),
   };
@@ -287,11 +287,11 @@ export function twoFactorDisabledTemplate(locale: Locale, name?: string | null):
   const body = [
     hiName(ar, name ?? null),
     ar
-      ? "نأكّد أنه تم تعطيل التحقق بخطوتين على حسابك في مُرقّط للتو. إذا كنت أنت من قام بذلك، فلا حاجة لأي إجراء."
+      ? "نأكّد أنه تم تعطيل التحقق بخطوتين على حسابك في مرقط للتو. إذا كنت أنت من قام بذلك، فلا حاجة لأي إجراء."
       : "We're confirming that two-factor authentication was just turned off on your Moracat account. If this was you, there's nothing else to do.",
   ];
   return {
-    subject: ar ? "تم تعطيل التحقق بخطوتين — مُرقّط" : "Two-factor authentication turned off — Moracat",
+    subject: ar ? "تم تعطيل التحقق بخطوتين — مرقط" : "Two-factor authentication turned off — Moracat",
     html: layout({
       locale,
       preheader: heading,
@@ -310,12 +310,12 @@ export function emailChangeTemplate(locale: Locale, url: string): BuiltEmail {
   const heading = ar ? "أكّد بريدك الجديد" : "Confirm your new email";
   const body = [
     ar
-      ? "طلبت تغيير البريد الإلكتروني لحسابك في مُرقّط إلى هذا العنوان. أكّد للمتابعة. الرابط صالح لمدة ٢٤ ساعة."
+      ? "طلبت تغيير البريد الإلكتروني لحسابك في مرقط إلى هذا العنوان. أكّد للمتابعة. الرابط صالح لمدة ٢٤ ساعة."
       : "You requested to change your Moracat account email to this address. Confirm to continue. This link is valid for 24 hours.",
   ];
   const cta = { label: ar ? "تأكيد البريد الجديد" : "Confirm new email", url };
   return {
-    subject: ar ? "أكّد بريدك الجديد — مُرقّط" : "Confirm your new email — Moracat",
+    subject: ar ? "أكّد بريدك الجديد — مرقط" : "Confirm your new email — Moracat",
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "إذا لم تطلب ذلك، تجاهل هذه الرسالة." : "If you didn't request this, you can safely ignore this email." }),
     text: toText(heading, body, cta),
   };
@@ -328,7 +328,7 @@ export function catIdIssuedTemplate(locale: Locale, catName: string, catIdNumber
   const heading = ar ? `هوية ${catName} جاهزة 🎉` : `${catName}'s Cat ID is ready 🎉`;
   const body = [
     ar
-      ? `مبروك — أصبح لـ${catName} هوية رسمية موثّقة في مُرقّط. احتفظ بها، اطبعها، أو أضفها إلى محفظتك، وشاركها متى ما أردت.`
+      ? `مبروك — أصبح لـ${catName} هوية رسمية موثّقة في مرقط. احتفظ بها، اطبعها، أو أضفها إلى محفظتك، وشاركها متى ما أردت.`
       : `Congratulations — ${catName} now has an official, verified identity on Moracat. Keep it, print it, add it to your wallet, and share it whenever you like.`,
   ];
   const cta = { label: ar ? "افتح هوية القط" : "Open the Cat ID", url: `${siteUrl()}/portal/cats` };
@@ -352,7 +352,7 @@ export function waitlistJoinedTemplate(locale: Locale, name: string | null): Bui
   ];
   const cta = { label: ar ? "عد إلى حسابك" : "Back to your account", url: `${siteUrl()}/portal` };
   return {
-    subject: ar ? "أنت على قائمة الإطلاق — مُرقّط" : "You're on the launch list — Moracat",
+    subject: ar ? "أنت على قائمة الإطلاق — مرقط" : "You're on the launch list — Moracat",
     html: layout({ locale, preheader: heading, heading, body, cta }),
     text: toText(heading, body, cta),
   };
@@ -371,7 +371,7 @@ export function supportTicketOpenedTemplate(locale: Locale, name: string | null,
   ];
   const cta = { label: ar ? "عرض التذكرة" : "View your ticket", url: supportUrl() };
   return {
-    subject: ar ? `تذكرتك ${ticketNumber} — مُرقّط` : `Your ticket ${ticketNumber} — Moracat`,
+    subject: ar ? `تذكرتك ${ticketNumber} — مرقط` : `Your ticket ${ticketNumber} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra: chip(ar ? "رقم التذكرة" : "Ticket", ticketNumber), cta }),
     text: toText(heading, body, cta, [`${ar ? "رقم التذكرة" : "Ticket"}: ${ticketNumber}`]),
   };
@@ -383,12 +383,12 @@ export function supportReplyTemplate(locale: Locale, name: string | null, ticket
   const body = [
     hiName(ar, name),
     ar
-      ? `ردّ فريق مُرقّط على تذكرتك ${ticketNumber}. افتح المحادثة للاطّلاع والرد.`
+      ? `ردّ فريق مرقط على تذكرتك ${ticketNumber}. افتح المحادثة للاطّلاع والرد.`
       : `The Moracat team replied to your ticket ${ticketNumber}. Open the conversation to read it and reply.`,
   ];
   const cta = { label: ar ? "قراءة الرد" : "Read the reply", url: supportUrl() };
   return {
-    subject: ar ? `رد جديد على تذكرتك ${ticketNumber} — مُرقّط` : `New reply on ticket ${ticketNumber} — Moracat`,
+    subject: ar ? `رد جديد على تذكرتك ${ticketNumber} — مرقط` : `New reply on ticket ${ticketNumber} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, cta }),
     text: toText(heading, body, cta),
   };
@@ -416,7 +416,7 @@ export function orderConfirmationTemplate(
   ];
   const cta = { label: ar ? "تتبّع طلبك" : "Track your order", url: `${siteUrl()}/portal/orders` };
   return {
-    subject: ar ? `تأكيد الطلب ${orderNumber} — مُرقّط` : `Order ${orderNumber} confirmed — Moracat`,
+    subject: ar ? `تأكيد الطلب ${orderNumber} — مرقط` : `Order ${orderNumber} confirmed — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra: chip(ar ? "رقم الطلب" : "Order", orderNumber) + summary(rows, ar), cta }),
     text: toText(heading, body, cta, [`${ar ? "رقم الطلب" : "Order"}: ${orderNumber}`, ...items.map((it) => `- ${it.name} ×${it.qty}`), `${ar ? "الإجمالي" : "Total"}: ${sar(total, ar)}`]),
   };
@@ -436,7 +436,7 @@ export function paymentReceiptTemplate(
     [ar ? "طريقة الدفع" : "Payment method", method],
   ];
   return {
-    subject: ar ? `إيصال الطلب ${orderNumber} — مُرقّط` : `Receipt for order ${orderNumber} — Moracat`,
+    subject: ar ? `إيصال الطلب ${orderNumber} — مرقط` : `Receipt for order ${orderNumber} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra: chip(ar ? "رقم الطلب" : "Order", orderNumber) + summary(rows, ar) }),
     text: toText(heading, body, undefined, rows.map(([k, v]) => `${k}: ${v}`)),
   };
@@ -453,7 +453,7 @@ export function paymentFailedTemplate(locale: Locale, name: string | null, retry
   ];
   const cta = { label: ar ? "إعادة المحاولة" : "Try again", url: retryUrl };
   return {
-    subject: ar ? "تعذّر إتمام الدفع — مُرقّط" : "Payment couldn't be completed — Moracat",
+    subject: ar ? "تعذّر إتمام الدفع — مرقط" : "Payment couldn't be completed — Moracat",
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "إن استمرت المشكلة، تواصل معنا وسنساعدك." : "If the problem continues, contact us and we'll help." }),
     text: toText(heading, body, cta),
   };
@@ -474,7 +474,7 @@ export function subscriptionConfirmedTemplate(locale: Locale, name: string | nul
   ];
   const cta = { label: ar ? "إدارة العضوية" : "Manage membership", url: `${siteUrl()}/portal/subscriptions` };
   return {
-    subject: ar ? "عضويتك مفعّلة — مُرقّط" : "Your membership is active — Moracat",
+    subject: ar ? "عضويتك مفعّلة — مرقط" : "Your membership is active — Moracat",
     html: layout({ locale, preheader: heading, heading, body, extra: summary(rows, ar), cta }),
     text: toText(heading, body, cta, rows.map(([k, v]) => `${k}: ${v}`)),
   };
@@ -509,7 +509,7 @@ export function termEndInvitationTemplate(
   ];
   const cta = { label: ar ? `جدّد عضوية ${catName}` : `Renew ${catName}'s membership`, url: renewUrl };
   return {
-    subject: ar ? `عضوية ${catName} تقترب من نهايتها — مُرقّط` : `${catName}'s membership is nearly up — Moracat`,
+    subject: ar ? `عضوية ${catName} تقترب من نهايتها — مرقط` : `${catName}'s membership is nearly up — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "لا يوجد أي خصم تلقائي. القرار لك بالكامل." : "There is no automatic charge. The choice is entirely yours." }),
     text: toText(heading, body, cta),
   };
@@ -539,7 +539,7 @@ export function membershipLapsedTemplate(
   ];
   const cta = { label: ar ? `رجّع عضوية ${catName}` : `Welcome ${catName} back`, url: renewUrl };
   return {
-    subject: ar ? `عضوية ${catName} انتهت — مُرقّط` : `${catName}'s membership has ended — Moracat`,
+    subject: ar ? `عضوية ${catName} انتهت — مرقط` : `${catName}'s membership has ended — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, cta }),
     text: toText(heading, body, cta),
   };
@@ -584,7 +584,7 @@ export function vaccinationReminderTemplate(
     ? [clinic.callUrl ? `${ar ? "اتصل" : "Call"}: ${clinic.callUrl}` : "", clinic.whatsappUrl ? `WhatsApp: ${clinic.whatsappUrl}` : ""].filter(Boolean)
     : [];
   return {
-    subject: ar ? `تطعيم ${catName} يقترب — مُرقّط` : `${catName}'s vaccination is coming up — Moracat`,
+    subject: ar ? `تطعيم ${catName} يقترب — مرقط` : `${catName}'s vaccination is coming up — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra: contact ? `<div style="text-align:center;margin:4px 0 10px;">${contact}</div>` : undefined, cta }),
     text: toText(heading, body, cta, extraLines),
   };
@@ -620,7 +620,7 @@ export function renewalUpcomingTemplate(
   const cta = { label: ar ? "إدارة العضوية" : "Manage membership", url: manageUrl };
   const pills = actionLink(skipUrl, ar ? "لا تجدّدها هالمرة" : "Don't renew this time");
   return {
-    subject: ar ? `عضوية ${catName} تتجدد في ${endsAt} — مُرقّط` : `${catName}'s membership renews on ${endsAt} — Moracat`,
+    subject: ar ? `عضوية ${catName} تتجدد في ${endsAt} — مرقط` : `${catName}'s membership renews on ${endsAt} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra: `<div style="text-align:center;margin:4px 0 10px;">${pills}</div>`, cta, footnote: ar ? "أنت من فعّل التجديد التلقائي، وتقدر توقفه في أي وقت." : "You switched auto-renew on, and you can switch it off any time." }),
     text: toText(heading, body, cta, [`${ar ? "لا تجدّدها" : "Skip"}: ${skipUrl}`]),
   };
@@ -659,7 +659,7 @@ export function renewalFailedTemplate(
   ];
   const cta = { label: ar ? "حدّث طريقة الدفع" : "Update payment method", url: updateUrl };
   return {
-    subject: `${heading} — ${ar ? "مُرقّط" : "Moracat"}`,
+    subject: `${heading} — ${ar ? "مرقط" : "Moracat"}`,
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "لا نخصم أبداً بدون إشعار، ولا نأخذ سجلّ قطك أبداً." : "We never charge without notice, and we never take your cat's record away." }),
     text: toText(heading, body, cta),
   };
@@ -693,7 +693,7 @@ export function catFoundTemplate(
   ];
   const cta = { label: ar ? `افتح صفحة ${catName}` : `Open ${catName}'s page`, url };
   return {
-    subject: ar ? `شخص وجد ${catName} — مُرقّط` : `Someone found ${catName} — Moracat`,
+    subject: ar ? `شخص وجد ${catName} — مرقط` : `Someone found ${catName} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, cta }),
     text: toText(heading, body, cta),
   };
@@ -718,7 +718,7 @@ export function refundRequestedTemplate(
   ];
   const cta = { label: ar ? "تواصل مع العناية" : "Contact Care", url: supportUrl() };
   return {
-    subject: ar ? "استلمنا طلب الاسترداد — مُرقّط" : "We've received your refund request — Moracat",
+    subject: ar ? "استلمنا طلب الاسترداد — مرقط" : "We've received your refund request — Moracat",
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "طلبك مسجّل ومحفوظ. نحن هنا لمساعدتك." : "Your request is logged and safe. We're here to help." }),
     text: toText(heading, body, cta),
   };
@@ -773,12 +773,12 @@ export function ownershipTransferTemplate(
   }
 ): BuiltEmail {
   const ar = locale === "ar";
-  const who = i.fromName ? esc(i.fromName) : ar ? "أحد أعضاء مُرقّط" : "a Moracat member";
+  const who = i.fromName ? esc(i.fromName) : ar ? "أحد أعضاء مرقط" : "a Moracat member";
   const cat = esc(i.catName);
   const heading = ar ? `${who} يسلّمك ${cat} 🐾` : `${who} is handing ${cat} over to you 🐾`;
   const body = [
     ar
-      ? `${who} يريد نقل ملكية ${cat} إليك في مُرقّط. لو وافقت، تنتقل لك هوية ${cat} بنفس رقمها — ومعها سجلها كامل: التطعيمات، الوزن، وملاحظات الطبيب. ما يبدأ شي من الصفر.`
+      ? `${who} يريد نقل ملكية ${cat} إليك في مرقط. لو وافقت، تنتقل لك هوية ${cat} بنفس رقمها — ومعها سجلها كامل: التطعيمات، الوزن، وملاحظات الطبيب. ما يبدأ شي من الصفر.`
       : `${who} would like to transfer ${cat} to you on Moracat. If you accept, ${cat}'s Cat ID comes to you with the same number — and the whole record with it: vaccinations, weights, vet notes. Nothing starts from scratch.`,
     ar
       ? "افتح الرابط وشوف الملف قبل ما تقرّر. القبول أو الرفض بضغطة، ولا يصير شي إلا لما تختار بنفسك."
@@ -792,7 +792,7 @@ export function ownershipTransferTemplate(
     ? `الرابط صالح حتى ${fmtDate(locale, i.expiresAt)}. لو ما تعرف المُرسل، تجاهل الرسالة ولا ينتقل شي.`
     : `This link is valid until ${fmtDate(locale, i.expiresAt)}. If you don't know the sender, ignore this email — nothing moves.`;
   return {
-    subject: ar ? `${cat} بانتظارك — مُرقّط` : `${cat} is waiting for you — Moracat`,
+    subject: ar ? `${cat} بانتظارك — مرقط` : `${cat} is waiting for you — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra, cta, footnote }),
     text: toText(heading, body, cta, i.note ? [i.note] : []),
   };
@@ -841,10 +841,10 @@ export function ownershipTransferDoneTemplate(
   return {
     subject: toNew
       ? ar
-        ? `${cat} صار لك — مُرقّط`
+        ? `${cat} صار لك — مرقط`
         : `${cat} is yours — Moracat`
       : ar
-        ? `تم نقل ${cat} — مُرقّط`
+        ? `تم نقل ${cat} — مرقط`
         : `${cat} has been transferred — Moracat`,
     html: layout({
       locale,
@@ -874,7 +874,7 @@ export function adoptionRequestTemplate(
   ];
   const cta = { label: ar ? "افتح الطلب" : "Open the request", url: i.url };
   return {
-    subject: ar ? `طلب تبنٍّ لـ${cat} — مُرقّط` : `An adoption enquiry for ${cat} — Moracat`,
+    subject: ar ? `طلب تبنٍّ لـ${cat} — مرقط` : `An adoption enquiry for ${cat} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra: quoted(i.message, ar), cta }),
     text: toText(heading, body, cta, [i.message]),
   };
@@ -949,10 +949,10 @@ export function lostFoundMessageTemplate(
     subject:
       i.kind === "LOST"
         ? ar
-          ? `رسالة عن ${cat} — مُرقّط`
+          ? `رسالة عن ${cat} — مرقط`
           : `A message about ${cat} — Moracat`
         : ar
-          ? "رسالة على إعلانك — مُرقّط"
+          ? "رسالة على إعلانك — مرقط"
           : "A message on your notice — Moracat",
     html: layout({
       locale,

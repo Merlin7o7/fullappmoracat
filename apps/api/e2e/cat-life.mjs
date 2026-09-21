@@ -318,6 +318,50 @@ console.log("━━ ownership transfer: a direct hand-over, and its refusals ━
   ).json;
   ok(pending.recipientHasAccount === false, "an offer can be addressed to someone with no account");
 
+  // Anyone can REGISTER an address they don't control. Until that email is
+  // confirmed, the account must neither see nor accept the offer by its id —
+  // only the emailed token (proof of the inbox) or a verified email moves a cat.
+  {
+    const squatEmail = `squat+${rnd()}@e.com`;
+    const offer = (
+      await call(
+        `/cats/${gift.id}/transfer`,
+        "POST",
+        { toEmail: squatEmail, confirmCatName: gift.name },
+        giver.token
+      )
+    ).json;
+    const squat = (
+      await call("/auth/register", "POST", {
+        email: squatEmail,
+        password: "S3cure!pass",
+        firstName: "squat",
+        acceptTerms: true,
+      })
+    ).json;
+    const theirs = (await call("/transfers", "GET", undefined, squat.accessToken)).json;
+    ok((theirs.incoming ?? []).length === 0, "an unverified account is not shown offers addressed to its email");
+    ok(
+      (await call(`/transfers/${offer.id}`, "GET", undefined, squat.accessToken)).status === 403,
+      "an unverified account cannot preview an offer by id (403)"
+    );
+    const grab = await call("/transfers/accept", "POST", { token: offer.id }, squat.accessToken);
+    ok(
+      grab.status === 403 && grab.json?.code === "EMAIL_NOT_VERIFIED",
+      "an unverified account cannot accept a cat by transfer id (403 EMAIL_NOT_VERIFIED)"
+    );
+    ok(
+      (await call(`/cats/${gift.id}`, "GET", undefined, giver.token)).json?.id === gift.id,
+      "the cat stays with its owner after the refused grab"
+    );
+    if (squat.devEmailCode) {
+      await call("/auth/email/otp/verify", "POST", { code: squat.devEmailCode }, squat.accessToken);
+      const after = (await call("/transfers", "GET", undefined, squat.accessToken)).json;
+      ok((after.incoming ?? []).some((t) => t.id === offer.id), "once verified, the offer appears in their portal");
+    }
+    await call(`/transfers/${offer.id}/cancel`, "POST", {}, giver.token);
+  }
+
   // Withdrawing is always available while it is pending (R010).
   const cancelled = (await call(`/transfers/${pending.id}/cancel`, "POST", {}, giver.token)).json;
   ok(cancelled.status === "CANCELLED", "the sender can withdraw the offer");

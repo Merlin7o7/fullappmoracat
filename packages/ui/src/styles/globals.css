@@ -59,6 +59,9 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 44%;
     --warning-foreground: 30 45% 10%;
+    /* --warning is a FILL: as text on paper it is 2.6:1 and fails AA. Amber
+     * *text* uses --warning-ink (≈6.3:1 on paper), mirroring --accent-ink. */
+    --warning-ink: 32 95% 28%;
     --info: 200 82% 33%;             /* darkened from 38% → clears 4.5:1 text */
     --info-foreground: 0 0% 100%;
     --destructive: 0 74% 45%;
@@ -138,6 +141,7 @@
     --success-foreground: 168 45% 6%;
     --warning: 38 92% 56%;
     --warning-foreground: 168 45% 6%;
+    --warning-ink: 38 92% 62%;
     --info: 200 84% 62%;
     --info-foreground: 168 45% 6%;
     --destructive: 0 78% 63%;        /* lightened from 57% → clears 4.5:1 on dark */
@@ -357,5 +361,19 @@
   }
   .sticker-hover:hover {
     transform: rotate(-4deg) scale(1.08);
+  }
+}
+
+/* iOS Safari zooms the whole page when a focused control is under 16px, and
+ * never zooms back — every form felt broken on an iPhone. Small-text controls
+ * are lifted to 16px on phones only; from `sm` up the denser size returns.
+ * Outside @layer so it wins over the utility regardless of source order;
+ * deliberately scoped to the two small sizes so large inputs (the OTP boxes,
+ * the hero name field) keep their own size. */
+@media (max-width: 639px) {
+  input.text-sm, select.text-sm, textarea.text-sm,
+  input.text-xs, select.text-xs, textarea.text-xs {
+    font-size: 1rem;
+    line-height: 1.5rem;
   }
 }

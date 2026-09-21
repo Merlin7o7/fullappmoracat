@@ -35,7 +35,9 @@ export interface MembershipBenefit {
 
 /** What an active membership unlocks — the six pillars, cat-first framing. */
 export const MEMBERSHIP_BENEFITS: MembershipBenefit[] = [
-  { icon: BadgeCheck, en: "Official Cat ID activation", ar: "تفعيل هوية القط الرسمية" },
+  // The Cat ID itself is free for good (FAQ + terms) — a paid benefit must
+  // never be worded as "activating" it.
+  { icon: BadgeCheck, en: "“Member” status on the Cat ID", ar: "صفة «عضو» على هوية قطك" },
   { icon: Package, en: "Monthly essentials delivered", ar: "أساسيات شهرية توصل لبابك" },
   // Member-rate lexicon (R085/R087): recognition, never coupon talk.
   { icon: Percent, en: "Member rates honoured at partners", ar: "سعر الأعضاء محفوظ عند الشركاء" },
@@ -180,7 +182,7 @@ export function MembershipCard({
         ) : (
           <>
             <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-              <Sparkles className="size-4" /> {isAr ? "أنت عضو مؤسّس — العضويات تُفتح قريباً" : "You're a founding member — memberships open soon"}
+              <Sparkles className="size-4" /> {isAr ? "خطة العناية تفتح قريباً — وهويتك مجانية دايماً" : "The care plan opens soon — your ID stays free for good"}
             </span>
           </>
         )}

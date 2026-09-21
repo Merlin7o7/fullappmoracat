@@ -432,7 +432,7 @@ function SubscriptionsInner() {
 
               {/* Dunning (T7): a failed renewal keeps benefits through the grace week — say so, and point at the fix. */}
               {status === "ACTIVE" && sub.dunningAttempts > 0 && sub.graceUntil && (
-                <p className="mb-4 rounded-xl bg-warning/10 p-4 text-sm text-[hsl(38_92%_26%)] dark:text-warning">
+                <p className="mb-4 rounded-xl bg-warning/10 p-4 text-sm text-[hsl(38_92%_26%)] dark:text-warning-ink">
                   {isAr
                     ? `ما نجح التجديد على البطاقة المحفوظة — مزاياكم مستمرة حتى ${formatMoneyDate(sub.graceUntil, true)}. حدّث البطاقة ونكمل. `
                     : `The renewal didn't go through on the saved card — your benefits continue until ${formatMoneyDate(sub.graceUntil, false)}. Update the card and we'll finish it. `}
@@ -474,7 +474,7 @@ function SubscriptionsInner() {
 
               {/* Won't renew — amber, honest, and the member keeps every day they paid for. */}
               {wontRenew && sub.endsAt && (
-                <p className="mb-4 rounded-xl bg-warning/10 p-4 text-sm text-[hsl(38_92%_26%)] dark:text-warning">
+                <p className="mb-4 rounded-xl bg-warning/10 p-4 text-sm text-[hsl(38_92%_26%)] dark:text-warning-ink">
                   {isAr
                     ? `لن تتجدد — مزاياكم مستمرة حتى ${formatMoneyDate(sub.endsAt, true)}، وكل ما دفعتم يصلكم كاملاً.`
                     : `Won't renew — your benefits continue until ${formatMoneyDate(sub.endsAt, false)}, and everything you paid for still arrives.`}
@@ -500,7 +500,7 @@ function SubscriptionsInner() {
               )}
 
               {status === "PAST_DUE" && (
-                <p className="mb-4 rounded-xl bg-warning/10 p-4 text-sm text-[hsl(38_92%_26%)] dark:text-warning">
+                <p className="mb-4 rounded-xl bg-warning/10 p-4 text-sm text-[hsl(38_92%_26%)] dark:text-warning-ink">
                   {isAr
                     ? "في مشكلة بالدفعة الأخيرة — تواصل مع العناية ونحلّها معك."
                     : "There's an issue with the last payment — contact Care and we'll sort it out together."}

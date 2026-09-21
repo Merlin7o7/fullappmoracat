@@ -170,7 +170,7 @@ export function LocationPicker({
         {isAr ? "استخدم موقعي الحالي" : "Use my current location"}
       </Button>
       {geoMsg && (
-        <p className="text-xs leading-relaxed text-[hsl(38_92%_30%)] dark:text-warning" role="status">
+        <p className="text-xs leading-relaxed text-[hsl(38_92%_30%)] dark:text-warning-ink" role="status">
           {geoMsg}
         </p>
       )}
@@ -253,7 +253,7 @@ export function LocationPicker({
             <span className="sr-only">{isAr ? "(يفتح في نافذة جديدة)" : "(opens in a new tab)"}</span>
           </a>
           {!inSaudi(lat, lng) && (
-            <span className="basis-full text-[hsl(38_92%_30%)] dark:text-warning">
+            <span className="basis-full text-[hsl(38_92%_30%)] dark:text-warning-ink">
               {isAr ? "هذا الموقع يبدو خارج المملكة — تأكد منه." : "This looks like it's outside Saudi Arabia — double-check it."}
             </span>
           )}

@@ -38,3 +38,6 @@ export * from "./qr";
 // T7/T8 — renewal dunning ladder and honest cancel reasons.
 export * from "./dunning";
 export * from "./cancel-reasons";
+
+// Any-script digits → Latin: Arabic keyboards type ٠–٩ and no field may drop them.
+export * from "./digits";

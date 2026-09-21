@@ -1,5 +1,6 @@
 "use client";
 
+import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PhoneCall, Pencil } from "lucide-react";
@@ -59,7 +60,7 @@ export function EmergencyContactForm({ record, isAr }: { record: HealthRecord; i
           <Field label={isAr ? "الجوال" : "Mobile"} required type="tel" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} placeholder="+9665…" />
           <Field label={isAr ? "الصلة" : "Relation"} value={f.relation} onChange={(v) => setF({ ...f, relation: v })} placeholder={isAr ? "أخت، صديق…" : "Sister, friend…"} />
           <div className="flex gap-2 sm:col-span-3">
-            <Button type="submit" size="sm" loading={save.isPending} disabled={!f.name || f.phone.replace(/\D/g, "").length < 8}>{isAr ? "حفظ جهة الاتصال" : "Save contact"}</Button>
+            <Button type="submit" size="sm" loading={save.isPending} disabled={!f.name || digitsOnly(f.phone).length < 8}>{isAr ? "حفظ جهة الاتصال" : "Save contact"}</Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>{isAr ? "إلغاء" : "Cancel"}</Button>
           </div>
         </form>

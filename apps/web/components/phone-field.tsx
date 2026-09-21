@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@moraqat/ui";
+import { digitsOnly, latinizeDigits } from "@moraqat/core";
 
 /**
  * Country-code + mobile number, defaulting to Saudi Arabia (+966) — the fewest
@@ -31,7 +32,17 @@ interface PhoneFieldProps {
 
 /** Compose a full E.164 number from a dial code + a national number. */
 export function composePhone(dialCode: string, national: string): string {
-  return `${dialCode}${national.replace(/^0+/, "").replace(/[^0-9]/g, "")}`;
+  return `${dialCode}${digitsOnly(national).replace(/^0+/, "")}`;
+}
+
+/**
+ * Is the national part long enough to be a real mobile? Saudi mobiles are nine
+ * digits after the trunk zero; Bahrain, Qatar, Kuwait and Oman are eight — one
+ * flat "at least 9" would refuse every one of them.
+ */
+export function nationalNumberOk(dialCode: string, national: string): boolean {
+  const n = digitsOnly(national).replace(/^0+/, "");
+  return n.length >= (dialCode === "+966" ? 9 : 7) && n.length <= 12;
 }
 
 export function PhoneField({ label, dialCode, onDialCode, value, onValue, required, error, isAr }: PhoneFieldProps) {
@@ -50,7 +61,7 @@ export function PhoneField({ label, dialCode, onDialCode, value, onValue, requir
             aria-label={isAr ? "رمز الدولة" : "Country code"}
             value={dialCode}
             onChange={(e) => onDialCode(e.target.value)}
-            className="h-11 rounded-xl border border-input bg-background ps-3 pe-8 text-sm shadow-e1 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-xl border border-input bg-background ps-3 pe-8 text-base shadow-e1 sm:text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring"
             dir="ltr"
           >
             {DIAL_CODES.map((d) => (
@@ -65,12 +76,12 @@ export function PhoneField({ label, dialCode, onDialCode, value, onValue, requir
           autoComplete="tel-national"
           required={required}
           value={value}
-          onChange={(e) => onValue(e.target.value)}
+          onChange={(e) => onValue(latinizeDigits(e.target.value))}
           placeholder="5X XXX XXXX"
           dir="ltr"
           aria-invalid={!!error}
           className={cn(
-            "h-11 w-full flex-1 rounded-xl border bg-background px-3 text-sm shadow-e1 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring",
+            "h-11 w-full flex-1 rounded-xl border bg-background px-3 text-base shadow-e1 sm:text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring",
             error ? "border-destructive" : "border-input"
           )}
         />

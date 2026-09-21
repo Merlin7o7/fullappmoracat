@@ -934,6 +934,22 @@ export class CatsService implements OnModuleInit {
     return { id: cat.id, lostModeAt: cat.lostModeAt, qrToken: cat.qrToken };
   }
 
+  /**
+   * What finders wrote after scanning the collar QR. The notification and the
+   * email carry each message once; this is where the owner can read them all
+   * again — a finder's number must never exist only in a toast (R112, R117).
+   */
+  async foundReports(userId: string, catId: string) {
+    await this.ownedCat(userId, catId);
+    const items = await this.prisma.foundReport.findMany({
+      where: { catId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { id: true, message: true, finderPhone: true, createdAt: true },
+    });
+    return { items };
+  }
+
   /** One primary emergency contact per cat; setting it again replaces it. */
   async upsertEmergencyContact(userId: string, catId: string, dto: EmergencyContactDto) {
     await this.ownedCat(userId, catId);

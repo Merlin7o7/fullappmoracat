@@ -109,6 +109,45 @@ export interface AccessLogResponse {
   pagination: { page: number; total: number; totalPages: number };
 }
 
+/** The API's ledger row, as actually returned (`clinic:{ar,en}`, never flat). */
+interface ApiAccessLogItem {
+  id: string;
+  at: string;
+  tier: string;
+  surface: string;
+  emergency: boolean;
+  clinic?: { id: string; ar: string | null; en: string | null } | null;
+}
+
+/**
+ * Map the API's ledger onto the flat shape the ledger screen reads. Without
+ * this the clinic's name — the one fact the ledger exists to show — renders
+ * blank. Staff names are deliberately never sent (see VetConsentService).
+ */
+export function toAccessLogResponse(raw: unknown): AccessLogResponse {
+  const r = raw as {
+    items?: ApiAccessLogItem[];
+    pagination?: { page?: number; total?: number; totalPages?: number };
+  } | null;
+  return {
+    items: (r?.items ?? []).map((i) => ({
+      id: i.id,
+      orgNameEn: i.clinic?.en ?? "",
+      orgNameAr: i.clinic?.ar ?? "",
+      staffName: null,
+      tier: i.tier,
+      surface: i.surface,
+      emergency: !!i.emergency,
+      at: i.at,
+    })),
+    pagination: {
+      page: r?.pagination?.page ?? 1,
+      total: r?.pagination?.total ?? 0,
+      totalPages: r?.pagination?.totalPages ?? 1,
+    },
+  };
+}
+
 /** A grant still in force: not revoked, and not past its expiry. */
 export function isGrantLive(g: ConsentGrant, now: number = Date.now()): boolean {
   if (g.revokedAt) return false;

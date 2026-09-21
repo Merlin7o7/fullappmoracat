@@ -30,7 +30,7 @@ export default function CatLayout({ children }: { children: React.ReactNode }) {
 
   const tabs = [
     { href: `/portal/cats/${params.id}/health`, icon: HeartPulse, ar: "السجل الصحي", en: "Health record" },
-    { href: `/portal/cats/${params.id}/privacy`, icon: ShieldCheck, ar: "الخصوصية", en: "Privacy" },
+    { href: `/portal/cats/${params.id}/privacy`, icon: ShieldCheck, ar: "الأمان والخصوصية", en: "Safety & privacy" },
   ];
 
   return (

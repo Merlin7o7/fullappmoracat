@@ -74,8 +74,8 @@ const MAP: Record<string, Copy> = {
     en: { title: "One moment", message: "A few too many codes in a short time. Wait a minute, then request a fresh one." },
   },
   EMAIL_NOT_VERIFIED: {
-    ar: { title: "أكّد بريدك أولاً", message: "هذه الخطوة تحتاج بريداً مؤكداً. أرسلنا لك رمز التأكيد — دقيقة وحدة وتخلص." },
-    en: { title: "Confirm your email first", message: "This step needs a confirmed email. We've sent you the code — it takes under a minute." },
+    ar: { title: "أكّد بريدك أولاً", message: "هذه الخطوة تحتاج بريداً مؤكداً. افتح صفحة تأكيد البريد واطلب الرمز — دقيقة وحدة وتخلص." },
+    en: { title: "Confirm your email first", message: "This step needs a confirmed email. Open the confirm-email page and request your code — it takes under a minute." },
   },
   ACCOUNT_NOT_FOUND: {
     ar: { title: "ما لقينا الحساب", message: "لا يوجد حساب بهذه البيانات. تأكد منها أو أنشئ حساباً جديداً — يأخذ دقيقة." },

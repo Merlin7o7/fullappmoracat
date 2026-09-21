@@ -160,7 +160,7 @@ function VaccinationsModule({ vaccinations }: { vaccinations: Vaccination[] }) {
       state: "DUE_SOON",
       ar: "يستحق قريباً",
       en: "Due soon",
-      tone: "bg-warning/20 text-[hsl(38_92%_26%)] dark:text-warning",
+      tone: "bg-warning/20 text-[hsl(38_92%_26%)] dark:text-warning-ink",
     },
     { state: "VALID", ar: "سارٍ", en: "Up to date", tone: "bg-success/15 text-success" },
     { state: "NO_RECORD", ar: "لا يوجد سجل", en: "No record", tone: "bg-muted text-muted-foreground" },
@@ -223,7 +223,7 @@ function VaccinationsModule({ vaccinations }: { vaccinations: Vaccination[] }) {
 
 function VaxIcon({ state }: { state: VaxState }) {
   if (state === "OVERDUE") return <TriangleAlert className="size-4 shrink-0 text-destructive" aria-hidden />;
-  if (state === "DUE_SOON") return <CalendarClock className="size-4 shrink-0 text-warning" aria-hidden />;
+  if (state === "DUE_SOON") return <CalendarClock className="size-4 shrink-0 text-warning-ink" aria-hidden />;
   if (state === "VALID") return <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />;
   return <CircleDashed className="size-4 shrink-0 text-muted-foreground" aria-hidden />;
 }

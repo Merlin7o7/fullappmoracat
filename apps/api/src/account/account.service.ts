@@ -204,15 +204,41 @@ export class AccountService {
     // "Coming up" — the care dashboard's forward glance (R049/P8): the next
     // vaccination due in the coming 45 days. The lifecycle engine sends the
     // reminder; this row lets the home screen show care *before* it's asked for.
-    const upcomingVaccinations = await this.prisma.catVaccination.findMany({
+    //
+    // A dose whose date has PASSED matters more than one that is coming, so the
+    // window reaches back six months as well: filtering on `dueAt >= now` made
+    // an overdue vaccine vanish from the home screen the day it lapsed — the
+    // exact moment the owner most needed to see it. A lapsed row is dropped
+    // only when a later dose of the same vaccine has since been recorded.
+    const now = new Date();
+    const dueWindow = await this.prisma.catVaccination.findMany({
       where: {
-        dueAt: { gte: new Date(), lte: new Date(Date.now() + 45 * 86_400_000) },
+        dueAt: { gte: new Date(now.getTime() - 180 * 86_400_000), lte: new Date(now.getTime() + 45 * 86_400_000) },
         cat: { userId, deletedAt: null, status: "ACTIVE" },
       },
       orderBy: { dueAt: "asc" },
-      take: 2,
-      select: { id: true, name: true, dueAt: true, cat: { select: { id: true, name: true } } },
+      take: 40,
+      select: { id: true, name: true, dueAt: true, administeredAt: true, cat: { select: { id: true, name: true } } },
     });
+    const lapsed = dueWindow.filter((v) => v.dueAt && v.dueAt.getTime() < now.getTime());
+    const laterDoses = lapsed.length
+      ? await this.prisma.catVaccination.findMany({
+          where: { catId: { in: [...new Set(lapsed.map((v) => v.cat.id))] } },
+          select: { catId: true, name: true, administeredAt: true },
+        })
+      : [];
+    const sameVaccine = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+    const upcomingVaccinations = dueWindow
+      .filter((v) => {
+        if (!v.dueAt || v.dueAt.getTime() >= now.getTime()) return true;
+        return !laterDoses.some(
+          (d) =>
+            d.catId === v.cat.id &&
+            sameVaccine(d.name, v.name) &&
+            d.administeredAt.getTime() > v.administeredAt.getTime()
+        );
+      })
+      .slice(0, 3);
 
     // Resolve the featured (primary) cat, self-healing to the first active one.
     let primaryId = user?.primaryCatId ?? null;
@@ -288,13 +314,15 @@ export class AccountService {
           catId: v.cat.id,
           catName: v.cat.name,
           label: v.name,
+          overdue: !!v.dueAt && v.dueAt.getTime() < now.getTime(),
         })),
         ...(activeSub?.nextDeliveryAt && activeSub.nextDeliveryAt.getTime() > Date.now()
-          ? [{ type: "delivery" as const, at: activeSub.nextDeliveryAt, catId: null, catName: null, label: null }]
+          ? [{ type: "delivery" as const, at: activeSub.nextDeliveryAt, catId: null, catName: null, label: null, overdue: false }]
           : []),
       ]
+        // Oldest first, so anything overdue leads.
         .sort((a, b) => (a.at && b.at ? a.at.getTime() - b.at.getTime() : 0))
-        .slice(0, 2),
+        .slice(0, 3),
       // Back-compat alias for the previous overview shape.
       firstCat: primaryCat ? { name: primaryCat.name, catIdNumber: primaryCat.catIdNumber } : null,
       recentOrders: recentOrders.map((o) => ({

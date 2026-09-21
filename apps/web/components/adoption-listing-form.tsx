@@ -4,7 +4,7 @@ import * as React from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button, Card, cn } from "@moraqat/ui";
-import { SAUDI_CITIES } from "@moraqat/core";
+import { SAUDI_CITIES, digitsOnly } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 import { Illo3D } from "@/components/illo-3d";
@@ -240,7 +240,7 @@ export function AdoptionListingForm({
         </span>
         <input
           value={feeSar}
-          onChange={(e) => setFeeSar(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          onChange={(e) => setFeeSar(digitsOnly(e.target.value).slice(0, 4))}
           inputMode="numeric"
           dir="ltr"
           placeholder="0"
@@ -261,7 +261,7 @@ export function AdoptionListingForm({
             checked={contactPref === "IN_APP"}
             onSelect={() => setContactPref("IN_APP")}
             title={isAr ? "رسائل داخل مرقط" : "Messages inside Moracat"}
-            body={isAr ? "ما نكشف رقمك ولا بريدك لأحد. الأفضل والأأمن." : "We never reveal your number or email. The safest option."}
+            body={isAr ? "ما نكشف رقمك ولا بريدك لأحد. الخيار الأكثر أماناً." : "We never reveal your number or email. The safest option."}
           />
           <ContactChoice
             checked={contactPref === "WHATSAPP"}

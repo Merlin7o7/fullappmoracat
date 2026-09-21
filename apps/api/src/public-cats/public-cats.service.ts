@@ -101,7 +101,7 @@ export class PublicCatsService {
     }
     if (foundSmsEnabled() && cat.user.phone) {
       const line = loc === "ar"
-        ? `مُراقط: شخص وجد ${cat.name} وترك رسالة: "${message.slice(0, 100)}"${finderPhone ? ` — رقمه ${finderPhone}` : ""}`
+        ? `مرقط: شخص وجد ${cat.name} وترك رسالة: "${message.slice(0, 100)}"${finderPhone ? ` — رقمه ${finderPhone}` : ""}`
         : `Moracat: someone found ${cat.name} and left a message: "${message.slice(0, 100)}"${finderPhone ? ` — their number ${finderPhone}` : ""}`;
       void this.sms.send(cat.user.phone, line).catch(() => undefined);
     }

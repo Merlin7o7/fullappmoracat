@@ -13,15 +13,18 @@ export const dict = {
     nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية", community: "المجتمع", benefits: "مزايا الأعضاء", adopt: "تبنَّ قطاً", lostFound: "مفقود وموجود" },
     announce: "نرحّب بقططكم في كل مدن السعودية — انضمّ للمجتمع",
     hero: {
-      badge: "التعداد الوطني للقطط",
-      // The headline is the census question, and nothing else. `titleAccent` is
-      // the tail of that same sentence rather than a second line: it carries the
+      badge: "تعداد مرقط لقطط السعودية",
+      // The headline says what the owner gets, in the brand line's own words
+      // ("لِحياة قطّك كلّها"); the census is the proof underneath, not the pitch.
+      // `titleAccent` is the tail of the same sentence: it carries the
       // marker-underline signature, and the two always render as one phrase —
-      // "كم قط يعيش في السعودية؟" — including where auth-shell concatenates them.
-      title: "كم قط يعيش",
-      titleAccent: "في السعودية؟",
+      // "هوية لقطك، لحياته كلّها" — including where auth-shell concatenates them.
+      // "رسمية" and "الوطني" are deliberately absent from marketing claims: those
+      // words belong to the state, and a private register must not borrow them.
+      title: "هوية لقطك،",
+      titleAccent: "لحياته كلّها",
       subtitle:
-        "إحنا نعدّهم، قط قط. سجّل قطك وياخذ هوية رسمية باسمه ورقمه — مجاناً، في أقل من دقيقتين. سجله الصحي ومجتمع أهل القطط يجون معها.",
+        "لو ضاع، اللي يلقاه يوصلك — بدون ما ينكشف رقمك. وسجله الصحي معه في أي عيادة. سجّل قطك وياخذ هويته باسمه ورقمه — مجاناً، في أقل من دقيقتين.",
       namePrompt: "وش اسم قطك؟",
       namePlaceholder: "مثلاً: سمسم",
       cta: "سجّل قطك",
@@ -30,10 +33,10 @@ export const dict = {
       previewNote: "هذي معاينة — رقم قطك الحقيقي يطلع لحظة التسجيل.",
     },
     features: {
-      title: "وش تعني العضوية؟",
-      lede: "عضوية وحدة تجمع كل شي يخص قطك — هويته، وعنايته الشهرية، وناسه.",
+      title: "وش تسوّي الهوية؟",
+      lede: "هوية وحدة تمشي مع قطك طول عمره — ترجّعه لك لو ضاع، وتحفظ سجله، وتعرّف الناس عليه.",
       items: [
-        { eyebrow: "هويته", title: "هوية رسمية", body: "كل قط له هوية خاصة فيها اسمه وصورته ورقمه — نفس الهوية اللي يحملها طول عمره." },
+        { eyebrow: "هويته", title: "هوية باسمه ورقمه", body: "كل قط له هوية خاصة فيها اسمه وصورته ورقمه — نفس الهوية اللي يحملها طول عمره." },
         { eyebrow: "عنايته الشهرية — قريباً", title: "عناية شهرية، لسّا ما فتحت", body: "نجهّز خطة شهرية موجّهة من عمر قطك واحتياجه. ما فتحنا الاشتراكات بعد، وما نبيع شي اليوم — نعدّ القطط أولاً. أول ما تفتح، أهل التعداد أول من يدري." },
         { eyebrow: "ملفه الصحي", title: "سجله يمشي معه", body: "التطعيمات والوزن وملاحظات الطبيب — كلها في هويته، حاضرة معك في كل زيارة للعيادة." },
         { eyebrow: "مجتمعه", title: "معروف ومحبوب", body: "قطك ينضم لمجتمع أهل القطط في السعودية من أول يوم — وتقدر تخليه خاص بضغطة. القرار لك دايم." },
@@ -63,7 +66,7 @@ export const dict = {
      * and the true cohort size and let the reader subtract.
      */
     census: {
-      eyebrow: "التعداد الوطني للقطط",
+      eyebrow: "تعداد مرقط لقطط السعودية",
       counterLabel: "قط مسجّل في السعودية",
       counterLabelOne: "قط مسجّل في السعودية",
       counterLoading: "نحسب…",
@@ -93,7 +96,7 @@ export const dict = {
       positionNote: "ترتيبك حسب وقت انضمامك — ما فيه شي يقدّمك أو يأخّرك.",
     },
     voices: { title: "كلام أعضائنا" },
-    marquee: ["هوية رسمية لقطك", "سجل صحي يمشي معه", "مجتمع من أهل القطط", "إرشاد تغذية ذكي", "الانضمام مجاناً"],
+    marquee: ["هوية لقطك باسمه ورقمه", "سجل صحي يمشي معه", "مجتمع من أهل القطط", "حاسبة أكل قطك", "الانضمام مجاناً"],
     faq: {
       title: "أسئلة تسألونها كثير",
       items: [
@@ -129,11 +132,11 @@ export const dict = {
     nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in", blog: "Journal", tools: "Feeding calculator", community: "Community", benefits: "Member benefits", adopt: "Adopt", lostFound: "Lost & Found" },
     announce: "Now welcoming cats across Saudi Arabia — join the community",
     hero: {
-      badge: "The Saudi Cat Census",
-      title: "How many cats live in",
-      titleAccent: "Saudi Arabia?",
+      badge: "The Moracat census of Saudi cats",
+      title: "An ID for your cat,",
+      titleAccent: "for their whole life",
       subtitle:
-        "We're counting them, one cat at a time. Register your cat and they get an official Cat ID with their name and their own number — free, in under two minutes. Their health record and the community come with it.",
+        "If they're ever lost, whoever finds them can reach you — without seeing your number. And their health record walks into any clinic with them. Register your cat and they get a Cat ID with their name and their own number — free, in under two minutes.",
       namePrompt: "What's your cat's name?",
       namePlaceholder: "e.g. Simba",
       cta: "Register your cat",
@@ -142,10 +145,10 @@ export const dict = {
       previewNote: "This is a preview — your cat's real number is issued the moment you register.",
     },
     features: {
-      title: "What membership means",
-      lede: "One membership that carries everything about your cat — their identity, their monthly care, and their people.",
+      title: "What the Cat ID does",
+      lede: "One identity that stays with your cat for life — it brings them home if they're lost, keeps their record, and tells people who they are.",
       items: [
-        { eyebrow: "Their identity", title: "An identity, officially", body: "Every cat gets a unique Cat ID with their name, photo and number — the same one they'll carry for life." },
+        { eyebrow: "Their identity", title: "An ID with their name and number", body: "Every cat gets a unique Cat ID with their name, photo and number — the same one they'll carry for life." },
         { eyebrow: "Their monthly care — coming", title: "Monthly care, not open yet", body: "We're building a monthly plan guided by your cat's age and needs. Subscriptions aren't open and nothing is for sale today — we're counting cats first. When it opens, the census cats hear first." },
         { eyebrow: "Their health record", title: "A record that travels", body: "Vaccinations, weight and vet notes live on their ID — in your pocket at every vet visit." },
         { eyebrow: "Their community", title: "Seen and celebrated", body: "Your cat joins a growing community of Saudi cat people from day one — and one tap keeps them private. The choice is always yours." },
@@ -169,7 +172,7 @@ export const dict = {
       vatNote: "Final prices — no hidden fees · Delivery across Saudi Arabia",
     },
     census: {
-      eyebrow: "The Saudi Cat Census",
+      eyebrow: "The Moracat census of Saudi cats",
       counterLabel: "cats registered in Saudi Arabia",
       counterLabelOne: "cat registered in Saudi Arabia",
       counterLoading: "Counting…",
@@ -195,7 +198,7 @@ export const dict = {
       positionNote: "Your place is simply when you joined — nothing moves you up or down.",
     },
     voices: { title: "From members who mean it" },
-    marquee: ["An official Cat ID", "A health record that travels", "A community of cat people", "Smart feeding guidance", "Free to join"],
+    marquee: ["A Cat ID with their name and number", "A health record that travels", "A community of cat people", "A feeding calculator", "Free to join"],
     faq: {
       title: "Questions we hear a lot",
       items: [

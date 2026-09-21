@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
-import { findSaudiCity } from "@moraqat/core";
+import { SAUDI_CITIES, findSaudiCity } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { riyadhDayBounds } from "@moraqat/core";
 import { EventsService } from "../events/events.service";
@@ -166,6 +166,32 @@ export class VetOrgService {
    * publish, inside an org Moracat has actually verified — the badge has to
    * mean something. Contains no staff and no PII: this is a shopfront.
    */
+  /**
+   * A city as a member types it → a branch filter. A branch knows its city two
+   * ways: `cityId` (the DELIVERY city table — Riyadh and Jeddah only) and
+   * `cityCode` (the census list, anywhere in the Kingdom). Match either, in
+   * either language, so "أبها" finds an Abha clinic long before Abha ships.
+   */
+  private cityTextFilter(raw: string | undefined): Prisma.BranchWhereInput {
+    const text = raw?.trim();
+    if (!text) return {};
+    const lower = text.toLowerCase();
+    const codes = SAUDI_CITIES.filter(
+      (c) => c.ar.includes(text) || c.en.toLowerCase().includes(lower) || c.code.includes(lower)
+    ).map((c) => c.code);
+    return {
+      AND: [
+        {
+          OR: [
+            ...(codes.length ? [{ cityCode: { in: codes } }] : []),
+            { city: { nameAr: { contains: text } } },
+            { city: { nameEn: { contains: text, mode: "insensitive" as const } } },
+          ],
+        },
+      ],
+    };
+  }
+
   async directory(query: DirectoryQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? DEFAULT_DIRECTORY_LIMIT;
@@ -179,6 +205,8 @@ export class VetOrgService {
       // shown an address they could drive to (R040).
       org: { status: "LIVE", verifiedAt: { not: null }, suspendedAt: null, isDemo: false },
       ...(query.cityId ? { cityId: query.cityId } : {}),
+      // The public page has a free-text city box, not a city-id picker.
+      ...this.cityTextFilter(query.city),
       ...(query.emergency === "true" ? { emergency24h: true } : {}),
       ...(query.q
         ? {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Instagram, Phone } from "lucide-react";
 import { useLocale } from "@/app/providers";
 import { commerceEnabled } from "@/lib/features";
-import { CONTACT, LEGAL_ENTITY, copyright } from "@/lib/org";
+import { CONTACT, REGISTRATION, copyright } from "@/lib/org";
 import { IlloCat, IlloMouse, IlloPaw, IlloSprig } from "./illustrations";
 
 /**
@@ -147,10 +147,24 @@ export function SiteFooter() {
             {t.footerNote}
           </p>
           <div className="text-center sm:text-end">
+            {/* copyright() already names the legal entity — printing it again
+                underneath read as a rendering bug. */}
             <p className="text-xs text-primary-foreground/85">{copyright(locale)}</p>
-            <p className="mt-0.5 text-[11px] text-primary-foreground/85" dir={isAr ? "rtl" : "ltr"}>
-              {isAr ? LEGAL_ENTITY.ar : LEGAL_ENTITY.en}
-            </p>
+            {(REGISTRATION.crNumber || REGISTRATION.vatNumber) && (
+              <p className="mt-0.5 text-xs text-primary-foreground/85">
+                {REGISTRATION.crNumber && (
+                  <span>
+                    {isAr ? "سجل تجاري" : "CR"} <span dir="ltr" className="font-mono">{REGISTRATION.crNumber}</span>
+                  </span>
+                )}
+                {REGISTRATION.crNumber && REGISTRATION.vatNumber && <span aria-hidden> · </span>}
+                {REGISTRATION.vatNumber && (
+                  <span>
+                    {isAr ? "الرقم الضريبي" : "VAT"} <span dir="ltr" className="font-mono">{REGISTRATION.vatNumber}</span>
+                  </span>
+                )}
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -33,8 +33,8 @@ export class RegisterDto {
   @IsString()
   @MinLength(8, { message: "Password must be at least 8 characters" })
   @MaxLength(72)
-  @Matches(/[A-Za-z]/, { message: "Password must contain a letter" })
-  @Matches(/\d/, { message: "Password must contain a number" })
+  @Matches(/\p{L}/u, { message: "Password must contain a letter" })
+  @Matches(/\p{Nd}/u, { message: "Password must contain a number" })
   password?: string;
 
   /** Full name — split into first/last server-side to keep the form to one field. */
@@ -174,8 +174,8 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8)
   @MaxLength(72)
-  @Matches(/[A-Za-z]/, { message: "Password must contain a letter" })
-  @Matches(/\d/, { message: "Password must contain a number" })
+  @Matches(/\p{L}/u, { message: "Password must contain a letter" })
+  @Matches(/\p{Nd}/u, { message: "Password must contain a number" })
   newPassword!: string;
 }
 

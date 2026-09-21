@@ -41,7 +41,7 @@ function Banner({
   }[tone];
   const iconClass = {
     destructive: "text-destructive",
-    warning: "text-[hsl(38_92%_32%)] dark:text-warning",
+    warning: "text-[hsl(38_92%_32%)] dark:text-warning-ink",
     info: "text-info",
     neutral: "text-muted-foreground",
   }[tone];

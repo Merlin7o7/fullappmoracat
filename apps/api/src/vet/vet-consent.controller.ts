@@ -96,6 +96,14 @@ export class VetOwnerConsentController {
     return this.consent.revoke(userId, id, dto);
   }
 
+  @Get("clinics/:orgId")
+  @ApiOperation({
+    summary: "Name a clinic by id — for the approval screen a consent request links to",
+  })
+  clinic(@Param("orgId") orgId: string) {
+    return this.consent.clinicForOwner(orgId);
+  }
+
   @Get("access-log")
   @ApiOperation({
     summary: "The access ledger — who looked at my cat's record",

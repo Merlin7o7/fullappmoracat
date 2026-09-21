@@ -562,7 +562,7 @@ function ConsentBanner({ profile, catId }: { profile: PatientProfile; catId: str
         <span
           className={cn(
             "grid size-9 shrink-0 place-items-center rounded-xl",
-            full ? "bg-success/15 text-success" : "bg-warning/20 text-[hsl(38_92%_26%)] dark:text-warning"
+            full ? "bg-success/15 text-success" : "bg-warning/20 text-[hsl(38_92%_26%)] dark:text-warning-ink"
           )}
         >
           {full ? <Unlock className="size-4" /> : <Lock className="size-4" />}

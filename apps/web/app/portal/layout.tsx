@@ -162,7 +162,7 @@ function VerifyEmailBanner({ isAr, pathname }: { isAr: boolean; pathname: string
       >
         <MailCheck className="size-3.5 shrink-0 text-accent" aria-hidden />
         <span className="truncate">{message}</span>
-        <span className="shrink-0 text-accent underline-offset-2 hover:underline">{isAr ? "أكّده الآن" : "Confirm now"}</span>
+        <span className="shrink-0 font-medium text-accent-ink underline underline-offset-2">{isAr ? "أكّده الآن" : "Confirm now"}</span>
       </Link>
       <button
         type="button"

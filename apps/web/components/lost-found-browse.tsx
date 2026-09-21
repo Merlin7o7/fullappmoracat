@@ -1,5 +1,6 @@
 "use client";
 
+import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import Link from "next/link";
 import { useInfiniteQuery, useQuery, keepPreviousData } from "@tanstack/react-query";
@@ -78,7 +79,7 @@ export function LostFoundBrowse({
     });
 
   const items = data?.pages.flatMap((p) => p.items) ?? [];
-  const looksLikeChip = debounced.replace(/\D/g, "").length >= CHIP_HINT_MIN;
+  const looksLikeChip = digitsOnly(debounced).length >= CHIP_HINT_MIN;
 
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {

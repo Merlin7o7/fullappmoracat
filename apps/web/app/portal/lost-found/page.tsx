@@ -12,6 +12,7 @@ import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloEmpty, IlloHeader } from "@/components/illo-panel";
 import { Illo3D } from "@/components/illo-3d";
 import { LostFoundForm } from "@/components/lost-found-form";
+import { LostFoundShare } from "@/components/lost-found-share";
 import { QueryError } from "@/components/query-error";
 import { localizeName } from "@/lib/translit";
 import { relativeTime } from "@/lib/datetime";
@@ -54,6 +55,7 @@ function PortalLostFoundInner() {
   const { authedFetch } = useAuth();
   const params = useSearchParams();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const initialKind = params.get("kind") === "FOUND" ? "FOUND" : params.get("kind") === "LOST" ? "LOST" : null;
   const [reporting, setReporting] = React.useState<LostFoundKind | null>(initialKind);
@@ -110,6 +112,14 @@ function PortalLostFoundInner() {
           onCreated={() => {
             setReporting(null);
             refresh();
+            // Publishing is half the job — point straight at the other half.
+            toast({
+              title: isAr ? "الإعلان منشور" : "Your notice is live",
+              description: isAr
+                ? "شاركه الحين في واتساب مجموعات حيّك — الأزرار تحت الإعلان."
+                : "Now share it to your neighbourhood WhatsApp groups — the buttons are under the notice.",
+              variant: "success",
+            });
           }}
         />
       )}
@@ -240,6 +250,14 @@ function NoticeRow({
         </Button>
       </div>
 
+      {/* Reach is the job: the share row is always in view on a live notice,
+          never behind the messages toggle (R005, R048). */}
+      {active && (
+        <div className="border-t border-border px-3 py-2.5">
+          <LostFoundShare notice={post} isAr={isAr} compact />
+        </div>
+      )}
+
       {open && (
         <div className="space-y-3 border-t border-border bg-muted/30 p-3">
           {messages.isLoading ? (
@@ -247,8 +265,8 @@ function NoticeRow({
           ) : (messages.data?.items.length ?? 0) === 0 ? (
             <p className="py-3 text-center text-sm text-muted-foreground">
               {isAr
-                ? "ما وصل شي بعد. شارك الرابط في مجموعات حيّك — هذا اللي يفرق."
-                : "Nothing yet. Share the link in your neighbourhood groups — that's what moves the needle."}
+                ? "ما وصل شي بعد. شارك الإعلان في مجموعات حيّك من الأزرار فوق — هذا اللي يفرق."
+                : "Nothing yet. Share the notice to your neighbourhood groups with the buttons above — that's what moves the needle."}
             </p>
           ) : (
             <ul className="space-y-2">

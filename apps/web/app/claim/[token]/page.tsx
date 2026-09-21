@@ -139,7 +139,7 @@ export default function ClaimPage() {
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               <Stethoscope className="me-1 inline size-4 align-text-bottom text-primary" />
               {isAr
-                ? `${preview.clinic.ar} سجّلت ${preview.cat.name} في مُراقط وأرسلت هذا الرابط للرقم المنتهي بـ ${preview.phoneLast4}.`
+                ? `${preview.clinic.ar} سجّلت ${preview.cat.name} في مرقط وأرسلت هذا الرابط للرقم المنتهي بـ ${preview.phoneLast4}.`
                 : `${preview.clinic.en} registered ${preview.cat.name} on Moracat and sent this link to the number ending ${preview.phoneLast4}.`}
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
@@ -156,7 +156,7 @@ export default function ClaimPage() {
           ) : !ready ? null : !user ? (
             <Card className="space-y-3 p-5">
               <p className="text-sm leading-relaxed">
-                {isAr ? "لاستلام هوية قطك تحتاج حساباً في مُراقط — دقيقة واحدة." : "To claim your cat's ID you need a Moracat account — it takes a minute."}
+                {isAr ? "لاستلام هوية قطك تحتاج حساباً في مرقط — دقيقة واحدة." : "To claim your cat's ID you need a Moracat account — it takes a minute."}
               </p>
               <Link href={`/register?next=${encodeURIComponent(next)}`} className="block"><Button className="w-full">{isAr ? "أنشئ حساباً واستلم" : "Create an account and claim"}</Button></Link>
               <Link href={`/login?next=${encodeURIComponent(next)}`} className="block"><Button variant="outline" className="w-full">{isAr ? "عندي حساب — تسجيل الدخول" : "I have an account — sign in"}</Button></Link>

@@ -3,6 +3,7 @@
  */
 import { Body, Controller, Ip, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { VetStaffGuard } from "./guards/vet-staff.guard";
 import { VetCapability } from "./decorators/vet-capability.decorator";
 import { VetActorParam } from "./decorators/vet-actor.decorator";
@@ -19,6 +20,9 @@ export class VetEmergencyController {
 
   @Post(":catId")
   @VetCapability("emergency.access")
+  // Generous for a real emergency room, hopeless for walking cat ids to harvest
+  // owners' phone numbers — every call also notifies the owner it names.
+  @Throttle({ default: { limit: 10, ttl: 600_000 } })
   @ApiOperation({
     summary: "Emergency access — tier-0 safety information only",
     description:

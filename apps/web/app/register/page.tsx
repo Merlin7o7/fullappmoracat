@@ -1,5 +1,6 @@
 "use client";
 
+import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,8 +32,8 @@ function clearSignupDraft() {
  *  checklist ticks green as the member types, so WEAK_PASSWORD never surprises. */
 const PASSWORD_CHECKS = [
   { id: "minLength", ar: "٨ أحرف على الأقل", en: "At least 8 characters", test: (p: string) => p.length >= 8 },
-  { id: "letter", ar: "حرف واحد على الأقل", en: "At least one letter", test: (p: string) => /[A-Za-z]/.test(p) },
-  { id: "number", ar: "رقم واحد على الأقل", en: "At least one number", test: (p: string) => /\d/.test(p) },
+  { id: "letter", ar: "حرف واحد على الأقل", en: "At least one letter", test: (p: string) => /\p{L}/u.test(p) },
+  { id: "number", ar: "رقم واحد على الأقل", en: "At least one number", test: (p: string) => /\p{Nd}/u.test(p) },
 ] as const;
 
 /** An in-app `?next=` path only — never an external URL (open-redirect guard). */
@@ -113,7 +114,7 @@ export default function RegisterPage() {
     return () => window.clearTimeout(t);
   }, [draftName, draftDial, draftPhone, draftEmail]);
 
-  const phoneDigits = form.phone.replace(/\D/g, "");
+  const phoneDigits = digitsOnly(form.phone);
   // Phone is optional now that OTP is off; include it only if a real number is given.
   const fullPhone = phoneDigits.length >= 8 ? composePhone(form.dialCode, form.phone) : undefined;
   // SMS OTP is only usable once a provider is wired. Until then, verify-by-SMS is

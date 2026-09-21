@@ -6,6 +6,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FoundCatForm } from "./found-cat-form";
 import { Illo3D } from "@/components/illo-3d";
+import { Syringe } from "lucide-react";
+import { vaccinationStandingLabel, type VaccinationStanding } from "@moraqat/core";
 
 /**
  * The page a phone camera opens from the collar QR (MRC-PROD-001 T6).
@@ -51,6 +53,10 @@ export default async function PublicCatPage({ params }: { params: { token: strin
   const card = await fetchCard(params.token);
   if (!card) notFound();
   const isAr = cookies().get("locale")?.value !== "en";
+  const standing =
+    card.vaccinationStanding && card.vaccinationStanding !== "UNKNOWN"
+      ? vaccinationStandingLabel(card.vaccinationStanding as VaccinationStanding)
+      : null;
 
   return (
     <div className="min-h-screen">
@@ -73,9 +79,19 @@ export default async function PublicCatPage({ params }: { params: { token: strin
           <div className="space-y-3 p-6 text-center">
             <h1 className="font-display text-3xl font-bold tracking-tight">{card.name}</h1>
             <p className="text-sm text-muted-foreground">
-              {[card.breed ? (isAr ? card.breed.ar : card.breed.en) : null, isAr ? "مسجّل في مُراقط" : "Registered with Moracat"].filter(Boolean).join(" · ")}
+              {[card.breed ? (isAr ? card.breed.ar : card.breed.en) : null, isAr ? "مسجّل في مرقط" : "Registered with Moracat"].filter(Boolean).join(" · ")}
             </p>
             {card.catIdMasked && <p className="font-mono text-xs text-muted-foreground" dir="ltr">{card.catIdMasked}</p>}
+            {/* The one clinical fact a stranger can use: a finder learns the cat
+                is safe to handle, and a clinic that isn't on Moracat yet sees
+                where the vaccines stand. Derived from the record, never a claim;
+                shown only when the record actually says something. */}
+            {standing && (
+              <p className="mx-auto inline-flex min-h-8 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium">
+                <Syringe className="size-3.5" aria-hidden />
+                {isAr ? standing.ar : standing.en}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               {isAr ? "هذا القط له بيت وسجل صحي. لا تُعرض بيانات المالك هنا أبداً." : "This cat has a home and a health record. The owner's details are never shown here."}
             </p>

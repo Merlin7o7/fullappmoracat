@@ -218,10 +218,12 @@ export const LEGAL_DOCS: LegalDoc[] = [
         body: {
           ar: [
             "تخزين محلي أساسي: لحفظ تسجيل دخولك ولغتك المفضّلة — ضروري لعمل الموقع.",
+            "قياس مجهول خاص بنا: معرّف عشوائي يُحفظ في متصفحك لنعرف كيف يُستخدم الموقع (مثلاً: كم زائراً أكمل تسجيل قطه). لا يحمل اسمك ولا بريدك ولا رقمك ولا اسم قطك، ولا يُشارك مع أي طرف خارج مرقط.",
             "لا نستخدم إعلانات تتبّع من أطراف ثالثة.",
           ],
           en: [
             "Essential local storage: to keep you signed in and remember your language — required for the site to work.",
+            "Our own anonymous measurement: a random identifier kept in your browser so we can see how the site is used (for example, how many visitors finish registering a cat). It carries no name, email, phone number or cat name, and is never shared outside Moracat.",
             "We do not use third-party advertising trackers.",
           ],
         },

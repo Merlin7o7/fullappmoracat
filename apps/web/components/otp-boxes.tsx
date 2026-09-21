@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@moraqat/ui";
+import { digitsOnly } from "@moraqat/core";
 
 /**
  * Six separate OTP boxes. Auto-advances, supports backspace, arrow keys, and
@@ -42,7 +43,8 @@ export function OtpBoxes({
   }
 
   function handleInput(i: number, raw: string) {
-    const d = raw.replace(/\D/g, "");
+    // ٠–٩ from an Arabic keyboard are digits too (R101).
+    const d = digitsOnly(raw);
     if (!d) return;
     if (d.length > 1) {
       // Pasted / multi-char — distribute from this box.

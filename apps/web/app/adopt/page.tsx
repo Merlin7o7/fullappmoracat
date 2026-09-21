@@ -52,8 +52,8 @@ export default function AdoptPage() {
       tone: "sage" as const,
       ar: "بياناتك محفوظة",
       en: "Your details stay yours",
-      arBody: "الرسائل تمرّ عبر مرقط. ما نكشف بريدك ولا رقمك لأحد.",
-      enBody: "Messages go through Moracat. We never publish your email or number.",
+      arBody: "الرسائل تمرّ عبر مرقط، ولا شي ينشر للعموم. بريدك يوصل للطرف الثاني فقط بعد قبول الطلب.",
+      enBody: "Messages go through Moracat and nothing is published. Your email reaches the other person only once a request is accepted.",
     },
   ];
 

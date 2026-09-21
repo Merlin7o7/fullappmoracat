@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users, LifeBuoy, Bell, Info, ShieldCheck,
+  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users, LifeBuoy, Bell, ShieldCheck,
   Heart, Search, ArrowRightLeft,
 } from "lucide-react";
 import { commerceEnabled } from "@/lib/features";
@@ -31,7 +31,10 @@ export const PORTAL_NAV: PortalNavItem[] = [
   // Found sit beside Community because they are the same idea — this cat, and
   // the people around them — not a separate marketplace section.
   { href: "/portal/adoption", icon: Heart, en: "Adoption", ar: "التبني" },
-  { href: "/portal/lost-found", icon: Search, en: "Lost & Found", ar: "مفقود وموجود" },
+  // In the thumb zone on a phone: a member whose cat just slipped out of the
+  // door must never have to look under "More" (R100; the emergency outranks
+  // every other destination).
+  { href: "/portal/lost-found", icon: Search, en: "Lost & Found", ar: "مفقود وموجود", primary: true },
   // Hand-overs in flight. Quiet by design: most members never see one, but a
   // cat waiting to be accepted must never be invisible.
   { href: "/portal/transfers", icon: ArrowRightLeft, en: "Hand-overs", ar: "نقل الملكية" },
@@ -41,10 +44,11 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { href: "/portal/health-access", icon: ShieldCheck, en: "Health access", ar: "الوصول الطبي" },
   { href: "/portal/subscriptions", icon: Repeat, en: "Subscriptions", ar: "الاشتراكات", commercial: true },
   { href: "/portal/orders", icon: Package, en: "Orders", ar: "الطلبات", commercial: true },
-  { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين" },
-  { href: "/portal/support", icon: LifeBuoy, en: "Support", ar: "الدعم", primary: true },
+  // Delivery addresses exist for orders; with nothing for sale they are a
+  // door onto an empty room, so they follow the commerce switch (R040).
+  { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين", commercial: true },
+  { href: "/portal/support", icon: LifeBuoy, en: "Support", ar: "الدعم" },
   { href: "/portal/settings", icon: Settings, en: "Settings", ar: "الإعدادات" },
-  { href: "/about", icon: Info, en: "About Moracat", ar: "عن مرقط" },
 ];
 
 /** Nav items visible in the current commerce mode (drops commercial surfaces in beta). */

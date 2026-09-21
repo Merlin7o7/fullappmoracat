@@ -220,9 +220,13 @@ export class OwnershipService {
   async mine(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true },
+      select: { email: true, emailVerified: true },
     });
     const email = user?.email?.toLowerCase() ?? "";
+    // An address anyone can type is not proof of who they are: until the email
+    // is confirmed, offers addressed to it stay out of this list (the emailed
+    // link still works — holding it proves the inbox). See `assertRecipient`.
+    const verified = !!user?.emailVerified;
 
     const [outgoing, incoming] = await Promise.all([
       this.prisma.catOwnershipTransfer.findMany({
@@ -231,12 +235,14 @@ export class OwnershipService {
         take: 40,
         select: this.select(),
       }),
-      this.prisma.catOwnershipTransfer.findMany({
-        where: { OR: [{ toUserId: userId }, { toEmail: email }] },
-        orderBy: { createdAt: "desc" },
-        take: 40,
-        select: this.select(),
-      }),
+      verified
+        ? this.prisma.catOwnershipTransfer.findMany({
+            where: { OR: [{ toUserId: userId }, { toEmail: email }] },
+            orderBy: { createdAt: "desc" },
+            take: 40,
+            select: this.select(),
+          })
+        : Promise.resolve([]),
     ]);
 
     return {
@@ -330,14 +336,7 @@ export class OwnershipService {
     if (!transfer) {
       throw new NotFoundException({ code: "TRANSFER_NOT_FOUND", message: "This transfer is not valid." });
     }
-    const addressedToMe =
-      transfer.toUserId === userId || transfer.toEmail.toLowerCase() === userEmail.toLowerCase();
-    if (!addressedToMe) {
-      throw new ForbiddenException({
-        code: "TRANSFER_WRONG_ACCOUNT",
-        message: `This cat was offered to ${maskEmail(transfer.toEmail)}. Sign in with that account to see it.`,
-      });
-    }
+    await this.assertRecipient(transfer, ref, userId, userEmail, "see it");
     // Reuse the one read model, keyed by the row we just authorised.
     return this.previewById(transfer.id);
   }
@@ -648,9 +647,9 @@ export class OwnershipService {
    * accepted because the email is not the only way a recipient meets an offer:
    * it also appears in their portal, and a member who deleted the email should
    * not be stuck watching a cat they were given sit out of reach. Neither form
-   * is a capability on its own — the offer is addressed to an EMAIL, and the
-   * check below is what actually authorises, so a leaked link or a guessed id
-   * cannot move a cat into a stranger's hands.
+   * is a capability on its own — the offer is addressed to an EMAIL, and
+   * `assertRecipient` is what actually authorises, so a leaked link or a
+   * guessed id cannot move a cat into a stranger's hands.
    */
   private async loadForRecipient(ref: string, userId: string, userEmail: string) {
     const transfer = await this.prisma.catOwnershipTransfer.findFirst({
@@ -661,6 +660,7 @@ export class OwnershipService {
         expiresAt: true,
         toEmail: true,
         toUserId: true,
+        tokenHash: true,
         catId: true,
         fromUserId: true,
         cat: { select: { name: true } },
@@ -681,15 +681,46 @@ export class OwnershipService {
         message: "This transfer link has expired. Ask for a new one.",
       });
     }
+    await this.assertRecipient(transfer, ref, userId, userEmail, "accept");
+    return transfer;
+  }
+
+  /**
+   * Is this signed-in person really who the offer was addressed to?
+   *
+   * Matching the account's email is necessary but not sufficient: anyone can
+   * REGISTER an address they do not control, and an unverified account that
+   * merely claims `toEmail` must never receive a cat and its medical record.
+   * So the match has to be backed by proof of the inbox — either the emailed
+   * token itself (only the inbox holds it) or a confirmed email on the account.
+   */
+  private async assertRecipient(
+    transfer: { toEmail: string; toUserId: string | null; tokenHash: string },
+    ref: string,
+    userId: string,
+    userEmail: string,
+    verb: "see it" | "accept"
+  ) {
     const addressedToMe =
       transfer.toUserId === userId || transfer.toEmail.toLowerCase() === userEmail.toLowerCase();
     if (!addressedToMe) {
       throw new ForbiddenException({
         code: "TRANSFER_WRONG_ACCOUNT",
-        message: `This cat was offered to ${maskEmail(transfer.toEmail)}. Sign in with that account to accept.`,
+        message: `This cat was offered to ${maskEmail(transfer.toEmail)}. Sign in with that account to ${verb}.`,
       });
     }
-    return transfer;
+    const heldTheLink = transfer.tokenHash === hashToken(ref);
+    if (heldTheLink) return;
+    const me = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { emailVerified: true },
+    });
+    if (!me?.emailVerified) {
+      throw new ForbiddenException({
+        code: "EMAIL_NOT_VERIFIED",
+        message: "Confirm your email first — or open the link we emailed you.",
+      });
+    }
   }
 
   private select() {

@@ -11,6 +11,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { IlloCan, IlloFish, IlloPaw, Sticker } from "@/components/illustrations";
 import { useLocale } from "@/app/providers";
 import { useAuth } from "@/lib/auth";
+import { commerceEnabled } from "@/lib/features";
 import { localizeName } from "@/lib/translit";
 import { formatAmount, SAR_AR, SAR_EN } from "@/lib/money";
 
@@ -19,7 +20,7 @@ type Body = "UNDERWEIGHT" | "IDEAL" | "OVERWEIGHT";
 
 const L = {
   ar: {
-    title: "محرك التغذية الذكي",
+    title: "حاسبة أكل قطك",
     subtitle: "احسب الكمية المثالية لقطك وفق الإرشادات البيطرية — فوراً.",
     weight: "الوزن (كجم)",
     age: "العمر (أشهر)",
@@ -49,12 +50,15 @@ const L = {
     unitsMo: "وحدة/شهر",
     kcal: "سعرة",
     sar: SAR_AR,
-    bridgeTitle: "خطة مُرقّط تغطي هذا",
+    bridgeTitle: "خطة مرقط تغطي هذا",
     bridgeBody: "أكل ورمل ومكافآت على مقاس قطك، توصل بابك شهرياً — ننقل وزنه وعمره معك، فما تعيد إدخال شيء.",
     bridgeCta: (name: string | null) => (name ? `ابنِ خطة ${name}` : "ابنِ خطة قطك"),
+    idBridgeTitle: "احفظ هذا في هوية قطك",
+    idBridgeBody: "سجّل قطك مجاناً وخذ هويته باسمه ورقمه — وزنه وعمره ينتقلون معك، وسجله الصحي يبدأ من اليوم.",
+    idBridgeCta: (name: string | null) => (name ? `سجّل ${name} مجاناً` : "سجّل قطك مجاناً"),
   },
   en: {
-    title: "Smart Feeding Engine",
+    title: "Your cat's feeding calculator",
     subtitle: "Calculate the ideal amount for your cat using veterinary guidelines — instantly.",
     weight: "Weight (kg)",
     age: "Age (months)",
@@ -87,6 +91,9 @@ const L = {
     bridgeTitle: "A Moracat plan covers this",
     bridgeBody: "Food, litter and treats sized to your cat, delivered monthly — we carry the weight and age over, so you enter nothing twice.",
     bridgeCta: (name: string | null) => (name ? `Build ${name}'s plan` : "Build your cat's plan"),
+    idBridgeTitle: "Keep this on your cat's ID",
+    idBridgeBody: "Register your cat free and get their Cat ID with their name and number — their weight and age carry over, and their health record starts today.",
+    idBridgeCta: (name: string | null) => (name ? `Register ${name} free` : "Register your cat free"),
   },
 };
 
@@ -216,6 +223,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 export default function FeedingCalculatorPage() {
   const { locale } = useLocale();
   const { user } = useAuth();
+  const commerce = commerceEnabled();
   const t = L[locale];
   const isAr = locale === "ar";
 
@@ -448,15 +456,18 @@ export default function FeedingCalculatorPage() {
                 One clear next step (R005), profile carried over (R002). ── */}
             <Card className="relative overflow-hidden border-primary/25 bg-gradient-to-br from-primary/[0.07] via-card to-card p-6">
               <IlloPaw tone="peach" className="pointer-events-none absolute -end-2 -top-2 size-12 rotate-12 opacity-30" />
-              <h2 className="font-display text-xl font-semibold tracking-tight">{t.bridgeTitle}</h2>
-              <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">{t.bridgeBody}</p>
+              {/* While nothing is for sale the bridge leads to what IS real — the
+                  free Cat ID — never to a plan the site says it isn't selling
+                  (R040: never claim a job it can't yet do). */}
+              <h2 className="font-display text-xl font-semibold tracking-tight">{commerce ? t.bridgeTitle : t.idBridgeTitle}</h2>
+              <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">{commerce ? t.bridgeBody : t.idBridgeBody}</p>
               <Link
-                href={user ? "/portal/subscribe" : "/register"}
+                href={commerce ? (user ? "/portal/subscribe" : "/register") : user ? "/portal/cats/new" : "/register"}
                 onClick={rememberProfile}
                 className="mt-4 inline-block"
               >
                 <Button size="lg">
-                  {t.bridgeCta(bridgeName)} <ArrowRight className="size-4 rtl:rotate-180" />
+                  {commerce ? t.bridgeCta(bridgeName) : t.idBridgeCta(bridgeName)} <ArrowRight className="size-4 rtl:rotate-180" />
                 </Button>
               </Link>
             </Card>

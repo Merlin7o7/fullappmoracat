@@ -416,7 +416,7 @@ export function AlertsBand({
                         g.weight === "strong" &&
                           "border border-destructive/40 bg-destructive/10 text-destructive",
                         g.weight === "steady" &&
-                          "border border-warning/50 bg-warning/15 text-[hsl(38_92%_26%)] dark:text-warning",
+                          "border border-warning/50 bg-warning/15 text-[hsl(38_92%_26%)] dark:text-warning-ink",
                         g.weight === "calm" && "border border-border bg-card text-foreground"
                       )}
                     >

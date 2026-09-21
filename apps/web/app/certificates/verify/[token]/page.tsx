@@ -63,7 +63,7 @@ export default async function VerifyCertificatePage({ params }: { params: { toke
         <div className="overflow-hidden rounded-3xl border border-border bg-card">
           <div className={`px-6 py-4 text-center text-sm font-semibold ${v.valid ? "bg-success/15 text-success" : "bg-destructive/10 text-destructive"}`}>
             {v.valid
-              ? isAr ? "✓ شهادة صحيحة صادرة من مُراقط" : "✓ Valid certificate issued by Moracat"
+              ? isAr ? "✓ شهادة صحيحة صادرة من مرقط" : "✓ Valid certificate issued by Moracat"
               : v.revoked
                 ? isAr ? "هذه الشهادة أُلغيت" : "This certificate has been revoked"
                 : isAr ? "لم نجد شهادة بهذا الرمز" : "No certificate matches this code"}
@@ -86,7 +86,7 @@ export default async function VerifyCertificatePage({ params }: { params: { toke
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">{isAr ? "جهة الإصدار" : "Issued by"}</dt>
-                  <dd>{v.issuedBy ? (isAr ? v.issuedBy.ar : v.issuedBy.en) : isAr ? "المالك عبر مُراقط" : "The owner, via Moracat"}</dd>
+                  <dd>{v.issuedBy ? (isAr ? v.issuedBy.ar : v.issuedBy.en) : isAr ? "المالك عبر مرقط" : "The owner, via Moracat"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">{isAr ? "التطعيمات" : "Vaccinations"}</dt>
@@ -102,7 +102,7 @@ export default async function VerifyCertificatePage({ params }: { params: { toke
               </dl>
               <p className="text-xs text-muted-foreground">
                 {isAr
-                  ? "الإدخالات الذاتية أدخلها المالك ولم تتحقق منها مُراقط. لا تُعرض بيانات المالك هنا."
+                  ? "الإدخالات الذاتية أدخلها المالك ولم تتحقق منها مرقط. لا تُعرض بيانات المالك هنا."
                   : "Self-reported entries were entered by the owner and are not verified by Moracat. The owner's details are never shown here."}
               </p>
               <a

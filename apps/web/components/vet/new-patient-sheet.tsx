@@ -10,6 +10,7 @@
  * same owner phone + name) the sheet takes you to it instead of making a twin.
  */
 
+import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -83,7 +84,7 @@ export function NewPatientSheet({
     onError: (err) => setError(vetFriendlyError(err, isAr).message),
   });
 
-  const phoneOk = f.ownerPhone.replace(/\D/g, "").length >= 9;
+  const phoneOk = digitsOnly(f.ownerPhone).length >= 9;
 
   return (
     <Drawer open={open} onClose={onClose} title={isAr ? "مريض جديد" : "New patient"}>

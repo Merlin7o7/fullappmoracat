@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { commerceEnabled } from "@/lib/features";
+import { PARTNERS } from "@/lib/partners";
 import { ThemeToggle, LangToggle } from "./toggles";
 import { Logo } from "./logo";
 import { IlloPaw } from "./illustrations";
@@ -65,7 +66,10 @@ export function SiteHeader() {
   const navItems = [
     { href: "/#how", label: t.nav.how },
     ...(commerce ? [{ href: "/#plans", label: t.nav.plans }] : []),
-    { href: "/benefits", label: t.nav.benefits },
+    // Member benefits returns to the nav when there are partners to show: a
+    // top-level door onto an empty room is a promise we can't keep (R040). It
+    // stays reachable from the footer, where it honestly says "signing now".
+    ...(PARTNERS.length > 0 ? [{ href: "/benefits", label: t.nav.benefits }] : []),
     { href: "/community", label: t.nav.community },
     // Adoption and Lost & Found are community surfaces, not commerce — they
     // stay in the nav whatever the commerce switch says, because a lost cat
@@ -73,8 +77,8 @@ export function SiteHeader() {
     { href: "/adopt", label: t.nav.adopt },
     { href: "/lost-found", label: t.nav.lostFound },
     ...(commerce ? [{ href: "/products", label: t.nav.products }] : []),
-    { href: "/blog", label: t.nav.blog },
-    { href: "/tools/feeding", label: t.nav.tools },
+    // The journal and the feeding calculator live in the footer: reading, not
+    // wayfinding. Fewer doors, each one real (premium is subtraction).
   ];
 
   return (
@@ -116,9 +120,15 @@ export function SiteHeader() {
           <div className="flex items-center gap-1">
             <LangToggle />
             <ThemeToggle />
-            {/* Login is reachable at EVERY width (returning members on phones). */}
+            {/* Login is reachable at EVERY width (returning members on phones) —
+                but it is the QUIET control. The one filled button in the header
+                is the page's one action: register your cat (R005). On the
+                narrowest screens the hero input and the sticky bar carry it. */}
             <Link href="/login" className="ms-1 inline-flex">
-              <Button variant="brand" size="sm">{t.nav.login}</Button>
+              <Button variant="ghost" size="sm" className="px-3">{t.nav.login}</Button>
+            </Link>
+            <Link href="/register" className="hidden sm:inline-flex">
+              <Button size="sm">{t.hero.cta}</Button>
             </Link>
             {/* Mobile nav disclosure — the links that md:flex hides. */}
             <button

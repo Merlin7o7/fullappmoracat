@@ -37,7 +37,7 @@ export function claimPath(token: string): string {
 /** The SMS the owner receives. Short: a name, a clinic, a link. Both languages. */
 export function claimSmsText(input: { catName: string; clinicNameAr: string; clinicNameEn: string; url: string }): string {
   return (
-    `${input.clinicNameAr} سجّلت ${input.catName} في مُراقط. افتح الرابط لاستلام هوية قطك: ${input.url}\n` +
+    `${input.clinicNameAr} سجّلت ${input.catName} في مرقط. افتح الرابط لاستلام هوية قطك: ${input.url}\n` +
     `${input.clinicNameEn} registered ${input.catName} on Moracat. Open the link to claim your cat's ID.`
   );
 }

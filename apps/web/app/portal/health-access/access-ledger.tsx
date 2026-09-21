@@ -23,8 +23,8 @@ import { Pagination } from "@/app/admin/_components/pagination";
 import { QueryError } from "@/components/query-error";
 import { IlloPaw } from "@/components/illustrations";
 import {
-  type AccessLogResponse,
   EmergencyBadge,
+  toAccessLogResponse,
   TierBadge,
   orgName,
 } from "@/components/vet-consent-card";
@@ -42,11 +42,19 @@ function surfaceLabel(surface: string, isAr: boolean): string {
     IMAGING: { ar: "الأشعة والصور", en: "imaging" },
     PRESCRIPTIONS: { ar: "الوصفات الطبية", en: "prescriptions" },
     VERIFY: { ar: "التحقق من العضوية", en: "the membership check" },
+    // The values the API actually writes (RecordAccessLog.surface).
+    TIMELINE: { ar: "السجل الزمني للزيارات", en: "the visit timeline" },
+    ENTRY: { ar: "إحدى ملاحظات الزيارة", en: "a visit entry" },
+    ATTACHMENT: { ar: "ملف مرفق", en: "an attachment" },
+    EMERGENCY: { ar: "الملف في حالة طارئة", en: "the record, in an emergency" },
+    SEARCH: { ar: "نتيجة البحث عن القط", en: "the search result for this cat" },
+    WRITE: { ar: "السجل لإضافة ملاحظة", en: "the record, to add a note" },
   };
-  const hit = MAP[surface];
+  const hit = MAP[surface.toUpperCase()];
   if (hit) return isAr ? hit.ar : hit.en;
-  // Unknown surface: show it plainly rather than invent a friendly name.
-  return surface.toLowerCase().replace(/_/g, " ");
+  // Unknown surface: say so honestly in the reader's language — never leak a
+  // raw route name into an Arabic sentence (R101).
+  return isAr ? "جزء من السجل" : "part of the record";
 }
 
 export function AccessLedger({ catId, catName, isAr }: { catId: string; catName?: string; isAr: boolean }) {
@@ -61,9 +69,9 @@ export function AccessLedger({ catId, catName, isAr }: { catId: string; catName?
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["vet-access-log", user?.id, catId, page],
     queryFn: () =>
-      authedFetch<AccessLogResponse>(
+      authedFetch<unknown>(
         `/vet/owner/access-log?catId=${encodeURIComponent(catId)}&page=${page}`
-      ),
+      ).then(toAccessLogResponse),
     enabled: !!user && !!catId,
   });
 

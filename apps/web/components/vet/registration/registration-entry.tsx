@@ -164,7 +164,7 @@ function InviteFlow({ token, isAr, onResolved }: { token: string; isAr: boolean;
   if (user && !emailMatches) {
     return (
       <Centered>
-        <span className="grid size-12 place-items-center rounded-2xl bg-warning/15 text-[hsl(38_92%_30%)] dark:text-warning" aria-hidden>
+        <span className="grid size-12 place-items-center rounded-2xl bg-warning/15 text-[hsl(38_92%_30%)] dark:text-warning-ink" aria-hidden>
           <UserRoundX className="size-5" />
         </span>
         <h1 className="font-display text-xl font-semibold">{isAr ? "أنت مسجّل بحساب آخر" : "You're signed in as someone else"}</h1>

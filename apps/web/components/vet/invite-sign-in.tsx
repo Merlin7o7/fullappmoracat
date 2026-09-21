@@ -19,6 +19,7 @@
  * `onSignedIn`; this component only establishes the session.
  */
 
+import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import { KeyRound, MailCheck } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
@@ -179,7 +180,7 @@ export function InviteSignIn({ isAr, email, methods, onSignedIn, beforeSignIn, s
               <span className="text-sm font-medium">{isAr ? "رمز المصادقة الثنائية" : "Two-factor code"}</span>
               <input
                 value={totp}
-                onChange={(e) => setTotp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(e) => setTotp(digitsOnly(e.target.value).slice(0, 6))}
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 dir="ltr"

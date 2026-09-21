@@ -3,6 +3,8 @@
 import * as React from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn, Input } from "@moraqat/ui";
+import { decimalOnly, latinizeDigits } from "@moraqat/core";
+import { useLocale } from "@/app/providers";
 
 interface FieldProps {
   label: string;
@@ -24,9 +26,18 @@ export function Field({
   label, value, onChange, type = "text", placeholder, required, hint, error, className, inputMode, autoComplete, autoFocus,
 }: FieldProps) {
   const id = React.useId();
+  const { locale } = useLocale();
+  const isAr = locale === "ar";
   const [show, setShow] = React.useState(false);
   const isPassword = type === "password";
-  const resolvedType = isPassword && show ? "text" : type;
+  // A native number input refuses ٠–٩ outright, so numbers are a text field
+  // with a numeric keyboard, normalised to Latin digits as they are typed (R101).
+  const isNumber = type === "number";
+  const numericMode = isNumber ? inputMode ?? "decimal" : inputMode;
+  const takesDigits = isNumber || type === "tel" || numericMode === "numeric" || numericMode === "decimal" || numericMode === "tel";
+  const resolvedType = isNumber || (isPassword && show) ? "text" : type;
+  const normalize = (v: string) =>
+    isNumber ? (numericMode === "numeric" ? latinizeDigits(v).replace(/\D/g, "") : decimalOnly(v)) : takesDigits ? latinizeDigits(v) : v;
   const describedBy = error ? `${id}-err` : hint ? `${id}-hint` : undefined;
 
   return (
@@ -42,20 +53,21 @@ export function Field({
           value={value}
           required={required}
           placeholder={placeholder}
-          inputMode={inputMode}
+          inputMode={numericMode}
           autoComplete={autoComplete}
           autoFocus={autoFocus}
           invalid={!!error}
           aria-describedby={describedBy}
-          onChange={(e) => onChange(e.target.value)}
-          className={cn(isPassword && "pe-11", (type === "number") && "tabular")}
+          onChange={(e) => onChange(normalize(e.target.value))}
+          dir={isNumber ? "ltr" : undefined}
+          className={cn(isPassword && "pe-12", isNumber && "tabular text-start")}
         />
         {isPassword && (
           <button
             type="button"
             onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Hide password" : "Show password"}
-            className="absolute end-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={show ? (isAr ? "إخفاء كلمة المرور" : "Hide password") : (isAr ? "إظهار كلمة المرور" : "Show password")}
+            className="absolute end-1 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
@@ -98,7 +110,7 @@ export function SelectField({ label, value, onChange, options, className, requir
         aria-describedby={describedBy}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "h-11 rounded-xl border bg-background px-3 text-sm shadow-e1 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "h-11 rounded-xl border bg-background px-3 text-base shadow-e1 sm:text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           error ? "border-destructive" : "border-input"
         )}
       >

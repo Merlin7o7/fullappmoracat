@@ -77,8 +77,8 @@ export class ChangePasswordDto {
   @IsString()
   @MinLength(8)
   @MaxLength(72)
-  @Matches(/[A-Za-z]/, { message: "Password must contain a letter" })
-  @Matches(/\d/, { message: "Password must contain a number" })
+  @Matches(/\p{L}/u, { message: "Password must contain a letter" })
+  @Matches(/\p{Nd}/u, { message: "Password must contain a number" })
   newPassword!: string;
 }
 

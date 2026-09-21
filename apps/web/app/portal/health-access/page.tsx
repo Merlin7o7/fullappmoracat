@@ -57,6 +57,31 @@ export default function HealthAccessPage() {
   const isAr = locale === "ar";
   const { activeCats, activeCat, setActiveCat, isLoading: catsLoading, isError: catsError, refetch: refetchCats, isFetching: catsFetching } = useCats();
 
+  // A clinic's "may we see the record?" notification lands here with the
+  // decision already framed: ?cat=&org=&tier=. Read from the URL directly (no
+  // useSearchParams, so the page needs no Suspense boundary at build time).
+  const [request, setRequest] = React.useState<ClinicRequest | null>(null);
+  React.useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const cat = q.get("cat");
+    const org = q.get("org");
+    const tier = q.get("tier");
+    if (cat && org && (tier === "T1" || tier === "T2")) setRequest({ catId: cat, orgId: org, tier });
+  }, []);
+  // Open on the cat the clinic asked about — once, when the household loads.
+  const focused = React.useRef(false);
+  React.useEffect(() => {
+    if (focused.current || !request) return;
+    if (activeCats.some((c) => c.id === request.catId)) {
+      focused.current = true;
+      setActiveCat(request.catId);
+    }
+  }, [request, activeCats, setActiveCat]);
+  const dismissRequest = React.useCallback(() => {
+    setRequest(null);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
@@ -85,6 +110,9 @@ export default function HealthAccessPage() {
             // Remount per cat: consent is cat-specific state, and a stale open
             // dialog or expanded section must never carry across a switch.
             <React.Fragment key={activeCat.id}>
+              {request && request.catId === activeCat.id && (
+                <ClinicRequestCard request={request} catName={activeCat.name} isAr={isAr} onDone={dismissRequest} />
+              )}
               <ConsentSection catId={activeCat.id} catName={activeCat.name} isAr={isAr} />
               <AccessLedger catId={activeCat.id} catName={activeCat.name} isAr={isAr} />
             </React.Fragment>
@@ -92,6 +120,98 @@ export default function HealthAccessPage() {
         </>
       )}
     </div>
+  );
+}
+
+interface ClinicRequest {
+  catId: string;
+  orgId: string;
+  tier: VetTier;
+}
+
+/**
+ * A clinic asked; the owner answers — here, in one tap, with the tier spelled
+ * out BEFORE the decision (R004) and "not now" as an equal, guilt-free exit
+ * (R116). The clinic's name comes from the registry by id, never from the link.
+ */
+function ClinicRequestCard({
+  request, catName, isAr, onDone,
+}: {
+  request: ClinicRequest;
+  catName: string;
+  isAr: boolean;
+  onDone: () => void;
+}) {
+  const { authedFetch } = useAuth();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const clinic = useQuery({
+    queryKey: ["vet-owner-clinic", request.orgId],
+    queryFn: () =>
+      authedFetch<{ id: string; ar: string | null; en: string | null }>(
+        `/vet/owner/clinics/${encodeURIComponent(request.orgId)}`
+      ),
+    retry: false,
+  });
+  const name = clinic.data ? orgName({ nameAr: clinic.data.ar, nameEn: clinic.data.en }, isAr) : "";
+
+  const approve = useMutation({
+    mutationFn: () =>
+      authedFetch(CONSENT_ENDPOINTS.create, {
+        method: "POST",
+        body: JSON.stringify({ catId: request.catId, orgId: request.orgId, tier: request.tier }),
+      }),
+    onSuccess: () => {
+      toast({
+        title: isAr ? "تم منح الإذن" : "Access given",
+        description: isAr
+          ? `${name} تقدر الآن تفتح ${tierLabel(request.tier, isAr)} لـ${catName}. تقدر تسحبه أي وقت من هنا.`
+          : `${name} can now open ${catName}'s ${tierLabel(request.tier, isAr).toLowerCase()}. You can take it back here any time.`,
+        variant: "success",
+      });
+      void qc.invalidateQueries({ queryKey: ["vet-consent"] });
+      onDone();
+    },
+    onError: (err) => {
+      const f = friendlyError(err, isAr);
+      toast({ title: f.title, description: f.message, variant: "error" });
+    },
+  });
+
+  if (clinic.isLoading) return <Skeleton className="h-40 w-full" />;
+  // An id that resolves to no active clinic is not a request we can honour —
+  // say nothing alarming, just don't offer a button that would fail.
+  if (clinic.isError || !name) return null;
+
+  return (
+    <Card role="region" aria-labelledby="clinic-request-heading" className="border-primary/40 bg-primary/[0.04] p-5">
+      <div className="flex items-start gap-3">
+        <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+          <Building2 className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 id="clinic-request-heading" className="font-display text-lg font-semibold">
+            {isAr ? `${name} تطلب الاطلاع على سجل ${catName}` : `${name} is asking to see ${catName}'s record`}
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            {isAr
+              ? "القرار لك. لا شي ينفتح قبل موافقتك، وتقدر تسحب الإذن بضغطة في أي وقت."
+              : "It's your call. Nothing opens until you say yes, and you can take it back in one tap, any time."}
+          </p>
+        </div>
+      </div>
+      <TierExplainer tier={request.tier} catName={catName} isAr={isAr} className="mt-4" />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button onClick={() => approve.mutate()} loading={approve.isPending}>
+          <CheckCircle2 className="size-4" aria-hidden />
+          {isAr ? `اسمح لـ${name}` : `Allow ${name}`}
+        </Button>
+        <Button variant="ghost" onClick={onDone} disabled={approve.isPending}>
+          {isAr ? "مو الحين" : "Not now"}
+        </Button>
+      </div>
+    </Card>
   );
 }
 
@@ -278,7 +398,9 @@ function ConsentSection({ catId, catName, isAr }: { catId: string; catName: stri
           catId={catId}
           catName={catName}
           isAr={isAr}
-          existingOrgIds={live.map((g) => g.orgId)}
+          // An emergency read is not a relationship: it must not hide the
+          // clinic from the list of clinics the owner can choose to trust.
+          existingOrgIds={live.filter((g) => !g.emergency).map((g) => g.orgId)}
           onClose={() => setGranting(false)}
           onGranted={() => {
             setGranting(false);

@@ -150,7 +150,7 @@ export default function VetTodayPage() {
                 <AlertTriangle
                   className={cn(
                     "size-4 shrink-0",
-                    item.severity === "CRITICAL" ? "text-destructive" : "text-warning",
+                    item.severity === "CRITICAL" ? "text-destructive" : "text-warning-ink",
                   )}
                   aria-hidden
                 />

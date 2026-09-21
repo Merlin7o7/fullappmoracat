@@ -1,5 +1,7 @@
 "use client";
 
+import { digitsOnly } from "@moraqat/core";
+import { LostFoundShare } from "@/components/lost-found-share";
 import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -251,9 +253,26 @@ export function LostFoundView({ id }: { id: string }) {
           {/* ── Reaching them ────────────────────────────────────────────── */}
           <div className="mt-6">
             {data.viewer.isReporter ? (
-              <Link href="/portal/lost-found">
-                <Button className="w-full sm:w-auto">{isAr ? "أدر إعلانك" : "Manage your notice"}</Button>
-              </Link>
+              <div className="space-y-4">
+                {!closed && (
+                  <div className="rounded-2xl border border-border bg-muted/40 p-4">
+                    <p className="font-display text-base font-semibold">
+                      {isAr ? "الخطوة الأهم الحين: انشره في مجموعات حيّك" : "The step that matters now: post it to your neighbourhood groups"}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      {isAr
+                        ? "الرابط يظهر بصورة القط ومكانه، واللي يشوفه يراسلك من الصفحة — رقمك ما ينكشف إلا لو اخترت أنت."
+                        : "The link shows the cat's photo and area, and anyone who spots them messages you from the page — your number stays private unless you chose otherwise."}
+                    </p>
+                    <LostFoundShare notice={data} isAr={isAr} className="mt-3" />
+                  </div>
+                )}
+                <Link href="/portal/lost-found">
+                  <Button variant={closed ? "primary" : "outline"} className="w-full sm:w-auto">
+                    {isAr ? "أدر إعلانك" : "Manage your notice"}
+                  </Button>
+                </Link>
+              </div>
             ) : closed ? (
               <p className="rounded-2xl bg-muted/60 p-4 text-center text-sm text-muted-foreground">
                 {home
@@ -283,7 +302,7 @@ export function LostFoundView({ id }: { id: string }) {
                   <a
                     href={
                       data.contact.pref === "WHATSAPP"
-                        ? `https://wa.me/${data.contact.phone.replace(/\D/g, "")}`
+                        ? `https://wa.me/${digitsOnly(data.contact.phone)}`
                         : `tel:${data.contact.phone}`
                     }
                     className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-muted"
@@ -311,6 +330,17 @@ export function LostFoundView({ id }: { id: string }) {
               </div>
             )}
           </div>
+
+          {/* A neighbour who hasn't seen the cat can still do the most useful
+              thing: pass the notice on. Quiet, below the primary action. */}
+          {!data.viewer.isReporter && !closed && (
+            <div className="mt-6 border-t border-border pt-5">
+              <p className="mb-2 text-sm text-muted-foreground">
+                {isAr ? "ما شفته؟ مرّر الإعلان — كل مشاركة تقرّبه من بيته." : "Haven't seen them? Pass it on — every share brings them closer to home."}
+              </p>
+              <LostFoundShare notice={data} isAr={isAr} compact />
+            </div>
+          )}
         </div>
       </article>
 

@@ -479,8 +479,8 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
       </button>
       <p className="max-w-xs text-center text-xs leading-relaxed text-muted-foreground">
         {isAr
-          ? `الرمز رمز تحقق آمن — يُقرأ فقط داخل تطبيق مرقط أو من شريك معتمد للتأكد من الهوية والعضوية، بدون كشف أي بيانات عامة.`
-          : `The QR is a secure token — read only inside the Moracat app or by an authorized partner to confirm identity & membership. No public profile is exposed.`}
+          ? `أي كاميرا جوال تقرأ الرمز وتفتح صفحة ${localizeName(cat.name, "ar")}: اسمه وصورته وما اخترت إظهاره فقط — بياناتك أنت ما تظهر فيها. أما PDF وPNG والطباعة فتحمل اسمك ورقمك للطوارئ، فخلّها لطوقه وأوراقه، وللنشر استخدم «شارك الهوية».`
+          : `Any phone camera reads the QR and opens ${localizeName(cat.name, "en")}'s page: name, photo and only what you chose to show — none of your own details appear there. The PDF, PNG and print versions do carry your name and emergency number, so keep those for the collar and paperwork, and use "Share" for posting.`}
       </p>
     </div>
   );

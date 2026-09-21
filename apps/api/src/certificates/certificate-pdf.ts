@@ -190,7 +190,7 @@ export async function renderCertificatePdf(input: CertificateRenderInput): Promi
         View,
         { style: s.frame },
         // Header
-        h(View, { style: s.header }, h(Text, { style: s.brand }, "MORACAT"), h(ArabicText, { text: "مُراقط", size: 16, color: GREEN, bold: true })),
+        h(View, { style: s.header }, h(Text, { style: s.brand }, "MORACAT"), h(ArabicText, { text: "مرقط", size: 16, color: GREEN, bold: true })),
         h(View, { style: s.titleRow }, h(Text, { style: s.titleEn }, "Cat ID Certificate"), h(ArabicText, { text: "شهادة هوية القط", size: 20, bold: true })),
         h(Text, { style: s.sub }, `Certificate ${input.number} · issued ${fmt(input.issuedAt, "en")}`),
 
@@ -248,7 +248,7 @@ export async function renderCertificatePdf(input: CertificateRenderInput): Promi
             { style: [s.small, { marginTop: 6 }] },
             `${verifiedCount} of ${input.vaccinations.length} entries were written by a licensed partner clinic. Self-reported entries were entered by the owner and are not verified by Moracat.`
           ),
-          h(View, { style: { alignItems: "flex-end", marginTop: 2 } }, h(ArabicText, { text: "الإدخالات الذاتية أدخلها المالك ولم تتحقق منها مُراقط.", size: 9, color: MUTED }))
+          h(View, { style: { alignItems: "flex-end", marginTop: 2 } }, h(ArabicText, { text: "الإدخالات الذاتية أدخلها المالك ولم تتحقق منها مرقط.", size: 9, color: MUTED }))
         ),
 
         // Footer: verification

@@ -457,8 +457,9 @@ export class AdoptionService {
           name: r.requester.ownerNickname ?? r.requester.firstName ?? null,
           memberSince: r.requester.createdAt,
           catsRegistered: r.requester._count.cats,
-          // The owner needs this to send the Cat ID transfer — and only once
-          // they have accepted this person.
+          // Released only once they have accepted this person — it is how the
+          // two arrange to meet. The enquiry dialog says so in as many words;
+          // keep that copy and this rule in step.
           email: r.status === "ACCEPTED" || r.status === "COMPLETED" ? r.requester.email : null,
         },
       })),

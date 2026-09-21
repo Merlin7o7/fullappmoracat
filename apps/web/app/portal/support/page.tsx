@@ -159,7 +159,7 @@ function TicketThread({ ticket, isAr, onBack, authedFetch, onChanged }: {
         {ticket.messages.map((m) => (
           <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-3 text-sm", m.isStaff ? "self-start bg-muted" : "self-end bg-primary/10")}>
             <p className="mb-1 text-[11px] font-medium text-muted-foreground">
-              {m.isStaff ? (isAr ? "فريق مُرقّط" : "Moracat Care") : (isAr ? "أنت" : "You")} · {fmtTime(m.createdAt)}
+              {m.isStaff ? (isAr ? "فريق مرقط" : "Moracat Care") : (isAr ? "أنت" : "You")} · {fmtTime(m.createdAt)}
             </p>
             <p className="whitespace-pre-wrap">{m.body}</p>
           </div>

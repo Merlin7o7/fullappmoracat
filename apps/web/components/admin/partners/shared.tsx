@@ -88,7 +88,7 @@ export function ExpiryText({ iso, isAr, className }: { iso: string | null | unde
   }
   if (tone === "soon") {
     return (
-      <span className={cn("inline-flex items-center gap-1 font-medium text-[hsl(38_92%_32%)] dark:text-warning", className)}>
+      <span className={cn("inline-flex items-center gap-1 font-medium text-[hsl(38_92%_32%)] dark:text-warning-ink", className)}>
         <AlertTriangle aria-hidden className="size-3.5" />
         {isAr ? `${date} (بعد ${fmtNumber(d, true)} يوم)` : `${date} (in ${d}d)`}
       </span>

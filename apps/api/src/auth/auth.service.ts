@@ -601,10 +601,10 @@ export class AuthService {
       orderBy: { createdAt: "desc" },
     });
     if (recent.length >= EMAIL_OTP_MAX_SENDS_PER_HR) {
-      throw new BadRequestException("Too many code requests. Please try again later.");
+      throw new BadRequestException(authError("OTP_RATE_LIMITED", "Too many code requests. Please try again later."));
     }
     if (recent[0] && now - recent[0].createdAt.getTime() < EMAIL_OTP_COOLDOWN_MS) {
-      throw new BadRequestException("Please wait a moment before requesting another code.");
+      throw new BadRequestException(authError("OTP_RATE_LIMITED", "Please wait a moment before requesting another code."));
     }
 
     // Only the newest code is valid.
@@ -673,9 +673,9 @@ export class AuthService {
       where: { userId, purpose: "VERIFY_EMAIL", usedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
     });
-    if (!record) throw new BadRequestException("Your code has expired. Request a new one.");
+    if (!record) throw new BadRequestException(authError("OTP_EXPIRED", "Your code has expired. Request a new one."));
     if (record.attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
-      throw new BadRequestException("Too many attempts. Request a new code.");
+      throw new BadRequestException(authError("OTP_EXPIRED", "Too many attempts. Request a new code."));
     }
 
     const expected = Buffer.from(record.codeHash);
@@ -686,7 +686,7 @@ export class AuthService {
         where: { id: record.id },
         data: { attempts: { increment: 1 } },
       });
-      throw new BadRequestException("Incorrect code. Please try again.");
+      throw new BadRequestException(authError("OTP_INVALID", "Incorrect code. Please try again."));
     }
 
     const user = await this.prisma.$transaction(async (tx) => {

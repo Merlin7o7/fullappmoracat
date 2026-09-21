@@ -14,7 +14,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Check, ChevronDown, Lock, LockOpen, ShieldCheck } from "lucide-react";
 import { Badge, Button, Card, Dialog, cn, useToast } from "@moraqat/ui";
-import { VET_ROLE_LABELS, type VetRole } from "@moraqat/core";
+import { VET_ROLE_LABELS, digitsOnly, type VetRole } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
 import { Illo3D, type Illo3DName } from "@/components/illo-3d";
 import {
@@ -476,7 +476,7 @@ export function CounterLock({ className }: { className?: string }) {
             {isAr ? "الرمز السري" : "PIN"}
             <input
               value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onChange={(e) => setPin(digitsOnly(e.target.value).slice(0, 6))}
               inputMode="numeric"
               autoComplete="off"
               required

@@ -68,6 +68,8 @@ interface Overview {
     catId: string | null;
     catName: string | null;
     label: string | null;
+    /** The due date has passed and no later dose has been recorded. */
+    overdue?: boolean;
   }[];
 }
 
@@ -256,7 +258,9 @@ export default function OverviewPage() {
         <Card className="p-4">
           <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
             <CalendarClock className="size-4 text-primary" />
-            {isAr ? "قادم قريباً" : "Coming up"}
+            {data.comingUp.some((e) => e.overdue)
+              ? isAr ? "يحتاج انتباهك" : "Needs your attention"
+              : isAr ? "قادم قريباً" : "Coming up"}
           </p>
           <ul className="space-y-1.5">
             {data.comingUp.map((e, i) => (
@@ -270,9 +274,14 @@ export default function OverviewPage() {
                       {isAr
                         ? `تطعيم «${e.label}» لـ${e.catName}`
                         : `${e.catName}'s ${e.label} vaccination`}
-                      <span className="text-muted-foreground"> — {isAr ? "سنذكّرك قبله" : "we'll remind you"}</span>
+                      {e.overdue ? (
+                        // Words, not just colour (R093) — and a next step, not a scolding (R084).
+                        <span className="font-medium text-destructive"> — {isAr ? "فات موعده · سجّل الجرعة أو احجز عند عيادتك" : "overdue · log the dose or book your clinic"}</span>
+                      ) : (
+                        <span className="text-muted-foreground"> — {isAr ? "سنذكّرك قبله" : "we'll remind you"}</span>
+                      )}
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{fmtDate(e.at)}</span>
+                    <span className={cn("shrink-0 text-xs", e.overdue ? "font-medium text-destructive" : "text-muted-foreground")}>{fmtDate(e.at)}</span>
                   </Link>
                 ) : (
                   <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm">

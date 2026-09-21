@@ -1,5 +1,6 @@
 "use client";
 
+import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,7 +26,7 @@ import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloEmpty } from "@/components/illo-panel";
 import { Illo3D } from "@/components/illo-3d";
 import { localizeName } from "@/lib/translit";
-import { friendlyMessage } from "@/lib/errors";
+import { friendlyError } from "@/lib/errors";
 import {
   catLifeApi,
   cityLabel,
@@ -352,6 +353,9 @@ export function AdoptionListingView({ id }: { id: string }) {
                 <Link href={`/login?next=${encodeURIComponent(`/adopt/${id}`)}`} className="sm:w-auto">
                   <Button className="w-full">{isAr ? `سجّل الدخول وتواصل عن ${name}` : `Sign in to ask about ${name}`}</Button>
                 </Link>
+                <Link href={`/register?next=${encodeURIComponent(`/adopt/${id}`)}`} className="sm:w-auto">
+                  <Button variant="outline" className="w-full">{isAr ? "جديد؟ أنشئ حساباً" : "New here? Create an account"}</Button>
+                </Link>
                 <p className="self-center text-xs text-muted-foreground">
                   {isAr ? "نمرّر رسالتك لصاحب القط بدون ما نكشف بياناتك." : "We pass your message on without revealing your details."}
                 </p>
@@ -439,7 +443,7 @@ function RequestState({
         <a
           href={
             contact.pref === "WHATSAPP"
-              ? `https://wa.me/${contact.phone.replace(/\D/g, "")}`
+              ? `https://wa.me/${digitsOnly(contact.phone)}`
               : `tel:${contact.phone}`
           }
           className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
@@ -482,11 +486,14 @@ function AskDialog({
   const { authedFetch } = useAuth();
   const [message, setMessage] = React.useState(initial);
   const [error, setError] = React.useState<string | null>(null);
+  // An unverified email is a recovery, not a wall: hand them the door (R112).
+  const [needsVerify, setNeedsVerify] = React.useState(false);
 
   React.useEffect(() => {
     if (open) {
       setMessage(initial);
       setError(null);
+      setNeedsVerify(false);
     }
   }, [open, initial]);
 
@@ -497,7 +504,11 @@ function AskDialog({
         body: JSON.stringify({ message: message.trim() }),
       }),
     onSuccess: onDone,
-    onError: (err) => setError(friendlyMessage(err, isAr)),
+    onError: (err) => {
+      const friendly = friendlyError(err, isAr);
+      setError(friendly.message);
+      setNeedsVerify(friendly.code === "EMAIL_NOT_VERIFIED");
+    },
   });
 
   return (
@@ -507,8 +518,8 @@ function AskDialog({
       title={isAr ? `اسأل عن ${catName}` : `Ask about ${catName}`}
       description={
         isAr
-          ? "احكِ لهم شوي عن بيتك. ما نكشف بريدك ولا رقمك — الرسالة توصلهم عن طريقنا."
-          : "Tell them a little about the home you're offering. We never reveal your email or number — the message reaches them through us."
+          ? "احكِ لهم شوي عن بيتك. الرسالة توصلهم عن طريقنا، ورقمك ما ينكشف أبداً. بريدك يوصل لصاحب القط فقط إذا قبل طلبك — عشان تتفقون على اللقاء."
+          : "Tell them a little about the home you're offering. The message reaches them through us and your number is never shared. Your email is passed to the owner only if they accept you — so the two of you can arrange to meet."
       }
     >
       <form
@@ -541,7 +552,15 @@ function AskDialog({
         </p>
         {error && (
           <p role="alert" className="text-sm text-destructive">
-            {error}
+            {error}{" "}
+            {needsVerify && (
+              <Link
+                href={`/verify-email?next=${encodeURIComponent(`/adopt/${listingId}`)}`}
+                className="font-medium underline underline-offset-2"
+              >
+                {isAr ? "أكّد بريدك الآن" : "Confirm your email now"}
+              </Link>
+            )}
           </p>
         )}
         <div className="flex justify-end gap-2">

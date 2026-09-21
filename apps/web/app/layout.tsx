@@ -54,39 +54,52 @@ const arabic = localFont({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: "Moracat — The cat membership | مرقط",
-    template: "%s · Moracat",
-  },
-  description:
-    "Moracat is a membership for people who take their cats seriously — an official Cat ID, a health record that follows them anywhere, delivery across Saudi Arabia, and founding partners starting in Jeddah & Riyadh.",
-  keywords: ["cat membership", "Cat ID", "cat care Saudi Arabia", "عضوية قطط", "هوية قط", "Jeddah", "Riyadh"],
-  openGraph: {
-    type: "website",
-    siteName: "Moracat",
-    title: "Moracat — The cat membership",
-    description:
-      "Give your cat an identity of their own — delivery across Saudi Arabia, founding partners starting in Jeddah & Riyadh.",
-    url: siteUrl,
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Moracat — the cat membership" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Moracat",
-    description: "The cat membership — an identity of their own.",
-    images: ["/opengraph-image"],
-  },
-  // Single-URL app with cookie-driven locale — advertise only the canonical URL.
-  // (The former en-SA → /en alternate 404'd; a real localized route doesn't exist.)
-  alternates: { canonical: "/" },
-  robots: { index: true, follow: true },
-  applicationName: BRAND.en,
-  // The registered establishment that operates the brand.
-  publisher: LEGAL_ENTITY.en,
-  creator: LEGAL_ENTITY.en,
-};
+/**
+ * Locale-aware, because Arabic is the default experience (R101): an Arabic
+ * visitor's tab title, search snippet and link preview must read in Arabic.
+ * The layout already reads the locale cookie, so this adds no new dynamism.
+ * Copy describes only what exists today — no delivery or partner promises
+ * while commerce is off and the partner list is empty (R040).
+ */
+export function generateMetadata(): Metadata {
+  const isAr = cookies().get("locale")?.value !== "en";
+  const title = isAr ? "مرقط — هوية لقطك، لحياته كلّها" : "Moracat — an ID for your cat, for their whole life";
+  const description = isAr
+    ? "سجّل قطك وخذ هويته باسمه ورقمه مجاناً: لو ضاع، اللي يلقاه يوصلك بدون ما ينكشف رقمك، وسجله الصحي معه في أي عيادة. ومعها التبنّي ومفقود وموجود ومجتمع أهل القطط في السعودية."
+    : "Register your cat and get their Cat ID free: if they're ever lost, the finder reaches you without seeing your number, and their health record walks into any clinic with them. Plus adoption, Lost & Found and a community of Saudi cat people.";
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: title,
+      template: isAr ? "%s · مرقط" : "%s · Moracat",
+    },
+    description,
+    keywords: ["هوية قط", "مرقط", "قط مفقود", "تبني قطط", "سجل صحي للقطط", "Cat ID", "Moracat", "lost cat Saudi Arabia", "cat adoption Saudi Arabia"],
+    openGraph: {
+      type: "website",
+      siteName: isAr ? BRAND.ar : BRAND.en,
+      locale: isAr ? "ar_SA" : "en_US",
+      title,
+      description,
+      url: siteUrl,
+      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/opengraph-image"],
+    },
+    // Single-URL app with cookie-driven locale — advertise only the canonical URL.
+    // (The former en-SA → /en alternate 404'd; a real localized route doesn't exist.)
+    alternates: { canonical: "/" },
+    robots: { index: true, follow: true },
+    applicationName: BRAND.en,
+    // The registered establishment that operates the brand.
+    publisher: LEGAL_ENTITY.en,
+    creator: LEGAL_ENTITY.en,
+  };
+}
 
 export const viewport: Viewport = {
   // viewport-fit=cover lets the app paint into the notch/home-indicator area;

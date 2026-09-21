@@ -734,7 +734,7 @@ export function buildVetInviteEmail(p: {
   roleEn: string;
   url: string;
 }): { subject: string; html: string; text: string } {
-  const subject = `دعوة للانضمام إلى ${p.orgNameAr} على مُراقط · Join ${p.orgNameEn} on Moracat`;
+  const subject = `دعوة للانضمام إلى ${p.orgNameAr} على مرقط · Join ${p.orgNameEn} on Moracat`;
 
   const logo = p.logoUrl
     ? `<img src="${escapeHtml(p.logoUrl)}" alt="" width="56" height="56" style="display:block;border-radius:12px;border:1px solid ${BRAND.hairline};" />`
@@ -749,7 +749,7 @@ export function buildVetInviteEmail(p: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${BRAND.card};border:1px solid ${BRAND.hairline};border-radius:18px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,Arial,sans-serif;">
 
         <tr><td style="background:${BRAND.green};padding:22px 28px;color:${BRAND.greenInk};font-size:15px;font-weight:600;letter-spacing:.02em;">
-          مُراقط · Moracat
+          مرقط · Moracat
         </td></tr>
 
         <!-- Arabic first: the default experience (R101). -->

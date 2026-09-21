@@ -391,7 +391,7 @@ export function TeamSection() {
                       <span>{isAr ? inv.roleLabel.ar : inv.roleLabel.en}</span>
                       <span aria-hidden>·</span>
                       {inv.expired ? (
-                        <span className="font-medium text-[hsl(38_92%_26%)] dark:text-warning">
+                        <span className="font-medium text-[hsl(38_92%_26%)] dark:text-warning-ink">
                           {isAr ? "انتهت صلاحيتها" : "Expired"}
                         </span>
                       ) : (

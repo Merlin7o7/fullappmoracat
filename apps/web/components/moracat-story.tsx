@@ -3,7 +3,7 @@
 import * as React from "react";
 import {
   Package, Stethoscope, Heart, Sparkles, Users, IdCard, ShieldCheck,
-  Clock, Check, Star, Rocket, PawPrint,
+  Clock, Check, Star, HeartPulse, PawPrint,
 } from "lucide-react";
 import { Card, Badge, cn } from "@moraqat/ui";
 import { IlloCat, IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
@@ -42,55 +42,51 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
       {/* 2 — More than just an ID */}
       <Section
         eyebrow={isAr ? "أكثر من مجرد هوية" : "More than just an ID"}
-        title={isAr ? "الهوية هي البداية — العضوية هي القيمة" : "The ID is the beginning — the membership is the value"}
+        title={isAr ? "الهوية هي البداية" : "The ID is where it starts"}
         lead={
           isAr
-            ? "نعرّفك على مرقط من خلال هوية قطك، لكن مرقط أكبر من بطاقة تعريف. إنها عضوية كاملة مبنية لجعل تربية القطط أسهل وأوفر وأكثر متعة."
-            : "We introduce Moracat through your cat's ID — but Moracat is far more than an identification card. It's a complete membership built to make cat ownership easier, more affordable, and more rewarding."
+            ? "تعرفنا من هوية قطك — بس الهوية مو بطاقة وبس. هي اللي ترجّعه لك لو ضاع، وتحفظ سجله الصحي، وتعرّف الناس عليه."
+            : "You meet Moracat through your cat's ID — but the ID isn't just a card. It's what brings them home if they're lost, keeps their health record, and tells people who they are."
         }
       >
         <div className="grid gap-4 sm:grid-cols-3">
-          <MiniCard icon={IdCard} tone="text-primary" title={isAr ? "هوية" : "Identity"} body={isAr ? "رقم فريد وبطاقة رقمية دائمة لقطك." : "A unique number and a permanent digital card."} />
-          <MiniCard icon={Stethoscope} tone="text-leaf" title={isAr ? "عناية" : "Care"} body={isAr ? "سجل صحي وأساسيات تصل إلى بابك." : "A health record and essentials at your door."} />
-          <MiniCard icon={Users} tone="text-accent" title={isAr ? "مجتمع" : "Community"} body={isAr ? "انتماء إلى محبّي القطط في السعودية." : "Belonging among cat people in Saudi."} />
+          <MiniCard icon={IdCard} tone="text-primary" title={isAr ? "هوية" : "Identity"} body={isAr ? "رقم يخصّه وحده، وبطاقة تبقى معه طول عمره." : "A number that is theirs alone, and a card for life."} />
+          <MiniCard icon={Stethoscope} tone="text-leaf" title={isAr ? "عناية" : "Care"} body={isAr ? "سجل صحي يمشي معه لأي عيادة — وأنت من يقرّر من يشوفه." : "A health record that goes to any clinic with them — and you decide who sees it."} />
+          <MiniCard icon={Users} tone="text-accent" title={isAr ? "مجتمع" : "Community"} body={isAr ? "أهل القطط في السعودية — تبنٍّ، ومفقود وموجود، وقطط تعرفها." : "Saudi cat people — adoption, Lost & Found, and cats you get to know."} />
         </div>
       </Section>
 
       {/* 3 — What membership unlocks */}
       <Section
-        eyebrow={isAr ? "ماذا تفتح العضوية" : "What membership unlocks"}
-        title={isAr ? "عضوية واحدة، عالم من المزايا" : "One membership, a world of benefits"}
+        eyebrow={isAr ? "وش فيه اليوم، ووش الجاي" : "What's here today, and what's coming"}
+        title={isAr ? "نقول لك بصدق وين وصلنا" : "An honest account of where we are"}
         lead={
           isAr
-            ? "عند إطلاق العضويات، تفعيل هوية قطك يفتح ما هو أبعد من بطاقة تعريف."
-            : "When memberships launch, activating your cat's ID unlocks far more than an identification card."
+            ? "الهوية والسجل الصحي والمجتمع شغّالة اليوم، مجاناً. خطة العناية الشهرية وأسعار الشركاء قيد التجهيز — وما نعد بشي قبل ما يجهز."
+            : "The ID, the health record and the community work today, free. The monthly care plan and partner rates are being built — and we don't promise anything before it's ready."
         }
       >
         <div className="grid gap-4 md:grid-cols-2">
           <BenefitCard
             icon={Package}
-            emoji="🐱"
-            title={isAr ? "أساسيات شهرية" : "Monthly essentials"}
-            items={isAr ? ["طعام", "رمل", "مكافآت", "إكسسوارات", "منتجات صحية"] : ["Food", "Litter", "Treats", "Accessories", "Health products"]}
+            title={isAr ? "خطة العناية الشهرية — قريباً" : "The monthly care plan — coming"}
+            items={isAr ? ["أكل ورمل ومكافآت على مقاس قطك", "توصل لبابك كل شهر", "اختيارية — والهوية تظل مجانية"] : ["Food, litter and treats sized to your cat", "At your door every month", "Optional — the ID stays free"]}
           />
           <BenefitCard
             icon={Stethoscope}
-            emoji="🏥"
-            title={isAr ? "مزايا الشركاء" : "Partner benefits"}
+            title={isAr ? "أسعار الأعضاء عند الشركاء — نوقّع الآن" : "Member rates at partners — signing now"}
             // Member-rate lexicon (R085/R087): recognition, not coupon talk.
-            items={isAr ? ["سعر الأعضاء عند العيادات", "مزايا الشركاء", "امتيازات حصرية للأعضاء"] : ["Member rates at vets", "Partner benefits", "Member-only privileges"]}
+            items={isAr ? ["عيادات وعناية ومتاجر نختارها بعناية", "يظهر كل شريك أول ما يجهز", "نبلّغ الأعضاء أول بأول"] : ["Clinics, grooming and shops we choose carefully", "Each partner appears the day it's ready", "Members hear first"]}
           />
           <BenefitCard
             icon={Heart}
-            emoji="❤️"
-            title={isAr ? "المجتمع" : "Community"}
-            items={isAr ? ["ملف قطك", "استعراض المجتمع", "المشاركة", "مسابقات قادمة", "تقدير وتميّز"] : ["Your cat profile", "Community showcase", "Sharing", "Future competitions", "Recognition"]}
+            title={isAr ? "المجتمع — شغّال اليوم" : "Community — live today"}
+            items={isAr ? ["صفحة لقطك باسمه وصورته", "تبنَّ قطاً أو اعرض قطاً للتبنّي", "مفقود وموجود", "خاص بضغطة متى ما تبي"] : ["A page for your cat, with their name and photo", "Adopt a cat, or rehome one", "Lost & Found", "Private in one tap, whenever you like"]}
           />
           <BenefitCard
-            icon={Rocket}
-            emoji="🚀"
-            title={isAr ? "خدمات مستقبلية" : "Future services"}
-            items={isAr ? ["مزايا جديدة للأعضاء", "شبكة شركاء", "تتبّع الصحة", "مزايا مرقط الإضافية"] : ["New member benefits", "Partner network", "Health tracking", "More Moracat features"]}
+            icon={HeartPulse}
+            title={isAr ? "السجل الصحي — شغّال اليوم" : "The health record — live today"}
+            items={isAr ? ["التطعيمات ومواعيدها", "زيارات العيادة وملاحظات الطبيب", "تذكير قبل موعد التطعيم", "العيادة تشوف السجل بإذنك فقط"] : ["Vaccinations and when they're due", "Clinic visits and the vet's notes", "A reminder before a vaccine is due", "A clinic sees the record only with your permission"]}
           />
         </div>
       </Section>
@@ -98,11 +94,11 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
       {/* 4 — Your Moracat ID: Inactive vs Active */}
       <Section
         eyebrow={isAr ? "هوية قطك" : "Your Moracat ID"}
-        title={isAr ? "حالتان، وكلاهما مقصود" : "Two statuses, both intentional"}
+        title={isAr ? "الهوية مجانية دايماً — والخطة اختيارية" : "The ID is free for good — the plan is optional"}
         lead={
           isAr
-            ? `${catName ? `هوية ${name}` : "هويتك"} جاهزة الآن. تبدأ الهوية «غير مفعّلة» حتى تُربط بعضوية مرقط — وهذا اختيار، لا خطأ.`
-            : `${catName ? `${name}'s ID` : "Your ID"} is ready now. It begins as “Inactive” until it's connected to a Moracat Membership — that's by design, not a limitation.`
+            ? `${catName ? `هوية ${name}` : "هوية قطك"} كاملة من أول يوم: رقمها وسجلها الصحي وصفحتها لك بلا مقابل، اليوم ودايماً. خطة العناية الشهرية شي منفصل تختاره لو حبّيت.`
+            : `${catName ? `${name}'s ID` : "Your cat's ID"} is complete from day one: the number, the health record and the page are yours at no cost, today and always. The monthly care plan is a separate thing you may choose to add.`
         }
       >
         <div className="grid gap-4 sm:grid-cols-2">
@@ -110,22 +106,22 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
             active={false}
             highlighted={!membershipActive}
             isAr={isAr}
-            label={isAr ? "غير مفعّلة" : "Inactive"}
+            label={isAr ? "الهوية — لك الآن" : "The ID — yours now"}
             body={
               isAr
-                ? "قطك يملك هوية مرقط رسمية، لكن العضوية لم تُفعّل بعد. الهوية والمجتمع لك الآن — مجاناً."
-                : "Your cat has an official Moracat ID, but membership hasn't been activated yet. The ID and community are yours now — free."
+                ? "الرقم والبطاقة والسجل الصحي وصفحة المجتمع ومفقود وموجود — كلها شغّالة ومجانية، وما تنسحب منك لو ما اشتركت."
+                : "The number, the card, the health record, the community page and Lost & Found — all working and free, and never taken away if you don't subscribe."
             }
           />
           <StatusCard
             active
             highlighted={membershipActive}
             isAr={isAr}
-            label={isAr ? "مفعّلة" : "Active"}
+            label={isAr ? "مع خطة العناية" : "With the care plan"}
             body={
               isAr
-                ? "العضوية مفعّلة، وكل المزايا مفتوحة: التوصيل الشهري، وسعر الأعضاء المحفوظ عند الشركاء، والمكافآت الحصرية."
-                : "Membership is active and every benefit is unlocked: monthly deliveries, member rates honoured at partners, and member-only rewards."
+                ? "تضيف فوق الهوية: عناية قطك الشهرية توصل لبابك، وسعر الأعضاء عند الشركاء أول ما ينضمون."
+                : "Adds to the ID: your cat's monthly care at your door, and member rates at partners as they join."
             }
           />
         </div>
@@ -139,12 +135,12 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
           </Sticker>
           <Badge variant="secondary" className="mb-3">{isAr ? "مجتمع مرقط — نسخة مبكرة" : "Moracat — Community Beta"}</Badge>
           <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            {isAr ? "أنت من الأعضاء المؤسّسين" : "You're a founding member"}
+            {isAr ? "أول ١٠٠٠ قط هم الأعضاء المؤسِّسون" : "The first 1,000 cats are the Founding Members"}
           </h2>
           <p className="mt-3 text-base leading-relaxed text-muted-foreground">
             {isAr
-              ? "مرقط الآن في نسخته المجتمعية المبكرة. أنت تنضم مبكراً لتساعد في تشكيل المنصة قبل إطلاق العضوية الكاملة — لست في قائمة انتظار، بل من أوائل من بنوا مرقط."
-              : "Moracat is in its Community Beta. You're joining early to help shape the platform before full membership launches — not a waiting customer, but one of the first who built Moracat."}
+              ? "مرقط في بدايته، واللي ينضم الحين يساعدنا نبنيه صح. أرقام الهويات متسلسلة فعلاً: أول ١٠٠٠ قط يتسجّل يحمل صفة «عضو مؤسِّس» في هويته دايماً — الصفة تجي من رقم قطك نفسه، مو شي نعطيه أو نسحبه."
+              : "Moracat is at its beginning, and those who join now help us build it right. Cat ID numbers are genuinely sequential: the first 1,000 cats registered carry “Founding Member” on their ID for good — the status comes from your cat's own number, not something we hand out or take away."}
           </p>
         </div>
       </section>
@@ -155,8 +151,8 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
         title={isAr ? "منظومة واحدة لكل ما يخص قطك" : "One ecosystem for everything your cat needs"}
         lead={
           isAr
-            ? "نطمح أن يصبح مرقط المنصة الرائدة لأصحاب القطط — تجمع الهوية والعناية والمجتمع والراحة ومزايا الشركاء الموثوقين في منظومة واحدة راقية."
-            : "Moracat aims to become the leading platform for cat owners — combining identity, care, community, convenience, and trusted partner benefits into one premium ecosystem."
+            ? "نبي كل قط في السعودية يكون له مكان واحد يجمع حياته: هويته، وسجله الصحي، وعنايته، وناسه — من أول يوم له في البيت إلى آخره."
+            : "We want every cat in Saudi Arabia to have one place that holds their whole life: their identity, their health record, their care and their people — from their first day at home to their last."
         }
       >
         <div className="grid gap-3 sm:grid-cols-4">
@@ -232,7 +228,7 @@ function MiniCard({ icon: Icon, title, body, tone = "text-primary" }: { icon: Re
   );
 }
 
-function BenefitCard({ icon: Icon, emoji, title, items }: { icon: React.ElementType; emoji: string; title: string; items: string[] }) {
+function BenefitCard({ icon: Icon, title, items }: { icon: React.ElementType; title: string; items: string[] }) {
   return (
     <Card className="flex flex-col gap-4 p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-e2">
       <div className="flex items-center gap-3">
@@ -240,7 +236,7 @@ function BenefitCard({ icon: Icon, emoji, title, items }: { icon: React.ElementT
           <Icon className="size-5" />
         </span>
         <h3 className="font-display text-lg font-semibold tracking-tight">
-          <span aria-hidden className="me-1.5">{emoji}</span>{title}
+          {title}
         </h3>
       </div>
       <ul className="grid gap-2">
@@ -274,7 +270,7 @@ function StatusCard({ active, highlighted, isAr, label, body }: { active: boolea
       <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
       {!active && (
         <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-primary">
-          <ShieldCheck className="size-3.5" /> {isAr ? "التفعيل متاح قريباً" : "Activation available soon"}
+          <ShieldCheck className="size-3.5" /> {isAr ? "مجانية اليوم ودايماً" : "Free today and always"}
         </p>
       )}
     </Card>

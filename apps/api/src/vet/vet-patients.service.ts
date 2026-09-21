@@ -582,7 +582,7 @@ export class VetPatientsService {
       throw vetBadRequest("VET_PATIENT_NOT_FOUND", "Unrecognised identifier", {
         detectedAs: detected.kind,
         hint: {
-          ar: "هذا لا يشبه رقم مُراقط — الأرقام تُكتب هكذا: MRC-D7Y9-X5CW.",
+          ar: "هذا لا يشبه رقم مرقط — الأرقام تُكتب هكذا: MRC-D7Y9-X5CW.",
           en: "That doesn't look like a Moracat number — they read like MRC-D7Y9-X5CW.",
         },
       });

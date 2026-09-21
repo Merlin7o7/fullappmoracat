@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, Check, Loader2, LogOut, Stethoscope } from "lucide-react";
 import { Button, Card, cn, useToast } from "@moraqat/ui";
-import { VET_ROLE_LABELS } from "@moraqat/core";
+import { VET_ROLE_LABELS, digitsOnly } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { ApiError } from "@/lib/http";
@@ -267,7 +267,7 @@ export default function VetLoginPage() {
             <Field
               label={isAr ? "رمز المصادقة الثنائية" : "Two-factor code"}
               value={totp}
-              onChange={(v) => setTotp(v.replace(/\D/g, "").slice(0, 6))}
+              onChange={(v) => setTotp(digitsOnly(v).slice(0, 6))}
               inputMode="numeric"
               autoComplete="one-time-code"
               hint={
