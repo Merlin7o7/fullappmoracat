@@ -9,7 +9,7 @@ import {
 import {
   Button, Card, EmptyState, IdBand, Ledger, LedgerRow, Seal, Skeleton, StatusTag, cn, type StatusTone,
 } from "@moraqat/ui";
-import { ageInMonths, formatAge, formatDate, formatRelative, formatWeight, saudiCityLabel } from "@moraqat/core";
+import { ageInMonths, formatAge, formatDate, formatRelative, formatWeight, qrValueFor, saudiCityLabel } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import type { PortalCat } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
@@ -24,6 +24,7 @@ import { AddCareTask } from "@/components/care/add-care-task";
 import { WeightLog } from "@/components/care/weight-log";
 import { VetShare } from "./vet-share";
 import { CompleteFile } from "./complete-file";
+import { MomentShare } from "@/components/moments/moment-share";
 
 /**
  * The cat's profile — the flagship of the product (UX reassessment §3).
@@ -70,6 +71,7 @@ export function CatProfile({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
         </Link>
 
         {lost && (
+          <div className="space-y-2">
           <Link
             href={`/portal/cats/${cat.id}/privacy`}
             className="flex items-center gap-3 rounded-2xl bg-destructive px-4 py-3 text-destructive-foreground"
@@ -82,6 +84,26 @@ export function CatProfile({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
               </span>
             </span>
           </Link>
+          {/* The poster for the neighbourhood's WhatsApp groups — the growth
+              loop and the rescue in one (UX reassessment §25.1). */}
+          <MomentShare
+            kind="lost"
+            isAr={isAr}
+            catName={name}
+            photoUrl={cat.photoUrl}
+            catIdNumber={cat.catIdNumber}
+            lines={[
+              ...(cat.district ? [cat.district] : []),
+              isAr ? `مفقود منذ ${formatDate(cat.lostModeAt!, "ar", "medium")}` : `Missing since ${formatDate(cat.lostModeAt!, "en", "medium")}`,
+            ]}
+            qrUrl={cat.qrToken ? qrValueFor(process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co", cat.qrToken) : null}
+            shareText={isAr ? `${name} مفقود — لو شفته امسح الرمز في الصورة 🙏` : `${name} is missing — if you see them, scan the code in the image 🙏`}
+            label={isAr ? "شارك ملصق البحث" : "Share the missing poster"}
+            variant="destructive"
+            size="md"
+            className="w-full sm:w-auto"
+          />
+          </div>
         )}
 
         <div className="grid gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:items-end">
@@ -289,7 +311,15 @@ function ProfileBody({ cat, record, isAr, name }: { cat: PortalCat; record: Heal
 
       {/* ── 5 · Their life so far ─────────────────────────────────────────── */}
       <section aria-labelledby="life-title" className="space-y-3">
-        <SectionTitle id="life-title" title={isAr ? `حياة ${name}` : `${name}'s life`} />
+        <SectionTitle
+          id="life-title"
+          title={isAr ? `حياة ${name}` : `${name}'s life`}
+          action={
+            <Link href={`/portal/cats/${cat.id}/timeline`} className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
+              {isAr ? "الألبوم كاملاً" : "The full album"}
+            </Link>
+          }
+        />
         <Card className="p-5">
           <ol className="relative space-y-5 border-s border-border ps-6">
             {timeline.map((e) => (

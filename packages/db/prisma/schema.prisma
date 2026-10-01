@@ -912,6 +912,7 @@ model Cat {
   weightRecords     CatWeightRecord[]
   careTasks         CareTask[]
   healthShareLinks  HealthShareLink[]
+  moments           CatMoment[]
   consentGrants     ConsentGrant[]
   recordAccessLogs  RecordAccessLog[]
   emergencyContacts CatEmergencyContact[]
@@ -3848,4 +3849,23 @@ model EmailSignIn {
 
   @@index([email, createdAt])
   @@map("email_sign_ins")
+}
+
+/// A moment the owner adds to the cat's life (W9 — the family album): the
+/// first day home, a move, a funny photo. The timeline merges these with what
+/// the record already knows (birth, joining, doses, visits, hand-overs,
+/// reunions). Belongs to the CAT, not the account, so it travels on hand-over.
+model CatMoment {
+  id         String   @id @default(cuid())
+  catId      String
+  title      String
+  note       String?
+  photoUrl   String?
+  happenedAt DateTime
+  createdAt  DateTime @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId, happenedAt])
+  @@map("cat_moments")
 }

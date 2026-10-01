@@ -11,6 +11,7 @@ export function CatSectionTabs({ catId, isAr }: { catId: string; isAr: boolean }
   const tabs = [
     { href: base, ar: "الملف", en: "Profile" },
     { href: `${base}/health`, ar: "السجل الصحي", en: "Health record" },
+    { href: `${base}/timeline`, ar: "حياته", en: "Life" },
     { href: `${base}/privacy`, ar: "الأمان والخصوصية", en: "Safety & privacy" },
   ];
   return (

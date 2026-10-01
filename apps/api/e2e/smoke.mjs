@@ -402,6 +402,27 @@ console.log("━━ private health documents + launch readiness (Wave 1) ━━"
     ok((await call(`/wallet/cats/${cat.id}/apple`, "GET", undefined, C)).status === 503, "…and refuses to mint an unsigned pass (503)");
   }
 
+  console.log("━━ life timeline + moments + yearly keepsake (Wave 9) ━━");
+  {
+    const iso = (d) => new Date(Date.now() + d * 86_400_000).toISOString().slice(0, 10);
+    const tl = await call(`/cats/${cat.id}/timeline`, "GET", undefined, C);
+    ok(tl.status === 200 && tl.json.some((e) => e.kind === "joined"), "the album opens with joining the register");
+    const m = await call(`/cats/${cat.id}/moments`, "POST", { title: "First day home", happenedAt: iso(-2), note: "Hid under the sofa" }, C);
+    ok(m.status === 201 && !!m.json?.id, "owner adds a moment");
+    ok((await call(`/cats/${cat.id}/moments`, "POST", { title: "Later", happenedAt: iso(30) }, C)).status === 400, "a moment can't be in the future");
+    ok((await call(`/cats/${cat.id}/moments`, "POST", { title: "Evil", photoUrl: "javascript:alert(1)" }, C)).json?.photoUrl == null, "a non-https photo URL is dropped");
+    const tl2 = (await call(`/cats/${cat.id}/timeline`, "GET", undefined, C)).json;
+    ok(tl2.some((e) => e.momentId === m.json.id && e.title.en === "First day home"), "the moment shows in the album");
+    const strangerT = (await call("/auth/register", "POST", { email: `album+${rnd()}@e.com`, password: "S3cure!pass", firstName: "Album", acceptTerms: true })).json.accessToken;
+    ok((await call(`/cats/${cat.id}/timeline`, "GET", undefined, strangerT)).status === 404, "another member can't read the album");
+    ok((await call(`/cats/${cat.id}/moments/${m.json.id}`, "DELETE", undefined, strangerT)).status === 404, "…or remove a moment");
+    const y = new Date().getFullYear();
+    const year = await call(`/cats/${cat.id}/year/${y}`, "GET", undefined, C);
+    ok(year.status === 200 && year.json.year === y && year.json.counts.moments >= 1 && Array.isArray(year.json.milestones), "the yearly keepsake summarises the year");
+    ok((await call(`/cats/${cat.id}/year/${y + 1}`, "GET", undefined, C)).status === 400, "a future year has no keepsake");
+    ok((await call(`/cats/${cat.id}/moments/${m.json.id}`, "DELETE", undefined, C)).status === 200, "owner removes the moment");
+  }
+
   const ready = await call("/admin/readiness", "GET", undefined, A);
   ok(ready.status === 200 && Array.isArray(ready.json?.checks) && ready.json.checks.some((c) => c.key === "clinic_terms" && c.owner === "counsel"),
     "admin readiness lists ops gaps and pending professional sign-offs");

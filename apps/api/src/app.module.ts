@@ -44,6 +44,7 @@ import { LifecycleModule } from "./lifecycle/lifecycle.module";
 import { CareModule } from "./care/care.module";
 import { JobsModule } from "./jobs/jobs.module";
 import { HealthShareModule } from "./health-share/health-share.module";
+import { TimelineModule } from "./timeline/timeline.module";
 import { VetModule } from "./vet/vet.module";
 import { EventsModule } from "./events/events.module";
 import { FilesModule } from "./files/files.module";
@@ -139,6 +140,7 @@ import { LostFoundModule } from "./lost-found/lost-found.module";
     CareModule,
     JobsModule,
     HealthShareModule,
+    TimelineModule,
     VetModule,
     // The owner side of clinic-created patients: /claim/:token (T4).
     ClaimsModule,
