@@ -721,7 +721,15 @@ ok((await call("/admin/dashboard", "GET", undefined, C)).status === 403, "custom
 const refund = (await call(`/admin/orders/${order.orderNumber}/refund`, "POST", { amount: 10, reason: "smoke" }, A)).json;
 ok(refund.refunded === 10, "partial refund via PSP");
 const dash = (await call("/admin/dashboard", "GET", undefined, A)).json;
-ok(dash.kpis.revenueTotal > 0 && dash.revenueByDay.length === 14, "analytics dashboard computes");
+ok(dash.revenueByDay.length === 14 && dash.commerceEnabled === true, "analytics dashboard computes");
+// This suite pays through the MOCK provider. That money must never be reported
+// as revenue — it is exactly how a dashboard showed income with commerce off.
+ok(
+  dash.kpis.revenueTotal === 0 && dash.kpis.mrr === 0 && dash.kpis.activeSubscribers === 0,
+  "mock-provider payments are not revenue, MRR or subscribers"
+);
+ok(dash.test.payments > 0 && dash.test.total > 0, "…they are reported separately as test money");
+ok(dash.revenueByDay.every((d) => d.total === 0), "the revenue chart stays flat on test money");
 
 console.log("━━ cms ━━");
 const blog = (await call("/content/blog")).json;
@@ -1000,7 +1008,11 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
     ok((await call("/vet/org/onboarding/request-go-live", "POST", {}, O, OH)).json?.goLiveRequestedAt, "clinic asks Moracat to go live");
     const live = (await call(`/vet/admin/orgs/${orgId}/go-live`, "POST", {}, A)).json;
     ok(live.status === "LIVE" && live.branchesPublished === 1, "admin switches the clinic live; branch published");
-    const dir = (await call("/vet/directory")).json;
+    // Searched by this run's tag rather than read off page 1: the directory
+    // pages at 24, and a long-lived dev database accumulates enough published
+    // branches to push a freshly-created one off the first page. The assertion
+    // is about the branch being PUBLIC, not about where it sorts.
+    const dir = (await call(`/vet/directory?q=${encodeURIComponent(tag)}`)).json;
     ok(dir.items?.some((b) => b.id === branchId && b.city?.nameAr === "الرياض"), "live clinic appears in the public directory");
     ok((await call(`/vet/patients/search?q=${encodeURIComponent(cat.catIdNumber)}`, "GET", undefined, V, VH)).json?.total === 1, "live clinic finds real members by Cat ID");
   } else {

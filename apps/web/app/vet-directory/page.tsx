@@ -6,7 +6,8 @@ import { Card, Badge, Button } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Breadcrumbs, breadcrumbJsonLd } from "@/components/breadcrumbs";
-import { IlloCat, IlloPaw } from "@/components/illustrations";
+import { IlloPaw } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { fetchWithTimeout, httpError } from "@/lib/http";
 import { jsonLdProps } from "@/lib/json-ld";
 import { normalizeDirectory, type DirectoryClinic } from "@/lib/vet-directory";
@@ -191,7 +192,7 @@ export default async function VetDirectoryPage({
           ) : clinics.length === 0 ? (
             <Card className="relative flex flex-col items-center gap-3 overflow-hidden p-12 text-center">
               <IlloPaw tone="peach" aria-hidden className="pointer-events-none absolute start-8 top-6 size-7 -rotate-12 opacity-50" />
-              <IlloCat tone="sage" aria-hidden className="h-16 w-auto" />
+              <Illo3D name="heart" className="size-24 animate-float" px={96} />
               <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
                 {city || emergency
                   ? isAr

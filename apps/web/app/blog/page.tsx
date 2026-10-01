@@ -6,7 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, Skeleton } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { IlloCat, IlloMouse, IlloSprig, Sticker, type Tone } from "@/components/illustrations";
+import { IlloCat, IlloSprig, Sticker, type Tone } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
 import { api } from "@/lib/api";
@@ -117,7 +118,7 @@ export default function BlogPage() {
           </div>
         ) : (
           <div className="mx-auto max-w-md rounded-[2rem] bg-cream/60 px-6 py-16 text-center dark:bg-cream/40">
-            <IlloMouse tone="sage" className="mx-auto mb-5 h-10 w-auto rtl:-scale-x-100" />
+            <Illo3D name="mouse" variant="green" directional className="mx-auto mb-5 size-24 animate-float" px={96} />
             <p className="font-display text-xl font-semibold tracking-tight">{isAr ? "لا مقالات بعد" : "No articles yet"}</p>
           </div>
         )}

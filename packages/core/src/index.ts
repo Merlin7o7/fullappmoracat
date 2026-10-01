@@ -39,5 +39,15 @@ export * from "./qr";
 export * from "./dunning";
 export * from "./cancel-reasons";
 
+// The member-facing API contract — the read models and bilingual state labels
+// shared verbatim by the API, the web portal and the iOS app. Second client,
+// same lesson as vet-contract.ts: one declaration, or the copies drift and a
+// screen renders blank in someone's hand.
+export * from "./member-contract";
+
+// Prayer-aware notification timing (R107) — computed times plus the product
+// rule about which notifications may be held and which never are.
+export * from "./prayer-times";
+
 // Any-script digits → Latin: Arabic keyboards type ٠–٩ and no field may drop them.
 export * from "./digits";

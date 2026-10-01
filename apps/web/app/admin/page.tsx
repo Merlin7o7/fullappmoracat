@@ -11,15 +11,20 @@ import { QueryError } from "@/components/query-error";
 import { VetDemoCard } from "./_components/vet-demo-card";
 
 interface Dashboard {
+  /** The commerce switch, so "nothing sold" reads as a state, not a fault. */
+  commerceEnabled: boolean;
   kpis: {
     revenueTotal: number; revenue30d: number; mrr: number; arr: number;
     ordersTotal: number; orders30d: number; activeSubscribers: number;
+    pausedSubscribers: number; pastDueSubscribers: number; scheduledCancels: number;
     totalCustomers: number; newCustomers30d: number; aov: number; churnRate: number;
   };
+  /** Mock-provider and staff payments: reported, never added to revenue. */
+  test: { payments: number; total: number };
   revenueByDay: { date: string; total: number }[];
   ordersByStatus: { status: string; count: number }[];
   topProducts: { productId: string; name: string; unitsSold: number; revenue: number }[];
-  recentOrders: { orderNumber: string; status: string; grandTotal: number; customer: string; placedAt: string }[];
+  recentOrders: { orderNumber: string; status: string; grandTotal: number; customer: string; placedAt: string; test: boolean }[];
 }
 
 type MetricDay = MetricSnapshotData;
@@ -80,10 +85,19 @@ export default function AdminDashboard() {
   const cards = [
     { icon: Wallet, label: isAr ? "إجمالي الإيرادات" : "Total revenue", num: kpis?.revenueTotal, suffix: sar, sub: kpis ? (isAr ? `${fmt(kpis.revenue30d)} آخر ٣٠ يوماً` : `${fmt(kpis.revenue30d)} last 30d`) : "" },
     { icon: Repeat, label: isAr ? "الإيراد الشهري المتكرر" : "MRR", num: kpis?.mrr, suffix: sar, sub: kpis ? (isAr ? `${fmt(kpis.arr)} سنوياً` : `${fmt(kpis.arr)} ARR`) : "" },
-    { icon: ShoppingBag, label: isAr ? "الطلبات" : "Orders", num: kpis?.ordersTotal, sub: kpis ? (isAr ? `متوسط الطلب ${kpis.aov} ر.س` : `AOV ${kpis.aov} SAR`) : "" },
+    { icon: ShoppingBag, label: isAr ? "طلبات مدفوعة" : "Paid orders", num: kpis?.ordersTotal, sub: kpis ? (isAr ? `متوسط الطلب ${kpis.aov} ر.س` : `AOV ${kpis.aov} SAR`) : "" },
     { icon: Users, label: isAr ? "العملاء" : "Customers", num: kpis?.totalCustomers, sub: kpis ? (isAr ? `+${kpis.newCustomers30d} آخر ٣٠ يوماً` : `+${kpis.newCustomers30d} last 30d`) : "" },
-    { icon: TrendingUp, label: isAr ? "الاشتراكات النشطة" : "Active subs", num: kpis?.activeSubscribers, sub: isAr ? "متكررة" : "recurring" },
-    { icon: Percent, label: isAr ? "معدل التسرب" : "Churn", num: kpis?.churnRate, suffix: "%", decimals: 1, sub: isAr ? "من الاشتراكات" : "of subscriptions" },
+    {
+      icon: TrendingUp, label: isAr ? "الاشتراكات النشطة" : "Active subs", num: kpis?.activeSubscribers,
+      // The whole picture, not one number: who is paused, who is behind on a
+      // payment, and who has already said they won't renew.
+      sub: kpis
+        ? isAr
+          ? `${kpis.pausedSubscribers} موقوف · ${kpis.pastDueSubscribers} متأخر الدفع · ${kpis.scheduledCancels} لن يجدّد`
+          : `${kpis.pausedSubscribers} paused · ${kpis.pastDueSubscribers} past due · ${kpis.scheduledCancels} not renewing`
+        : "",
+    },
+    { icon: Percent, label: isAr ? "معدل التسرب" : "Churn", num: kpis?.churnRate, suffix: "%", decimals: 1, sub: isAr ? "اشتراكات انتهت من كل اشتراك بدأ فعلاً" : "ended, of every membership that really started" },
   ];
 
   return (
@@ -135,10 +149,26 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
-        {isAr
-          ? "مقاييس المبيعات أدناه ستتحرك عند إطلاق العضويات المدفوعة (الوضع الحالي: مجتمعي)."
-          : "The sales metrics below activate when paid memberships launch (current mode: Community)."}
+      {/* What the money numbers mean, in words. Revenue here is ONLY money a
+          real payment provider captured from a member, net of refunds — never
+          an unpaid checkout, never a mock-provider rehearsal (R006). */}
+      <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+        <p>
+          {data && !data.commerceEnabled
+            ? isAr
+              ? "البيع مقفل حالياً (الوضع المجتمعي)، فالأرقام أدناه صفر عن قصد — تتحرك أول ما تُفتح العضويات المدفوعة."
+              : "Commerce is switched off (Community mode), so the numbers below are zero on purpose — they move the day paid memberships open."
+            : isAr
+              ? "الإيرادات = مبالغ حصّلها مزوّد دفع حقيقي من الأعضاء، بعد خصم المسترجعات."
+              : "Revenue = money a real payment provider captured from members, net of refunds."}
+        </p>
+        {!!data?.test.payments && (
+          <p className="mt-1">
+            {isAr
+              ? `مستبعد من الأرقام: ${data.test.payments} دفعة تجريبية بقيمة ${fmt(data.test.total)} ر.س (مزوّد الدفع التجريبي أو حسابات الفريق).`
+              : `Excluded from the numbers: ${data.test.payments} test payment${data.test.payments === 1 ? "" : "s"} worth ${fmt(data.test.total)} SAR (mock provider or staff accounts).`}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -215,7 +245,14 @@ export default function AdminDashboard() {
               {data.recentOrders.map((o) => (
                 <div key={o.orderNumber} className="flex items-center justify-between py-2.5">
                   <div>
-                    <p className="text-sm font-medium" dir="ltr">{o.orderNumber}</p>
+                    <p className="text-sm font-medium">
+                      <span dir="ltr">{o.orderNumber}</span>
+                      {o.test && (
+                        <span className="ms-2 rounded-full border border-border px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">
+                          {isAr ? "تجريبي" : "test"}
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">{o.customer}</p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -237,16 +274,22 @@ export default function AdminDashboard() {
 
 function RevenueChart({ data }: { data: { date: string; total: number }[] }) {
   const max = Math.max(1, ...data.map((d) => d.total));
+  // A day with no money draws a hairline, not a bar: the old 4% minimum height
+  // painted fourteen green bars on a fortnight in which nothing was sold.
   return (
     <div className="flex h-40 items-end gap-1.5">
       {data.map((d) => (
         <div key={d.date} className="group flex flex-1 flex-col items-center gap-1">
           <div className="relative w-full flex-1 flex items-end">
-            <div
-              className="w-full rounded-t bg-primary/80 transition-all hover:bg-primary"
-              style={{ height: `${Math.max(4, (d.total / max) * 100)}%` }}
-              title={`${d.date}: ${d.total} SAR`}
-            />
+            {d.total > 0 ? (
+              <div
+                className="w-full rounded-t bg-primary/80 transition-all hover:bg-primary"
+                style={{ height: `${Math.max(4, (d.total / max) * 100)}%` }}
+                title={`${d.date}: ${d.total} SAR`}
+              />
+            ) : (
+              <div className="h-px w-full bg-border" title={`${d.date}: 0 SAR`} />
+            )}
           </div>
           <span className="text-[9px] text-muted-foreground">{d.date.slice(8)}</span>
         </div>

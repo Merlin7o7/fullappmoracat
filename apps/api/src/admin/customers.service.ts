@@ -31,7 +31,16 @@ export class AdminCustomersService {
         select: {
           id: true, email: true, firstName: true, lastName: true, phone: true,
           status: true, createdAt: true,
-          _count: { select: { orders: true, subscriptions: true, cats: true } },
+          // Count what really happened, not what was started: an abandoned
+          // checkout leaves a DRAFT subscription and a PENDING order behind,
+          // and listing those made members look like paying subscribers.
+          _count: {
+            select: {
+              orders: { where: { payments: { some: { status: { in: ["CAPTURED", "PARTIALLY_REFUNDED", "REFUNDED"] } } } } },
+              subscriptions: { where: { startedAt: { not: null } } },
+              cats: true,
+            },
+          },
         },
       }),
     ]);

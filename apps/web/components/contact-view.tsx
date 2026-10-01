@@ -4,6 +4,7 @@ import { Instagram, Phone, Mail, ShieldQuestion } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useLocale } from "@/app/providers";
+import { Illo3D } from "@/components/illo-3d";
 import { BRAND, LEGAL_ENTITY, CONTACT } from "@/lib/org";
 
 /**
@@ -51,6 +52,7 @@ export function ContactView() {
       <SiteHeader />
       <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-4 py-12 outline-none sm:py-16">
         <header className="mb-8 border-b border-border pb-6">
+          <Illo3D name="heart" className="mb-3 size-20" px={80} />
           <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
             {isAr ? "تواصل معنا" : "Contact us"}
           </h1>

@@ -6,7 +6,8 @@ import {
   Clock, Check, Star, HeartPulse, PawPrint,
 } from "lucide-react";
 import { Card, Badge, cn } from "@moraqat/ui";
-import { IlloCat, IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
+import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
+import { Illo3D } from "@/components/illo-3d";
 
 /**
  * "What is Moracat?" — the single source of truth for the product story.
@@ -180,19 +181,19 @@ function IntroHero({ isAr }: { isAr: boolean }) {
     <section className="animate-fade-up relative overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-cream/60 to-transparent p-8 text-center sm:p-14 dark:from-cream/20">
       <IlloPaw tone="butter" className="pointer-events-none absolute -top-2 end-10 size-12 rotate-[16deg] opacity-40" />
       <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 start-8 size-9 rotate-[-12deg] opacity-40" />
-      <Sticker rotate={10} float className="mx-auto mb-4 w-fit">
-        <IlloCat tone="green" className="h-16 w-auto sm:h-20" />
-      </Sticker>
+      {/* The hero tier opens the page (Illustration tiers): one 3D object, the
+          flat paws stay as the small accents around it. */}
+      <Illo3D name="cat" className="mx-auto mb-4 size-28 animate-float sm:size-36" px={144} priority />
       <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
         <PawPrint className="size-3.5" /> {isAr ? "ما هو مرقط؟" : "What is Moracat?"}
       </span>
       <h1 className="mx-auto mt-4 max-w-2xl font-display text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
-        {isAr ? "نبني مستقبل تربية القطط" : "We're building the future of cat ownership"}
+        {isAr ? "مكان واحد لكل ما يخص قطك" : "One place for everything about your cat"}
       </h1>
       <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
         {isAr
-          ? "كل قط يحصل على هوية رقمية فريدة عبر مرقط — تصبح هويته داخل منظومة مرقط، والبداية لرحلة أكبر."
-          : "Every cat receives a unique digital identity through its Moracat ID — their identity inside the Moracat ecosystem, and the beginning of a bigger journey."}
+          ? "كل قط ياخذ هوية تخصّه وحده — باسمه ورقمه — تمشي معه طول عمره: ترجّعه لك لو ضاع، وتحفظ سجله الصحي."
+          : "Every cat gets an ID of their own — their name, their number — that stays with them for life: it brings them home if they're lost, and keeps their health record."}
       </p>
     </section>
   );

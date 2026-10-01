@@ -10,6 +10,8 @@ import { useAuth } from "@/lib/auth";
 import { api, type CommunityCard, type LikeToggleResponse } from "@/lib/api";
 import { localizeName } from "@/lib/translit";
 import { ImgWithFallback } from "@/components/img-with-fallback";
+import { Illo3D, type Illo3DName } from "@/components/illo-3d";
+import { IlloPaw } from "@/components/illustrations";
 
 /**
  * Community browse experience, shared by the public /community page (marketing
@@ -379,14 +381,16 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
         </Grid>
       ) : isError ? (
         <EmptyLike
-          icon={PawPrint}
+          object3d={!!compact}
+          illo="mouse"
           title={isAr ? "تعذّر تحميل المجتمع" : "Couldn't load the community"}
           body={isAr ? "حاول تحديث الصفحة." : "Please try refreshing the page."}
         />
       ) : cats.length === 0 ? (
         hasActiveFilters ? (
           <EmptyLike
-            icon={Search}
+          object3d={!!compact}
+            illo="fish"
             title={isAr ? "لا توجد نتائج مطابقة" : "No matches found"}
             body={isAr ? "جرّب مصطلحاً آخر أو امسح المرشّحات." : "Try a different term or clear your filters."}
             action={
@@ -398,7 +402,8 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
         ) : (
           // R111: an empty community is a welcome with a reserved seat, never a void.
           <EmptyLike
-            icon={PawPrint}
+          object3d={!!compact}
+            illo="cat"
             title={isAr ? "حياك الله في مجتمع مرقط 👋" : "Welcome to the Moracat community 👋"}
             body={
               isAr
@@ -613,10 +618,21 @@ function Dropdown({
   );
 }
 
-function EmptyLike({ icon: Icon, title, body, action }: { icon: React.ElementType; title: string; body: string; action?: React.ReactNode }) {
+/**
+ * An empty state is a welcome, not a void (R111): the brand object carries the
+ * moment where a grey icon used to sit. One object, generous space, calm copy.
+ */
+function EmptyLike({ illo, object3d, title, body, action }: { illo: Illo3DName; object3d: boolean; title: string; body: string; action?: React.ReactNode }) {
   return (
-    <div className="grid place-items-center rounded-3xl border border-dashed border-border py-16 text-center">
-      <Icon className="size-10 text-muted-foreground/40" />
+    <div className="grid place-items-center rounded-3xl border border-dashed border-border px-4 py-14 text-center">
+      {/* ONE hero object per screen: the public community page already opens
+          with the 3D cat, so only the portal view (no header object) gets one
+          here; the public page keeps a small flat accent instead. */}
+      {object3d ? (
+        <Illo3D name={illo} className="size-28 animate-float" px={112} directional={illo !== "cat"} />
+      ) : (
+        <IlloPaw tone="peach" className="size-10 -rotate-12 opacity-70" />
+      )}
       <p className="mt-3 font-display text-lg font-semibold">{title}</p>
       <p className="mt-1 max-w-xs text-sm text-muted-foreground">{body}</p>
       {action ? <div className="mt-4">{action}</div> : null}

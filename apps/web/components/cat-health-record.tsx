@@ -4,6 +4,7 @@ import * as React from "react";
 import { Syringe, Scale, Pill, Stethoscope, BadgeCheck, CalendarClock } from "lucide-react";
 import { Badge, Card, cn } from "@moraqat/ui";
 import { formatDate } from "@/lib/datetime";
+import { Illo3D } from "@/components/illo-3d";
 
 /**
  * The read-only half of the living record (MRC-PROD-001 T3): what clinics
@@ -83,7 +84,7 @@ export function CatHealthRecord({ record, isAr }: { record: HealthRecord; isAr: 
 
       {nothingYet && (
         <Card className="p-8 text-center">
-          <Stethoscope className="mx-auto mb-3 size-6 text-primary" />
+          <Illo3D name="heart" className="mx-auto mb-3 size-24 animate-float" px={96} />
           <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
             {isAr
               ? `سجل ${cat.name} يبدأ من هنا. أضف أول تطعيم أدناه، أو اطلب من عيادتك مسح هوية ${cat.name} في الزيارة القادمة — وسيُكتب السجل هنا تلقائياً.`
