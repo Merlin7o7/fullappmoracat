@@ -176,7 +176,7 @@ export class AdoptionService {
         contactPhone: true,
         ownerId: true,
         adoptedAt: true,
-        owner: { select: { firstName: true, ownerNickname: true, createdAt: true } },
+        owner: { select: { firstName: true, ownerNickname: true, createdAt: true, emailVerified: true, phoneVerified: true } },
         cat: {
           select: {
             ...this.catSelect(),
@@ -229,7 +229,11 @@ export class AdoptionService {
       owner: {
         name: listing.owner.ownerNickname ?? listing.owner.firstName ?? null,
         memberSince: listing.owner.createdAt,
+        // Trust, said precisely: which channels Moracat has actually verified.
+        // "Verified" on the page means a verified phone — the stronger signal.
+        verified: { byEmail: !!listing.owner.emailVerified, byPhone: !!listing.owner.phoneVerified },
       },
+      feeCap: AdoptionService.feeCap(),
       contactPref: listing.contactPref,
       contact,
       cat: {
@@ -272,6 +276,53 @@ export class AdoptionService {
    * The owner's side
    * ────────────────────────────────────────────────────────────────────*/
 
+  /**
+   * Rehoming fees are a token, not a price (UX kill list: "adoption fees above
+   * token level"). The cap is configuration — ADOPTION_FEE_CAP_SAR, default
+   * 500 — so the founder can tune it without a deploy.
+   */
+  static feeCap(): number {
+    const n = Number(process.env.ADOPTION_FEE_CAP_SAR);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 500;
+  }
+
+  private assertFee(fee: number | undefined) {
+    if (fee !== undefined && fee > AdoptionService.feeCap()) {
+      throw new BadRequestException({
+        code: "ADOPTION_FEE_ABOVE_CAP",
+        message: `A rehoming fee on Moracat is a token — at most ${AdoptionService.feeCap()} SAR.`,
+        cap: AdoptionService.feeCap(),
+      });
+    }
+  }
+
+  /**
+   * Report a listing (W6 adoption safety). One report per member per listing
+   * (re-reporting updates it); three distinct pending reports hide the listing
+   * until a moderator decides, and the owner is told why (listing_hidden).
+   */
+  async report(userId: string, id: string, dto: { reason: string; detail?: string }) {
+    const listing = await this.prisma.adoptionListing.findFirst({
+      where: { id, hiddenAt: null },
+      select: { id: true, ownerId: true },
+    });
+    if (!listing) throw new NotFoundException("Listing not found");
+    if (listing.ownerId === userId) throw new BadRequestException({ code: "ADOPTION_REPORT_OWN", message: "You can't report your own listing." });
+    await this.prisma.adoptionReport.upsert({
+      where: { listingId_reporterId: { listingId: id, reporterId: userId } },
+      update: { reason: dto.reason, detail: dto.detail ?? null, status: "PENDING" },
+      create: { listingId: id, reporterId: userId, reason: dto.reason, detail: dto.detail ?? null },
+    });
+    const pending = await this.prisma.adoptionReport.count({ where: { listingId: id, status: "PENDING" } });
+    if (pending >= 3) {
+      await this.prisma.adoptionListing.updateMany({
+        where: { id, hiddenAt: null },
+        data: { hiddenAt: new Date(), hiddenReason: "Several members reported this listing — under review" },
+      });
+    }
+    return { reported: true };
+  }
+
   async create(ownerId: string, dto: CreateListingDto) {
     const cat = await this.prisma.cat.findFirst({
       where: { id: dto.catId, userId: ownerId, deletedAt: null },
@@ -284,6 +335,15 @@ export class AdoptionService {
         message: "Only an active cat can be listed for adoption.",
       });
     }
+    // A real photo of the real cat is the first line of trust (W6): no photo,
+    // no listing — anonymous, faceless listings are how marketplaces go bad.
+    if (!cat.photoUrl) {
+      throw new BadRequestException({
+        code: "ADOPTION_PHOTO_REQUIRED",
+        message: `Add a photo of ${cat.name} first — every listing shows the real cat.`,
+      });
+    }
+    this.assertFee(dto.feeSar);
 
     const existing = await this.prisma.adoptionListing.findFirst({
       where: { catId: cat.id, status: { in: ["AVAILABLE", "RESERVED"] } },
@@ -323,6 +383,7 @@ export class AdoptionService {
   }
 
   async update(ownerId: string, id: string, dto: UpdateListingDto) {
+    this.assertFee(dto.feeSar);
     const listing = await this.mustOwn(ownerId, id);
     if (listing.status === "ADOPTED") {
       throw new ConflictException({

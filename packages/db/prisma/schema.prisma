@@ -911,6 +911,7 @@ model Cat {
   prescriptions     Prescription[]
   weightRecords     CatWeightRecord[]
   careTasks         CareTask[]
+  healthShareLinks  HealthShareLink[]
   consentGrants     ConsentGrant[]
   recordAccessLogs  RecordAccessLog[]
   emergencyContacts CatEmergencyContact[]
@@ -3527,6 +3528,7 @@ model AdoptionListing {
   owner      User                   @relation("AdoptionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   adoptedBy  User?                  @relation("AdoptionAdopter", fields: [adoptedByUserId], references: [id], onDelete: SetNull)
   requests   AdoptionRequest[]
+  reports    AdoptionReport[]
   transfers  CatOwnershipTransfer[]
 
   // The browse board: live listings, newest first.
@@ -3785,4 +3787,49 @@ model CareTask {
   @@unique([catId, seriesKey])
   @@index([dueAt, status])
   @@map("care_tasks")
+}
+
+/// A secure, expiring link an owner gives a veterinarian: the cat's health
+/// summary without an account or the rest of Moracat (W6). Only the SHA-256
+/// of the token is stored — the URL is shown once, at creation. A link dies on
+/// expiry, on revocation, or the moment the cat changes owner.
+model HealthShareLink {
+  id             String    @id @default(cuid())
+  catId          String
+  /// The owner who issued it — if the cat is later handed on, the link stops.
+  createdById    String
+  tokenHash      String    @unique
+  /// Whether the summary shows the owner's phone (opt-in at creation).
+  includeContact Boolean   @default(false)
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  viewCount      Int       @default(0)
+  lastViewedAt   DateTime?
+  createdAt      DateTime  @default(now())
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@index([catId])
+  @@map("health_share_links")
+}
+
+/// A member's report on an adoption listing (W6 adoption safety). One per
+/// (listing, reporter) — re-reporting updates it. Three distinct PENDING
+/// reports hide the listing until a moderator decides (post-moderation, the
+/// same rule as the community feed).
+model AdoptionReport {
+  id         String       @id @default(cuid())
+  listingId  String
+  reporterId String
+  /// SALE_OR_BREEDING | FAKE | MISTREATMENT | SCAM | OTHER
+  reason     String
+  detail     String?
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+
+  listing AdoptionListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, reporterId])
+  @@index([status])
+  @@map("adoption_reports")
 }

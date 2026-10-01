@@ -193,6 +193,31 @@ ok(accepted.status === "ACCEPTED", "the owner can accept an enquiry");
 }
 
 // ════════════════════════════════════════════════════════════════════════
+console.log("━━ adoption safety (W6): photo, fee cap, verified lister, reports ━━");
+// ════════════════════════════════════════════════════════════════════════
+{
+  const bare = await newCat(owner.token, `NoPhoto${rnd()}`, { photoUrl: undefined });
+  const noPhoto = await call("/adoption/listings", "POST", { catId: bare.id, story: STORY }, owner.token);
+  ok(noPhoto.status === 400 && noPhoto.json?.code === "ADOPTION_PHOTO_REQUIRED", "no photo, no listing — every listing shows the real cat");
+  const pricey = await newCat(owner.token, `Pricey${rnd()}`);
+  const tooMuch = await call("/adoption/listings", "POST", { catId: pricey.id, story: STORY, feeSar: 2000 }, owner.token);
+  ok(tooMuch.status === 400 && tooMuch.json?.code === "ADOPTION_FEE_ABOVE_CAP", "a fee above the token cap is refused (not a marketplace)");
+  const detail = (await call(`/adoption/listings/${listing.id}`, "GET", undefined, stranger.token)).json;
+  ok(typeof detail.owner?.verified?.byPhone === "boolean" && typeof detail.feeCap === "number", "the listing says which of the lister's channels are verified");
+  ok((await call(`/adoption/listings/${listing.id}/report`, "POST", { reason: "SALE_OR_BREEDING" }, owner.token)).status === 400, "you can't report your own listing");
+  const target = await newCat(owner.token, `Reported${rnd()}`);
+  const reported = (await call("/adoption/listings", "POST", { catId: target.id, story: STORY }, owner.token)).json;
+  const r1 = await member("reporter1");
+  const r2 = await member("reporter2");
+  ok((await call(`/adoption/listings/${reported.id}/report`, "POST", { reason: "SCAM", detail: "asked for a deposit" }, r1.token)).status === 200, "a member reports a listing");
+  await call(`/adoption/listings/${reported.id}/report`, "POST", { reason: "SCAM" }, r1.token);
+  await call(`/adoption/listings/${reported.id}/report`, "POST", { reason: "FAKE" }, r2.token);
+  ok((await call(`/adoption/listings/${reported.id}`)).status === 200, "two reporters (one reporting twice) don't hide a listing");
+  await call(`/adoption/listings/${reported.id}/report`, "POST", { reason: "MISTREATMENT" }, stranger.token);
+  ok((await call(`/adoption/listings/${reported.id}`)).status === 404, "three independent reports take it down for review");
+}
+
+// ════════════════════════════════════════════════════════════════════════
 console.log("━━ ownership transfer: the two confirmations ━━");
 // ════════════════════════════════════════════════════════════════════════
 

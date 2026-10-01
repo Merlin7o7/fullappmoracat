@@ -121,6 +121,17 @@ export class AdminReadinessService {
       owner: "ops",
     });
 
+    const appleReady = ["APPLE_PASS_TYPE_ID", "APPLE_TEAM_ID", "APPLE_PASS_CERT_PEM_B64", "APPLE_PASS_KEY_PEM_B64", "APPLE_WWDR_PEM_B64"].every((k) => !!env[k]);
+    checks.push({
+      key: "apple_wallet",
+      level: appleReady ? "ok" : "warn",
+      titleAr: "بطاقة Apple Wallet",
+      titleEn: "Apple Wallet pass",
+      fixAr: appleReady ? "مفعّلة." : "تحتاج شهادة Pass Type ID من حساب Apple Developer. ضع APPLE_PASS_* و APPLE_WWDR_PEM_B64 — وإلى ذلك الحين يختفي الزر.",
+      fixEn: appleReady ? "Live." : "Needs a Pass Type ID certificate from the Apple Developer account. Set APPLE_PASS_* and APPLE_WWDR_PEM_B64 — until then the button stays hidden.",
+      owner: "ops",
+    });
+
     const [activePlans, citylessLive] = await Promise.all([
       this.prisma.plan.count({ where: { isActive: true } }),
       this.prisma.branch.count({

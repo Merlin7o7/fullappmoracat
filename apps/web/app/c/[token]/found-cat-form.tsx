@@ -19,6 +19,16 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => { track("public_card_viewed", { lost: isLost }); }, [isLost]);
+  // The sticky thumb-zone button (FoundCatCTA) opens this form from anywhere on the page.
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const onOpen = () => {
+      setOpen(true);
+      requestAnimationFrame(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
+    };
+    window.addEventListener("moracat:open-found-form", onOpen);
+    return () => window.removeEventListener("moracat:open-found-form", onOpen);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,22 +64,27 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
 
   if (done) {
     return (
+      <div ref={ref}>
       <div className="flex flex-col items-center gap-2 text-center">
         <CheckCircle2 className="size-8 text-success" />
         <p className="text-sm font-medium">{isAr ? `وصلت رسالتك لعائلة ${catName}. شكراً لك 🤍` : `Your message reached ${catName}'s family. Thank you 🤍`}</p>
+      </div>
       </div>
     );
   }
 
   if (!open) {
     return (
-      <Button variant="secondary" className="w-full" onClick={() => setOpen(true)}>
-        <MessageSquareHeart className="size-4" /> {isAr ? `وجدت ${catName}؟ أرسل رسالة للمالك` : `Found ${catName}? Message the owner`}
-      </Button>
+      <div ref={ref}>
+        <Button variant="secondary" className="w-full" onClick={() => setOpen(true)}>
+          <MessageSquareHeart className="size-4" /> {isAr ? `وجدت ${catName}؟ أرسل رسالة للمالك` : `Found ${catName}? Message the owner`}
+        </Button>
+      </div>
     );
   }
 
   return (
+    <div ref={ref}>
     <form onSubmit={submit} className="space-y-3">
       <p className="text-sm font-medium">{isAr ? `أخبر عائلة ${catName} أين هو` : `Tell ${catName}'s family where they are`}</p>
       <Field label={isAr ? "رسالتك" : "Your message"} required value={message} onChange={setMessage} placeholder={isAr ? "وجدته قرب حديقة العليا، بخير ومعي." : "Found them near Al Olaya park, safe with me."} />
@@ -80,5 +95,29 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
       </Button>
       <p className="text-xs text-muted-foreground">{isAr ? "لا نشارك رقمك مع أحد سوى المالك، ولا نكشف لك بيانات المالك." : "Your number goes to the owner only, and the owner's details are never shown to you."}</p>
     </form>
+    </div>
+  );
+}
+
+/**
+ * The one action, where a thumb rests (R100). On a lost cat it is the whole
+ * page's purpose, so it is red and always visible; otherwise it is a calm
+ * "message the owner". Hidden on wide screens, where the form is in view.
+ */
+export function FoundCatCTA({ catName, isLost, isAr }: { catName: string; isLost: boolean; isAr: boolean }) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+      <Button
+        variant={isLost ? "destructive" : "primary"}
+        size="lg"
+        className="w-full"
+        onClick={() => window.dispatchEvent(new Event("moracat:open-found-form"))}
+      >
+        <MessageSquareHeart className="size-5" aria-hidden />
+        {isLost
+          ? isAr ? `وجدت ${catName} — أرسل لعائلته` : `I found ${catName} — tell the family`
+          : isAr ? "أرسل رسالة للمالك" : "Message the owner"}
+      </Button>
+    </div>
   );
 }

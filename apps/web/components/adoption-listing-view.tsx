@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Syringe,
 } from "lucide-react";
-import { Badge, Button, Dialog, Skeleton, cn, useToast } from "@moraqat/ui";
+import { Button, Dialog, Skeleton, StatusTag, cn, useToast } from "@moraqat/ui";
+import { BadgeCheck, Flag } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { ImgWithFallback } from "@/components/img-with-fallback";
@@ -194,9 +195,9 @@ export function AdoptionListingView({ id }: { id: string }) {
               </p>
             </div>
             <div className="flex flex-col items-end gap-1.5">
-              <Badge variant={data.status === "AVAILABLE" ? "default" : "secondary"}>
+              <StatusTag tone={data.status === "AVAILABLE" ? "positive" : data.status === "RESERVED" ? "attention" : "neutral"}>
                 {adoptionStatusLabel(data.status, isAr)}
-              </Badge>
+              </StatusTag>
               <span className="text-sm font-semibold">{feeLabel(data.feeSar, isAr)}</span>
             </div>
           </div>
@@ -318,13 +319,23 @@ export function AdoptionListingView({ id }: { id: string }) {
                     ? `أحد أعضاء مرقط يدوّر لـ${name} بيتاً`
                     : `A Moracat member is looking for a home for ${name}`}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {isAr
                   ? `عضو منذ ${new Date(data.owner.memberSince).getFullYear()}`
                   : `Member since ${new Date(data.owner.memberSince).getFullYear()}`}
+                {/* Trust, said precisely (W6): "verified" means Moracat checked a phone number. */}
+                {data.owner.verified?.byPhone ? (
+                  <StatusTag tone="positive" icon={<BadgeCheck className="size-3.5" aria-hidden />}>
+                    {isAr ? "جوال موثّق" : "Verified phone"}
+                  </StatusTag>
+                ) : (
+                  <StatusTag tone="neutral">{isAr ? "جوال غير موثّق" : "Phone not verified"}</StatusTag>
+                )}
               </p>
             </div>
           </div>
+
+          {!data.viewer.isOwner && user && <ReportListing listingId={data.id} isAr={isAr} />}
 
           {/* ── The one action ───────────────────────────────────────────── */}
           <div className="mt-6">
@@ -574,5 +585,86 @@ function AskDialog({
         </div>
       </form>
     </Dialog>
+  );
+}
+
+/**
+ * Report a listing (W6 adoption safety). Quiet by design — a text link, not a
+ * button — but always there: a sale dressed as adoption, a fake, a cat that
+ * looks mistreated. Three independent reports take a listing down for review.
+ */
+function ReportListing({ listingId, isAr }: { listingId: string; isAr: boolean }) {
+  const { authedFetch } = useAuth();
+  const { toast } = useToast();
+  const [open, setOpen] = React.useState(false);
+  const [reason, setReason] = React.useState("SALE_OR_BREEDING");
+  const [detail, setDetail] = React.useState("");
+  const [sent, setSent] = React.useState(false);
+  const send = useMutation({
+    mutationFn: () =>
+      authedFetch(`/adoption/listings/${listingId}/report`, {
+        method: "POST",
+        body: JSON.stringify({ reason, detail: detail.trim() || undefined }),
+      }),
+    onSuccess: () => {
+      setSent(true);
+      setOpen(false);
+      toast({ title: isAr ? "وصل بلاغك — نراجعه" : "Report received — we will review it", variant: "success" });
+    },
+    onError: (e: unknown) => {
+      const f = friendlyError(e, isAr);
+      toast({ title: f.title, description: f.message, variant: "error" });
+    },
+  });
+  const reasons = [
+    { v: "SALE_OR_BREEDING", ar: "بيع أو تجارة بالقطط", en: "Selling or breeding for profit" },
+    { v: "FAKE", ar: "إعلان مزيّف أو قط غير حقيقي", en: "Fake listing or not a real cat" },
+    { v: "MISTREATMENT", ar: "قلق على سلامة القط", en: "Concern for the cat\u2019s welfare" },
+    { v: "SCAM", ar: "احتيال أو طلب مال", en: "Scam or asking for money" },
+    { v: "OTHER", ar: "سبب آخر", en: "Something else" },
+  ];
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        disabled={sent}
+        onClick={() => setOpen(true)}
+        className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:no-underline disabled:opacity-60"
+      >
+        <Flag className="size-4" aria-hidden />{" "}
+        {sent ? (isAr ? "أبلغت عن هذا الإعلان" : "You reported this listing") : isAr ? "أبلغ عن الإعلان" : "Report this listing"}
+      </button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={isAr ? "أبلغ عن الإعلان" : "Report this listing"}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            send.mutate();
+          }}
+          className="space-y-3"
+        >
+          <fieldset className="space-y-2">
+            <legend className="sr-only">{isAr ? "السبب" : "Reason"}</legend>
+            {reasons.map((r) => (
+              <label key={r.v} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-border px-3 text-sm has-[:checked]:border-primary">
+                <input type="radio" name="report-reason" value={r.v} checked={reason === r.v} onChange={() => setReason(r.v)} />
+                {isAr ? r.ar : r.en}
+              </label>
+            ))}
+          </fieldset>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">{isAr ? "تفاصيل (اختياري)" : "Details (optional)"}</span>
+            <textarea
+              value={detail}
+              onChange={(e) => setDetail(e.target.value.slice(0, 500))}
+              rows={3}
+              className="w-full rounded-md border border-input bg-background p-3 text-base sm:text-sm"
+            />
+          </label>
+          <Button type="submit" variant="destructive" loading={send.isPending}>
+            {isAr ? "أرسل البلاغ" : "Send report"}
+          </Button>
+        </form>
+      </Dialog>
+    </div>
   );
 }

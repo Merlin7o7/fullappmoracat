@@ -276,7 +276,14 @@ export interface AdoptionListing extends AdoptionCard {
   district: string | null;
   goodWith: { kids: boolean | null; cats: boolean | null; dogs: boolean | null };
   adoptedAt: string | null;
-  owner: { name: string | null; memberSince: string };
+  owner: {
+    name: string | null;
+    memberSince: string;
+    /** Channels Moracat has verified — "verified lister" means a verified phone. */
+    verified?: { byEmail: boolean; byPhone: boolean };
+  };
+  /** The configured rehoming-fee cap in SAR (a token, not a price). */
+  feeCap?: number;
   contactPref: ContactPref;
   /** Non-null only once the owner has accepted you. */
   contact: { pref: ContactPref; phone: string | null } | null;

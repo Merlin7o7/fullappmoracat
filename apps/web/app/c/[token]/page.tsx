@@ -4,9 +4,10 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { FoundCatForm } from "./found-cat-form";
+import { FoundCatForm, FoundCatCTA } from "./found-cat-form";
 import { Illo3D } from "@/components/illo-3d";
-import { Syringe } from "lucide-react";
+import { Siren, Syringe } from "lucide-react";
+import { IdBand, Seal, StatusTag } from "@moraqat/ui";
 import { vaccinationStandingLabel, type VaccinationStanding } from "@moraqat/core";
 
 /**
@@ -61,54 +62,73 @@ export default async function PublicCatPage({ params }: { params: { token: strin
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-md px-4 py-10">
-        <div className="overflow-hidden rounded-3xl border border-border bg-card">
-          <div className="relative aspect-square w-full bg-muted">
+      {/* pb-28: room above the sticky thumb-zone action on phones. */}
+      <main id="main" className="mx-auto w-full max-w-md px-4 pb-28 pt-6 sm:pb-10">
+        {card.isLost && (
+          <div role="alert" className="mb-4 flex items-start gap-3 rounded-2xl bg-destructive px-4 py-3 text-destructive-foreground">
+            <Siren className="mt-0.5 size-5 shrink-0" aria-hidden />
+            <p className="font-medium">
+              {isAr ? `${card.name} مفقود — عائلته تدوّره الآن. لو هو عندك، أرسل لهم بضغطة.` : `${card.name} is lost — the family is looking right now. If they're with you, tell them in one tap.`}
+            </p>
+          </div>
+        )}
+
+        <article className="overflow-hidden rounded-2xl border border-border bg-card">
+          <IdBand
+            tone="emerald"
+            kind={isAr ? "هوية مرقط" : "Moracat ID"}
+            serial={card.catIdMasked ?? undefined}
+            seal={<Seal label={isAr ? "مسجّل في مرقط" : "Registered with Moracat"} className="border-white/40 text-white" />}
+          />
+          <div className="relative aspect-square w-full bg-[hsl(var(--cream))]">
             {card.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={card.photoUrl} alt="" className="size-full object-cover" />
+              <img src={card.photoUrl} alt={isAr ? `صورة ${card.name}` : `Photo of ${card.name}`} className="size-full object-cover" />
             ) : (
-              <div className="grid size-full place-items-center bg-cream/60"><Illo3D name="cat" className="size-44" px={176} priority /></div>
-            )}
-            {card.isLost && (
-              <div className="absolute inset-x-0 top-0 bg-destructive px-4 py-2 text-center text-sm font-semibold text-destructive-foreground">
-                {isAr ? `${card.name} مفقود — إذا كان معك، أرسل رسالة أدناه` : `${card.name} is lost — if they're with you, send a message below`}
-              </div>
+              // No playful 3D object on a lost cat's page (AD 2.1: never in distress contexts).
+              card.isLost ? (
+                <div className="grid size-full place-items-center font-display text-8xl text-muted-foreground/50">{card.name.slice(0, 1)}</div>
+              ) : (
+                <div className="grid size-full place-items-center"><Illo3D name="cat" className="size-44" px={176} priority /></div>
+              )
             )}
           </div>
           <div className="space-y-3 p-6 text-center">
-            <h1 className="font-display text-3xl font-bold tracking-tight">{card.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              {[card.breed ? (isAr ? card.breed.ar : card.breed.en) : null, isAr ? "مسجّل في مرقط" : "Registered with Moracat"].filter(Boolean).join(" · ")}
+            <h1 className="font-display text-5xl leading-tight">{card.name}</h1>
+            <p className="text-muted-foreground">
+              {[card.breed ? (isAr ? card.breed.ar : card.breed.en) : null, isAr ? "له بيت وسجل صحي" : "Has a home and a health record"].filter(Boolean).join(" · ")}
             </p>
-            {card.catIdMasked && <p className="font-mono text-xs text-muted-foreground" dir="ltr">{card.catIdMasked}</p>}
-            {/* The one clinical fact a stranger can use: a finder learns the cat
-                is safe to handle, and a clinic that isn't on Moracat yet sees
-                where the vaccines stand. Derived from the record, never a claim;
-                shown only when the record actually says something. */}
+            {/* The one clinical fact a stranger can use: safe to handle? Shown
+                only when the record actually says something. */}
             {standing && (
-              <p className="mx-auto inline-flex min-h-8 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium">
-                <Syringe className="size-3.5" aria-hidden />
-                {isAr ? standing.ar : standing.en}
+              <p className="flex justify-center">
+                <StatusTag tone={card.vaccinationStanding === "UP_TO_DATE" ? "positive" : card.vaccinationStanding === "OVERDUE" ? "attention" : "neutral"} icon={<Syringe className="size-3.5" aria-hidden />}>
+                  {isAr ? `التطعيمات: ${standing.ar}` : `Vaccinations: ${standing.en}`}
+                </StatusTag>
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              {isAr ? "هذا القط له بيت وسجل صحي. لا تُعرض بيانات المالك هنا أبداً." : "This cat has a home and a health record. The owner's details are never shown here."}
+            <p className="text-sm text-muted-foreground">
+              {isAr ? "بيانات المالك لا تظهر هنا أبداً — رسالتك تصله عبر مرقط." : "The owner's details are never shown here — your message reaches them through Moracat."}
             </p>
           </div>
-          <div className="border-t border-border p-6">
+          <div id="found" className="border-t border-border p-6">
             <FoundCatForm token={params.token} catName={card.name} isLost={card.isLost} isAr={isAr} />
           </div>
-        </div>
+        </article>
 
-        {/* One invitation, at a moment of relevance. */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">{isAr ? "عندك قط؟ امنحه هوية وسجلاً صحياً يكتبه طبيبه — مجاناً." : "Have a cat? Give them an ID and a health record their vet writes — free."}</p>
-          <Link href="/register?src=qr" className="mt-2 inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground">
-            {isAr ? "سجّل قطك" : "Register your cat"}
+        {/* What this tag is, in one line — then one quiet invitation. */}
+        <section className="mt-6 space-y-3 rounded-2xl border border-border bg-card p-5 text-center">
+          <p className="text-sm text-muted-foreground">
+            {isAr
+              ? "هوية مرقط رقم دائم للقط: يوصل من يجده بأهله، ويحمل سجله الصحي لأي عيادة."
+              : "A Moracat ID is a cat's permanent number: it connects whoever finds them with their family, and carries their health record to any clinic."}
+          </p>
+          <Link href="/register?src=qr" className="inline-flex h-11 items-center rounded-md border border-border bg-card px-5 text-sm font-medium hover:bg-muted">
+            {isAr ? "سجّل قطك مجاناً" : "Register your cat — free"}
           </Link>
-        </div>
+        </section>
       </main>
+      <FoundCatCTA catName={card.name} isLost={card.isLost} isAr={isAr} />
       <SiteFooter />
     </div>
   );

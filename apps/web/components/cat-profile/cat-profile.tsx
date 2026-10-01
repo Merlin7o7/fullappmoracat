@@ -22,6 +22,7 @@ import { CatSectionTabs } from "./section-tabs";
 import { CareList, type CareTaskView } from "@/components/care/care-list";
 import { AddCareTask } from "@/components/care/add-care-task";
 import { WeightLog } from "@/components/care/weight-log";
+import { VetShare } from "./vet-share";
 
 /**
  * The cat's profile — the flagship of the product (UX reassessment §3).
@@ -163,6 +164,7 @@ export function CatProfile({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
       {cat.catIdNumber && (
         <section id="share" aria-labelledby="share-title" className="scroll-mt-20 space-y-4">
           <SectionTitle id="share-title" title={isAr ? "الهوية والمشاركة" : "The ID & sharing"} />
+          <VetShare catId={cat.id} catName={name} isAr={isAr} />
           <Card className="p-5 sm:p-6">
             <CatIdShare cat={cat} isAr={isAr} />
           </Card>

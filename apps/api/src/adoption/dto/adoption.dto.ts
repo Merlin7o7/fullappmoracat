@@ -161,3 +161,15 @@ export class HandoverDto {
   @MaxLength(60)
   confirmCatName!: string;
 }
+
+export class ReportListingDto {
+  @ApiProperty({ enum: ["SALE_OR_BREEDING", "FAKE", "MISTREATMENT", "SCAM", "OTHER"] })
+  @IsIn(["SALE_OR_BREEDING", "FAKE", "MISTREATMENT", "SCAM", "OTHER"])
+  reason!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  detail?: string;
+}

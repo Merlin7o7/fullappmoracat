@@ -361,6 +361,25 @@ console.log("━━ private health documents + launch readiness (Wave 1) ━━"
     ok((await call("/jobs/tick", "POST", {}, undefined, { "x-cron-secret": "nope" })).status === 401, "…and a wrong one");
   }
 
+  console.log("━━ vet health summary link + Apple Wallet (Wave 6) ━━");
+  {
+    const made = await call(`/cats/${cat.id}/share-links`, "POST", { days: 7 }, C);
+    ok(made.status === 201 && /\/h\/[A-Za-z0-9_-]{40,}$/.test(made.json?.url ?? ""), "owner creates a health-summary link (URL shown once)");
+    const token = made.json.url.split("/h/")[1];
+    const summary = await call(`/public/health/${token}`);
+    ok(summary.status === 200 && summary.json?.cat?.name === cat.name && Array.isArray(summary.json?.vaccination?.records), "a vet opens the summary without an account");
+    ok(summary.json.owner.phone === null && !JSON.stringify(summary.json).includes(email), "no owner phone unless ticked, never the email");
+    const listed = (await call(`/cats/${cat.id}/share-links`, "GET", undefined, C)).json;
+    ok(listed.some((l) => l.id === made.json.id && l.viewCount === 1 && l.active), "the owner sees the view counted");
+    ok(!JSON.stringify(listed).includes(token), "the link list never repeats the token");
+    ok((await call(`/public/health/${token.slice(0, -2)}xx`)).status === 404, "a wrong token is simply not found");
+    ok((await call(`/cats/${cat.id}/share-links/${made.json.id}`, "DELETE", undefined, C)).status === 200, "owner ends the link");
+    ok((await call(`/public/health/${token}`)).status === 410, "an ended link is gone (410), not a 500");
+    const avail = (await call("/wallet/availability", "GET", undefined, C)).json;
+    ok(avail.apple === false, "Apple Wallet reports unavailable without the pass certificates");
+    ok((await call(`/wallet/cats/${cat.id}/apple`, "GET", undefined, C)).status === 503, "…and refuses to mint an unsigned pass (503)");
+  }
+
   const ready = await call("/admin/readiness", "GET", undefined, A);
   ok(ready.status === 200 && Array.isArray(ready.json?.checks) && ready.json.checks.some((c) => c.key === "clinic_terms" && c.owner === "counsel"),
     "admin readiness lists ops gaps and pending professional sign-offs");

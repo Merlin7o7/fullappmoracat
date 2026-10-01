@@ -21,6 +21,7 @@ import {
   CreateListingDto,
   DecideAdoptionRequestDto,
   HandoverDto,
+  ReportListingDto,
   UpdateListingDto,
 } from "./dto/adoption.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -112,6 +113,16 @@ export class AdoptionController {
   @ApiOperation({ summary: "Take my listing down — one tap, no reason needed" })
   withdraw(@CurrentUser("id") userId: string, @Param("id") id: string) {
     return this.adoption.withdraw(userId, id);
+  }
+
+  @Post("listings/:id/report")
+  @ApiBearerAuth()
+  @RequireEmailVerified()
+  @Throttle(ENQUIRY_THROTTLE)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Report a listing (sale, fake, mistreatment, scam…)" })
+  report(@CurrentUser("id") userId: string, @Param("id") id: string, @Body() dto: ReportListingDto) {
+    return this.adoption.report(userId, id, dto);
   }
 
   @Get("listings/:id/requests")

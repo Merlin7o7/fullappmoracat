@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button, Card, cn } from "@moraqat/ui";
@@ -104,7 +105,11 @@ export function AdoptionListingForm({
   }
 
   const needsPhone = contactPref === "PHONE" || contactPref === "WHATSAPP";
-  const canSubmit = !!catId && story.trim().length >= 20 && (!needsPhone || contactPhone.trim().length >= 9);
+  // A real photo of the real cat is required (W6): the API refuses without one.
+  const hasPhoto = !!cat?.photoUrl;
+  const feeCap = 500;
+  const feeOk = !feeSar || Number(feeSar) <= feeCap;
+  const canSubmit = !!catId && hasPhoto && feeOk && story.trim().length >= 20 && (!needsPhone || contactPhone.trim().length >= 9);
 
   return (
     <Card className="space-y-5 p-5">
@@ -152,6 +157,15 @@ export function AdoptionListingForm({
           })}
         </div>
       </fieldset>
+
+      {cat && !hasPhoto && (
+        <p role="alert" className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+          {isAr ? `كل إعلان يظهر القط الحقيقي — أضف صورة ${catName} أولاً. ` : `Every listing shows the real cat — add a photo of ${catName} first. `}
+          <Link href={`/portal/cats/${cat.id}/edit#photos`} className="font-medium text-primary underline underline-offset-4">
+            {isAr ? "أضف صورة" : "Add a photo"}
+          </Link>
+        </p>
+      )}
 
       {/* The story — the field that actually finds a home. */}
       <label className="block">
@@ -246,6 +260,11 @@ export function AdoptionListingForm({
           placeholder="0"
           className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none ring-primary/20 transition focus:ring-2 sm:w-40"
         />
+        {!feeOk && (
+          <span role="alert" className="mt-1 block text-xs text-destructive">
+            {isAr ? `المقابل رمزي فقط — بحد أقصى ${feeCap} ر.س.` : `A token only — at most SAR ${feeCap}.`}
+          </span>
+        )}
         <span className="mt-1 block text-xs text-muted-foreground">
           {isAr
             ? "اتركها صفراً وتظهر «بدون مقابل». مرقط ما يأخذ عمولة ولا يمرّ المبلغ عبرنا."

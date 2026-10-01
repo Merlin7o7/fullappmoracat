@@ -23,6 +23,7 @@ export function CatIdShare({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
   const [copied, setCopied] = React.useState(false);
   const [busy, setBusy] = React.useState<null | "pdf" | "png" | "print">(null);
   const [walletBusy, setWalletBusy] = React.useState(false);
+  const [appleBusy, setAppleBusy] = React.useState(false);
   const [shareBusy, setShareBusy] = React.useState(false);
   const storyRef = React.useRef<HTMLDivElement>(null);
   // Wallet buttons appear only where the environment can actually issue a
@@ -195,6 +196,29 @@ export function CatIdShare({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
       </div>
 
       {/* The card where cards live — shown only when the pass can be issued (R034, R040). */}
+      {/* Apple Wallet: a navigation, not a fetch — Safari hands the .pkpass to Wallet. */}
+      {wallet.data?.apple && (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full max-w-sm"
+          disabled={appleBusy}
+          onClick={async () => {
+            setAppleBusy(true);
+            try {
+              const { url } = await authedFetch<{ url: string }>(`/wallet/cats/${cat.id}/apple`);
+              window.location.href = url;
+            } catch {
+              toast({ title: isAr ? "تعذّر إنشاء البطاقة" : "Couldn't create the pass", variant: "error" });
+            } finally {
+              setAppleBusy(false);
+            }
+          }}
+        >
+          {appleBusy ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
+          {isAr ? "أضفها إلى Apple Wallet" : "Add to Apple Wallet"}
+        </Button>
+      )}
       {wallet.data?.google && (
         <Button variant="secondary" size="sm" className="w-full max-w-sm" onClick={addToGoogleWallet} disabled={walletBusy}>
           {walletBusy ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
