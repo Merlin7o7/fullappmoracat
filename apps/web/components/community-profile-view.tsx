@@ -156,7 +156,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
             {/* Quiet trust affordance — reporting is always within reach, never loud. */}
             <ReportCatButton slug={slug} name={name} isAr={isAr} className="border border-border hover:bg-muted" />
             <div className="rounded-xl bg-white p-1.5 shadow-e1 ring-hairline" title={isAr ? "امسح للزيارة" : "Scan to visit"}>
-              <QRCodeSVG value={shareUrl} size={48} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
+              <QRCodeSVG value={shareUrl} size={48} level="M" bgColor="#ffffff" fgColor="#0b3b30" title={isAr ? `رمز صفحة ${name}` : `QR code for ${name}’s page`} />
             </div>
           </div>
         </div>

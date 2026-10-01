@@ -369,6 +369,7 @@ function QrTile({ value, isAr }: { value: string; isAr: boolean }) {
         level="M"
         bgColor="#ffffff"
         fgColor="#0b3b30"
+        title={isAr ? "رمز التحقق من الهوية" : "ID verification code"}
         style={{ width: "11.5cqw", height: "11.5cqw" }}
       />
       <p className="mt-[0.6cqw] text-center font-mono text-[1.5cqw] uppercase tracking-[0.18em] text-[hsl(168_30%_36%)]">

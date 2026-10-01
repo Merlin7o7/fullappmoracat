@@ -82,7 +82,7 @@ export function HealthProfileForm({ record, isAr }: { record: HealthRecord; isAr
           <Item label={isAr ? "العيادة المعتادة" : "Home clinic"} value={c.homeBranch ? (isAr ? c.homeBranch.clinic.ar : c.homeBranch.clinic.en) : null} />
           <Item label={isAr ? "كيف وصل إليك" : "How they came to you"} value={c.acquisitionSource ? (isAr ? ACQUISITION_SOURCE_LABELS[c.acquisitionSource]?.ar : ACQUISITION_SOURCE_LABELS[c.acquisitionSource]?.en) : null} />
           <Item label={isAr ? "الحي" : "District"} value={c.district} />
-          <div className="sm:col-span-2"><Item label={isAr ? "ملاحظات طارئة" : "Emergency notes"} value={c.emergencyNotes} /></div>
+          <Item className="sm:col-span-2" label={isAr ? "ملاحظات طارئة" : "Emergency notes"} value={c.emergencyNotes} />
         </dl>
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="grid gap-3 sm:grid-cols-2">
@@ -112,9 +112,9 @@ export function HealthProfileForm({ record, isAr }: { record: HealthRecord; isAr
   );
 }
 
-function Item({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+function Item({ label, value, mono, className }: { label: string; value: string | null | undefined; mono?: boolean; className?: string }) {
   return (
-    <div>
+    <div className={className}>
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className={mono ? "font-mono" : ""} dir={mono ? "ltr" : undefined}>{value || <span className="text-muted-foreground">—</span>}</dd>
     </div>

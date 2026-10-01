@@ -90,7 +90,7 @@ export const MomentPoster = React.forwardRef<HTMLDivElement, MomentPosterProps>(
       <div style={{ margin: "0 28px 28px", padding: 16, borderTop: "1px dashed rgba(21,33,28,0.25)", display: "flex", alignItems: "center", gap: 16 }}>
         {qrUrl ? (
           <div style={{ background: "#fff", padding: 8, borderRadius: 10 }}>
-            <QRCodeSVG value={qrUrl} size={96} level="M" fgColor={EMERALD} bgColor="#ffffff" />
+            <QRCodeSVG value={qrUrl} size={96} level="M" fgColor={EMERALD} bgColor="#ffffff" title={isAr ? "امسح للوصول إلى صفحة القط" : "Scan to reach the cat’s page"} />
           </div>
         ) : null}
         <div style={{ flex: 1, minWidth: 0 }}>

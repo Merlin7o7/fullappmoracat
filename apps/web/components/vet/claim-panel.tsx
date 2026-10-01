@@ -93,7 +93,7 @@ export function ClaimPanel({ catId, autoOpen }: { catId: string; autoOpen?: bool
       {link && (
         <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl bg-background p-4 sm:flex-row sm:items-start">
           <div className="rounded-xl bg-white p-2 ring-hairline">
-            <QRCodeSVG value={link.url} size={168} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
+            <QRCodeSVG value={link.url} size={168} level="M" bgColor="#ffffff" fgColor="#0b3b30" title={isAr ? "رمز ربط الملف بالمالك" : "Owner claim QR code"} />
           </div>
           <div className="min-w-0 flex-1 space-y-2 text-center sm:text-start">
             <p className="text-sm font-medium">{isAr ? "اطلب من المالك مسح الرمز بكاميرا الجوال" : "Ask the owner to scan this with their phone camera"}</p>

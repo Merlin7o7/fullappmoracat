@@ -524,7 +524,7 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
           {/* The QR is the human path (hand-typing base32 is an effort tax, R002);
               the secret stays below as the copyable fallback. */}
           <div className="flex justify-center rounded-lg bg-white p-4" dir="ltr">
-            <QRCodeSVG value={setup.otpauthUrl} size={168} aria-label={isAr ? "رمز QR لإعداد المصادقة الثنائية" : "Two-factor setup QR code"} />
+            <QRCodeSVG value={setup.otpauthUrl} size={168} title={isAr ? "رمز QR لإعداد المصادقة الثنائية" : "Two-factor setup QR code"} aria-label={isAr ? "رمز QR لإعداد المصادقة الثنائية" : "Two-factor setup QR code"} />
           </div>
           <p className="text-xs text-muted-foreground">{isAr ? "أو أدخل السر يدوياً:" : "Or enter the secret manually:"}</p>
           <code className="block break-all rounded-lg bg-background p-2 text-xs" dir="ltr">{setup.secret}</code>
