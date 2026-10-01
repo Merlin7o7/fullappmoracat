@@ -49,7 +49,14 @@ export function YearKeepsake({ cat, year, isAr }: { cat: PortalCat; year: number
   // The year in sentences — only facts we hold, each line only when true.
   const lines: string[] = [];
   const age = formatAge(d.ageMonthsAtEnd, loc);
-  if (age) lines.push(isAr ? `أنهى ${name} العام وعمره ${age}.` : `${name} ended the year aged ${age}.`);
+  const ongoing = year === new Date().getFullYear();
+  if (age) {
+    lines.push(
+      ongoing
+        ? isAr ? `عمر ${name} الآن ${age}، والعام لم ينتهِ بعد.` : `${name} is ${age} now, and the year isn't over yet.`
+        : isAr ? `أنهى ${name} العام وعمره ${age}.` : `${name} ended the year aged ${age}.`
+    );
+  }
   if (d.weight && d.weight.count > 1) {
     const diff = Math.round((d.weight.end - d.weight.start) * 10) / 10;
     lines.push(
