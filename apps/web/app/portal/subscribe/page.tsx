@@ -37,6 +37,7 @@ import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
 import { commerceEnabled } from "@/lib/features";
+import { RENEWAL_SHORT } from "@moraqat/core";
 import { type ApiPlan, type PlanTier } from "@/lib/plan-recommend";
 import {
   recommendFromConsumption,
@@ -355,12 +356,10 @@ function PlanBuilderInner() {
                   {isAr ? "/ شهرياً" : "/ month"}
                 </span>
               </p>
-              {/* The quiet money truth, BEFORE checkout ever shows a total (R021/R025):
-                  terms are prepaid, start at one month, and never auto-renew. */}
+              {/* The quiet money truth, BEFORE checkout ever shows a total (R021/R025)
+                  — the one renewal wording from @moraqat/core. */}
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {isAr
-                  ? "تُدفع المدة مقدّماً — من شهر واحد، وبدون أي تجديد تلقائي"
-                  : "Paid upfront per term — from 1 month, never auto-renewed"}
+                {isAr ? RENEWAL_SHORT.ar : RENEWAL_SHORT.en}
               </p>
               {/* A savings claim ONLY where the API's market basket proves one
                   (R006). Essentials/Kitten serialise null — they get the honest

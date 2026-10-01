@@ -691,6 +691,41 @@ ok(
   Math.abs(hhSub.grandTotal - (hhPlan.price + hhPlan.modulePriceSar)) < 0.01,
   `household total = base + one module (${hhPlan.price} + ${hhPlan.modulePriceSar} = ${hhPlan.price + hhPlan.modulePriceSar})`
 );
+// Paid for two cats → boxed for two cats. Per-cat lines (food, litter) ship
+// once per cat; shared lines once per household; fixed lines are included.
+{
+  const hhFull = (await call(`/subscriptions/${hhSub.subscriptionId}`, "GET", undefined, C)).json;
+  const lines = new Map((hhPlan.contents ?? []).map((c) => [c.id, c]));
+  const perCatItems = (hhFull.items ?? []).filter((i) => lines.get(i.planContentId)?.perCat);
+  const sharedItems = (hhFull.items ?? []).filter((i) => lines.get(i.planContentId) && !lines.get(i.planContentId).perCat);
+  ok(perCatItems.length > 0 && perCatItems.every((i) => i.quantity === Math.max(1, Math.round(lines.get(i.planContentId).quantity)) * 2),
+    "a 2-cat household's box carries per-cat lines ×2 (no more one box for N cats)");
+  ok(sharedItems.every((i) => i.quantity === Math.max(1, Math.round(lines.get(i.planContentId).quantity))), "shared lines ship once per household");
+  const fixed = (hhPlan.contents ?? []).filter((c) => !c.selectable);
+  ok(fixed.length === 0 || (hhFull.items ?? []).some((i) => fixed.some((f) => f.id === i.planContentId)),
+    "fixed plan lines are part of the box, not dropped");
+}
+
+console.log("━━ prepaid boxes 2…N ship (fulfilment job) ━━");
+{
+  // `sub` is a 3-month prepaid term: its payment order is box 1.
+  const before = (await call(`/subscriptions/${sub.subscriptionId}`, "GET", undefined, C)).json;
+  ok(before.boxes?.prepaid === term && before.boxes?.delivered === 1, `a ${term}-month term owes ${term} boxes; the payment order is box 1`);
+  const day = 86_400_000;
+  const at = (days) => new Date(Date.now() + days * day).toISOString();
+  ok((await call("/admin/jobs/fulfilment/run", "POST", { asOf: at(10) }, A)).json?.ran === "fulfilment", "fulfilment runs on demand (staff)");
+  ok(((await call(`/subscriptions/${sub.subscriptionId}`, "GET", undefined, C)).json.boxes?.delivered ?? 0) === 1, "nothing ships before box 2's packing window");
+  await call("/admin/jobs/fulfilment/run", "POST", { asOf: at(32) }, A);
+  const mid = (await call(`/subscriptions/${sub.subscriptionId}`, "GET", undefined, C)).json;
+  ok(mid.boxes?.delivered === 2, "month two: box 2 is created");
+  await call("/admin/jobs/fulfilment/run", "POST", { asOf: at(32) }, A);
+  ok(((await call(`/subscriptions/${sub.subscriptionId}`, "GET", undefined, C)).json.boxes?.delivered) === 2, "a re-run never ships the same box twice");
+  await call("/admin/jobs/fulfilment/run", "POST", { asOf: at(65) }, A);
+  await call("/admin/jobs/fulfilment/run", "POST", { asOf: at(400) }, A);
+  const done = (await call(`/subscriptions/${sub.subscriptionId}`, "GET", undefined, C)).json;
+  ok(done.boxes?.delivered === term, `exactly ${term} boxes for a ${term}-month term — never more than was paid for`);
+  ok((await call("/admin/jobs/fulfilment/run", "POST", {}, C)).status === 403, "running jobs is staff-only");
+}
 
 
 console.log("━━ T7: card rail + opt-in auto-renew (embedded PSP form) ━━");

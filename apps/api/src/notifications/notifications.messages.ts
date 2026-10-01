@@ -52,7 +52,9 @@ export type NotificationType =
   | "listing_hidden"
   // Ops: a clinic is waiting for a human (registration submitted, go-live
   // requested). Written to staff accounts so it is never only an email.
-  | "partner_needs_review";
+  | "partner_needs_review"
+  // A prepaid box (2…N of a term) is being packed.
+  | "box_scheduled";
 
 export type NotificationParams = Record<string, string | number>;
 
@@ -399,6 +401,17 @@ export function buildNotificationText(
     // Every line here is about a cat moving between people. The voice stays
     // warm and factual: a hand-over is not a transaction to congratulate, and
     // a lost cat is not a moment for exclamation marks (R081, R087).
+    case "box_scheduled":
+      return {
+        ar: {
+          title: `صندوق ${p(params, "name") || "قطّك"} يُجهَّز`,
+          body: `الصندوق ${p(params, "box")} من ${p(params, "of")} — مدفوع مسبقاً مع اشتراكك، ونبلغك إذا خرج للتوصيل.`,
+        },
+        en: {
+          title: `${p(params, "name") || "Your cat"}'s box is being packed`,
+          body: `Box ${p(params, "box")} of ${p(params, "of")} — already paid with your membership. We'll tell you when it's out for delivery.`,
+        },
+      };
     case "partner_needs_review":
       return {
         ar: {

@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
+import { boxLineQuantity } from "@moraqat/core";
 import type { ProductType } from "@moraqat/db";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
@@ -164,11 +165,6 @@ export class SubscriptionsService {
     });
     if (!plan) throw new BadRequestException("Plan not found");
 
-    // Resolve the member's brand/flavor picks (or fall back to each line's
-    // recommended default) BEFORE charging — an invalid choice must fail the
-    // box, never the payment (R115). Flat pricing: choices don't change the total.
-    const boxItems = await this.resolveBoxSelections(plan.contents, dto.selections);
-
     const address = await this.prisma.address.findFirst({
       where: { id: dto.addressId, userId },
       select: { id: true },
@@ -198,6 +194,12 @@ export class SubscriptionsService {
       });
     }
     const monthlyPrice = householdMonthlyPrice(round(Number(plan.basePrice)), modulePrice, catCount);
+
+    // Resolve the member's brand/flavor picks (or each line's recommended
+    // default) BEFORE charging — an invalid choice must fail the box, never the
+    // payment (R115). Quantities are for the whole household: per-cat lines
+    // ship once per cat, shared lines once (MRC-FIN-002 §5).
+    const boxItems = await this.resolveBoxSelections(plan.contents, dto.selections, catCount);
 
     // Term commitment: the member commits to a minimum of `minTerm` months and
     // pays the FULL term upfront (delivered monthly across the term).
@@ -275,6 +277,10 @@ export class SubscriptionsService {
           // Renewal is due at term end (whole term prepaid); deliveries monthly.
           nextBillingAt: isPending ? null : termEnd,
           nextDeliveryAt: isPending ? null : firstDelivery,
+          // This payment order is box 1 of the term; the fulfilment job ships
+          // the remaining termMonths − 1 (a pending charge is credited on settle).
+          boxesPrepaid: isPending ? 0 : termMonths,
+          boxesDelivered: isPending ? 0 : 1,
           autoRenewRequestedAt: autoRenewRequested ? now : null,
           cats: { create: dto.catIds.map((catId) => ({ catId })) },
           // The member's chosen brands/flavors, recorded on the subscription so
@@ -1031,6 +1037,10 @@ export class SubscriptionsService {
           dunningStartedAt: null,
           nextDunningAt: null,
           graceUntil: null,
+          // A new paid term: its boxes join the prepaid count; this renewal
+          // order is the term's first box.
+          boxesPrepaid: { increment: sub.termMonths ?? 1 },
+          boxesDelivered: { increment: 1 },
           // A requested plan change takes effect on the freshly paid term (T8).
           ...(sub.pendingPlan
             ? {
@@ -1053,6 +1063,8 @@ export class SubscriptionsService {
       }),
     ]);
 
+    // The new plan's lines replace the old plan's — same picks where they fit.
+    if (sub.pendingPlan) await this.rebuildBoxItems(sub.id, sub.pendingPlan.id, sub.cats.length);
     await this.syncCatsMembership(sub.cats.map((c) => c.catId));
     return { ok: true, endsAt };
   }
@@ -1106,11 +1118,12 @@ export class SubscriptionsService {
       productId: string | null;
       selectableType: ProductType | null;
       quantity: number;
+      perCat: boolean;
     }[],
-    selections?: { contentId: string; productId: string }[]
+    selections: { contentId: string; productId: string }[] | undefined,
+    catCount: number
   ): Promise<{ productId: string; quantity: number; planContentId: string }[]> {
     const selectable = contents.filter((c) => c.selectableType);
-    if (!selectable.length) return [];
     const byId = new Map(selectable.map((c) => [c.id, c]));
     const chosen = new Map<string, string>(); // contentId -> productId
 
@@ -1141,14 +1154,61 @@ export class SubscriptionsService {
       }
     }
 
+    // Every line with a product becomes a box item — the choosable ones carry
+    // the member's pick, the fixed ones (wipes, a toy, a supplement) their set
+    // product. Before, fixed lines were dropped and the box was incomplete.
     const items: { productId: string; quantity: number; planContentId: string }[] = [];
-    for (const c of selectable) {
-      const productId = chosen.get(c.id) ?? c.productId ?? undefined;
+    for (const c of contents) {
+      const productId = (c.selectableType ? chosen.get(c.id) : undefined) ?? c.productId ?? undefined;
       if (productId) {
-        items.push({ productId, quantity: Math.max(1, Math.round(c.quantity)), planContentId: c.id });
+        items.push({ productId, quantity: boxLineQuantity(c, catCount), planContentId: c.id });
       }
     }
     return items;
+  }
+
+  /**
+   * Re-derive a subscription's box for a (new) plan and household size,
+   * keeping the member's brand/flavor picks wherever the new plan has a line of
+   * the same type. Used when a plan change takes effect at renewal (T8) — the
+   * old items pointed at the previous plan's lines.
+   */
+  async rebuildBoxItems(subscriptionId: string, planId: string, catCount: number) {
+    const [plan, current] = await Promise.all([
+      this.prisma.plan.findUnique({ where: { id: planId }, include: { contents: true } }),
+      this.prisma.subscriptionItem.findMany({
+        where: { subscriptionId, planContentId: { not: null } },
+        select: { productId: true, planContent: { select: { selectableType: true } } },
+      }),
+    ]);
+    if (!plan) return;
+    const pickByType = new Map<string, string>();
+    for (const it of current) {
+      const t = it.planContent?.selectableType;
+      if (t && !pickByType.has(t)) pickByType.set(t, it.productId);
+    }
+    const selections = plan.contents
+      .filter((c) => c.selectableType && pickByType.has(c.selectableType))
+      .map((c) => ({ contentId: c.id, productId: pickByType.get(c.selectableType!)! }));
+    const items = await this.resolveBoxSelections(plan.contents, selections, catCount).catch(() =>
+      this.resolveBoxSelections(plan.contents, [], catCount)
+    );
+    await this.prisma.$transaction([
+      this.prisma.subscriptionItem.deleteMany({ where: { subscriptionId, planContentId: { not: null } } }),
+      ...(items.length
+        ? [
+            this.prisma.subscriptionItem.createMany({
+              data: items.map((b) => ({
+                subscriptionId,
+                productId: b.productId,
+                quantity: b.quantity,
+                unitPrice: new Prisma.Decimal(0),
+                planContentId: b.planContentId,
+              })),
+            }),
+          ]
+        : []),
+    ]);
   }
 
   private resolveIntervalDays(interval: string, custom?: number | null): number {
@@ -1233,7 +1293,10 @@ export class SubscriptionsService {
         nameEn: i.product.nameEn,
         quantity: i.quantity,
         unitPrice: Number(i.unitPrice),
+        planContentId: i.planContentId,
       })),
+      // "Box 2 of 3" — prepaid boxes across terms vs boxes already dispatched.
+      boxes: { prepaid: sub.boxesPrepaid, delivered: sub.boxesDelivered },
       recentEvents: sub.events.slice(0, 5).map((e) => ({ type: e.type, at: e.createdAt })),
     };
   }

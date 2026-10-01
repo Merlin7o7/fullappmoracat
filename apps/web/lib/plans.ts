@@ -29,27 +29,32 @@ export interface Plan {
   kitten?: boolean;
 }
 
+import {
+  TERM_OPTIONS as CORE_TERM_OPTIONS,
+  TERM_DISCOUNTS as CORE_TERM_DISCOUNTS,
+  MAX_CATS_PER_SUBSCRIPTION,
+  householdMonthlyPrice,
+  termTotal as coreTermTotal,
+  planPrice,
+} from "@moraqat/core";
+
 /** Minimum committed subscription term, in months (1 = low-commitment entry). */
 export const MIN_TERM_MONTHS = 1;
-/** Term options offered at checkout (3 is the recommended default). */
-export const TERM_OPTIONS = [1, 3, 6, 12] as const;
-/**
- * Prepaid-term discounts — MUST mirror apps/api common/config/pricing.ts
- * (deterministic from the term so checkout previews exactly what the API
- * charges, R021). Longer terms also unlock gated gifts, not deeper cuts.
- */
-export const TERM_DISCOUNTS: Record<number, number> = { 1: 0, 3: 0, 6: 0.05, 12: 0.08 };
+/** Term options offered at checkout (3 is the recommended default) — from @moraqat/core. */
+export const TERM_OPTIONS = CORE_TERM_OPTIONS;
+/** Prepaid-term discounts — the same object the API charges with (R021). */
+export const TERM_DISCOUNTS: Record<number, number> = CORE_TERM_DISCOUNTS;
 /** Maximum cats per household subscription. */
-export const MAX_CATS = 6;
+export const MAX_CATS = MAX_CATS_PER_SUBSCRIPTION;
 
-/** Household monthly price: base + module × (extra cats). Mirrors the API. */
+/** Household monthly price: base + module × (extra cats). Same function as the API. */
 export function householdMonthly(plan: Plan, catCount: number): number {
-  return Math.round((plan.price + plan.modulePrice * Math.max(0, catCount - 1)) * 100) / 100;
+  return householdMonthlyPrice(plan.price, plan.modulePrice, catCount);
 }
 
-/** Upfront total for a term: monthly × months × (1 − discount). Mirrors the API. */
+/** Upfront total for a term: monthly × months × (1 − discount). Same function as the API. */
 export function termTotal(monthly: number, termMonths: number): number {
-  return Math.round(monthly * termMonths * (1 - (TERM_DISCOUNTS[termMonths] ?? 0)) * 100) / 100;
+  return coreTermTotal(monthly, termMonths);
 }
 
 export const PLANS: Plan[] = [
@@ -57,8 +62,8 @@ export const PLANS: Plan[] = [
     tier: "kitten",
     nameEn: "Kitten",
     nameAr: "قطتي الصغيرة",
-    price: 199,
-    modulePrice: 180,
+    price: planPrice("kitten").price,
+    modulePrice: planPrice("kitten").modulePrice,
     kitten: true,
     taglineEn: "Stage-aware care for 3–8 months",
     taglineAr: "عناية مرحلية لعمر ٣–٨ أشهر",
@@ -79,8 +84,8 @@ export const PLANS: Plan[] = [
     tier: "starter",
     nameEn: "Essentials",
     nameAr: "الأساسيات",
-    price: 219,
-    modulePrice: 180,
+    price: planPrice("starter").price,
+    modulePrice: planPrice("starter").modulePrice,
     taglineEn: "Only the necessities — delivered, never out of stock",
     taglineAr: "الضروريات فقط — تصلك بابك ولا تنفد أبداً",
     featuresEn: [
@@ -100,8 +105,8 @@ export const PLANS: Plan[] = [
     tier: "standard",
     nameEn: "Complete",
     nameAr: "العناية الكاملة",
-    price: 329,
-    modulePrice: 280,
+    price: planPrice("standard").price,
+    modulePrice: planPrice("standard").modulePrice,
     taglineEn: "A true month of food — plus care and play",
     taglineAr: "شهر كامل فعلاً من الطعام — مع العناية واللعب",
     featuresEn: [
@@ -122,8 +127,8 @@ export const PLANS: Plan[] = [
     tier: "premium",
     nameEn: "Signature",
     nameAr: "التوقيع",
-    price: 479,
-    modulePrice: 400,
+    price: planPrice("premium").price,
+    modulePrice: planPrice("premium").modulePrice,
     taglineEn: "Complete, upgraded — the full care ritual",
     taglineAr: "العناية الكاملة، مرفوعة درجة — طقس العناية الكامل",
     featuresEn: [

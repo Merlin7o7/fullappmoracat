@@ -35,6 +35,8 @@ import {
   type BoxInvariants,
   type InvariantKind,
   type RecipeLine,
+  planPrice,
+  PLAN_PRICES,
 } from "@moraqat/core";
 import { BOX_COST_MODEL } from "./box-cost-model";
 
@@ -168,9 +170,9 @@ const PLAN_DEFS: PlanDef[] = [
     descriptionEn:
       "Stage-aware nutrition for 3–8 months — kitten food, gentle litter, nothing she doesn't need yet.",
     descriptionAr: "تغذية مرحلية لعمر ٣–٨ أشهر — طعام صغار، رمل لطيف، ولا شيء لا تحتاجه بعد.",
-    price: 199,
-    modulePrice: 180,
-    sortOrder: 0,
+    price: planPrice("KITTEN").price,
+    modulePrice: planPrice("KITTEN").modulePrice,
+    sortOrder: planPrice("KITTEN").sortOrder,
     invariants: { minMarketSaving: -0.05, minContributionPostVat: 0 },
     acceptedViolations: {
       CONTRIBUTION:
@@ -195,9 +197,9 @@ const PLAN_DEFS: PlanDef[] = [
     descriptionEn:
       "Only the necessities — wet food, dry food, litter. Market price, delivered, never out of stock.",
     descriptionAr: "الضروريات فقط — طعام رطب وجاف ورمل. بسعر السوق، يصلك بابك، ولا ينفد أبداً.",
-    price: 219,
-    modulePrice: 180,
-    sortOrder: 1,
+    price: planPrice("STARTER").price,
+    modulePrice: planPrice("STARTER").modulePrice,
+    sortOrder: planPrice("STARTER").sortOrder,
     // Necessity tier: allowed up to 10% above the market basket (it sells
     // delivery + reliability) and therefore makes NO savings claim in copy.
     invariants: { minMarketSaving: -0.1 },
@@ -216,9 +218,9 @@ const PLAN_DEFS: PlanDef[] = [
     descriptionEn:
       "A true month of mixed feeding — 30 pouches + 2kg dry — plus litter, treats, play and care.",
     descriptionAr: "شهر كامل فعلاً من التغذية المختلطة — ٣٠ كيساً و٢كجم جاف — مع الرمل والمكافآت واللعب والعناية.",
-    price: 329,
-    modulePrice: 280,
-    sortOrder: 2,
+    price: planPrice("STANDARD").price,
+    modulePrice: planPrice("STANDARD").modulePrice,
+    sortOrder: planPrice("STANDARD").sortOrder,
     deliverySar: 35,
     // Makes a savings claim in copy → must genuinely save vs the market basket.
     invariants: { minMarketSaving: 0.03 },
@@ -243,9 +245,9 @@ const PLAN_DEFS: PlanDef[] = [
     descriptionEn:
       "Complete, upgraded — premium wet rotation, advanced litter, a monthly supplement course and more.",
     descriptionAr: "العناية الكاملة، مرفوعة درجة — تشكيلة رطب فاخرة، رمل متقدم، كورس مكملات شهري والمزيد.",
-    price: 479,
-    modulePrice: 400,
-    sortOrder: 3,
+    price: planPrice("PREMIUM").price,
+    modulePrice: planPrice("PREMIUM").modulePrice,
+    sortOrder: planPrice("PREMIUM").sortOrder,
     deliverySar: 35,
     invariants: { minMarketSaving: 0.08 },
     acceptedViolations: {
@@ -279,6 +281,8 @@ function catalogFingerprint(): string {
     .map((d) => join(d, "supplier-catalog-2026-07.psv"))
     .find((f) => existsSync(f));
   if (psv) h.update(readFileSync(psv));
+  // Prices live in @moraqat/core — a price change must re-sync too.
+  h.update(JSON.stringify(PLAN_PRICES));
   return h.digest("hex");
 }
 

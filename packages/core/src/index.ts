@@ -51,3 +51,10 @@ export * from "./prayer-times";
 
 // Any-script digits → Latin: Arabic keyboards type ٠–٩ and no field may drop them.
 export * from "./digits";
+
+// The membership price list + term/household maths — one declaration shared by
+// the catalog seed, the API and the web (R021).
+export * from "./plans";
+
+// What happens at the end of a paid term — one wording for every surface (R021/R025).
+export * from "./renewal-policy";

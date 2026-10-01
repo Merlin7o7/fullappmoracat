@@ -21,6 +21,7 @@ import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Truck, SlidersHorizontal, IdCard, Stethoscope, Users, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { Badge, Button } from "@moraqat/ui";
+import { RENEWAL_SHORT } from "@moraqat/core";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
 
 interface Benefit {
@@ -161,9 +162,7 @@ export function ProductIntro({
         {/* The money truth arrives before any number does (R004/R025): terms are
             prepaid, start at one month, and nothing ever renews silently. */}
         <p className="text-center text-xs text-muted-foreground">
-          {isAr
-            ? "تُدفع المدة مقدّماً — من شهر واحد، وبدون أي تجديد تلقائي"
-            : "Paid upfront per term — from 1 month, never auto-renewed"}
+          {isAr ? RENEWAL_SHORT.ar : RENEWAL_SHORT.en}
         </p>
         {onSkip && (
           <button

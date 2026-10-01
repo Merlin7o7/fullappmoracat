@@ -4,6 +4,7 @@
  * Authority: membership-first (member / Cat ID / benefit, R087); the cat is
  * the hero (P09). Latin brand is "Moracat"; Arabic brand is "مرقط".
  */
+import { RENEWAL_BILLING_NOTE, RENEWAL_FAQ_ANSWER } from "@moraqat/core";
 export type Locale = "ar" | "en";
 
 export const dict = {
@@ -56,8 +57,8 @@ export const dict = {
         "سعر الأعضاء عند شركائنا المؤسسين",
         "مجتمع أهل القطط — وقطك نجمه",
       ],
-      billingNote: "شهراً بشهر أو مدة مدفوعة مقدماً — خصم على مدتَي ٦ و١٢ شهراً. أوقف أو ألغِ متى شئت، ولا تجديد بدون علمك.",
-      vatNote: "أسعار نهائية — لا رسوم خفية · التوصيل لكل مدن السعودية",
+      billingNote: RENEWAL_BILLING_NOTE.ar,
+      vatNote: "أسعار نهائية — لا رسوم خفية · التوصيل حالياً في الرياض وجدة",
     },
     /**
      * The Census (MRC-GTM-001 §1). Every number shown here comes from the
@@ -113,9 +114,9 @@ export const dict = {
        * markup may reveal the paid product before launch (R040/R006).
        */
       commerceItems: [
-        { q: "كيف يشتغل اشتراك العناية؟", a: "خطة شهرية تُحسب من ملف قطك نفسه — وزنه وعمره وبيته — مو جدول فئات تختار منه. شهراً بشهر أو مدة مدفوعة مقدماً، مع خصم على مدتَي ٦ و١٢ شهراً." },
-        { q: "أقدر ألغي أو أوقف الاشتراك؟", a: "متى ما تبي، وبضغطة — إيقاف مؤقت أو إلغاء كامل. ولا تجديد بدون علمك: نذكّرك قبل أي خصم." },
-        { q: "وين توصّلون؟", a: "التوصيل لكل مدن السعودية، والأسعار نهائية بلا رسوم خفية." },
+        { q: "كيف يشتغل اشتراك العناية؟", a: "أربع خطط شهرية، ونقترح عليك الأنسب من ملف قطك — عمره ووزنه وعدد قطط البيت. شهر واحد أو مدة مدفوعة مقدّماً، مع خصم على مدتَي ٦ و١٢ شهراً." },
+        { q: "أقدر ألغي أو أوقف الاشتراك؟", a: RENEWAL_FAQ_ANSWER.ar },
+        { q: "وين توصّلون؟", a: "حالياً في الرياض وجدة، وبقية المدن تباعاً — وهوية قطك وسجله متاحة في كل مكان من اليوم. الأسعار نهائية بلا رسوم خفية." },
       ],
     },
     closing: {
@@ -168,8 +169,8 @@ export const dict = {
         "Member rates at our founding partners",
         "A community of cat people — starring your cat",
       ],
-      billingNote: "Month to month, or prepay a term — 6 and 12-month terms carry a discount. Pause or cancel anytime; nothing ever renews without you knowing.",
-      vatNote: "Final prices — no hidden fees · Delivery across Saudi Arabia",
+      billingNote: RENEWAL_BILLING_NOTE.en,
+      vatNote: "Final prices — no hidden fees · Delivering in Riyadh and Jeddah for now",
     },
     census: {
       eyebrow: "The Moracat census of Saudi cats",
@@ -215,9 +216,9 @@ export const dict = {
        * markup may reveal the paid product before launch (R040/R006).
        */
       commerceItems: [
-        { q: "How does the care subscription work?", a: "A monthly plan computed from your cat's own profile — their weight, age and household — never picked from a tier table. Month to month, or prepay a term; 6 and 12-month terms carry a discount." },
-        { q: "Can I cancel or pause?", a: "Anytime, in one tap — pause for a while or cancel outright. And nothing ever renews without you knowing: we remind you before any charge." },
-        { q: "Where do you deliver?", a: "Every city in Saudi Arabia — and prices are final, with no hidden fees." },
+        { q: "How does the care subscription work?", a: "Four monthly plans — we suggest the right one from your cat's own profile: age, weight and how many cats share the home. One month or a prepaid term; 6 and 12-month terms carry a discount." },
+        { q: "Can I cancel or pause?", a: RENEWAL_FAQ_ANSWER.en },
+        { q: "Where do you deliver?", a: "Riyadh and Jeddah for now, more cities in turn — the Cat ID and health record work everywhere today. Prices are final, with no hidden fees." },
       ],
     },
     closing: {

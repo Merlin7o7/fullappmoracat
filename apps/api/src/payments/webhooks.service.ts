@@ -525,6 +525,9 @@ export class WebhooksService {
           endsAt: termEnd,
           nextBillingAt: termEnd,
           nextDeliveryAt: firstDelivery,
+          // The settled payment order is box 1; the fulfilment job ships the rest.
+          boxesPrepaid: { increment: sub.termMonths ?? 3 },
+          boxesDelivered: { increment: 1 },
           events: { create: { type: "activated", metadata: { orderNumber, via: "webhook" } } },
         },
       }),

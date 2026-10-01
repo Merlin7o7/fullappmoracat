@@ -1523,6 +1523,13 @@ model Subscription {
   startedAt      DateTime?
   nextBillingAt  DateTime?
   nextDeliveryAt DateTime?
+  /// Boxes paid for across every term (each paid term adds termMonths) and
+  /// boxes dispatched. The term's payment order is its first box; the
+  /// fulfilment job creates the rest, one cycle order per box, until the two
+  /// meet. Counting boxes — not dates — is what keeps a skip or a pause from
+  /// ever swallowing a box the member already paid for.
+  boxesPrepaid   Int       @default(0)
+  boxesDelivered Int       @default(0)
   pausedUntil    DateTime?
   /// When the current pause began. resume() extends endsAt / delivery dates by
   /// the paused duration so paid months are never lost (R062).
@@ -1699,6 +1706,10 @@ model Order {
   addressId      String?
   source         OrderSource @default(ONE_TIME)
   status         OrderStatus @default(PENDING)
+  /// Monthly box N of a prepaid subscription: "<subscriptionId>:<N>", N counted
+  /// across terms and never reused. Unique so a re-run job cannot ship twice.
+  cycleKey       String?     @unique
+  cycleIndex     Int?
   subtotal       Decimal     @db.Decimal(10, 2)
   discountTotal  Decimal     @default(0) @db.Decimal(10, 2)
   shippingTotal  Decimal     @default(0) @db.Decimal(10, 2)

@@ -611,7 +611,7 @@ function CheckoutInner() {
         <LaunchDeliveryNote isAr={isAr} />
 
         {/* The commitment block (R021): the exact upfront total, when it ends,
-            and the honest promise — no automatic renewal, ever (R025). */}
+            and what happens next — exactly as the member set the toggle (R025). */}
         <div className="space-y-1.5 rounded-xl bg-muted/50 p-4 text-center">
           {/* Per-cat breakdown restated at the point of commitment (R021). */}
           {catCount > 1 && (

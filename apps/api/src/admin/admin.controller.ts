@@ -5,6 +5,7 @@ import { AdminReadinessService } from "./readiness.service";
 import { AdminMetricsService } from "./metrics.service";
 import { AdminCatsService } from "./admin-cats.service";
 import { LifecycleService } from "../lifecycle/lifecycle.service";
+import { FulfilmentService } from "../subscriptions/fulfilment.service";
 import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
@@ -33,7 +34,8 @@ export class AdminController {
     private readonly audit: AdminAuditService,
     private readonly metrics_: AdminMetricsService,
     private readonly adminCats: AdminCatsService,
-    private readonly lifecycle: LifecycleService
+    private readonly lifecycle: LifecycleService,
+    private readonly fulfilment: FulfilmentService
   ) {}
 
   // ── Me ────────────────────────────────────────────────────────────────
@@ -98,8 +100,18 @@ export class AdminController {
   // lease as the cron, so a manual run can never double up with a live tick.
   @Post("jobs/:name/run")
   @RequirePermissions("settings.write")
-  @ApiOperation({ summary: "Run a scheduled job now: lifecycle | metrics" })
-  async runJob(@Param("name") name: string) {
+  @ApiOperation({ summary: "Run a scheduled job now: lifecycle | metrics | fulfilment" })
+  async runJob(@Param("name") name: string, @Body() body?: { asOf?: string }) {
+    if (name === "fulfilment") {
+      // `asOf` lets the e2e suite stand a month in the future. Never honoured
+      // in production — there the job only ever runs against the real clock.
+      const asOf =
+        process.env.NODE_ENV !== "production" && body?.asOf && !Number.isNaN(Date.parse(body.asOf))
+          ? new Date(body.asOf)
+          : new Date();
+      const created = await this.fulfilment.pass(asOf);
+      return { ran: "fulfilment", created };
+    }
     if (name === "lifecycle") {
       await this.lifecycle.runNow();
       return { ran: "lifecycle" };
