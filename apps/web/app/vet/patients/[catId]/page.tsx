@@ -59,6 +59,7 @@ import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
 import { QueryError } from "@/components/query-error";
 import { ClaimPanel } from "@/components/vet/claim-panel";
+import { GlanceStrip } from "@/components/vet/glance-strip";
 import {
   AlertsBand,
   deriveMissingVaccinations,
@@ -148,6 +149,9 @@ export default function PatientProfilePage({ params }: { params: { catId: string
 
       {/* ── The safety floor. Above everything. Always. ─────────────────── */}
       <AlertsBand alerts={flattenTier0Alerts(profile.alerts)} missingVaccinations={missing} catName={profile.name} />
+
+      {/* The 30-second read: weight + trend, next vaccine, last visit — no tabs. */}
+      <GlanceStrip profile={profile} isAr={isAr} />
 
       <ConsentBanner profile={profile} catId={catId} />
 

@@ -177,30 +177,47 @@ export default function VetScanPage() {
   React.useEffect(() => {
     if (camera !== "live") return;
     const Ctor = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
-    if (!Ctor) {
-      // Camera works, decoding doesn't: honest about which half is missing.
-      setCamera("unsupported");
-      stopCamera();
-      return;
-    }
-    const detector = new Ctor({ formats: ["qr_code"] });
     let cancelled = false;
-    const tick = async () => {
-      if (cancelled || !videoRef.current || videoRef.current.readyState < 2) return;
-      try {
-        const codes = await detector.detect(videoRef.current);
-        const value = codes?.[0]?.rawValue;
-        if (value && !cancelled) void resolve(value, "camera");
-      } catch {
-        /* a dropped frame is not an error worth showing anyone */
-      }
-    };
-    const id = setInterval(() => void tick(), 220);
+    let id: ReturnType<typeof setInterval> | undefined;
+
+    if (Ctor) {
+      const detector = new Ctor({ formats: ["qr_code"] });
+      const tick = async () => {
+        if (cancelled || !videoRef.current || videoRef.current.readyState < 2) return;
+        try {
+          const codes = await detector.detect(videoRef.current);
+          const value = codes?.[0]?.rawValue;
+          if (value && !cancelled) void resolve(value, "camera");
+        } catch {
+          /* a dropped frame is not an error worth showing anyone */
+        }
+      };
+      id = setInterval(() => void tick(), 220);
+    } else {
+      // Safari (every iPhone at the counter) has no BarcodeDetector. Decode
+      // frames in JS instead: a downscaled canvas grab + jsQR, loaded only here.
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      void import("jsqr").then(({ default: jsQR }) => {
+        if (cancelled || !ctx) return;
+        id = setInterval(() => {
+          const v = videoRef.current;
+          if (cancelled || !v || v.readyState < 2 || !v.videoWidth) return;
+          const scale = Math.min(1, 640 / v.videoWidth);
+          canvas.width = Math.round(v.videoWidth * scale);
+          canvas.height = Math.round(v.videoHeight * scale);
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+          if (code?.data && !cancelled) void resolve(code.data, "camera");
+        }, 260);
+      });
+    }
     return () => {
       cancelled = true;
-      clearInterval(id);
+      if (id) clearInterval(id);
     };
-  }, [camera, resolve, stopCamera]);
+  }, [camera, resolve]);
 
   // Silence gets help, not a shrug.
   React.useEffect(() => {
