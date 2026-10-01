@@ -119,9 +119,13 @@ ok(
 // An unrecognised city must be REFUSED, never silently stored or defaulted.
 const badCity = await call("/cats", "POST", { name: "Nowhere", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2023-01-01", cityCode: "atlantis" }, C);
 ok(badCity.status === 400, "an unknown city code is rejected (400), never defaulted");
-// The three newly-required fields must actually be required.
+// Sex and age are required to issue an ID; the city is asked after the
+// ceremony (W8 «4 inputs»), so a cat without one is accepted — city-less, not guessed.
+{
+  const noCity = await call("/cats", "POST", { name: "NoCity", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2023-01-01" }, C);
+  ok(noCity.status === 201 && noCity.json?.cityCode === null, "a cat without a city is issued (city comes later, never defaulted)");
+}
 for (const [field, body] of [
-  ["cityCode", { name: "NoCity", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2023-01-01" }],
   ["gender", { name: "NoSex", activityLevel: "LOW", isIndoor: true, birthDate: "2023-01-01", cityCode: "riyadh" }],
   ["birthDate", { name: "NoAge", activityLevel: "LOW", isIndoor: true, gender: "MALE", cityCode: "riyadh" }],
 ]) {
@@ -359,6 +363,24 @@ console.log("━━ private health documents + launch readiness (Wave 1) ━━"
     ok(typeof dig.json?.sent === "number", "weekly digest runs and reports what it sent");
     ok((await call("/jobs/tick", "POST", {})).status === 401, "the wake-up tick refuses a missing secret");
     ok((await call("/jobs/tick", "POST", {}, undefined, { "x-cron-secret": "nope" })).status === 401, "…and a wrong one");
+  }
+
+  console.log("━━ passwordless sign-up: 4 inputs before the ceremony (Wave 8) ━━");
+  {
+    const pwEmail = `nopass+${rnd()}@e.com`;
+    const start = await call("/auth/email/start", "POST", { email: pwEmail, locale: "ar" });
+    ok(start.status === 200 && /^\d{6}$/.test(start.json?.devCode ?? ""), "an email gets a 6-digit code (no account created yet)");
+    ok((await call("/auth/email/start", "POST", { email: pwEmail })).status === 400, "a second code inside the cooldown is refused");
+    ok((await call("/auth/email/continue", "POST", { email: pwEmail, code: start.json.devCode })).status === 400, "a NEW account still needs the terms accepted");
+    const again = await call("/auth/email/start", "POST", { email: `other+${rnd()}@e.com` });
+    ok(again.status === 200, "another address gets its own code");
+    const wrong = await call("/auth/email/continue", "POST", { email: pwEmail, code: start.json.devCode === "000000" ? "111111" : "000000", acceptTerms: true });
+    ok(wrong.status === 400, "a wrong code is refused");
+    const made = await call("/auth/email/continue", "POST", { email: pwEmail, code: start.json.devCode, acceptTerms: true, locale: "ar" });
+    ok(made.status === 200 && made.json?.created === true && !!made.json?.accessToken && !!made.json?.user?.emailVerified, "the code creates a verified, password-less account and signs it in");
+    ok((await call("/auth/email/continue", "POST", { email: pwEmail, code: start.json.devCode, acceptTerms: true })).status === 400, "a used code can't be replayed");
+    const quick = await call("/cats", "POST", { name: "Quick", gender: "FEMALE", birthDate: "2025-06-01" }, made.json.accessToken);
+    ok(quick.status === 201 && !!quick.json?.catIdNumber && quick.json.cityCode === null, "a cat is issued with name, sex and age alone (city comes later)");
   }
 
   console.log("━━ vet health summary link + Apple Wallet (Wave 6) ━━");

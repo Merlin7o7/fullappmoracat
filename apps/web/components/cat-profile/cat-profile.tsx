@@ -23,6 +23,7 @@ import { CareList, type CareTaskView } from "@/components/care/care-list";
 import { AddCareTask } from "@/components/care/add-care-task";
 import { WeightLog } from "@/components/care/weight-log";
 import { VetShare } from "./vet-share";
+import { CompleteFile } from "./complete-file";
 
 /**
  * The cat's profile — the flagship of the product (UX reassessment §3).
@@ -269,6 +270,8 @@ function ProfileBody({ cat, record, isAr, name }: { cat: PortalCat; record: Heal
           </Ledger>
         </Card>
       </section>
+
+      <CompleteFile cat={cat} record={record} isAr={isAr} />
 
       {/* ── 3 · What needs doing ──────────────────────────────────────────── */}
       <section aria-labelledby="care-title" className="space-y-3">

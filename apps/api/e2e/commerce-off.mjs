@@ -90,7 +90,7 @@ const openPaths = ["/census", "/content/faqs", "/content/announcements", "/conte
 // go red has no reason to believe it. Numeric values under known count keys are
 // blanked first; the key scan still catches every real price field.
 const COUNT_VALUES =
-  /"(registered|foundingLimit|latestPublicCatNumber|catNumber|total|totalPages|count|likeCount|viewCount|page|limit|lost|found|reunited)"\s*:\s*-?\d+/g;
+  /"(registered|issuedThrough|foundingLimit|latestPublicCatNumber|catNumber|total|totalPages|count|likeCount|viewCount|page|limit|lost|found|reunited)"\s*:\s*-?\d+/g;
 for (const p of openPaths) {
   const r = await call(p);
   const body = JSON.stringify(r.json ?? "");

@@ -217,3 +217,53 @@ export class ChangePendingEmailDto {
   @IsEmail()
   email!: string;
 }
+
+export class EmailStartDto {
+  @ApiProperty({ example: "sara@example.com" })
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+
+  @ApiPropertyOptional({ enum: ["ar", "en"] })
+  @IsOptional()
+  @IsIn(["ar", "en"])
+  locale?: string;
+}
+
+export class EmailContinueDto {
+  @ApiProperty()
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+
+  @ApiProperty({ example: "482913" })
+  @IsString()
+  @Matches(/^\d{6}$/)
+  code!: string;
+
+  @ApiPropertyOptional({ description: "Only for a new account" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  fullName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  acceptTerms?: boolean;
+
+  @ApiPropertyOptional({ enum: ["ar", "en"] })
+  @IsOptional()
+  @IsIn(["ar", "en"])
+  locale?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  ref?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  firstTouch?: unknown;
+}

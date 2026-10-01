@@ -4,24 +4,20 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, useMotionValue, useSpring, useReducedMotion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-import { Check, Star, ArrowRight } from "lucide-react";
-import { Button, cn } from "@moraqat/ui";
+import { Check, ArrowRight } from "lucide-react";
+import { Button } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CatIdCard } from "@/components/cat-id-card";
-import {
-  IlloCat, IlloCan, IlloFish, IlloHeart, IlloMouse, IlloPaw, IlloSprig,
-  Sticker, PawTrail, type Tone,
-} from "@/components/illustrations";
+import { IlloHeart, IlloPaw, IlloSprig, Sticker } from "@/components/illustrations";
 import { Illo3D } from "@/components/illo-3d";
 import { useLocale } from "@/app/providers";
 import { PLANS } from "@/lib/plans";
-import { api } from "@/lib/api";
 import { commerceEnabled } from "@/lib/features";
 import { localizeName } from "@/lib/translit";
 import { CensusCounter, FoundingNote, useCensus } from "@/components/census-counter";
 import { MobileRegisterCta } from "@/components/mobile-register-cta";
+import { HomeChapters } from "@/components/home/home-chapters";
 import { useCaptureSource } from "@/lib/source";
 
 const fadeUp = {
@@ -73,26 +69,25 @@ export function HomeView() {
       <SiteHeader />
 
       {/* ── Hero · identity first (Dossier Stage 1 + §05) ────────────────── */}
-      <section id="main" tabIndex={-1} className="mesh-bg relative overflow-hidden outline-none">
+      <section id="main" tabIndex={-1} className="relative overflow-hidden outline-none">
         <div className="container grid items-center gap-14 py-14 md:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
           {/* Left · the promise */}
           <div className="relative text-center lg:text-start">
             <motion.p
               variants={fadeUp} initial="hidden" animate="show"
-              className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-primary shadow-e1"
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm font-medium text-primary"
             >
-              <IlloPaw tone="orange" className="size-4" />
               {t.hero.badge}
             </motion.p>
 
             <motion.h1
               variants={fadeUp} initial="hidden" animate="show" custom={1}
-              className="mx-auto max-w-2xl font-display text-5xl font-semibold leading-[1.04] tracking-tight sm:text-6xl lg:mx-0 lg:text-7xl"
+              className="mx-auto max-w-2xl font-display text-5xl leading-[1.1] sm:text-6xl lg:mx-0 lg:text-7xl"
             >
               {t.hero.title}{" "}
               {/* Wrap is allowed below sm — nowrap on a long Arabic accent
                   overflowed narrow phones (R094-adjacent: survive small widths). */}
-              <span className="underline-marker sm:whitespace-nowrap">{t.hero.titleAccent}</span>
+              <span className="text-primary sm:whitespace-nowrap">{t.hero.titleAccent}</span>
             </motion.h1>
 
             <motion.p
@@ -112,13 +107,13 @@ export function HomeView() {
               <label htmlFor="hero-cat-name" className="mb-2.5 block text-sm font-medium text-foreground/80">
                 {t.hero.namePrompt}
               </label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-full sm:border sm:border-input sm:bg-card sm:p-1.5 sm:ps-5 sm:shadow-e2 sm:focus-within:ring-2 sm:focus-within:ring-ring">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-md sm:border sm:border-input sm:bg-card sm:p-1.5 sm:ps-4 sm:shadow-e1 sm:focus-within:ring-2 sm:focus-within:ring-ring">
                 <input
                   id="hero-cat-name"
                   value={catName}
                   onChange={(e) => setCatName(e.target.value.slice(0, 24))}
                   placeholder={t.hero.namePlaceholder}
-                  className="h-13 flex-1 rounded-full border border-input bg-card px-5 text-base shadow-e1 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring sm:h-11 sm:border-0 sm:bg-transparent sm:px-0 sm:shadow-none sm:focus-visible:ring-0"
+                  className="h-13 flex-1 rounded-md border border-input bg-card px-4 text-base shadow-e1 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring sm:h-11 sm:border-0 sm:bg-transparent sm:px-0 sm:shadow-none sm:focus-visible:ring-0"
                 />
                 <Link href="/register" onClick={rememberName} className="sm:shrink-0">
                   <Button size="lg" className="w-full sm:h-11 sm:w-auto sm:px-6">
@@ -153,20 +148,6 @@ export function HomeView() {
             variants={fadeUp} initial="hidden" animate="show" custom={2}
             className="relative mx-auto w-full max-w-sm"
           >
-            {/* The sticker sheet around the card — depth without noise. */}
-            <Sticker rotate={-14} float className="-start-10 -top-8 hidden sm:block" delay={0.4}>
-              <IlloMouse tone="sage" className="h-12 w-auto rtl:-scale-x-100" />
-            </Sticker>
-            <Sticker rotate={10} float className="-end-7 -top-10 hidden sm:block">
-              <IlloHeart tone="pink" className="size-10" />
-            </Sticker>
-            <Sticker rotate={16} float className="-bottom-9 -end-9 hidden sm:block" delay={0.9}>
-              <IlloPaw tone="butter" className="size-14" />
-            </Sticker>
-            <Sticker rotate={-18} className="-bottom-12 -start-7 hidden sm:block">
-              <IlloSprig tone="leaf" className="h-20 w-auto opacity-70" />
-            </Sticker>
-
             <TiltCard>
               <CatIdCard
                 catName={catName.trim() || (isAr ? "قطك" : "Your cat")}
@@ -180,25 +161,10 @@ export function HomeView() {
           </motion.div>
         </div>
 
-        <PawTrail steps={6} tone="peach" className="absolute bottom-4 start-1/2 hidden -translate-x-1/2 lg:flex" />
       </section>
 
-      {/* ── Benefits ribbon — the promises, on repeat ─────────────────────── */}
-      <BenefitsRibbon items={[...t.marquee]} />
-
-      {/* ── Membership pillars (Dossier §01 / §04) — editorial rows ──────── */}
-      <section id="how" className="container py-20 sm:py-24">
-        <div className="mx-auto mb-14 max-w-2xl text-center">
-          <h2 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">{t.features.title}</h2>
-          <p className="mt-4 text-lg text-muted-foreground">{t.features.lede}</p>
-        </div>
-
-        <div className="space-y-6 sm:space-y-8">
-          {t.features.items.map((f, i) => (
-            <FeatureRow key={f.title} index={i} eyebrow={f.eyebrow} title={f.title} body={f.body} flip={i % 2 === 1} />
-          ))}
-        </div>
-      </section>
+      {/* ── The story: your cat → identity → care → health → life (W8) ──── */}
+      <HomeChapters isAr={isAr} />
 
       {/* ── The Census (Phase 0) / the membership (at launch) ──────────────
            While commerce is off the site's job is to count cats, so this slot
@@ -225,13 +191,11 @@ export function HomeView() {
         <CensusSection t={t} isAr={isAr} />
       )}
 
-      {/* ── Member voices · social proof (Dossier Stage 1 trust) ─────────── */}
-      <MemberVoices isAr={isAr} title={t.voices.title} />
 
       {/* ── Quiet FAQ — the four questions that precede trust (R004/R021) ── */}
       <section aria-labelledby="faq-title" className="container pb-4 pt-20 sm:pt-24">
         <div className="mx-auto max-w-3xl">
-          <h2 id="faq-title" className="mb-8 text-center font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 id="faq-title" className="mb-8 text-center font-display text-4xl">
             {t.faq.title}
           </h2>
           <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-e1">
@@ -254,25 +218,11 @@ export function HomeView() {
       {/* ── Closing invitation ────────────────────────────────────────────── */}
       <section id="closing-invite" className="container py-20 sm:py-24">
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-e2 sm:py-20">
-          <Sticker rotate={-12} className="start-8 top-8 hidden md:block">
-            <IlloHeart tone="orange" className="size-9 opacity-80" />
-          </Sticker>
-          <Sticker rotate={14} className="end-10 top-12 hidden md:block">
-            <IlloPaw tone="sage" className="size-12 opacity-70" />
-          </Sticker>
-          <Sticker rotate={-8} className="bottom-6 start-16 hidden md:block">
-            <IlloCan tone="pink" className="h-16 w-auto opacity-80" />
-          </Sticker>
-          <Sticker rotate={10} className="-bottom-2 end-20 hidden md:block">
-            <IlloMouse tone="peach" className="h-10 w-auto" />
-          </Sticker>
-
-          {/* The second — and last — 3D object on this page, a full screen
-              away from the first. It marks the invitation itself: the moment
-              the page stops explaining and starts asking. */}
+          {/* One 3D object for the invitation — never two in view (AD 2.1). */}
           <Illo3D name="heart" px={112} className="mx-auto mb-6 block size-28" />
 
-          <h2 className="mx-auto max-w-xl font-display text-4xl font-semibold tracking-tight sm:text-5xl">
+          <p className="mb-3 text-sm text-muted-foreground">{isAr ? "لِحياة قطّك كلّها" : "For your cat's whole life"}</p>
+          <h2 className="mx-auto max-w-xl font-display text-4xl sm:text-5xl">
             {closingTitle}
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-muted-foreground">{t.closing.sub}</p>
@@ -324,126 +274,7 @@ function TiltCard({ children }: { children: React.ReactNode }) {
 
 /* ── Benefits ribbon ─────────────────────────────────────────────────────── */
 
-function BenefitsRibbon({ items }: { items: string[] }) {
-  const icons = [
-    <IlloPaw key="p" tone="orange" className="size-5" />,
-    <IlloHeart key="h" tone="pink" className="size-5" />,
-    <IlloFish key="f" tone="orange" className="h-4 w-auto" />,
-    <IlloMouse key="m" tone="sage" className="h-5 w-auto" />,
-    <IlloSprig key="s" tone="leaf" className="h-5 w-auto" />,
-  ];
-  // Doubled content + translateX(-50%) = a seamless loop. Track runs LTR so
-  // the animation math holds in both locales; each item renders its own dir.
-  const track = [...items, ...items];
-  return (
-    <>
-      {/* The moving ribbon is decorative; its promises must still exist for
-          screen readers (R095) — a static, visually-hidden copy carries them. */}
-      <ul className="sr-only">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-      <div aria-hidden className="marquee-pause overflow-hidden border-y border-border/70 bg-cream py-4" dir="ltr">
-      <div className="animate-marquee flex w-max items-center gap-10">
-        {track.map((item, i) => (
-          <span key={i} className="flex items-center gap-10">
-            <span dir="auto" className="whitespace-nowrap font-display text-lg font-medium text-cream-foreground/90">
-              {item}
-            </span>
-            {icons[i % icons.length]}
-          </span>
-        ))}
-        </div>
-      </div>
-    </>
-  );
-}
-
 /* ── Editorial feature rows ─────────────────────────────────────────────── */
-
-const FEATURE_ART: { tint: string; art: React.ReactNode }[] = [
-  {
-    // The identity pillar — the product's central claim, so it gets the HERO
-    // illustration tier. The flat cat that stood here read as decoration; the
-    // plush one reads as a character, which is what "the cat is the hero"
-    // (P09) asks for at the one moment on this page that carries the promise.
-    // The stickers around it stay flat: the two tiers never compete, they
-    // stack (DESIGN-AUTHORITY, "Illustration tiers").
-    tint: "bg-cream",
-    art: (
-      <>
-        <Illo3D name="cat" px={224} className="size-44 motion-safe:animate-float sm:size-56" priority />
-        <Sticker rotate={12} className="end-8 top-8"><IlloPaw tone="butter" className="size-10" /></Sticker>
-        <Sticker rotate={-10} className="bottom-8 start-10"><IlloHeart tone="orange" className="size-8" /></Sticker>
-      </>
-    ),
-  },
-  {
-    tint: "bg-butter/50 dark:bg-butter/15",
-    art: (
-      <>
-        <IlloMouse tone="sage" className="h-24 w-auto sm:h-28" />
-        <Sticker rotate={-14} className="start-10 top-10"><IlloHeart tone="pink" className="size-9" /></Sticker>
-        <Sticker rotate={8} className="bottom-10 end-12"><IlloPaw tone="peach" className="size-9" /></Sticker>
-      </>
-    ),
-  },
-  {
-    tint: "bg-blush/40 dark:bg-blush/15",
-    art: (
-      <>
-        <IlloCan tone="green" className="h-36 w-auto sm:h-44" />
-        <Sticker rotate={10} className="end-10 bottom-8"><IlloFish tone="orange" className="h-8 w-auto" /></Sticker>
-        <Sticker rotate={-12} className="start-9 top-9"><IlloPaw tone="sage" className="size-9" /></Sticker>
-      </>
-    ),
-  },
-  {
-    tint: "bg-sage/15 dark:bg-sage/10",
-    art: (
-      <>
-        <IlloCan tone="pink" className="h-32 w-auto sm:h-40" />
-        <Sticker rotate={14} className="end-9 top-9"><IlloSprig tone="leaf" className="h-16 w-auto" /></Sticker>
-        <Sticker rotate={-8} className="bottom-9 start-10"><IlloHeart tone="orange" className="size-8" /></Sticker>
-      </>
-    ),
-  },
-];
-
-/* Each pillar is one of the membership's jobs — the chip names it honestly
- * (two for the cat, two for the owner), like a sticker pressed on the page. */
-const PILLAR_CHIP = [
-  "bg-cream text-cream-foreground/80 -rotate-2",
-  "bg-butter/70 text-foreground/75 rotate-1 dark:bg-butter/20",
-  "bg-blush/60 text-foreground/75 -rotate-1 dark:bg-blush/20",
-  "bg-sage/25 text-foreground/75 rotate-2",
-];
-
-function FeatureRow({ index, eyebrow, title, body, flip }: { index: number; eyebrow: string; title: string; body: string; flip: boolean }) {
-  const art = FEATURE_ART[index % FEATURE_ART.length] ?? FEATURE_ART[0]!;
-  return (
-    <motion.div
-      variants={fadeUp} initial="hidden" whileInView="show"
-      viewport={{ once: true, margin: "-80px" }}
-      className="grid items-stretch gap-6 lg:grid-cols-2 lg:gap-8"
-    >
-      {/* Copy panel */}
-      <div className={cn("relative flex flex-col items-start justify-center rounded-2xl border border-border bg-card p-8 shadow-e1 sm:p-12", flip && "lg:order-2")}>
-        <span className={cn("inline-flex items-center rounded-full border border-foreground/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.12em]", PILLAR_CHIP[index % PILLAR_CHIP.length])}>
-          {eyebrow}
-        </span>
-        <h3 className="mt-5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h3>
-        <p className="mt-3 max-w-md text-base leading-relaxed text-muted-foreground">{body}</p>
-      </div>
-
-      {/* Illustration panel */}
-      <div className={cn("relative grid min-h-56 place-items-center overflow-hidden rounded-2xl border border-border/60 p-8 sm:min-h-72", art.tint, flip && "lg:order-1")}>
-        {art.art}
-      </div>
-    </motion.div>
-  );
-}
 
 /* ── The Census section (Phase 0, MRC-GTM-001 §1) ────────────────────────
  * The slot the priced membership panel occupies at launch. Three beats, in
@@ -567,51 +398,3 @@ function MembershipPanel({ t }: { t: ReturnType<typeof useLocale>["t"] }) {
 
 /* ── Member voices ──────────────────────────────────────────────────────── */
 
-const VOICE_TONES: Tone[] = ["green", "orange", "pink"];
-
-function MemberVoices({ isAr, title }: { isAr: boolean; title: string }) {
-  const { data } = useQuery({ queryKey: ["testimonials"], queryFn: () => api.testimonials() });
-  // Honest by default (R006): a subscription testimonial ("food arrives before we
-  // run out", "the plan paid for itself") is impossible before a single box ships.
-  // We never present invented members as social proof — the voices section stays
-  // dark until memberships are live and testimonials are real. Pre-launch trust is
-  // carried by the live community (real cats, real members) instead.
-  if (!commerceEnabled()) return null;
-  if (!data || data.length === 0) return null;
-  return (
-    <section className="container py-20 sm:py-24">
-      <h2 className="mb-14 text-center font-display text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h2>
-      <div className="grid gap-10 md:grid-cols-3 md:gap-6 lg:gap-10">
-        {data.slice(0, 3).map((tst, i) => {
-          const tone = VOICE_TONES[i % VOICE_TONES.length];
-          return (
-            <motion.figure
-              key={tst.id}
-              variants={fadeUp} initial="hidden" whileInView="show"
-              viewport={{ once: true, margin: "-60px" }} custom={i}
-            >
-              {/* Speech bubble */}
-              <div className="relative rounded-2xl border border-border bg-card p-6 shadow-e1">
-                <div className="mb-3 flex gap-0.5" aria-label={`${tst.rating} / 5`}>
-                  {Array.from({ length: 5 }).map((_, s) => (
-                    <Star key={s} className={`size-4 ${s < tst.rating ? "fill-accent text-accent" : "text-muted"}`} />
-                  ))}
-                </div>
-                <blockquote className="text-[15px] leading-relaxed">“{isAr ? tst.quoteAr : tst.quoteEn}”</blockquote>
-                {/* the bubble's tail */}
-                <span aria-hidden className="absolute -bottom-2 start-9 size-4 rotate-45 border-b border-e border-border bg-card" />
-              </div>
-              <figcaption className="mt-5 flex items-center gap-3 ps-4">
-                <IlloCat tone={tone} className="h-9 w-auto" />
-                <span className="text-sm font-medium">
-                  {tst.authorName}
-                  {tst.role && <span className="font-normal text-muted-foreground"> · {tst.role}</span>}
-                </span>
-              </figcaption>
-            </motion.figure>
-          );
-        })}
-      </div>
-    </section>
-  );
-}

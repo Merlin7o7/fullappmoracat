@@ -75,9 +75,9 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
           />
           <BenefitCard
             icon={Stethoscope}
-            title={isAr ? "أسعار الأعضاء عند الشركاء — نوقّع الآن" : "Member rates at partners — signing now"}
+            title={isAr ? "أسعار الأعضاء عند الشركاء — لاحقاً" : "Member rates at partners — later"}
             // Member-rate lexicon (R085/R087): recognition, not coupon talk.
-            items={isAr ? ["عيادات وعناية ومتاجر نختارها بعناية", "يظهر كل شريك أول ما يجهز", "نبلّغ الأعضاء أول بأول"] : ["Clinics, grooming and shops we choose carefully", "Each partner appears the day it's ready", "Members hear first"]}
+            items={isAr ? ["عيادات وعناية ومتاجر نختارها بعناية", "لا نعلن عن شريك قبل أن يكون جاهزاً فعلاً", "نبلّغ الأعضاء أول بأول"] : ["Clinics, grooming and shops we choose carefully", "No partner is announced before it is really ready", "Members hear first"]}
           />
           <BenefitCard
             icon={Heart}
@@ -87,7 +87,7 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
           <BenefitCard
             icon={HeartPulse}
             title={isAr ? "السجل الصحي — شغّال اليوم" : "The health record — live today"}
-            items={isAr ? ["التطعيمات ومواعيدها", "زيارات العيادة وملاحظات الطبيب", "تذكير قبل موعد التطعيم", "العيادة تشوف السجل بإذنك فقط"] : ["Vaccinations and when they're due", "Clinic visits and the vet's notes", "A reminder before a vaccine is due", "A clinic sees the record only with your permission"]}
+            items={isAr ? ["التطعيمات ومواعيدها، والوزن ومنحناه", "قائمة عناية أسبوعية لكل قطط البيت", "ملخص صحي ترسله لأي طبيب برابط مؤقت", "العيادة تشوف السجل بإذنك فقط"] : ["Vaccinations and their dates, weight and its trend", "A weekly care list for every cat in the home", "A health summary you send any vet by temporary link", "A clinic sees the record only with your permission"]}
           />
         </div>
       </Section>
@@ -129,7 +129,7 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
       </Section>
 
       {/* 5 — Why we're starting this way (Community Beta) */}
-      <section className="animate-fade-up overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-b from-primary/[0.06] to-transparent p-8 sm:p-12">
+      <section className="animate-fade-up overflow-hidden rounded-2xl border border-border bg-card p-8 sm:p-12">
         <div className="mx-auto max-w-2xl text-center">
           <Sticker rotate={-8} float className="mx-auto mb-4 w-fit">
             <IlloHeart tone="pink" className="size-9" />

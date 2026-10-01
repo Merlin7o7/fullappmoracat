@@ -335,6 +335,29 @@ function IssueIdFlow() {
     } catch { /* ignore */ }
   }, []);
 
+  // «4 inputs before the ceremony» (W8): a cat drafted on /register arrives
+  // here already named, sexed and aged — issue it at once, no second form.
+  const [fromStart, setFromStart] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("moraqat.draftCat");
+      if (!raw) return;
+      const d = JSON.parse(raw) as { name?: string; gender?: string; ageMonths?: number | null };
+      if (!d.name || !d.gender) return;
+      sessionStorage.removeItem("moraqat.draftCat");
+      setF((s) => ({
+        ...s,
+        name: d.name!,
+        gender: d.gender!,
+        ageYears: typeof d.ageMonths === "number" ? String(Math.floor(d.ageMonths / 12)) : "",
+        ageMonths: typeof d.ageMonths === "number" ? String(d.ageMonths % 12) : "",
+      }));
+      setFromStart(true);
+    } catch {
+      /* ignore — the form below still works */
+    }
+  }, []);
+
   // The emergency contact is one of the Cat ID's four jobs (safety — "bring my
   // cat home"). A failed save must never be swallowed: it retries quietly in
   // the background and, if it still can't land, says so honestly with where to
@@ -417,7 +440,8 @@ function IssueIdFlow() {
           name: f.name.trim(),
           gender: f.gender,
           // Where the cat lives — decides the founding class on their card.
-          cityCode: f.cityCode,
+          // Optional since W8: asked after the ceremony when skipped here.
+          ...(f.cityCode ? { cityCode: f.cityCode } : {}),
           photoUrl: f.photoUrl.trim() || undefined,
           weightKg: typeof carried.weightKg === "number" ? carried.weightKg : undefined,
           birthDate,
@@ -491,9 +515,35 @@ function IssueIdFlow() {
     () => cats.some((c) => c.status === "ACTIVE" && c.name.trim().toLowerCase() === catName.toLowerCase()),
     [cats, catName]
   );
+  // A drafted cat is issued as soon as its fields land in state — once.
+  const autoIssued = React.useRef(false);
+  React.useEffect(() => {
+    if (!fromStart || autoIssued.current || !catName || !f.gender) return;
+    autoIssued.current = true;
+    create.mutate();
+  }, [fromStart, catName, f.gender, create]);
+
   // The member's first name — offered in the ceremony's share fork ("appear as
   // my first name"). Prefer what they just typed; fall back to the account.
   const ownerFirstName = f.ownerName.trim().split(/\s+/)[0] || user?.firstName || "";
+
+  if (fromStart && !ceremonyCat) {
+    return (
+      <div className="mx-auto grid min-h-[50vh] max-w-md place-items-center text-center" aria-live="polite">
+        {create.isError ? (
+          <div className="space-y-3">
+            <p className="font-display text-2xl">{isAr ? "تعذّر إصدار الهوية" : "Couldn't issue the ID"}</p>
+            <Button onClick={() => create.mutate()}>{isAr ? "حاول مرة ثانية" : "Try again"}</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <Loader2 className="mx-auto size-6 animate-spin text-primary" aria-hidden />
+            <p className="font-display text-2xl">{isAr ? `نصدر هوية ${catName}…` : `Issuing ${catName}'s ID…`}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -891,7 +941,9 @@ function IssueIdFlow() {
             // core value moment — the subscription is the product (R004). (The
             // legacy /portal/welcome celebration page still exists as a route but
             // is no longer the forced post-issue stop.)
-            router.push(`/portal/subscribe?cat=${ceremonyCat.id}`)
+            // W8: the reveal lands on the cat's own profile — the home of
+            // everything that follows — never on a sales page (R004).
+            router.push(`/portal/cats/${ceremonyCat.id}`)
           }
         />
       )}

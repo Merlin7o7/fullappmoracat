@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Star, Pencil, Archive, RotateCcw, Trash2, Loader2, ArrowRight } from "lucide-react";
 import { Badge, Button, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { SAUDI_CITIES } from "@moraqat/core";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { Field, SelectField } from "@/components/field";
 import { CatHealthPanel } from "@/components/cat-health-panel";
@@ -193,6 +194,7 @@ function EditForm({ cat, isAr, onSaved }: { cat: PortalCat; isAr: boolean; onSav
     activityLevel: cat.activityLevel,
     isIndoor: cat.isIndoor ? "true" : "false",
     gender: cat.gender || "UNKNOWN",
+    cityCode: cat.cityCode ?? "",
   });
   const save = useMutation({
     mutationFn: (b: Record<string, unknown>) => authedFetch(`/cats/${cat.id}`, { method: "PATCH", body: JSON.stringify(b) }),
@@ -200,15 +202,21 @@ function EditForm({ cat, isAr, onSaved }: { cat: PortalCat; isAr: boolean; onSav
   });
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); save.mutate({ name: f.name.trim(), weightKg: f.weightKg ? Number(f.weightKg) : undefined, activityLevel: f.activityLevel, isIndoor: f.isIndoor === "true", gender: f.gender }); }}
+      onSubmit={(e) => { e.preventDefault(); save.mutate({ name: f.name.trim(), weightKg: f.weightKg ? Number(f.weightKg) : undefined, activityLevel: f.activityLevel, isIndoor: f.isIndoor === "true", gender: f.gender, ...(f.cityCode ? { cityCode: f.cityCode } : {}) }); }}
       className="grid gap-3 rounded-2xl bg-muted/40 p-4 sm:grid-cols-2"
     >
       <Field label={isAr ? "الاسم" : "Name"} required value={f.name} onChange={(v) => setF({ ...f, name: v })} />
-      <Field label={isAr ? "الوزن (كجم)" : "Weight (kg)"} type="number" value={f.weightKg} onChange={(v) => setF({ ...f, weightKg: v })} />
+      <Field label={isAr ? "الوزن (كغ)" : "Weight (kg)"} inputMode="decimal" value={f.weightKg} onChange={(v) => setF({ ...f, weightKg: v })} />
       <SelectField label={isAr ? "الجنس" : "Sex"} value={f.gender} onChange={(v) => setF({ ...f, gender: v })}
         options={[{ value: "MALE", label: isAr ? "ذكر" : "Male" }, { value: "FEMALE", label: isAr ? "أنثى" : "Female" }, { value: "UNKNOWN", label: isAr ? "غير محدد" : "Unknown" }]} />
       <SelectField label={isAr ? "النشاط" : "Activity"} value={f.activityLevel} onChange={(v) => setF({ ...f, activityLevel: v })}
         options={[{ value: "LOW", label: isAr ? "منخفض" : "Low" }, { value: "MODERATE", label: isAr ? "متوسط" : "Moderate" }, { value: "HIGH", label: isAr ? "عالٍ" : "High" }]} />
+      <SelectField
+        label={isAr ? "المدينة" : "City"}
+        value={f.cityCode}
+        onChange={(v) => setF({ ...f, cityCode: v })}
+        options={[{ value: "", label: isAr ? "اختر المدينة" : "Choose a city" }, ...SAUDI_CITIES.map((c) => ({ value: c.code, label: isAr ? c.ar : c.en }))]}
+      />
       <SelectField label={isAr ? "البيئة" : "Environment"} value={f.isIndoor} onChange={(v) => setF({ ...f, isIndoor: v })}
         options={[{ value: "true", label: isAr ? "داخلي" : "Indoor" }, { value: "false", label: isAr ? "خارجي" : "Outdoor" }]} />
       <div className="sm:col-span-2">

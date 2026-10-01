@@ -14,7 +14,7 @@ export const dict = {
     nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية", community: "المجتمع", benefits: "مزايا الأعضاء", adopt: "تبنَّ قطاً", lostFound: "مفقود وموجود" },
     announce: "نرحّب بقططكم في كل مدن السعودية — انضمّ للمجتمع",
     hero: {
-      badge: "تعداد مرقط لقطط السعودية",
+      badge: "سجل مرقط — لقطط السعودية",
       // The headline says what the owner gets, in the brand line's own words
       // ("لِحياة قطّك كلّها"); the census is the proof underneath, not the pitch.
       // `titleAccent` is the tail of the same sentence: it carries the
@@ -29,7 +29,7 @@ export const dict = {
       namePrompt: "وش اسم قطك؟",
       namePlaceholder: "مثلاً: سمسم",
       cta: "سجّل قطك",
-      ctaSecondary: "وش يعني التعداد؟",
+      ctaSecondary: "وش هي هوية مرقط؟",
       trust: "مجاناً · أقل من دقيقتين · بدون بطاقة",
       previewNote: "هذي معاينة — رقم قطك الحقيقي يطلع لحظة التسجيل.",
     },
@@ -38,7 +38,7 @@ export const dict = {
       lede: "هوية وحدة تمشي مع قطك طول عمره — ترجّعه لك لو ضاع، وتحفظ سجله، وتعرّف الناس عليه.",
       items: [
         { eyebrow: "هويته", title: "هوية باسمه ورقمه", body: "كل قط له هوية خاصة فيها اسمه وصورته ورقمه — نفس الهوية اللي يحملها طول عمره." },
-        { eyebrow: "عنايته الشهرية — قريباً", title: "عناية شهرية، لسّا ما فتحت", body: "نجهّز خطة شهرية موجّهة من عمر قطك واحتياجه. ما فتحنا الاشتراكات بعد، وما نبيع شي اليوم — نعدّ القطط أولاً. أول ما تفتح، أهل التعداد أول من يدري." },
+        { eyebrow: "عنايته الشهرية — قريباً", title: "عناية شهرية، لسّا ما فتحت", body: "نجهّز خطة شهرية موجّهة من عمر قطك واحتياجه. ما فتحنا الاشتراكات بعد، وما نبيع شي اليوم — نعدّ القطط أولاً. أول ما تفتح، المسجّلون أول من يدري." },
         { eyebrow: "ملفه الصحي", title: "سجله يمشي معه", body: "التطعيمات والوزن وملاحظات الطبيب — كلها في هويته، حاضرة معك في كل زيارة للعيادة." },
         { eyebrow: "مجتمعه", title: "معروف ومحبوب", body: "قطك ينضم لمجتمع أهل القطط في السعودية من أول يوم — وتقدر تخليه خاص بضغطة. القرار لك دايم." },
       ],
@@ -67,23 +67,23 @@ export const dict = {
      * and the true cohort size and let the reader subtract.
      */
     census: {
-      eyebrow: "تعداد مرقط لقطط السعودية",
-      counterLabel: "قط مسجّل في السعودية",
-      counterLabelOne: "قط مسجّل في السعودية",
+      eyebrow: "سجل مرقط",
+      counterLabel: "قطة مسجّلة في مرقط",
+      counterLabelOne: "قطة مسجّلة في مرقط",
       counterLoading: "نحسب…",
       counterUnavailable: "العدّاد مو متاح الحين",
       title: "العدّ بدأ",
       body:
-        "ما فيه سجل وطني للقطط في السعودية. إحنا نبنيه — وقطك يقدر يكون فيه. كل تسجيل ياخذ رقمه بالترتيب، ورقمك هو رقمك للأبد.",
+        "مرقط سجل خاص بقطط السعودية تديره شركة سعودية — ليس جهة حكومية. كل قط ينضم ياخذ رقمه بالترتيب، ورقمه له للأبد.",
       foundingTitle: "الأعضاء المؤسِّسون",
       foundingBody:
-        "أول 1000 قط يتسجّل يحمل صفة «عضو مؤسِّس — دفعة الرياض 2026» في هويته، دايماً. الأرقام متسلسلة فعلاً: رقم قطك هو ترتيبه الحقيقي في التعداد.",
+        "أول 1000 قط ينضم يحمل صفة «عضو مؤسِّس» في هويته، مع دفعة مدينته وسنة انضمامه — دايماً. الأرقام متسلسلة فعلاً: رقم قطك هو ترتيبه الحقيقي في السجل.",
       foundingClosed:
         "اكتملت دفعة الأعضاء المؤسِّسين (أول 1000 قط). التسجيل مستمر — وكل قط يظل ياخذ رقمه بالترتيب.",
       latestPrefix: "آخر تسجيل:",
       soonTitle: "وش الجاي؟",
       soonBody:
-        "الاشتراك الشهري لعناية قطك يفتح بعد التعداد. ما نبيع شي اليوم، وما نطلب بطاقة. تسجيل قطك يحجز لك مكانك في قائمة الانتظار — وبس.",
+        "الاشتراك الشهري لعناية قطك يفتح بعد مرحلة التسجيل. ما نبيع شي اليوم، وما نطلب بطاقة. تسجيل قطك يحجز لك مكانك في قائمة الانتظار — وبس.",
     },
     /**
      * Joining the waitlist is a *consequence* of registering, so it is stated
@@ -102,7 +102,7 @@ export const dict = {
       title: "أسئلة تسألونها كثير",
       items: [
         { q: "هل هوية القط مجانية؟", a: "نعم — مجانية اليوم ودايم. الهوية والسجل الصحي والمجتمع لك بلا مقابل، وما نطلب بطاقة." },
-        { q: "وش تبيعون الحين؟", a: "ولا شي. إحنا في مرحلة التعداد — نسجّل القطط بس. الاشتراك الشهري للعناية يفتح بعدين، ونبلّغ المسجّلين أول ما يصير." },
+        { q: "وش تبيعون الحين؟", a: "ولا شي. إحنا في مرحلة التسجيل — نسجّل القطط بس. الاشتراك الشهري للعناية يفتح بعدين، ونبلّغ المسجّلين أول ما يصير." },
         { q: "لما تفتح العضويات، لازم أدفع عشان أحتفظ بالهوية؟", a: "لا. حسابك وهوية قطك وسجله والمجتمع تظل مجانية — هذا مكتوب في شروطنا. الاشتراك الشهري للعناية شي اختياري منفصل، وتسجيلك اليوم يحجز مكانك في قائمة الانتظار بس." },
         { q: "وش يعني «عضو مؤسِّس»؟", a: "أول 1000 قط يتسجّل. الصفة تجي من رقم قطك المتسلسل نفسه — مو شي نعطيه أو نسحبه، ورقمه يظل رقمه." },
         { q: "من يقدر يشوف سجل قطك الصحي؟", a: "أنت بس — إلا إذا منحت عيادة موثّقة إذن الاطلاع وقت الزيارة، وتقدر تسحبه بعدها بضغطة. كل مرة يُفتح فيها السجل تجدها مكتوبة في سجل الاطلاع داخل حسابك." },
@@ -133,7 +133,7 @@ export const dict = {
     nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in", blog: "Journal", tools: "Feeding calculator", community: "Community", benefits: "Member benefits", adopt: "Adopt", lostFound: "Lost & Found" },
     announce: "Now welcoming cats across Saudi Arabia — join the community",
     hero: {
-      badge: "The Moracat census of Saudi cats",
+      badge: "The Moracat register — for Saudi cats",
       title: "An ID for your cat,",
       titleAccent: "for their whole life",
       subtitle:
@@ -141,7 +141,7 @@ export const dict = {
       namePrompt: "What's your cat's name?",
       namePlaceholder: "e.g. Simba",
       cta: "Register your cat",
-      ctaSecondary: "What is the census?",
+      ctaSecondary: "What is a Moracat ID?",
       trust: "Free · Under two minutes · No card needed",
       previewNote: "This is a preview — your cat's real number is issued the moment you register.",
     },
@@ -150,7 +150,7 @@ export const dict = {
       lede: "One identity that stays with your cat for life — it brings them home if they're lost, keeps their record, and tells people who they are.",
       items: [
         { eyebrow: "Their identity", title: "An ID with their name and number", body: "Every cat gets a unique Cat ID with their name, photo and number — the same one they'll carry for life." },
-        { eyebrow: "Their monthly care — coming", title: "Monthly care, not open yet", body: "We're building a monthly plan guided by your cat's age and needs. Subscriptions aren't open and nothing is for sale today — we're counting cats first. When it opens, the census cats hear first." },
+        { eyebrow: "Their monthly care — coming", title: "Monthly care, not open yet", body: "We're building a monthly plan guided by your cat's age and needs. Subscriptions aren't open and nothing is for sale today — we're counting cats first. When it opens, registered cats hear first." },
         { eyebrow: "Their health record", title: "A record that travels", body: "Vaccinations, weight and vet notes live on their ID — in your pocket at every vet visit." },
         { eyebrow: "Their community", title: "Seen and celebrated", body: "Your cat joins a growing community of Saudi cat people from day one — and one tap keeps them private. The choice is always yours." },
       ],
@@ -173,17 +173,17 @@ export const dict = {
       vatNote: "Final prices — no hidden fees · Delivering in Riyadh and Jeddah for now",
     },
     census: {
-      eyebrow: "The Moracat census of Saudi cats",
-      counterLabel: "cats registered in Saudi Arabia",
-      counterLabelOne: "cat registered in Saudi Arabia",
+      eyebrow: "The Moracat register",
+      counterLabel: "cats registered on Moracat",
+      counterLabelOne: "cat registered on Moracat",
       counterLoading: "Counting…",
       counterUnavailable: "The counter is unavailable right now",
       title: "The count has started",
       body:
-        "There is no national register of cats in Saudi Arabia. We're building one — and your cat can be in it. Every registration takes the next number in order, and your number is yours for good.",
+        "Moracat is a private register for Saudi cats, run by a Saudi company — not a government body. Every cat who joins takes the next number in order, and that number is theirs for good.",
       foundingTitle: "Founding Members",
       foundingBody:
-        "The first 1,000 cats registered carry “Founding Member — Riyadh Class of 2026” on their ID, permanently. The numbers are genuinely sequential: your cat's number is their real place in the count.",
+        "The first 1,000 cats to join carry “Founding Member” on their ID — with their own city's class and year — permanently. The numbers are genuinely sequential: your cat's number is their real place in the register.",
       foundingClosed:
         "The founding cohort (the first 1,000 cats) is complete. Registration continues — every cat still takes the next number in order.",
       latestPrefix: "Most recent:",
@@ -204,7 +204,7 @@ export const dict = {
       title: "Questions we hear a lot",
       items: [
         { q: "Is the Cat ID free?", a: "Yes — free today and always. The ID, the health record and the community cost nothing, and we never ask for a card." },
-        { q: "What are you selling right now?", a: "Nothing. We're in the census phase — we're only registering cats. The monthly care subscription opens later, and registered cats hear first." },
+        { q: "What are you selling right now?", a: "Nothing. We're in the registration phase — we're only registering cats. The monthly care subscription opens later, and registered cats hear first." },
         { q: "When memberships open, do I have to pay to keep the ID?", a: "No. Your account, your cat's ID, their record and the community stay free — it's written in our terms. The monthly care subscription is a separate, optional thing; registering today only holds your place on the waitlist." },
         { q: "What does “Founding Member” mean?", a: "The first 1,000 cats registered. The status comes from your cat's sequential number itself — it isn't something we hand out or take away, and their number stays theirs." },
         { q: "Who can see my cat's health record?", a: "Only you — unless you grant a verified clinic access at the time of a visit, and you can take it back in one tap afterwards. Every time the record is opened, you'll find it written in the access ledger inside your account." },

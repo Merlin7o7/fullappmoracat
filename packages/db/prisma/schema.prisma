@@ -3833,3 +3833,19 @@ model AdoptionReport {
   @@index([status])
   @@map("adoption_reports")
 }
+
+/// A passwordless email sign-in / sign-up code (W8 onboarding). Keyed by the
+/// address, not a user: the account is created only AFTER the code proves the
+/// person holds the inbox, so typing an address creates nothing.
+model EmailSignIn {
+  id         String    @id @default(cuid())
+  email      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, createdAt])
+  @@map("email_sign_ins")
+}

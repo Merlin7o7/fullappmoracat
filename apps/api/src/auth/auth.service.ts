@@ -576,6 +576,118 @@ export class AuthService {
     await this.mail.send({ to: email, subject: tpl.subject, html: tpl.html, text: tpl.text });
   }
 
+  // ── Passwordless email: one code, no password (W8 onboarding) ─────────────
+  //
+  // «4 inputs before the ceremony»: the cat's name, sex and age, then an email
+  // and the code that arrives — no password to invent at the most fragile
+  // moment of the journey. The same door signs an existing member in.
+  //
+  // Safety: the account is created only AFTER the code proves the inbox, so
+  // typing an address creates nothing; the response never reveals whether an
+  // address is registered; per-address cooldown + hourly cap; 5 attempts per
+  // code; only the newest code works; members with 2FA must use their password
+  // + authenticator (a mailbox alone must not bypass a second factor).
+
+  async emailStart(dto: { email: string; locale?: string }) {
+    const email = dto.email.trim().toLowerCase();
+    const now = Date.now();
+    const recent = await this.prisma.emailSignIn.findMany({
+      where: { email, createdAt: { gt: new Date(now - 60 * 60 * 1000) } },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    if (recent.length >= EMAIL_OTP_MAX_SENDS_PER_HR || (recent[0] && now - recent[0].createdAt.getTime() < EMAIL_OTP_COOLDOWN_MS)) {
+      throw new BadRequestException(authError("OTP_RATE_LIMITED", "Please wait a moment before requesting another code."));
+    }
+    await this.prisma.emailSignIn.updateMany({ where: { email, consumedAt: null }, data: { consumedAt: new Date() } });
+    const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+    await this.prisma.emailSignIn.create({
+      data: { email, codeHash: this.hashToken(`${code}:${email}`), expiresAt: new Date(now + EMAIL_OTP_TTL_MS) },
+    });
+    const existing = await this.prisma.user.findFirst({ where: { email, deletedAt: null }, select: { firstName: true, locale: true } });
+    const tpl = otpEmailTemplate(this.mailLocale(existing?.locale ?? dto.locale), existing?.firstName ?? null, code);
+    try {
+      await this.mail.send({ to: email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    } catch (e) {
+      this.logger.error(`sign-in code email failed: ${String(e)}`);
+    }
+    if (!IS_PROD) this.logger.log(`Email sign-in code for ${email}: ${code}`);
+    return { sent: true, ...(IS_PROD ? {} : { devCode: code }) };
+  }
+
+  async emailContinue(
+    dto: { email: string; code: string; fullName?: string; acceptTerms?: boolean; locale?: string; ref?: string; firstTouch?: unknown },
+    meta: RequestMeta
+  ) {
+    const email = dto.email.trim().toLowerCase();
+    const challenge = await this.prisma.emailSignIn.findFirst({
+      where: { email, consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+    const bad = () => new BadRequestException(authError("OTP_INVALID", "That code isn't right, or it has expired."));
+    if (!challenge || challenge.attempts >= 5) throw bad();
+    const expected = Buffer.from(challenge.codeHash);
+    const given = Buffer.from(this.hashToken(`${String(dto.code).trim()}:${email}`));
+    if (expected.length !== given.length || !timingSafeEqual(expected, given)) {
+      await this.prisma.emailSignIn.update({ where: { id: challenge.id }, data: { attempts: { increment: 1 } } });
+      throw bad();
+    }
+    const existing = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null },
+      include: { twoFactor: true },
+    });
+    // A new account must accept the terms. Checked BEFORE the code is spent,
+    // so forgetting the tick doesn't cost the member a fresh code.
+    if (!existing && !dto.acceptTerms) {
+      throw new BadRequestException(authError("TERMS_NOT_ACCEPTED", "You must accept the Terms & Privacy Policy"));
+    }
+    await this.prisma.emailSignIn.update({ where: { id: challenge.id }, data: { consumedAt: new Date() } });
+
+    if (existing) {
+      if (existing.status !== "ACTIVE") throw new UnauthorizedException(authError("ACCOUNT_SUSPENDED", "This account is not active."));
+      if (existing.twoFactor?.enabled) {
+        throw new UnauthorizedException(authError("TOTP_REQUIRED", "This account uses two-step sign-in — sign in with your password."));
+      }
+      const user = existing.emailVerified
+        ? existing
+        : await this.prisma.user.update({ where: { id: existing.id }, data: { emailVerified: new Date() } });
+      const tokens = await this.issueSession(user.id, user.email, user.isStaff, meta, REFRESH_TTL);
+      return { user: this.publicUser(user), ...tokens, created: false };
+    }
+
+    const { firstName, lastName } = splitName(dto.fullName, undefined, undefined);
+    let referredByCode: string | undefined;
+    if (dto.ref) {
+      const referrer = await this.prisma.user.findUnique({ where: { referralCode: dto.ref }, select: { id: true } });
+      if (referrer) referredByCode = dto.ref;
+    }
+    const firstTouch = sanitizeFirstTouch(dto.firstTouch as never);
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        memberIdNumber: await this.ids.newMemberId(),
+        firstName,
+        lastName,
+        gender: "UNSPECIFIED",
+        status: "ACTIVE",
+        // The code arrived at this inbox — the address is verified by the act.
+        emailVerified: new Date(),
+        locale: dto.locale === "en" ? "en" : "ar",
+        referredByCode,
+        firstTouch: firstTouch ?? undefined,
+        termsAcceptedAt: new Date(),
+        wallet: { create: {} },
+        loyalty: { create: {} },
+      },
+    });
+    this.events.emit("user_registered", {
+      userId: user.id,
+      props: { method: "email_code", hasPhone: false, referred: !!referredByCode, src: firstTouch?.src ?? null, utm_source: firstTouch?.utm_source ?? null },
+    });
+    const tokens = await this.issueSession(user.id, user.email, user.isStaff, meta, REFRESH_TTL);
+    return { user: this.publicUser(user), ...tokens, created: true };
+  }
+
   /** Salted, single-use hash of a short OTP (salted by user so codes can't
    *  collide across accounts, and constant-time compared on verify). */
   private hashOtp(code: string, userId: string): string {

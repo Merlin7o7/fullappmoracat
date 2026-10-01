@@ -26,6 +26,8 @@ const STRICT = { default: { limit: STRICT_LIMIT, ttl: 60_000 } } as const;
 const OTP_SEND = { default: { limit: 4, ttl: 60_000 } } as const;
 import {
   ForgotPasswordDto,
+  EmailStartDto,
+  EmailContinueDto,
   GoogleAuthDto,
   LoginDto,
   PhoneLoginDto,
@@ -86,6 +88,24 @@ export class AuthController {
   @ApiOperation({ summary: "Authenticate with mobile number + OTP" })
   phoneLogin(@Body() dto: PhoneLoginDto, @Req() req: Request) {
     return this.auth.phoneLogin(dto, meta(req));
+  }
+
+  @Public()
+  @Throttle(OTP_SEND)
+  @Post("email/start")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Passwordless: email a 6-digit sign-in / sign-up code" })
+  emailStart(@Body() dto: EmailStartDto) {
+    return this.auth.emailStart(dto);
+  }
+
+  @Public()
+  @Throttle(STRICT)
+  @Post("email/continue")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Passwordless: sign in, or create the account, with the emailed code" })
+  emailContinue(@Body() dto: EmailContinueDto, @Req() req: Request) {
+    return this.auth.emailContinue(dto, meta(req));
   }
 
   @Public()

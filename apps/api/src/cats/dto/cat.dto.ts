@@ -98,10 +98,14 @@ export class CreateCatDto {
    * identity document (R040). Validated against the list so a typo can never
    * become a city.
    */
-  @ApiProperty({ example: "jeddah", enum: SAUDI_CITY_CODES })
+  // Optional since W8 («4 inputs before the ceremony»): the city is asked in
+  // the "complete the file" step after the ID exists. A cat without a city
+  // gets a founding class with no city in it — never a guessed one (R040).
+  @ApiPropertyOptional({ example: "jeddah", enum: SAUDI_CITY_CODES })
+  @IsOptional()
   @Trim()
   @IsIn(SAUDI_CITY_CODES)
-  cityCode!: string;
+  cityCode?: string;
 
   @ApiPropertyOptional({ example: 4.5 })
   @IsOptional()
