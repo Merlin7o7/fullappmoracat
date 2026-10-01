@@ -82,7 +82,7 @@ async function main() {
     },
   });
 
-  const city = await prisma.city.findFirst({ select: { id: true } });
+  const city = await prisma.city.findFirst({ where: { slug: "riyadh" }, select: { id: true } });
 
   const branchMain = await prisma.branch.upsert({
     where: { id: `${org.id}-main` },
@@ -93,6 +93,7 @@ async function main() {
       nameEn: "Al-Noor — Al Olaya",
       nameAr: "النور — العليا",
       cityId: city?.id ?? null,
+      cityCode: "riyadh",
       addressLine: "Prince Mohammed Bin Abdulaziz Rd, Al Olaya, Riyadh",
       phone: "+966112345678",
       specialties: ["Internal medicine", "Dentistry"],
@@ -110,6 +111,7 @@ async function main() {
       nameEn: "Al-Noor — Al Nakheel",
       nameAr: "النور — النخيل",
       cityId: city?.id ?? null,
+      cityCode: "riyadh",
       addressLine: "Al Nakheel District, Riyadh",
       phone: "+966112345679",
       specialties: ["Preventive care"],

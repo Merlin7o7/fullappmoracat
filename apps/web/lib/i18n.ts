@@ -52,7 +52,7 @@ export const dict = {
       soonNote: "العضويات قريب — سوِّ هوية قطك اليوم وتكون من أول الأعضاء المؤسسين.",
       includes: [
         "عناية شهرية على مقاس قطك — أكل ورمل ومكافآت",
-        "الهوية الرسمية وسجل صحي يمشي معه",
+        "هوية دائمة وسجل صحي يمشي معه",
         "سعر الأعضاء عند شركائنا المؤسسين",
         "مجتمع أهل القطط — وقطك نجمه",
       ],
@@ -164,7 +164,7 @@ export const dict = {
       soonNote: "Memberships open soon — create your cat's ID today and you'll be first in line as a founding member.",
       includes: [
         "Monthly care sized to your cat — food, litter and treats",
-        "The official Cat ID and a health record that travels",
+        "A permanent Cat ID and a health record that travels",
         "Member rates at our founding partners",
         "A community of cat people — starring your cat",
       ],

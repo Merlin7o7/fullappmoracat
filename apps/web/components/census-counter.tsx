@@ -140,9 +140,19 @@ export function FoundingNote({
           <span className="font-medium text-foreground">
             {data.latestPublicCatName}
           </span>{" "}
-          <span dir="ltr" className="tabular">
-            {isAr ? `— رقم ${data.latestPublicCatNumber}` : `— #${data.latestPublicCatNumber}`}
+          <span className="tabular">
+            {isAr ? `— الرقم التسلسلي ${data.latestPublicCatNumber}` : `— serial #${data.latestPublicCatNumber}`}
           </span>
+        </p>
+      )}
+      {/* The count and the serial are different facts. Say so once, plainly,
+          wherever both appear — a reader who sees "70" then "#86" deserves the
+          reason, not a contradiction (R006). */}
+      {data.latestPublicCatNumber !== null && data.latestPublicCatNumber > data.registered && (
+        <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted-foreground">
+          {isAr
+            ? "الأرقام التسلسلية لا تُعاد أبداً — القط الذي يُحذف أو سجل العيادة الذي لم يُستلم بعد يحتفظ برقمه، لذلك قد يتجاوز آخر رقم عدد القطط المسجّلة الآن."
+            : "Serials are never reused — a removed cat or an unclaimed clinic record keeps its number, so the latest serial can run ahead of today's count."}
         </p>
       )}
     </div>

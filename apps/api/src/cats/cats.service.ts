@@ -46,6 +46,7 @@ import type {
   CreateVaccinationDto,
   CreateVetVisitDto,
 } from "./dto/cat-health.dto";
+import { DOCUMENT_KINDS, type DocumentKind } from "./dto/cat-health.dto";
 
 const catInclude = {
   breed: true,
@@ -475,7 +476,7 @@ export class CatsService implements OnModuleInit {
       ...this.serialize(cat as CatRow, user?.primaryCatId ?? null),
       vaccinations: cat.vaccinations,
       vetVisits: cat.vetVisits.map((v) => ({ ...v, cost: v.cost ? Number(v.cost) : null })),
-      documents: cat.documents,
+      documents: cat.documents.map((d) => this.documentView(d)),
     };
   }
 
@@ -1022,21 +1023,68 @@ export class CatsService implements OnModuleInit {
   }
 
   // ── Health record: documents ────────────────────────────────────────────────
+  //
+  // A vaccine card or a lab result is health data, so the file never gets a
+  // public URL. Uploads land under private/cats/<catId>/docs/ and the row keeps
+  // `private:<key>`; every read hands back a 5-minute signed /api/files link
+  // (the same rule as clinic attachments, T12). Rows written before this rule
+  // still hold a public URL until scripts/migrate-private-docs.ts moves them.
+
+  /** A document as the owner sees it — private keys become short-lived signed links. */
+  documentView<T extends { url: string; title: string }>(doc: T): T & { isPrivate: boolean } {
+    if (!doc.url.startsWith("private:")) return { ...doc, isPrivate: false };
+    const key = doc.url.slice("private:".length);
+    const ext = key.split(".").pop()?.toLowerCase();
+    const mime = ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : "image/jpeg";
+    return { ...doc, url: this.files.linkFor({ key, mime, fileName: `${doc.title}.${ext ?? "bin"}` }), isPrivate: true };
+  }
+
   async addDocument(userId: string, catId: string, dto: CreateDocumentDto) {
     await this.ownedCat(userId, catId);
-    return this.prisma.catDocument.create({
+    // A caller-supplied URL may only point outward. Accepting "private:<key>"
+    // here would let anyone mint a signed link to someone else's file.
+    if (!/^https:\/\//i.test(dto.url)) throw new BadRequestException("Document links must be https:// URLs");
+    const doc = await this.prisma.catDocument.create({
       data: { catId, title: dto.title, kind: dto.kind, url: dto.url, notes: dto.notes },
     });
+    return this.documentView(doc);
+  }
+
+  /** Upload the file itself (PDF / JPEG / PNG) into private storage. */
+  async uploadDocument(
+    userId: string,
+    catId: string,
+    file: UploadedImage | undefined,
+    meta: { title?: string; kind?: string; notes?: string }
+  ) {
+    await this.ownedCat(userId, catId);
+    if (!file?.buffer?.length) throw new BadRequestException("No file uploaded");
+    if (file.size > 10 * 1024 * 1024) throw new BadRequestException("File too large (max 10 MB)");
+    const sniffed = this.storage.sniffDocument(file.buffer);
+    if (!sniffed) throw new BadRequestException("Only PDF, JPEG or PNG documents are accepted");
+    const title = (meta.title ?? "").trim().slice(0, 120) || "Document";
+    const kind = DOCUMENT_KINDS.includes(meta.kind as DocumentKind) ? (meta.kind as DocumentKind) : "other";
+    const key = this.storage.buildPrivateKey(`cats/${catId}/docs`, sniffed.ext);
+    await this.storage.putPrivate(key, file.buffer, sniffed.mime);
+    const doc = await this.prisma.catDocument.create({
+      data: { catId, title, kind, url: `private:${key}`, notes: meta.notes?.trim().slice(0, 500) || null },
+    });
+    return this.documentView(doc);
   }
 
   async listDocuments(userId: string, catId: string) {
     await this.ownedCat(userId, catId);
-    return this.prisma.catDocument.findMany({ where: { catId }, orderBy: { createdAt: "desc" } });
+    const docs = await this.prisma.catDocument.findMany({ where: { catId }, orderBy: { createdAt: "desc" } });
+    return docs.map((d) => this.documentView(d));
   }
 
   async removeDocument(userId: string, catId: string, id: string) {
     await this.ownedCat(userId, catId);
+    const doc = await this.prisma.catDocument.findFirst({ where: { id, catId }, select: { url: true } });
     await this.prisma.catDocument.deleteMany({ where: { id, catId } });
+    if (doc?.url.startsWith("private:")) {
+      await this.storage.removePrivate(doc.url.slice("private:".length)).catch(() => undefined);
+    }
     return { success: true };
   }
 

@@ -46,6 +46,33 @@ services:
       # Public bucket URL is not a secret — set it directly.
       - key: S3_PUBLIC_URL
         value: https://pub-1bc6cdbbb878439f908a3257ecaa6a11.r2.dev
+      # NON-public bucket for health documents, clinic paperwork and
+      # certificates. Unset = they fall back to the public bucket (unguessable
+      # keys only) and /admin/readiness shows it red. Create the bucket in R2
+      # with public access OFF, then run apps/api/scripts/migrate-private-docs.mjs.
+      - key: S3_PRIVATE_BUCKET
+        sync: false
+      # ── Ops + tax configuration (never invented — /admin/readiness) ─────
+      # Inbox(es) for clinic submissions / go-live requests, comma-separated.
+      - key: PARTNERS_NOTIFY_EMAIL
+        sync: false
+      # 0 until VAT-registered; then 0.15 AND VAT_NUMBER (15 digits, 3…3).
+      - key: VAT_RATE
+        value: "0"
+      - key: VAT_NUMBER
+        sync: false
+      # Commercial registration, 10 digits — printed on invoices.
+      - key: CR_NUMBER
+        sync: false
+      # Shared with the GitHub Actions wake-up (.github/workflows/cron.yml).
+      - key: CRON_SECRET
+        sync: false
+      # 1 = sync catalog + plans after migrations (idempotent, advisory-locked).
+      - key: SEED_CATALOG_ON_BOOT
+        value: "1"
+      # Medical care schedule stays off until a vet signs it off.
+      - key: CARE_PROTOCOL_APPROVED
+        value: "0"
       # Neon connection string — paste in the Render dashboard (kept secret).
       # IMPORTANT: use the POOLED Neon URL (host contains "-pooler") with
       # ?sslmode=require&pgbouncer=true&connection_limit=1 — the direct URL will

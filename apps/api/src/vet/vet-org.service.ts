@@ -12,6 +12,7 @@ import { EventsService } from "../events/events.service";
 import { vetError } from "./guards/vet-staff.guard";
 import type { VetActor } from "./decorators/vet-actor.decorator";
 import { VetAuthService, type RequestMeta } from "./vet-auth.service";
+import { resolveBranchCity } from "./branch-city";
 import type {
   ApplyDto,
   CreateBranchDocumentDto,
@@ -517,11 +518,17 @@ export class VetOrgService {
       );
     }
     await this.assertCity(dto.cityId);
+    const city = await resolveBranchCity(this.prisma, dto);
+    if (!city.cityCode) {
+      // A branch without a city disappears from every city search (R040).
+      throw new BadRequestException(vetError("VET_BRANCH_CITY_REQUIRED", "Choose the branch's city."));
+    }
 
     const branch = await this.prisma.branch.create({
       data: {
         orgId: actor.orgId,
         ...this.branchWriteData(dto),
+        ...city,
         nameEn: dto.nameEn.trim(),
         nameAr: dto.nameAr.trim(),
         // Publishing is gated on verification, so a brand-new branch never
@@ -541,11 +548,13 @@ export class VetOrgService {
   async updateBranch(actor: VetActor, branchId: string, dto: UpdateBranchDto, meta: RequestMeta) {
     await this.assertBranch(actor, branchId);
     await this.assertCity(dto.cityId);
+    const city = await resolveBranchCity(this.prisma, dto);
 
     const branch = await this.prisma.branch.update({
       where: { id: branchId },
       data: {
         ...this.branchWriteData(dto),
+        ...city,
         ...(dto.nameEn !== undefined ? { nameEn: dto.nameEn.trim() } : {}),
         ...(dto.nameAr !== undefined ? { nameAr: dto.nameAr.trim() } : {}),
         ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
@@ -595,7 +604,6 @@ export class VetOrgService {
 
   private branchWriteData(dto: CreateBranchDto | UpdateBranchDto) {
     return {
-      ...(dto.cityId !== undefined ? { cityId: dto.cityId } : {}),
       ...(dto.addressLine !== undefined ? { addressLine: dto.addressLine } : {}),
       ...(dto.lat !== undefined ? { lat: dto.lat } : {}),
       ...(dto.lng !== undefined ? { lng: dto.lng } : {}),

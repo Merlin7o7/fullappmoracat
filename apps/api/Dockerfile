@@ -22,6 +22,7 @@ COPY apps/api ./apps/api
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN pnpm --filter @moraqat/db build \
  && pnpm --filter @moraqat/core build \
+ && pnpm --filter @moraqat/db build:seed \
  && pnpm --filter @moraqat/api build
 
 # Produce a pruned, production-only bundle of the API + its workspace deps.
@@ -31,6 +32,7 @@ RUN pnpm --filter @moraqat/db build \
 # Deterministic: same lockfile ⇒ identical store-entry directory name.
 RUN pnpm --filter @moraqat/api --prod deploy /app \
  && cp -r packages/db/prisma /app/prisma \
+ && cp -r packages/db/data /app/data \
  && rm -rf /app/node_modules/.pnpm/@prisma+client* \
  && cp -a /repo/node_modules/.pnpm/@prisma+client* /app/node_modules/.pnpm/
 WORKDIR /app

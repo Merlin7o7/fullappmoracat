@@ -35,6 +35,7 @@ import { vetError } from "./guards/vet-staff.guard";
 import { hashToken, type RequestMeta } from "./vet-auth.service";
 import { VetStaffService } from "./vet-staff.service";
 import { buildVetNoticeEmail } from "./vet-registration.emails";
+import { NotificationsService } from "../notifications/notifications.service";
 import type {
   AdminOrgListQueryDto,
   InviteClinicDto,
@@ -85,7 +86,8 @@ export class VetRegistrationService {
     private readonly mail: MailService,
     private readonly storage: StorageService,
     private readonly accounts: AuthService,
-    private readonly staff: VetStaffService
+    private readonly staff: VetStaffService,
+    private readonly notifications: NotificationsService
   ) {}
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -746,8 +748,11 @@ export class VetRegistrationService {
       });
     }
     await this.notifyPartnersTeam(
-      resubmission ? "Registration resubmitted" : "New clinic registration",
-      `${state.org.nameEn} / ${state.org.nameAr} — ${siteUrl()}/admin/partners/${orgId}`
+      orgId,
+      resubmission
+        ? { ar: "أُعيد إرسال طلب تسجيل", en: "Registration resubmitted" }
+        : { ar: "طلب تسجيل عيادة جديد", en: "New clinic registration" },
+      state.org
     );
 
     const next = await this.buildState(orgId, "owner");
@@ -1080,7 +1085,7 @@ export class VetRegistrationService {
       await this.prisma.partnerOrg.update({ where: { id: orgId }, data: { goLiveRequestedAt: new Date() } });
       await this.audit(userId, "vet.onboarding.golive.request", orgId, meta, {});
       const org = await this.prisma.partnerOrg.findUnique({ where: { id: orgId }, select: { nameAr: true, nameEn: true } });
-      await this.notifyPartnersTeam("Clinic ready to go live", `${org?.nameEn} / ${org?.nameAr} — ${siteUrl()}/admin/partners/${orgId}`);
+      await this.notifyPartnersTeam(orgId, { ar: "عيادة جاهزة للإطلاق", en: "Clinic ready to go live" }, org);
     }
     return this.onboarding(orgId);
   }
@@ -1564,14 +1569,57 @@ export class VetRegistrationService {
     }
   }
 
-  /** Optional ops inbox for "something is waiting for a human" signals. */
-  private async notifyPartnersTeam(subject: string, line: string) {
-    const to = process.env.PARTNERS_NOTIFY_EMAIL;
-    if (!to) return;
+  /**
+   * "Something is waiting for a human" — a clinic submitted, resubmitted or
+   * asked to go live. Two channels so it can never be silent:
+   *   1. an in-app notification on every staff account (always), and
+   *   2. an email to PARTNERS_NOTIFY_EMAIL (comma-separated list) when set.
+   * An unset inbox is logged loudly and surfaces on /admin's readiness panel.
+   */
+  private async notifyPartnersTeam(
+    orgId: string,
+    what: { ar: string; en: string },
+    org: { nameAr?: string | null; nameEn?: string | null } | null
+  ) {
+    const clinic = org?.nameAr || org?.nameEn || orgId;
+    const link = `${siteUrl()}/admin/partners/${orgId}`;
     try {
-      await this.mail.send({ to, subject: `[Moracat partners] ${subject}`, text: line, html: `<p>${line}</p>` });
+      const staff = await this.prisma.user.findMany({ where: { isStaff: true, deletedAt: null }, select: { id: true } });
+      await Promise.all(
+        staff.map((u) =>
+          this.notifications.notify(u.id, {
+            category: "SYSTEM",
+            type: "partner_needs_review",
+            params: { clinic, whatAr: what.ar, whatEn: what.en },
+            data: { link: `/admin/partners/${orgId}`, orgId },
+          })
+        )
+      );
     } catch (err) {
-      this.logger.warn(`Partners-team notification failed: ${(err as Error).message}`);
+      this.logger.warn(`Partners-team in-app notice failed: ${(err as Error).message}`);
+    }
+
+    const recipients = partnersNotifyRecipients();
+    if (!recipients.length) {
+      this.logger.warn(`PARTNERS_NOTIFY_EMAIL is not set — "${what.en}" for ${orgId} reached staff in-app only.`);
+      return;
+    }
+    const built = buildVetNoticeEmail({
+      subjectAr: `${what.ar}: ${clinic}`,
+      subjectEn: `${what.en}: ${org?.nameEn || clinic}`,
+      headingAr: what.ar,
+      headingEn: what.en,
+      bodyAr: [`${org?.nameAr ?? ""}${org?.nameEn ? ` · ${org.nameEn}` : ""}`.trim() || orgId],
+      bodyEn: [`${org?.nameEn ?? ""}${org?.nameAr ? ` · ${org.nameAr}` : ""}`.trim() || orgId],
+      cta: { labelAr: "افتح ملف العيادة", labelEn: "Open the clinic", url: link },
+    });
+    for (const to of recipients) {
+      try {
+        const res = await this.mail.send({ to, subject: `[Moracat partners] ${built.subject}`, html: built.html, text: built.text });
+        if (!res.ok) this.logger.error(`Partners-team email to ${maskEmail(to)} was not sent.`);
+      } catch (err) {
+        this.logger.warn(`Partners-team notification failed: ${(err as Error).message}`);
+      }
     }
   }
 
@@ -1594,6 +1642,14 @@ export function editableStepsFor(status: ClinicOrgStatus, reopened: Registration
   if (status === "INVITED" || status === "REGISTERING") return ["clinic", "branches", "documents", "team", "terms"];
   if (status === "CHANGES_REQUESTED") return [...reopened, "terms"];
   return [];
+}
+
+/** PARTNERS_NOTIFY_EMAIL as a list — one inbox or several, comma-separated. */
+export function partnersNotifyRecipients(): string[] {
+  return (process.env.PARTNERS_NOTIFY_EMAIL ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
 }
 
 function siteUrl(): string {

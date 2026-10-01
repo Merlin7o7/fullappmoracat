@@ -378,7 +378,7 @@ function ans(m: AnswerMap | undefined, id: string): string | string[] | undefine
 export const BADGES: BadgeDef[] = [
   {
     id: "founding-member", emoji: "🪪", en: "Founding Member", ar: "عضو مؤسّس",
-    whyEn: "Has an official Cat ID", whyAr: "يملك هوية رسمية",
+    whyEn: "Has a Moracat Cat ID", whyAr: "يملك هوية مرقط",
     earned: () => true,
   },
   {

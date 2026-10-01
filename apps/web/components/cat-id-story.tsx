@@ -72,7 +72,7 @@ export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, 
       <img src="/brand/moracat-logo.png" alt="" aria-hidden className="mt-[104px] h-16 w-auto" />
 
       <p className="mt-9 whitespace-nowrap font-mono text-[13px] font-semibold uppercase tracking-[0.3em] text-[hsl(18_93%_44%)]">
-        {isAr ? "✦ هوية رسمية ✦" : "✦ Officially ID'd ✦"}
+        {isAr ? "هوية مرقط" : "Moracat ID"}
       </p>
 
       <h1 className="mt-3 max-w-[430px] text-center font-display text-[38px] font-bold leading-[1.2] tracking-tight">

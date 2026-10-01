@@ -9,6 +9,7 @@ import { useLocale } from "@/app/providers";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
 import { VetDemoCard } from "./_components/vet-demo-card";
+import { ReadinessCard } from "./_components/readiness-card";
 
 interface Dashboard {
   /** The commerce switch, so "nothing sold" reads as a state, not a fault. */
@@ -116,6 +117,8 @@ export default function AdminDashboard() {
           rather than a number. High on the page because it is what an admin
           reaches for when a clinic is on the phone (2026-09-20). */}
       <VetDemoCard />
+
+      <ReadinessCard />
 
       {/* The living record — what the strategy steers by (MRC-STRAT-001 §F). */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

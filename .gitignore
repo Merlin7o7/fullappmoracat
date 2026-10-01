@@ -49,3 +49,4 @@ Thumbs.db
 
 # Dev fallback for private object storage (never committed)
 .private-uploads/
+packages/db/prisma/seed-dist/

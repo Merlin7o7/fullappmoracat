@@ -49,7 +49,10 @@ export type NotificationType =
   | "lost_found_possible_match"
   // Moderation on the new public boards. A hidden post is never a silent
   // disappearance — the person who wrote it hears what happened, and why.
-  | "listing_hidden";
+  | "listing_hidden"
+  // Ops: a clinic is waiting for a human (registration submitted, go-live
+  // requested). Written to staff accounts so it is never only an email.
+  | "partner_needs_review";
 
 export type NotificationParams = Record<string, string | number>;
 
@@ -396,6 +399,17 @@ export function buildNotificationText(
     // Every line here is about a cat moving between people. The voice stays
     // warm and factual: a hand-over is not a transaction to congratulate, and
     // a lost cat is not a moment for exclamation marks (R081, R087).
+    case "partner_needs_review":
+      return {
+        ar: {
+          title: `عيادة بانتظار المراجعة: ${p(params, "clinic")}`,
+          body: `${p(params, "whatAr")} — افتح ملف العيادة في لوحة الشركاء.`,
+        },
+        en: {
+          title: `Clinic waiting for review: ${p(params, "clinic")}`,
+          body: `${p(params, "whatEn")} — open the clinic in the partners console.`,
+        },
+      };
     case "ownership_transfer_offered":
       return {
         ar: {

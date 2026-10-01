@@ -213,6 +213,20 @@ export class CatsController {
     return this.cats.addDocument(userId, id, dto);
   }
 
+  /** Upload the document file itself — stored privately, read back via signed links only. */
+  @Post(":id/documents/upload")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Upload a private health document (PDF/JPEG/PNG)" })
+  uploadDocument(
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @UploadedFile() file: UploadedImage,
+    @Body() meta: { title?: string; kind?: string; notes?: string }
+  ) {
+    return this.cats.uploadDocument(userId, id, file, meta ?? {});
+  }
+
   @Delete(":id/documents/:docId")
   @ApiOperation({ summary: "Delete a document" })
   removeDocument(

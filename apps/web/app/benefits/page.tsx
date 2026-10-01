@@ -44,7 +44,7 @@ export default function BenefitsPage() {
     {
       icon: IdCard,
       title: isAr ? "سوِّ هوية قطك" : "Create your cat's ID",
-      body: isAr ? "مجاناً، في أقل من دقيقتين — هويته الرسمية تصير جاهزة." : "Free, in under two minutes — their official ID is ready.",
+      body: isAr ? "مجاناً، في أقل من دقيقتين — هويته في مرقط تصير جاهزة." : "Free, in under two minutes — their Moracat ID is ready.",
     },
     {
       icon: BadgeCheck,

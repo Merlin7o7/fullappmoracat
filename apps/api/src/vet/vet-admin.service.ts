@@ -13,6 +13,7 @@ import { IdsService } from "../ids/ids.service";
 import { vetError } from "./guards/vet-staff.guard";
 import { VetStaffService } from "./vet-staff.service";
 import type { RequestMeta } from "./vet-auth.service";
+import { resolveBranchCity } from "./branch-city";
 import type {
   AccessLogQueryDto,
   ApplicationListQueryDto,
@@ -708,6 +709,25 @@ export class VetAdminService {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /**
+   * Set a branch's city from the console. The fix for a branch that went live
+   * with no city (it was invisible to every city search) — and the only way to
+   * correct one, since clinics edit branches through the registration wizard.
+   */
+  async setBranchCity(actorId: string, orgId: string, branchId: string, cityCode: string, meta: RequestMeta) {
+    await this.assertOrg(orgId);
+    const branch = await this.prisma.branch.findFirst({ where: { id: branchId, orgId }, select: { id: true, cityCode: true } });
+    if (!branch) throw new NotFoundException(vetError("VET_BRANCH_NOT_FOUND", "Branch not found."));
+    const city = await resolveBranchCity(this.prisma, { cityCode });
+    const updated = await this.prisma.branch.update({
+      where: { id: branchId },
+      data: city,
+      select: { id: true, cityCode: true, cityId: true },
+    });
+    await this.audit(actorId, "vet.branch.city", "Branch", branchId, meta, { from: branch.cityCode, to: updated.cityCode });
+    return updated;
+  }
 
   private async assertOrg(id: string) {
     const org = await this.prisma.partnerOrg.findUnique({

@@ -5,7 +5,7 @@
 //  wordmark. Every email carries a logo, a single clear action, a plain-text
 //  fallback, and the brand promise. The cat is the hero.
 // ════════════════════════════════════════════════════════════════════════
-import { VAT_ENABLED } from "../common/config/pricing";
+import { VAT_ENABLED, vatPercentLabel } from "../common/config/pricing";
 
 export type Locale = "ar" | "en";
 
@@ -238,8 +238,8 @@ export function welcomeTemplate(locale: Locale, name: string | null): BuiltEmail
   const body = [
     name ? (ar ? `أهلاً ${name} 🐾` : `Welcome, ${name} 🐾`) : ar ? "أهلاً بك 🐾" : "Welcome 🐾",
     ar
-      ? "سعداء بانضمامك. سجّل قطك، أنشئ هويته الرسمية، وشاركه مع مجتمع مرقط — كل قط يستاهل هوية تخصّه."
-      : "We're glad you're here. Register your cat, issue their official Cat ID, and share it with the Moracat community — every cat deserves an identity of their own.",
+      ? "سعداء بانضمامك. سجّل قطك، أنشئ هويته في مرقط، وشاركه مع مجتمع مرقط — كل قط يستاهل هوية تخصّه."
+      : "We're glad you're here. Register your cat, issue their Moracat Cat ID, and share it with the Moracat community — every cat deserves an identity of their own.",
   ];
   const cta = { label: ar ? "ابدأ بهوية قطك" : "Create your Cat ID", url: `${siteUrl()}/portal/cats` };
   return {
@@ -328,8 +328,8 @@ export function catIdIssuedTemplate(locale: Locale, catName: string, catIdNumber
   const heading = ar ? `هوية ${catName} جاهزة 🎉` : `${catName}'s Cat ID is ready 🎉`;
   const body = [
     ar
-      ? `مبروك — أصبح لـ${catName} هوية رسمية موثّقة في مرقط. احتفظ بها، اطبعها، أو أضفها إلى محفظتك، وشاركها متى ما أردت.`
-      : `Congratulations — ${catName} now has an official, verified identity on Moracat. Keep it, print it, add it to your wallet, and share it whenever you like.`,
+      ? `مبروك — أصبح لـ${catName} هوية موثّقة في مرقط. احتفظ بها، اطبعها، أو أضفها إلى محفظتك، وشاركها متى ما أردت.`
+      : `Congratulations — ${catName} now has a verified identity on Moracat. Keep it, print it, add it to your wallet, and share it whenever you like.`,
   ];
   const cta = { label: ar ? "افتح هوية القط" : "Open the Cat ID", url: `${siteUrl()}/portal/cats` };
   return {
@@ -429,12 +429,20 @@ export function paymentReceiptTemplate(
   const heading = ar ? "إيصال الدفع" : "Your payment receipt";
   const body = [hiName(ar, name), ar ? "تم استلام دفعتك بنجاح. هذا إيصالك." : "Your payment was received successfully. Here's your receipt."];
   const net = total - tax;
-  const rows: [string, string][] = [
-    [ar ? "المبلغ قبل الضريبة" : "Subtotal", sar(net, ar)],
-    [ar ? "ضريبة القيمة المضافة (١٥٪)" : "VAT (15%)", sar(tax, ar)],
-    [ar ? "الإجمالي المدفوع" : "Total paid", sar(total, ar)],
-    [ar ? "طريقة الدفع" : "Payment method", method],
-  ];
+  // The VAT line exists only when VAT was actually charged, and it prints the
+  // configured rate — never a hard-coded 15% on a 0% invoice.
+  const pct = vatPercentLabel();
+  const rows: [string, string][] = tax > 0
+    ? [
+        [ar ? "المبلغ قبل الضريبة" : "Subtotal", sar(net, ar)],
+        [ar ? `ضريبة القيمة المضافة (${pct}٪)` : `VAT (${pct}%)`, sar(tax, ar)],
+        [ar ? "الإجمالي المدفوع" : "Total paid", sar(total, ar)],
+        [ar ? "طريقة الدفع" : "Payment method", method],
+      ]
+    : [
+        [ar ? "الإجمالي المدفوع" : "Total paid", sar(total, ar)],
+        [ar ? "طريقة الدفع" : "Payment method", method],
+      ];
   return {
     subject: ar ? `إيصال الطلب ${orderNumber} — مرقط` : `Receipt for order ${orderNumber} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra: chip(ar ? "رقم الطلب" : "Order", orderNumber) + summary(rows, ar) }),

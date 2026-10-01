@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
+import { SAUDI_CITY_CODES } from "@moraqat/core";
 import {
   ArrayMaxSize,
   IsArray,
@@ -133,6 +134,11 @@ export class CreateBranchDto {
   @IsString()
   @MaxLength(40)
   cityId?: string;
+
+  @ApiPropertyOptional({ description: "Census city code (SAUDI_CITIES), e.g. riyadh, abha." })
+  @IsOptional()
+  @IsIn(SAUDI_CITY_CODES as unknown as string[])
+  cityCode?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

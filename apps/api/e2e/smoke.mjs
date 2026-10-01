@@ -150,6 +150,9 @@ ok(typeof census?.foundingClosed === "boolean", "founding-closed flag derived fr
 ok(!("remaining" in (census ?? {})) && !("spotsLeft" in (census ?? {})), "census exposes no 'places remaining' countdown (R006)");
 const censusAgain = (await call("/census")).json;
 ok(censusAgain.registered >= census.registered, "census count never goes backwards");
+// One source for both numbers: serials are never reused, so the highest one
+// issued can never be below today's count (the "70 vs #86" contradiction, R006).
+ok(typeof census.issuedThrough === "number" && census.issuedThrough >= census.registered, "census publishes issuedThrough ≥ registered");
 const recommendation = (await call(`/feeding/cats/${cat.id}`, "POST", {}, C)).json;
 ok(recommendation.dailyCalories > 200 && recommendation.estimatedMonthlyCostSar > 0, `feeding rec (${recommendation.dailyCalories} kcal)`);
 
@@ -277,6 +280,50 @@ console.log("━━ admin cat CRM + merge (MRC-PROD-001 T4) ━━");
   ok(after === before + 1, "the twin's vaccination now lives on the survivor");
   ok((await call(`/cats/${twinCat.id}`, "GET", undefined, C)).status === 404, "the merged twin is archived (404 to its owner)");
   ok((await call(`/admin/cats/${cat.id}/merge`, "POST", { targetId: cat.id }, A)).status === 400, "a cat cannot be merged into itself");
+}
+
+console.log("━━ private health documents + launch readiness (Wave 1) ━━");
+{
+  const docForm = (bytes, name, type, fields) => {
+    const form = new FormData();
+    form.append("file", new Blob([bytes], { type }), name);
+    for (const [k, v] of Object.entries(fields)) form.append(k, v);
+    return form;
+  };
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82]);
+  const up = await fetch(`${base}/cats/${cat.id}/documents/upload`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${C}` },
+    body: docForm(png, "vaccine-card.png", "image/png", { title: "دفتر التطعيم", kind: "other" }),
+  });
+  const doc = await up.json().catch(() => null);
+  ok(up.status === 201 && doc?.isPrivate === true && doc.url.includes("/api/files/"), "a photographed document is stored privately and read back via a signed link");
+  ok(!JSON.stringify(doc).includes("private/") && !JSON.stringify(doc).includes("users/"), "the storage key is never exposed");
+  const listed = (await call(`/cats/${cat.id}/documents`, "GET", undefined, C)).json;
+  ok(listed.some((d) => d.id === doc?.id && d.isPrivate), "the document list re-signs private documents");
+  const opened = await fetch(doc.url);
+  ok(opened.status === 200 && (opened.headers.get("content-type") ?? "").startsWith("image/png"), "the signed link opens the file");
+  const forged = doc.url.replace(/\.[^.]+$/, ".forged");
+  ok((await fetch(forged)).status === 401, "a tampered file token is refused");
+  ok((await call(`/cats/${cat.id}/documents`, "POST", { title: "x", kind: "other", url: "private:private/cats/x/docs/abc.png" }, C)).status === 400,
+    "a caller cannot attach a private key by hand (no signed link to someone else's file)");
+  const bad = await fetch(`${base}/cats/${cat.id}/documents/upload`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${C}` },
+    body: docForm(new TextEncoder().encode("<html>"), "x.png", "image/png", { title: "x" }),
+  });
+  ok(bad.status === 400, "non-PDF/JPEG/PNG bytes are refused whatever the name says");
+  ok((await call(`/cats/${cat.id}/documents/${doc.id}`, "DELETE", undefined, C)).status === 200, "the owner removes the document");
+
+  const ready = await call("/admin/readiness", "GET", undefined, A);
+  ok(ready.status === 200 && Array.isArray(ready.json?.checks) && ready.json.checks.some((c) => c.key === "clinic_terms" && c.owner === "counsel"),
+    "admin readiness lists ops gaps and pending professional sign-offs");
+  const secretValues = ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "CLAIM_HASH_SALT", "RESEND_API_KEY", "S3_SECRET_KEY", "CRON_SECRET"]
+    .map((k) => process.env[k])
+    .filter((v) => typeof v === "string" && v.length >= 8);
+  const readyText = JSON.stringify(ready.json);
+  ok(!secretValues.some((v) => readyText.includes(v)) && !readyText.includes("BEGIN PRIVATE"), "readiness never prints a secret");
+  ok((await call("/admin/readiness", "GET", undefined, C)).status === 403, "readiness is staff-only");
 }
 const ss = rnd();
 const dry = (await call("/admin/products", "POST", { slug: `smoke-dry-${ss}`, sku: `SMKD-${ss.toUpperCase()}`, type: "DRY_FOOD", nameEn: "Smoke Dry", nameAr: "جاف", price: 49 }, A)).json;
@@ -1014,6 +1061,16 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
     // is about the branch being PUBLIC, not about where it sorts.
     const dir = (await call(`/vet/directory?q=${encodeURIComponent(tag)}`)).json;
     ok(dir.items?.some((b) => b.id === branchId && b.city?.nameAr === "الرياض"), "live clinic appears in the public directory");
+    // The city-less live clinic bug: a city search must find the branch, and
+    // the console can (re)set a branch's city.
+    const byCity = (await call(`/vet/directory?city=${encodeURIComponent("الرياض")}&q=${encodeURIComponent(tag)}`)).json;
+    ok(byCity.items?.some((b) => b.id === branchId), "the directory's city search finds the live branch");
+    const moved = await call(`/vet/admin/orgs/${orgId}/branches/${branchId}/city`, "PATCH", { cityCode: "abha" }, A);
+    ok(moved.status === 200 && moved.json?.cityCode === "abha", "admin sets a branch's census city");
+    ok(((await call(`/vet/directory?city=${encodeURIComponent("أبها")}&q=${encodeURIComponent(tag)}`)).json.items ?? []).some((b) => b.id === branchId),
+      "…and the branch is found under its new city");
+    ok((await call(`/vet/admin/orgs/${orgId}/branches/${branchId}/city`, "PATCH", { cityCode: "atlantis" }, A)).status === 400, "unknown city codes are refused");
+    await call(`/vet/admin/orgs/${orgId}/branches/${branchId}/city`, "PATCH", { cityCode: "riyadh" }, A);
     ok((await call(`/vet/patients/search?q=${encodeURIComponent(cat.catIdNumber)}`, "GET", undefined, V, VH)).json?.total === 1, "live clinic finds real members by Cat ID");
   } else {
     ok(true, "no demo cat seeded — test-scan/go-live leg skipped (run db:seed:vet-demo)");

@@ -24,6 +24,30 @@ export const VAT_RATE: number = (() => {
 export const VAT_ENABLED = VAT_RATE > 0;
 
 /**
+ * The seller's own registration numbers, as printed on invoices. Never
+ * defaulted or invented: unset means "not registered / not yet provided" and
+ * the invoice omits the line. ZATCA VAT numbers are 15 digits starting and
+ * ending in 3; a Saudi CR is 10 digits. Anything else is ignored exactly like
+ * unset — and /admin's readiness panel says so.
+ */
+function digitsEnv(name: string, pattern: RegExp): string | null {
+  const raw = (process.env[name] ?? "").trim();
+  return pattern.test(raw) ? raw : null;
+}
+export const SELLER_VAT_NUMBER: string | null = digitsEnv("VAT_NUMBER", /^3\d{13}3$/);
+export const SELLER_CR_NUMBER: string | null = digitsEnv("CR_NUMBER", /^\d{10}$/);
+
+/** Fields every new invoice carries from config (spread into invoice.create). */
+export function invoiceSellerFields(): { vatNumber: string | null } {
+  return { vatNumber: VAT_ENABLED ? SELLER_VAT_NUMBER : null };
+}
+
+/** "15" for 0.15 — the rate as printed beside a VAT line. */
+export function vatPercentLabel(): string {
+  return String(Math.round(VAT_RATE * 10000) / 100);
+}
+
+/**
  * Split a customer-facing (VAT-inclusive) gross amount into net + tax.
  * With VAT_RATE=0 this returns { net: gross, tax: 0 } — no VAT anywhere.
  */

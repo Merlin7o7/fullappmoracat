@@ -58,6 +58,8 @@ export type VetErrorCode =
   | "VET_BRANCH_NOT_FOUND"
   | "VET_DOCUMENT_NOT_FOUND"
   | "VET_CITY_INVALID"
+  | "VET_CITY_UNKNOWN"
+  | "VET_BRANCH_CITY_REQUIRED"
   | "VET_VAT_TAKEN"
   // ── Applications (public + admin) ──
   | "VET_APPLICATION_NOT_FOUND"

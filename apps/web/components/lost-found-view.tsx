@@ -215,8 +215,8 @@ export function LostFoundView({ id }: { id: string }) {
                 <p className="font-display font-semibold">{isAr ? "قط مسجّل في مرقط" : "A registered Moracat cat"}</p>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   {isAr
-                    ? "له هوية رسمية وسجل صحي. لو لقيته، امسح الرمز على طوقه أو راسل صاحبه من هنا."
-                    : "They hold an official Cat ID and a health record. If you've found them, scan the tag on their collar or message the owner here."}
+                    ? "له هوية في مرقط وسجل صحي. لو لقيته، امسح الرمز على طوقه أو راسل صاحبه من هنا."
+                    : "They hold a Moracat Cat ID and a health record. If you've found them, scan the tag on their collar or message the owner here."}
                 </p>
                 {data.registeredCat.catIdNumber && (
                   <p className="mt-1.5 font-mono text-xs text-primary" dir="ltr">

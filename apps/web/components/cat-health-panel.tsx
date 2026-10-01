@@ -33,7 +33,7 @@ interface CatDetail {
 type Tab = "vaccinations" | "visits" | "documents";
 
 export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }) {
-  const { authedFetch } = useAuth();
+  const { authedFetch, authedUpload } = useAuth();
   const qc = useQueryClient();
   const { toast } = useToast();
   const [tab, setTab] = React.useState<Tab>("vaccinations");
@@ -64,8 +64,19 @@ export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }
     onSuccess: invalidate,
     onError: (e: unknown) => { const f = friendlyError(e, isAr); toast({ title: f.title, description: f.message, variant: "error" }); },
   });
+  // A photographed document is health data: it goes straight into private
+  // storage (signed links only). A pasted link stays a plain https:// reference.
   const addDoc = useMutation({
-    mutationFn: (b: Record<string, unknown>) => authedFetch(`/cats/${catId}/documents`, { method: "POST", body: JSON.stringify(b) }),
+    mutationFn: (b: Record<string, unknown>) => {
+      if (b.file instanceof File) {
+        const form = new FormData();
+        form.append("file", b.file, b.file.name);
+        form.append("title", String(b.title ?? ""));
+        form.append("kind", String(b.kind ?? "other"));
+        return authedUpload(`/cats/${catId}/documents/upload`, form);
+      }
+      return authedFetch(`/cats/${catId}/documents`, { method: "POST", body: JSON.stringify(b) });
+    },
     onSuccess: invalidate,
     onError: (e: unknown) => { const f = friendlyError(e, isAr); toast({ title: f.title, description: f.message, variant: "error" }); },
   });
@@ -186,41 +197,34 @@ function VisitForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
 }
 
 function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
-  const { authedUpload } = useAuth();
   const [f, setF] = React.useState({ title: "", kind: "other", url: "" });
-  const [uploading, setUploading] = React.useState(false);
+  const [file, setFile] = React.useState<File | null>(null);
+  const [preview, setPreview] = React.useState<string | null>(null);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const [showLink, setShowLink] = React.useState(false);
 
+  React.useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
   // Real members hold a *photo* of the vaccine card, not a hosted URL — so the
-  // primary path is "photograph it" (camera on mobile), uploaded to storage and
-  // attached automatically (R002). A paste-a-link field stays as the fallback.
-  async function handleFile(file: File | undefined) {
-    if (!file) return;
+  // primary path is "photograph it" (R002). The file is kept in the browser
+  // until "Add document", then uploaded once, privately, with its title.
+  function handleFile(next: File | undefined) {
     setUploadError(null);
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append("file", file, file.name);
-      const res = await authedUpload<{ url: string }>("/uploads/image", form);
-      setF((prev) => ({ ...prev, url: res.url }));
-    } catch {
-      setUploadError(
-        isAr
-          ? "تعذّر رفع الصورة — جرّب مرة أخرى، مستندك ما زال معك."
-          : "The photo didn't upload — try again; your document is still with you."
-      );
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
+    if (!next) return;
+    if (next.size > 10 * 1024 * 1024) {
+      setUploadError(isAr ? "الملف أكبر من ١٠ ميغابايت — صوّره بدقة أقل." : "That file is over 10 MB — try a smaller photo.");
+      return;
     }
+    setFile(next);
+    setPreview(next.type.startsWith("image/") ? URL.createObjectURL(next) : null);
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (
-    <FormShell isAr={isAr} pending={pending} disabled={!f.title || !f.url || uploading} onCancel={onCancel}
+    <FormShell isAr={isAr} pending={pending} disabled={!f.title || (!file && !f.url)} onCancel={onCancel}
       submitLabel={isAr ? "أضف المستند" : "Add document"}
-      onSubmit={() => onSubmit({ title: f.title, kind: f.kind, url: f.url })}>
+      onSubmit={() => onSubmit(file ? { title: f.title, kind: f.kind, file } : { title: f.title, kind: f.kind, url: f.url })}>
       <Field label={isAr ? "العنوان" : "Title"} required value={f.title} onChange={(v) => setF({ ...f, title: v })} />
       <SelectField label={isAr ? "النوع" : "Kind"} value={f.kind} onChange={(v) => setF({ ...f, kind: v })}
         options={[
@@ -235,22 +239,26 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           // No `capture`: forcing the camera blocked the commonest case — the
           // clinic already sent the report as a photo in WhatsApp. Without it
           // iOS and Android offer BOTH "take photo" and "choose from library".
           className="sr-only"
           aria-label={isAr ? "صوّر المستند أو ارفعه" : "Photograph or upload the document"}
-          onChange={(e) => void handleFile(e.target.files?.[0])}
+          onChange={(e) => handleFile(e.target.files?.[0])}
         />
-        {f.url ? (
+        {file ? (
           <div className="flex items-center gap-2 rounded-xl border border-input bg-muted/40 p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={f.url} alt="" className="size-12 rounded-lg object-cover" />
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="" className="size-12 rounded-lg object-cover" />
+            ) : (
+              <FileText className="size-8 text-muted-foreground" aria-hidden />
+            )}
             <span className="flex-1 text-xs text-muted-foreground">
-              {isAr ? "تم الحفظ — أكمل وأضف المستند" : "Saved — finish and add the document"}
+              {isAr ? "جاهز — يُحفظ بشكل خاص، لا يراه أحد غيرك" : "Ready — stored privately, only you can open it"}
             </span>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setF({ ...f, url: "" })}>
+            <Button type="button" size="sm" variant="ghost" onClick={() => { setFile(null); setPreview(null); }}>
               {isAr ? "تغيير" : "Change"}
             </Button>
           </div>
@@ -259,7 +267,6 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
             type="button"
             size="sm"
             variant="outline"
-            loading={uploading}
             onClick={() => fileRef.current?.click()}
             className="w-fit"
           >
@@ -267,7 +274,7 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
           </Button>
         )}
         {uploadError && <p role="alert" className="text-xs text-destructive">{uploadError}</p>}
-        {!f.url && (
+        {!file && (
           showLink ? (
             <Field label={isAr ? "أو ألصق رابطاً" : "Or paste a link"} value={f.url} onChange={(v) => setF({ ...f, url: v })} placeholder="https://…" />
           ) : (

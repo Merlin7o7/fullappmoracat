@@ -19,7 +19,7 @@ import {
 } from "../payments/payment-provider.interface";
 import type { CheckoutDto } from "./dto/checkout.dto";
 import { commerceEnabled } from "../common/config/features";
-import { splitVat } from "../common/config/pricing";
+import { splitVat, invoiceSellerFields } from "../common/config/pricing";
 import { IdempotencyService } from "../common/idempotency.service";
 import { claimCoupon } from "../common/coupons";
 
@@ -152,6 +152,7 @@ export class CheckoutService {
             invoice: {
               create: {
                 invoiceNumber: await this.nextNumber(tx, "INV", "invoice"),
+                ...invoiceSellerFields(),
                 userId,
                 status: "ISSUED",
                 subtotal: new Prisma.Decimal(netSubtotal),

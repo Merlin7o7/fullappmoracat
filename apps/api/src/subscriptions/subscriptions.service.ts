@@ -28,6 +28,7 @@ import { EventsService } from "../events/events.service";
 import { commerceEnabled } from "../common/config/features";
 import {
   splitVat,
+  invoiceSellerFields,
   MIN_TERM_MONTHS,
   TERM_OPTIONS,
   MAX_CATS_PER_SUBSCRIPTION,
@@ -336,6 +337,7 @@ export class SubscriptionsService {
           invoice: {
             create: {
               invoiceNumber: makeNumber("INV"),
+              ...invoiceSellerFields(),
               userId,
               status: isPending ? "ISSUED" : "PAID",
               subtotal: new Prisma.Decimal(netSubtotal),
@@ -970,6 +972,7 @@ export class SubscriptionsService {
         invoice: {
           create: {
             invoiceNumber: makeNumber("INV"),
+            ...invoiceSellerFields(),
             userId: sub.userId,
             status: "ISSUED",
             subtotal: new Prisma.Decimal(net),

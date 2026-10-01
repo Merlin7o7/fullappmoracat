@@ -1,3 +1,4 @@
+import { AdminReadinessService } from "./readiness.service";
 import { Module } from "@nestjs/common";
 import { CatsModule } from "../cats/cats.module";
 import { LifecycleModule } from "../lifecycle/lifecycle.module";
@@ -27,6 +28,7 @@ import { CmsService } from "./cms.service";
   controllers: [AdminController, CmsController, AdminCommunityController, AdminStaffController, AdminVetDemoController, AdminListingsController, FeatureFlagsController],
   providers: [
     AdminAnalyticsService,
+    AdminReadinessService,
     AdminMetricsService,
     AdminCatsService,
     AdminAuditService,

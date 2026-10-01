@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
+import { SAUDI_CITY_CODES } from "@moraqat/core";
 import {
   IsIn,
   IsInt,
@@ -131,6 +132,12 @@ export class ReviewApplicationDto {
   @IsString()
   @MaxLength(1000)
   reviewNote?: string;
+}
+
+export class SetBranchCityDto {
+  @ApiProperty({ description: "Census city code (SAUDI_CITIES), e.g. riyadh." })
+  @IsIn(SAUDI_CITY_CODES as unknown as string[])
+  cityCode!: string;
 }
 
 export class SuspendOrgDto {

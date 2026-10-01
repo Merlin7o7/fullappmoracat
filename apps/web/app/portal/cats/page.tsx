@@ -165,7 +165,7 @@ export default function CatsPage() {
           <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
           <Illo3D name="cat" className="size-32" px={128} />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-            {isAr ? "أول قط تضيفه يحصل على هويته الرسمية فوراً" : "The first cat you add gets an official Cat ID, instantly"}
+            {isAr ? "أول قط تضيفه يحصل على هويته في مرقط فوراً" : "The first cat you add gets their Moracat Cat ID, instantly"}
           </p>
           <Link href="/portal/cats/new"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>
         </Card>

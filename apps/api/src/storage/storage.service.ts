@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit, ServiceUnavailableException } from "@nestjs/common";
 import {
   S3Client,
   PutObjectCommand,
@@ -44,9 +44,20 @@ const IMAGE_EXT: Record<string, string> = {
  * it's the standard S3 API.
  */
 @Injectable()
-export class StorageService {
+export class StorageService implements OnModuleInit {
   private readonly logger = new Logger("Storage");
   private client?: S3Client;
+
+  onModuleInit() {
+    // Health documents must never share the public media bucket. Not fatal —
+    // the keys are unguessable — but loud, and /admin/readiness shows it red.
+    if (process.env.NODE_ENV === "production" && this.isConfigured() && !process.env.S3_PRIVATE_BUCKET) {
+      this.logger.error(
+        "S3_PRIVATE_BUCKET is not set — private documents are falling back to the PUBLIC media bucket. " +
+          "Create a non-public bucket and set S3_PRIVATE_BUCKET."
+      );
+    }
+  }
 
   private get bucket(): string {
     return process.env.S3_BUCKET || "moracat-media";

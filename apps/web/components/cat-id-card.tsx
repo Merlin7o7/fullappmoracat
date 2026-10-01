@@ -317,7 +317,7 @@ export function CatIdCard({
           ) : (
             <span className="inline-flex shrink-0 items-center gap-[1.2cqw] font-mono text-[2cqw] uppercase tracking-[0.22em] text-[hsl(168_30%_34%)]">
               <ShieldCheck className="size-[3.2cqw]" />
-              {isAr ? "هوية رسمية" : "Official ID"}
+              {isAr ? "هوية مرقط" : "Moracat ID"}
             </span>
           )}
         </div>

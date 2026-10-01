@@ -430,7 +430,7 @@ function RevealAct({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative my-auto flex w-full max-w-sm flex-col items-center py-4 text-center">
       <motion.p {...fade(0.45)} className="font-mono text-[10px] uppercase tracking-[0.28em] text-[hsl(18_93%_62%)]">
-        {isAr ? "صارت رسمية" : "It's official"}
+        {isAr ? "صار له رقمه" : "The number is theirs"}
       </motion.p>
       <motion.p {...fade(0.6)} aria-hidden className="mt-3 font-display text-3xl font-semibold tracking-tight text-white">
         {isAr ? `${cat.name} صار عضو` : `${cat.name} is a member`}

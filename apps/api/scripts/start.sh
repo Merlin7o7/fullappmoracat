@@ -62,4 +62,20 @@ until DATABASE_URL="$MIGRATE_URL" node_modules/.bin/prisma migrate deploy --sche
 done
 echo "✓ Migrations applied."
 
+# Catalog + plans (MRC-FIN-002). Opt-in, idempotent, advisory-locked — see
+# packages/db/prisma/seed-catalog.ts. A failed seed (e.g. the plan-economics
+# gate refusing a recipe) must NOT take the API down: the previous catalog
+# stays in place and the reason is the last thing in the boot log.
+if [ "$SEED_CATALOG_ON_BOOT" = "1" ] && [ -f prisma/seed-dist/seed-catalog.js ]; then
+  echo "▶ Syncing catalog + plans (SEED_CATALOG_ON_BOOT=1)…"
+  # @prisma/client is a dependency of @moraqat/db, not of the API, so the pruned
+  # bundle only exposes it under that package's node_modules.
+  if DATABASE_URL="$MIGRATE_URL" NODE_PATH="/app/node_modules/@moraqat/db/node_modules:/app/node_modules" \
+    node prisma/seed-dist/seed-catalog.js; then
+    echo "✓ Catalog in sync."
+  else
+    echo "⚠ Catalog seed failed — serving with the existing catalog. See the error above." >&2
+  fi
+fi
+
 exec node dist/main.js

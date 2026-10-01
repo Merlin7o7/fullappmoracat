@@ -1,6 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AdminAnalyticsService } from "./analytics.service";
+import { AdminReadinessService } from "./readiness.service";
 import { AdminMetricsService } from "./metrics.service";
 import { AdminCatsService } from "./admin-cats.service";
 import { LifecycleService } from "../lifecycle/lifecycle.service";
@@ -22,6 +23,7 @@ import { Commercial } from "../common/decorators/commercial.decorator";
 export class AdminController {
   constructor(
     private readonly analytics: AdminAnalyticsService,
+    private readonly readinessChecks: AdminReadinessService,
     private readonly customers: AdminCustomersService,
     private readonly orders: AdminOrdersService,
     private readonly products: AdminProductsService,
@@ -46,6 +48,13 @@ export class AdminController {
   }
 
   // ── Analytics ─────────────────────────────────────────────────────────
+  @Get("readiness")
+  @RequirePermissions("dashboard.read")
+  @ApiOperation({ summary: "Launch readiness — ops gaps and pending sign-offs, no secrets" })
+  readiness() {
+    return this.readinessChecks.checks();
+  }
+
   @Get("dashboard")
   @RequirePermissions("dashboard.read")
   @ApiOperation({ summary: "Admin analytics dashboard" })

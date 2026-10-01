@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -22,6 +23,7 @@ import {
   RejectApplicationDto,
   ReviewApplicationDto,
   SuspendOrgDto,
+  SetBranchCityDto,
 } from "./dto/vet-admin.dto";
 
 function meta(req: Request) {
@@ -129,6 +131,19 @@ export class VetAdminController {
   @ApiOperation({ summary: "Withdraw verification and pull every branch from the directory" })
   unverify(@CurrentUser("id") actorId: string, @Param("id") id: string, @Req() req: Request) {
     return this.admin.unverifyOrg(actorId, id, meta(req));
+  }
+
+  @Patch("orgs/:id/branches/:branchId/city")
+  @RequirePermissions("partners.write")
+  @ApiOperation({ summary: "Set a branch's census city (fixes branches missing from city search)" })
+  setBranchCity(
+    @CurrentUser("id") actorId: string,
+    @Param("id") id: string,
+    @Param("branchId") branchId: string,
+    @Body() dto: SetBranchCityDto,
+    @Req() req: Request
+  ) {
+    return this.admin.setBranchCity(actorId, id, branchId, dto.cityCode, meta(req));
   }
 
   @Post("orgs/:id/go-live")

@@ -44,7 +44,7 @@ export default function OpengraphImage() {
           Give your cat an identity of their own.
         </div>
         <div style={{ fontSize: 30, color: "#4b5a52", marginTop: 24 }}>
-          An official Cat ID · a health record · a community · Jeddah &amp; Riyadh
+          A permanent Cat ID · a health record · a community · Jeddah &amp; Riyadh
         </div>
       </div>
     ),

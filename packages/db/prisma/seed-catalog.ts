@@ -13,9 +13,16 @@
  *      so existing subscriptions stay valid).
  *
  * Run:  pnpm --filter @moraqat/db seed:catalog
+ *
+ * Deploy: the API image compiles this file (build:seed → prisma/seed-dist) and
+ * start.sh runs it after `migrate deploy` when SEED_CATALOG_ON_BOOT=1. It is
+ * idempotent — plan lines are matched by (plan, label) and updated in place, so
+ * re-running never duplicates rows nor orphans a member's box selections — and
+ * a Postgres advisory lock makes two booting containers take turns.
  */
 import { PrismaClient, PlanTier, ProductType } from "@prisma/client";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { importCatalog } from "./import-catalog";
 import { seedResearchedOptions } from "./seed-researched";
@@ -258,9 +265,94 @@ const PLAN_DEFS: PlanDef[] = [
   },
 ];
 
+/** Arbitrary constant: one catalog seed at a time across every booting container. */
+const SEED_LOCK_KEY = 4_206_202_607;
+const CATALOG_FINGERPRINT_KEY = "catalog.seed.fingerprint";
+
+/** sha256 over the seed's own modules + the supplier sheet — any edit re-syncs. */
+function catalogFingerprint(): string {
+  const h = createHash("sha256");
+  for (const f of readdirSync(__dirname).filter((n) => /\.(ts|js)$/.test(n) && !n.endsWith(".d.ts")).sort()) {
+    if (/^seed-catalog|^seed-researched|^import-catalog|^box-cost-model/.test(f)) h.update(readFileSync(join(__dirname, f)));
+  }
+  const psv = [join(__dirname, "..", "data"), join(__dirname, "..", "..", "data")]
+    .map((d) => join(d, "supplier-catalog-2026-07.psv"))
+    .find((f) => existsSync(f));
+  if (psv) h.update(readFileSync(psv));
+  return h.digest("hex");
+}
+
+/**
+ * Bring a plan's lines to `rows` without delete-and-recreate. A line keeps its
+ * id while its label is unchanged, so SubscriptionItem.planContentId (a
+ * member's chosen brand/flavour for that line) survives every re-run. Lines no
+ * longer in the recipe are removed only when nobody's box points at them; a
+ * referenced line that vanished from the recipe is a business decision, so the
+ * seed stops and says which one rather than silently orphaning selections.
+ */
+async function syncPlanContents(planId: string, rows: Record<string, unknown>[]) {
+  const existing = await prisma.planContent.findMany({
+    where: { planId },
+    select: { id: true, label: true, _count: { select: { selections: true } } },
+  });
+  const byLabel = new Map(existing.map((e) => [e.label, e]));
+  const keep = new Set<string>();
+  for (const r of rows) {
+    const hit = byLabel.get(String(r.label));
+    if (hit) {
+      keep.add(hit.id);
+      await prisma.planContent.update({ where: { id: hit.id }, data: r as never });
+    } else {
+      const created = await prisma.planContent.create({ data: { ...r, planId } as never });
+      keep.add(created.id);
+    }
+  }
+  const stale = existing.filter((e) => !keep.has(e.id));
+  const referenced = stale.filter((e) => e._count.selections > 0);
+  if (referenced.length) {
+    throw new Error(
+      `Plan ${planId}: recipe dropped line(s) members have chosen products for — ` +
+        referenced.map((e) => `"${e.label}" (${e._count.selections})`).join(", ") +
+        `. Keep the label, or migrate those selections first.`
+    );
+  }
+  if (stale.length) await prisma.planContent.deleteMany({ where: { id: { in: stale.map((e) => e.id) } } });
+}
+
 async function main() {
+  const rows = await prisma.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_lock(${SEED_LOCK_KEY}::bigint) AS locked`;
+  if (!rows[0]?.locked) {
+    console.log("⏭ Another catalog seed holds the lock — skipping this run.");
+    return;
+  }
+  try {
+    // Boot runs this on every cold start; only do the work when the catalog
+    // inputs (this file, its sibling modules, the supplier sheet) changed.
+    const fingerprint = catalogFingerprint();
+    const prev = await prisma.setting.findUnique({ where: { key: CATALOG_FINGERPRINT_KEY } });
+    if (prev && (prev.value as { hash?: string })?.hash === fingerprint && process.env.SEED_CATALOG_FORCE !== "1") {
+      console.log("⏭ Catalog inputs unchanged since the last sync — nothing to do.");
+      return;
+    }
+    await seedCatalog();
+    await prisma.setting.upsert({
+      where: { key: CATALOG_FINGERPRINT_KEY },
+      update: { value: { hash: fingerprint, at: new Date().toISOString() } },
+      create: { key: CATALOG_FINGERPRINT_KEY, value: { hash: fingerprint, at: new Date().toISOString() } },
+    });
+  } finally {
+    await prisma.$queryRaw`SELECT pg_advisory_unlock(${SEED_LOCK_KEY}::bigint)`;
+  }
+}
+
+async function seedCatalog() {
   console.log("▶ Importing supplier catalog (market-aligned category markups)…");
-  const psv = readFileSync(join(__dirname, "..", "data", "supplier-catalog-2026-07.psv"), "utf-8");
+  // Source tree: prisma/../data. Compiled deploy copy: prisma/seed-dist/../../data.
+  const psvPath = [join(__dirname, "..", "data"), join(__dirname, "..", "..", "data")]
+    .map((d) => join(d, "supplier-catalog-2026-07.psv"))
+    .find((f) => existsSync(f));
+  if (!psvPath) throw new Error("supplier-catalog-2026-07.psv not found next to the seed (expected ../data)");
+  const psv = readFileSync(psvPath, "utf-8");
   const res = await importCatalog(prisma, psv, {
     markupByCategory: CATEGORY_MARKUPS,
     markup: FALLBACK_MARKUP,
@@ -381,11 +473,7 @@ async function main() {
       update: planData,
       create: { tier: def.tier, ...planData },
     });
-    // Scoped to THIS plan only — safe.
-    await prisma.planContent.deleteMany({ where: { planId: plan.id } });
-    await prisma.planContent.createMany({
-      data: contentRows.map((r) => ({ ...r, planId: plan.id })),
-    });
+    await syncPlanContents(plan.id, contentRows);
 
     const mark = fatal.length ? "✗" : violations.length ? "⚠" : "✓";
     console.log(

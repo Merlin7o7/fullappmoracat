@@ -126,8 +126,8 @@ function WelcomeInner() {
             </h1>
             <p className="mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
               {isAr
-                ? `${name} صار عنده هوية مرقط رسمية خاصة به. الهوية الآن «غير مفعّلة» لأنها لم تُربط بعضوية بعد — وعند إطلاق العضويات، تفعيلها يفتح ما هو أبعد بكثير من بطاقة تعريف.`
-                : `${name} now has an official Moracat ID. Right now it's “Inactive” because it isn't connected to a membership yet — and when memberships launch, activating it unlocks far more than an identification card.`}
+                ? `${name} صار عنده هوية مرقط خاصة به. الهوية الآن «غير مفعّلة» لأنها لم تُربط بعضوية بعد — وعند إطلاق العضويات، تفعيلها يفتح ما هو أبعد بكثير من بطاقة تعريف.`
+                : `${name} now has their own Moracat ID. Right now it's “Inactive” because it isn't connected to a membership yet — and when memberships launch, activating it unlocks far more than an identification card.`}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {cat?.catIdNumber && (

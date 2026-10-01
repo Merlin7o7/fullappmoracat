@@ -184,7 +184,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             {isAr ? "قطك يستاهل هوية خاصة فيه" : "Your cat deserves an identity of their own"}
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            {isAr ? "هوية رسمية وملف صحي ومجتمع — ابدأ مجاناً." : "An official Cat ID, a health record and a community — start free."}
+            {isAr ? "هوية دائمة وملف صحي ومجتمع — ابدأ مجاناً." : "A permanent Cat ID, a health record and a community — start free."}
           </p>
           <Link href="/register"><Button size="lg" className="mt-5">{isAr ? "سوِّ هوية قطك" : "Create your cat's ID"}</Button></Link>
         </div>

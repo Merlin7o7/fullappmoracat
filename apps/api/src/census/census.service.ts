@@ -40,6 +40,13 @@ interface CensusSnapshot {
    */
   foundingClosed: boolean;
   /**
+   * The highest serial ever issued. ALWAYS ≥ `registered`: serials are never
+   * reused (a removed cat, a test registration, a clinic record not yet
+   * claimed all keep theirs). Published so every surface can say both numbers
+   * truthfully instead of one page showing 70 and the next "#86" (R006).
+   */
+  issuedThrough: number;
+  /**
    * The most recently registered cat that its owner chose to make public —
    * the "Cat #347 is Lulu" beat from §1, and the stand's e-paper line (§2).
    * Private cats are never named here; consent is the whole gate (R106).
@@ -96,6 +103,7 @@ export class CensusService {
       registered,
       foundingLimit: FOUNDING_MEMBER_LIMIT,
       foundingClosed: (highest._max.catNumber ?? 0) >= FOUNDING_MEMBER_LIMIT,
+      issuedThrough: highest._max.catNumber ?? 0,
       latestPublicCatName: latestPublic?.name ?? null,
       latestPublicCatNumber: latestPublic?.catNumber ?? null,
     };

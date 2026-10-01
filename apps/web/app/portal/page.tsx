@@ -238,7 +238,7 @@ export default function OverviewPage() {
           <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
           <Illo3D name="cat" className="size-32" px={128} />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-            {isAr ? "أضف قطك الأول واحصل على هويته الرسمية فوراً" : "Add your first cat and get their official Cat ID, instantly"}
+            {isAr ? "أضف قطك الأول واحصل على هويته في مرقط فوراً" : "Add your first cat and get their Moracat Cat ID, instantly"}
           </p>
           {/* Straight to the add-cat flow — never a hop through another list page (R002). */}
           <Link href="/portal/cats/new"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>

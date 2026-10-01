@@ -156,8 +156,8 @@ export function ExploreHome({ isAr, firstName }: { isAr: boolean; firstName: str
           </p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             {isAr
-              ? "هويته الرسمية باسمه ورقمه تنطبع في أقل من دقيقتين، مجاناً — ويدخل التعداد الوطني."
-              : "Their official Cat ID — their name, their own number — takes under two minutes, free, and puts them in the national count."}
+              ? "هويته باسمه ورقمه تنطبع في أقل من دقيقتين، مجاناً — ويدخل سجل مرقط."
+              : "Their Cat ID — their name, their own number — takes under two minutes, free, and puts them in the Moracat register."}
           </p>
         </div>
         <Link href="/portal/cats/new" className="shrink-0">

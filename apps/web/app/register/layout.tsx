@@ -6,20 +6,20 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Register your cat — free Cat ID · سجّل قطك",
   description:
-    "Register your cat in the Saudi Cat Census and they get an official Cat ID — free, no card needed, under two minutes. سجّل قطك في التعداد واحصل على هوية رسمية مجاناً خلال دقيقتين.",
+    "Register your cat on Moracat and they get a permanent Cat ID — free, no card needed, under two minutes. سجّل قطك في مرقط واحصل على هويته مجاناً خلال دقيقتين.",
   alternates: { canonical: "/register" },
   openGraph: {
     type: "website",
     title: "Register your cat — free Cat ID · سجّل قطك",
     description:
-      "An official Cat ID with your cat's name and their own number — free, in under two minutes.",
+      "A Cat ID with your cat's name and their own number — free, in under two minutes.",
     url: "/register",
   },
   twitter: {
     card: "summary_large_image",
     title: "Register your cat — free Cat ID · سجّل قطك",
     description:
-      "An official Cat ID with your cat's name and their own number — free, in under two minutes.",
+      "A Cat ID with your cat's name and their own number — free, in under two minutes.",
   },
 };
 

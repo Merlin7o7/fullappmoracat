@@ -123,6 +123,8 @@ export interface CensusSnapshot {
   registered: number;
   foundingLimit: number;
   foundingClosed: boolean;
+  /** Highest serial ever issued — serials are never reused, so this is ≥ registered. */
+  issuedThrough?: number;
   latestPublicCatName: string | null;
   latestPublicCatNumber: number | null;
 }

@@ -20,6 +20,7 @@
     "seed:community": "tsx prisma/seed-community.ts",
     "backfill:community-share": "tsx prisma/backfill-community-share.ts",
     "seed:catalog": "tsx prisma/seed-catalog.ts",
+    "build:seed": "tsc -p tsconfig.seed.json",
     "local": "node scripts/pg-local.mjs",
     "studio": "prisma studio",
     "typecheck": "tsc --noEmit",
