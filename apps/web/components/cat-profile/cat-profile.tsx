@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, Camera, Pencil, Share2, Syringe, Stethoscope, Cake, Sparkles, Scale, Siren, FileText,
+  ArrowLeft, Camera, Pencil, Share2, Syringe, Stethoscope, Cake, Sparkles, Siren, FileText,
 } from "lucide-react";
 import {
   Button, Card, EmptyState, IdBand, Ledger, LedgerRow, Seal, Skeleton, StatusTag, cn, type StatusTone,
@@ -19,7 +19,9 @@ import { QueryError } from "@/components/query-error";
 import { CatIdShare } from "@/components/cat-id-share";
 import { CertificateCard } from "@/components/certificate-card";
 import { CatSectionTabs } from "./section-tabs";
-import { WeightChart } from "./weight-chart";
+import { CareList, type CareTaskView } from "@/components/care/care-list";
+import { AddCareTask } from "@/components/care/add-care-task";
+import { WeightLog } from "@/components/care/weight-log";
 
 /**
  * The cat's profile — the flagship of the product (UX reassessment §3).
@@ -189,30 +191,18 @@ const STANDING: Record<HealthRecord["vaccination"]["standing"], { tone: StatusTo
   UNKNOWN: { tone: "neutral", ar: "غير مسجّلة", en: "Not recorded" },
 };
 
-type CareItem = { key: string; label: string; dueAt: string; state: "overdue" | "due" | "upcoming" };
-
 function ProfileBody({ cat, record, isAr, name }: { cat: PortalCat; record: HealthRecord; isAr: boolean; name: string }) {
   const loc = isAr ? "ar" : "en";
-  const now = Date.now();
   const standing = STANDING[record.vaccination.standing];
 
-  // Care, from what the record already knows: every vaccination with a due
-  // date that hasn't been superseded by a later dose of the same name.
-  const care: CareItem[] = React.useMemo(() => {
-    const latestByName = new Map<string, HealthRecord["vaccination"]["records"][number]>();
-    for (const v of record.vaccination.records) {
-      const prev = latestByName.get(v.name);
-      if (!prev || +new Date(v.administeredAt) > +new Date(prev.administeredAt)) latestByName.set(v.name, v);
-    }
-    return [...latestByName.values()]
-      .filter((v) => v.dueAt)
-      .map((v) => {
-        const due = +new Date(v.dueAt!);
-        const state: CareItem["state"] = due < now ? "overdue" : due - now < 30 * 86_400_000 ? "due" : "upcoming";
-        return { key: v.id, label: v.name, dueAt: v.dueAt!, state };
-      })
-      .sort((a, b) => +new Date(a.dueAt) - +new Date(b.dueAt));
-  }, [record, now]);
+  // The next open care item, from the engine (same query the care section uses).
+  const { authedFetch, user } = useAuth();
+  const careQ = useQuery({
+    queryKey: ["cat-care", cat.id],
+    queryFn: () => authedFetch<{ protocolApproved: boolean; tasks: CareTaskView[] }>(`/cats/${cat.id}/care`),
+    enabled: !!user,
+  });
+  const nextCare = careQ.data?.tasks.find((t) => t.state !== "done" && t.state !== "skipped");
 
   const weights = record.weights.length
     ? record.weights.map((w) => ({ weightKg: w.weightKg, measuredAt: w.measuredAt, source: w.source }))
@@ -225,7 +215,6 @@ function ProfileBody({ cat, record, isAr, name }: { cat: PortalCat; record: Heal
   const delta = latestW && prevW ? Math.round((latestW.weightKg - prevW.weightKg) * 10) / 10 : null;
 
   const timeline = buildTimeline(cat, record, isAr).slice(0, 6);
-  const nextCare = care[0];
 
   return (
     <div className="space-y-8">
@@ -247,7 +236,7 @@ function ProfileBody({ cat, record, isAr, name }: { cat: PortalCat; record: Heal
             />
             <LedgerRow
               label={isAr ? "الرعاية القادمة" : "Next care"}
-              value={nextCare ? nextCare.label : isAr ? "لا شيء مستحق" : "Nothing due"}
+              value={nextCare ? (isAr ? nextCare.title.ar : nextCare.title.en) : isAr ? "لا شيء مستحق" : "Nothing due"}
               hint={
                 nextCare
                   ? nextCare.state === "overdue"
@@ -281,65 +270,15 @@ function ProfileBody({ cat, record, isAr, name }: { cat: PortalCat; record: Heal
 
       {/* ── 3 · What needs doing ──────────────────────────────────────────── */}
       <section aria-labelledby="care-title" className="space-y-3">
-        <SectionTitle
-          id="care-title"
-          title={isAr ? "الرعاية" : "Care"}
-          action={
-            <Link href={`/portal/cats/${cat.id}/health`} className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
-              {isAr ? "سجّل تطعيماً" : "Record a vaccine"}
-            </Link>
-          }
-        />
-        {care.length === 0 ? (
-          <Card>
-            <EmptyState
-              art={<Syringe className="size-6 text-muted-foreground" aria-hidden />}
-              title={isAr ? "ما فيه مواعيد مسجّلة بعد" : "No care dates yet"}
-              body={
-                isAr
-                  ? `سجّل آخر تطعيم لـ${name} من دفتره، ونذكّرك قبل الجرعة التالية.`
-                  : `Record ${name}'s last vaccine from their booklet and we'll remind you before the next dose.`
-              }
-            />
-          </Card>
-        ) : (
-          <Card className="divide-y divide-border">
-            {care.slice(0, 5).map((c) => (
-              <div key={c.key} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{c.label}</p>
-                  <p className="text-sm text-muted-foreground">{formatDate(c.dueAt, loc, "medium")}</p>
-                </div>
-                <StatusTag tone={c.state === "overdue" ? "critical" : c.state === "due" ? "attention" : "neutral"}>
-                  {c.state === "overdue"
-                    ? isAr ? "متأخر" : "Overdue"
-                    : c.state === "due"
-                      ? isAr ? "قريب" : "Due soon"
-                      : formatRelative(c.dueAt, loc)}
-                </StatusTag>
-              </div>
-            ))}
-          </Card>
-        )}
+        <SectionTitle id="care-title" title={isAr ? "الرعاية" : "Care"} action={<AddCareTask catId={cat.id} isAr={isAr} invalidate={[["cat-care", cat.id], ["care-agenda"]]} />} />
+        <CatCare catId={cat.id} isAr={isAr} name={name} />
       </section>
 
       {/* ── 4 · How they're doing ─────────────────────────────────────────── */}
-      <section aria-labelledby="weight-title" className="space-y-3">
+      <section id="weight" aria-labelledby="weight-title" className="scroll-mt-20 space-y-3">
         <SectionTitle id="weight-title" title={isAr ? "الوزن" : "Weight"} />
         <Card className="p-5">
-          {sortedW.length >= 2 ? (
-            <WeightChart points={sortedW} isAr={isAr} />
-          ) : (
-            <EmptyState
-              art={<Scale className="size-6 text-muted-foreground" aria-hidden />}
-              title={latestW ? formatWeight(latestW.weightKg, loc)! : isAr ? "لا قياسات بعد" : "No weigh-ins yet"}
-              body={
-                isAr
-                  ? "يظهر منحنى الوزن من القياس الثاني — وزن العيادة يُضاف تلقائياً."
-                  : "The trend appears from the second weigh-in — clinic weights are added automatically."
-              }
-            />
-          )}
+          <WeightLog catId={cat.id} isAr={isAr} />
         </Card>
       </section>
 
@@ -444,3 +383,33 @@ function buildTimeline(cat: PortalCat, record: HealthRecord, isAr: boolean): Tim
   return ev.sort((a, b) => +new Date(b.at) - +new Date(a.at));
 }
 
+/** The cat's care, from the engine: open items first, recently done below. */
+function CatCare({ catId, isAr, name }: { catId: string; isAr: boolean; name: string }) {
+  const { authedFetch, user } = useAuth();
+  const q = useQuery({
+    queryKey: ["cat-care", catId],
+    queryFn: () => authedFetch<{ protocolApproved: boolean; tasks: CareTaskView[] }>(`/cats/${catId}/care`),
+    enabled: !!user,
+  });
+  if (q.isLoading) return <Skeleton className="h-32 w-full rounded-2xl" />;
+  if (q.isError) return <QueryError isAr={isAr} onRetry={() => q.refetch()} retrying={q.isFetching} />;
+  const tasks = q.data?.tasks ?? [];
+  const open = tasks.filter((t) => t.state !== "done" && t.state !== "skipped");
+  const closed = tasks.filter((t) => t.state === "done" || t.state === "skipped").slice(0, 3);
+  if (!tasks.length) {
+    return (
+      <Card>
+        <EmptyState
+          art={<Syringe className="size-6 text-muted-foreground" aria-hidden />}
+          title={isAr ? "ما فيه مواعيد بعد" : "No care dates yet"}
+          body={isAr ? `سجّل آخر تطعيم لـ${name} من دفتره، ونذكّرك قبل الجرعة التالية.` : `Record ${name}'s last vaccine from their booklet and we'll remind you before the next dose.`}
+        />
+      </Card>
+    );
+  }
+  return (
+    <Card className="overflow-hidden">
+      <CareList tasks={[...open, ...closed]} isAr={isAr} invalidate={[["cat-care", catId], ["care-agenda"]]} />
+    </Card>
+  );
+}

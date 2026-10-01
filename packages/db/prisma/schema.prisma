@@ -910,6 +910,7 @@ model Cat {
   clinicalEntries   ClinicalEntry[]
   prescriptions     Prescription[]
   weightRecords     CatWeightRecord[]
+  careTasks         CareTask[]
   consentGrants     ConsentGrant[]
   recordAccessLogs  RecordAccessLog[]
   emergencyContacts CatEmergencyContact[]
@@ -3324,6 +3325,10 @@ model CatWeightRecord {
   measuredAt DateTime @default(now())
   source     String   @default("clinic") // clinic | owner
   createdAt  DateTime @default(now())
+  /// Owner entries can be corrected or removed (a mistyped 42 kg); clinic
+  /// rows are part of the medical record and are never deleted here. A
+  /// removed owner entry is soft-deleted so the trend stays explainable.
+  deletedAt  DateTime?
 
   cat   Cat            @relation(fields: [catId], references: [id], onDelete: Restrict)
   entry ClinicalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
@@ -3747,4 +3752,37 @@ model LostFoundMessage {
 
   @@index([postId, createdAt])
   @@map("lost_found_messages")
+}
+
+/// One thing a cat needs, on a date (retention engine, W9). Generated from the
+/// record by packages/core care-schedule.ts (recorded due dates + routine
+/// cadence; a kitten series only with a vet-approved protocol), or added by
+/// the owner. Upcoming / due / overdue are DERIVED from dueAt; only the
+/// owner's decisions (done, skipped) are stored.
+model CareTask {
+  id                  String    @id @default(cuid())
+  catId               String
+  /// VACCINE | CHECKUP | WEIGH_IN | DEWORM | FLEA | DENTAL | CUSTOM
+  kind                String
+  /// Stable identity within the cat — the idempotent upsert key.
+  seriesKey           String
+  titleAr             String
+  titleEn             String
+  dueAt               DateTime
+  /// OPEN | DONE | SKIPPED
+  status              String    @default("OPEN")
+  /// GENERATED | VET | OWNER
+  source              String    @default("GENERATED")
+  /// From an advisory protocol — shown as «مقترح — راجع طبيبك».
+  proposed            Boolean   @default(false)
+  linkedVaccinationId String?
+  completedAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  cat Cat @relation(fields: [catId], references: [id], onDelete: Cascade)
+
+  @@unique([catId, seriesKey])
+  @@index([dueAt, status])
+  @@map("care_tasks")
 }

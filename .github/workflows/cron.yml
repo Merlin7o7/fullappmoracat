@@ -1,0 +1,43 @@
+# The external wake-up for scheduled jobs (W9 "reliable cron").
+#
+# Render's free plan sleeps the API when idle, and the in-process @Cron jobs
+# (vaccination reminders, care nudges, the weekly digest, monthly boxes) sleep
+# with it. Every 30 minutes this calls POST /api/jobs/tick, which wakes the
+# instance and runs whatever is due. Jobs are leased and side effects are
+# de-duplicated server-side, so an extra tick is always harmless.
+#
+# Repository secrets required (Settings → Secrets → Actions):
+#   MORACAT_API_URL  e.g. https://api.moracat.co   (no trailing slash)
+#   CRON_SECRET      the same value as CRON_SECRET on Render (≥ 24 chars)
+# Without them the job exits quietly — it never fails the repo's checks.
+name: cron-tick
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wake the API and run due jobs
+        env:
+          API: ${{ secrets.MORACAT_API_URL }}
+          SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$API" ] || [ -z "$SECRET" ]; then
+            echo "MORACAT_API_URL / CRON_SECRET not configured — skipping."
+            exit 0
+          fi
+          # A cold start can take ~60 s on the free plan; retry once.
+          for attempt in 1 2; do
+            code=$(curl -s -o /tmp/out -w "%{http_code}" --max-time 120 -X POST "$API/api/jobs/tick" -H "x-cron-secret: $SECRET")
+            echo "attempt $attempt → HTTP $code: $(cat /tmp/out)"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          exit 1

@@ -2,65 +2,41 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useQueries } from "@tanstack/react-query";
-import { ShieldCheck, Repeat, Package, ArrowLeft, Syringe } from "lucide-react";
-import { Card, EmptyState, Skeleton, StatusTag } from "@moraqat/ui";
-import { formatDate, formatRelative } from "@moraqat/core";
+import { useQuery } from "@tanstack/react-query";
+import { ShieldCheck, Repeat, Package, ChevronDown } from "lucide-react";
+import { Card, EmptyState, Skeleton } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
 import { commerceEnabled } from "@/lib/features";
-import { localizeName } from "@/lib/translit";
-import type { HealthRecord } from "@/components/cat-health-record";
+import { QueryError } from "@/components/query-error";
 import { Illo3D } from "@/components/illo-3d";
 import { HubLink } from "@/components/hub-link";
-
-type Item = { key: string; catId: string; catName: string; label: string; dueAt: string; state: "overdue" | "due" | "upcoming" };
+import { CareList, type CareTaskView } from "@/components/care/care-list";
 
 /**
- * «العناية» — what needs doing, for every cat, in one list.
+ * «العناية» — what needs doing, for every cat, in one list (the care engine).
  *
  * The question a member opens this to answer is "is anything due?" — so the
- * page leads with the answer (overdue first, then the next 30 days), and keeps
- * the rest (clinic access, the membership box) as quiet doors underneath.
+ * page leads with the answer: overdue and this week first, then what's next,
+ * and keeps the rest (clinic access, the membership box) as quiet doors below.
  */
 export default function CarePage() {
   const { authedFetch, user } = useAuth();
   const { locale } = useLocale();
   const isAr = locale === "ar";
-  const loc = isAr ? "ar" : "en";
   const { activeCats, isLoading: catsLoading } = useCats();
-
-  const results = useQueries({
-    queries: activeCats.map((c) => ({
-      queryKey: ["cat-health", c.id],
-      queryFn: () => authedFetch<HealthRecord>(`/cats/${c.id}/health`),
-      enabled: !!user,
-    })),
+  const q = useQuery({
+    queryKey: ["care-agenda"],
+    queryFn: () => authedFetch<{ protocolApproved: boolean; tasks: CareTaskView[] }>("/care"),
+    enabled: !!user,
   });
-  const loading = catsLoading || results.some((r) => r.isLoading);
 
-  const now = Date.now();
-  const items: Item[] = [];
-  results.forEach((r, i) => {
-    const cat = activeCats[i];
-    if (!r.data || !cat) return;
-    const latest = new Map<string, HealthRecord["vaccination"]["records"][number]>();
-    for (const v of r.data.vaccination.records) {
-      const prev = latest.get(v.name);
-      if (!prev || +new Date(v.administeredAt) > +new Date(prev.administeredAt)) latest.set(v.name, v);
-    }
-    for (const v of latest.values()) {
-      if (!v.dueAt) continue;
-      const due = +new Date(v.dueAt);
-      const state: Item["state"] = due < now ? "overdue" : due - now < 30 * 86_400_000 ? "due" : "upcoming";
-      items.push({ key: v.id, catId: cat.id, catName: localizeName(cat.name, loc), label: v.name, dueAt: v.dueAt, state });
-    }
-  });
-  items.sort((a, b) => +new Date(a.dueAt) - +new Date(b.dueAt));
-  const now30 = items.filter((i) => i.state !== "upcoming");
-  const later = items.filter((i) => i.state === "upcoming").slice(0, 6);
+  const tasks = q.data?.tasks ?? [];
+  const now = tasks.filter((t) => t.state === "overdue" || t.state === "due");
+  const later = tasks.filter((t) => t.state === "upcoming");
   const commerce = commerceEnabled();
+  const multi = activeCats.length > 1;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -72,9 +48,11 @@ export default function CarePage() {
       </header>
 
       <section aria-labelledby="now" className="space-y-3">
-        <h2 id="now" className="font-display text-2xl">{isAr ? "الآن والأسابيع القادمة" : "Now and the coming weeks"}</h2>
-        {loading ? (
+        <h2 id="now" className="font-display text-2xl">{isAr ? "هذا الأسبوع" : "This week"}</h2>
+        {catsLoading || q.isLoading ? (
           <Skeleton className="h-40 w-full rounded-2xl" />
+        ) : q.isError ? (
+          <QueryError isAr={isAr} onRetry={() => q.refetch()} retrying={q.isFetching} />
         ) : activeCats.length === 0 ? (
           <Card>
             <EmptyState
@@ -87,37 +65,37 @@ export default function CarePage() {
               }
             />
           </Card>
-        ) : now30.length === 0 ? (
+        ) : now.length === 0 ? (
           <Card>
             <EmptyState
               art={<Illo3D name="heart" className="size-28" px={112} />}
-              title={isAr ? "ما فيه شيء مستحق" : "Nothing is due"}
-              body={
-                items.length
-                  ? isAr ? "كل التطعيمات المسجّلة في وقتها. نذكّرك قبل الموعد القادم." : "Every recorded vaccine is on time. We'll remind you before the next one."
-                  : isAr ? "سجّل آخر تطعيم من دفتر قطك، ونتابع المواعيد عنك." : "Record the last vaccine from your cat's booklet and we'll keep track of the dates."
-              }
+              title={isAr ? "ما فيه شيء مستحق هالأسبوع" : "Nothing is due this week"}
+              body={isAr ? "نذكّرك قبل أي موعد قادم." : "We'll remind you before anything that's coming up."}
             />
           </Card>
         ) : (
-          <Card className="divide-y divide-border">
-            {now30.map((i) => (
-              <CareRow key={i.key} item={i} isAr={isAr} />
-            ))}
+          <Card className="overflow-hidden">
+            <CareList tasks={now} isAr={isAr} showCat={multi} invalidate={[["care-agenda"]]} />
           </Card>
         )}
+
         {later.length > 0 && (
-          <details className="group rounded-2xl border border-border bg-card">
+          <details className="group overflow-hidden rounded-2xl border border-border bg-card">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 text-sm font-medium">
               {isAr ? `لاحقاً (${later.length})` : `Later (${later.length})`}
-              <ArrowLeft className="size-4 -rotate-90 transition-transform group-open:rotate-90" aria-hidden />
+              <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
             </summary>
-            <div className="divide-y divide-border border-t border-border">
-              {later.map((i) => (
-                <CareRow key={i.key} item={i} isAr={isAr} />
-              ))}
+            <div className="border-t border-border">
+              <CareList tasks={later} isAr={isAr} showCat={multi} invalidate={[["care-agenda"]]} />
             </div>
           </details>
+        )}
+        {q.data && !q.data.protocolApproved && (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "مواعيد التطعيم هنا من سجل قطك فقط — ما نقترح جدولاً طبياً قبل أن يعتمده طبيب بيطري."
+              : "Vaccine dates here come only from your cat's record — we don't suggest a medical schedule until a veterinarian has signed it off."}
+          </p>
         )}
       </section>
 
@@ -139,27 +117,5 @@ export default function CarePage() {
         </div>
       </section>
     </div>
-  );
-}
-
-function CareRow({ item, isAr }: { item: Item; isAr: boolean }) {
-  const loc = isAr ? "ar" : "en";
-  return (
-    <Link href={`/portal/cats/${item.catId}/health`} className="flex items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-muted/50">
-      <span className="flex min-w-0 items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
-          <Syringe className="size-4" aria-hidden />
-        </span>
-        <span className="min-w-0">
-          <span className="block truncate font-medium">{item.label}</span>
-          <span className="block truncate text-sm text-muted-foreground">
-            {item.catName} · {formatDate(item.dueAt, loc, "medium")}
-          </span>
-        </span>
-      </span>
-      <StatusTag tone={item.state === "overdue" ? "critical" : item.state === "due" ? "attention" : "neutral"}>
-        {item.state === "overdue" ? (isAr ? "متأخر" : "Overdue") : formatRelative(item.dueAt, loc)}
-      </StatusTag>
-    </Link>
   );
 }

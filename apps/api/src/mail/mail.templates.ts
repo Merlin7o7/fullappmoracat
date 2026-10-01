@@ -970,3 +970,30 @@ export function lostFoundMessageTemplate(
     text: toText(heading, [i.senderPhone ? `${i.senderName ?? ""} ${i.senderPhone}`.trim() : i.senderName ?? ""], cta, [i.message]),
   };
 }
+
+/**
+ * «هذا الأسبوع مع قططك» — the weekly care digest (retention, W9). Sent only
+ * when there is something to say (a due or overdue item, or a weight change),
+ * so it earns its place in the inbox. Every cat- or task-name is escaped:
+ * they are typed by members.
+ */
+export function weeklyDigestTemplate(
+  locale: Locale,
+  name: string | null,
+  cats: { name: string; lines: string[] }[],
+  url: string
+): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = ar ? "هذا الأسبوع مع قططك" : "This week with your cats";
+  const body = [
+    hiName(ar, name),
+    ar ? "هذا ما يحتاجه كل قط في بيتك هالأسبوع — بدون زحمة:" : "Here's what each cat in your home needs this week — nothing more:",
+  ];
+  const rows: [string, string][] = cats.flatMap((c) => c.lines.map((l, i) => [i === 0 ? esc(c.name) : "", esc(l)] as [string, string]));
+  const cta = { label: ar ? "افتح العناية" : "Open Care", url };
+  return {
+    subject: ar ? "هذا الأسبوع مع قططك — مرقط" : "This week with your cats — Moracat",
+    html: layout({ locale, preheader: heading, heading, body, extra: summary(rows, ar), cta }),
+    text: toText(heading, body, cta, cats.flatMap((c) => [c.name, ...c.lines.map((l) => `• ${l}`)])),
+  };
+}

@@ -62,3 +62,7 @@ export * from "./renewal-policy";
 // One formatter for numbers, money, dates, ages and weights — Western digits,
 // Gregorian by default, real Arabic plural grammar (R110).
 export * from "./format";
+
+// The care schedule — recorded due dates, routine cadence, and (only with a
+// vet-approved protocol) proposed kitten doses (retention engine, W9).
+export * from "./care-schedule";

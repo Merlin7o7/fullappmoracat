@@ -925,7 +925,7 @@ export class VetRecordsService {
 
     // Only move the cat's headline weight if this is the most recent measurement.
     const newer = await tx.catWeightRecord.count({
-      where: { catId: entry.catId, measuredAt: { gt: entry.occurredAt } },
+      where: { catId: entry.catId, measuredAt: { gt: entry.occurredAt }, deletedAt: null },
     });
     if (newer === 0) {
       await tx.cat.update({ where: { id: entry.catId }, data: { weightKg: p.weightKg } });

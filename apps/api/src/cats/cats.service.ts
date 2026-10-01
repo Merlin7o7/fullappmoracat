@@ -735,7 +735,7 @@ export class CatsService implements OnModuleInit {
         healthConds: { select: { name: true } },
         emergencyContacts: { orderBy: { isPrimary: "desc" }, take: 1, select: { name: true, phone: true, relation: true } },
         vaccinations: { orderBy: { administeredAt: "desc" } },
-        weightRecords: { orderBy: { measuredAt: "asc" }, select: { id: true, weightKg: true, bcs: true, measuredAt: true, source: true } },
+        weightRecords: { where: { deletedAt: null }, orderBy: { measuredAt: "asc" }, select: { id: true, weightKg: true, bcs: true, measuredAt: true, source: true } },
         prescriptions: {
           orderBy: { issuedAt: "desc" },
           take: 50,

@@ -54,7 +54,12 @@ export type NotificationType =
   // requested). Written to staff accounts so it is never only an email.
   | "partner_needs_review"
   // A prepaid box (2…N of a term) is being packed.
-  | "box_scheduled";
+  | "box_scheduled"
+  // The care engine (W9): a routine/owner task is due, anything overdue, and
+  // the weekly digest's in-app twin.
+  | "care_due"
+  | "care_overdue"
+  | "weekly_digest";
 
 export type NotificationParams = Record<string, string | number>;
 
@@ -401,6 +406,21 @@ export function buildNotificationText(
     // Every line here is about a cat moving between people. The voice stays
     // warm and factual: a hand-over is not a transaction to congratulate, and
     // a lost cat is not a moment for exclamation marks (R081, R087).
+    case "care_due":
+      return {
+        ar: { title: `${p(params, "task")} — ${p(params, "name")}`, body: `موعده ${p(params, "dueAt")}. علّمه «تم» بعد ما تخلّصه، أو أجّله.` },
+        en: { title: `${p(params, "task")} — ${p(params, "name")}`, body: `Due ${p(params, "dueAt")}. Mark it done when it's done, or move it.` },
+      };
+    case "care_overdue":
+      return {
+        ar: { title: `فات موعد ${p(params, "task")} لـ${p(params, "name")}`, body: `كان موعده ${p(params, "dueAt")}. لو تم، سجّله — ولو لا، هذا تذكير لطيف.` },
+        en: { title: `${p(params, "name")}'s ${p(params, "task")} is overdue`, body: `It was due ${p(params, "dueAt")}. If it's done, record it — if not, this is a gentle nudge.` },
+      };
+    case "weekly_digest":
+      return {
+        ar: { title: "هذا الأسبوع مع قططك", body: p(params, "summaryAr") },
+        en: { title: "This week with your cats", body: p(params, "summaryEn") },
+      };
     case "box_scheduled":
       return {
         ar: {

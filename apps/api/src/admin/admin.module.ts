@@ -1,3 +1,4 @@
+import { CareModule } from "../care/care.module";
 import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 import { AdminReadinessService } from "./readiness.service";
 import { Module } from "@nestjs/common";
@@ -25,7 +26,7 @@ import { AdminStaffService } from "./staff.service";
 import { CmsService } from "./cms.service";
 
 @Module({
-  imports: [CatsModule, LifecycleModule, SubscriptionsModule],
+  imports: [CatsModule, LifecycleModule, SubscriptionsModule, CareModule],
   controllers: [AdminController, CmsController, AdminCommunityController, AdminStaffController, AdminVetDemoController, AdminListingsController, FeatureFlagsController],
   providers: [
     AdminAnalyticsService,

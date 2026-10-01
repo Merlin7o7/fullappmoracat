@@ -41,6 +41,8 @@ import { CommunityModule } from "./community/community.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { WalletModule } from "./wallet/wallet.module";
 import { LifecycleModule } from "./lifecycle/lifecycle.module";
+import { CareModule } from "./care/care.module";
+import { JobsModule } from "./jobs/jobs.module";
 import { VetModule } from "./vet/vet.module";
 import { EventsModule } from "./events/events.module";
 import { FilesModule } from "./files/files.module";
@@ -133,6 +135,8 @@ import { LostFoundModule } from "./lost-found/lost-found.module";
     WaitlistModule,
     CensusModule,
     LifecycleModule,
+    CareModule,
+    JobsModule,
     VetModule,
     // The owner side of clinic-created patients: /claim/:token (T4).
     ClaimsModule,

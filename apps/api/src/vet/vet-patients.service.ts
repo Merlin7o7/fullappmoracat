@@ -966,7 +966,7 @@ export class VetPatientsService {
         take: 40,
       }),
       this.prisma.catWeightRecord.findMany({
-        where: { catId },
+        where: { catId, deletedAt: null },
         select: { id: true, weightKg: true, bcs: true, measuredAt: true, source: true },
         orderBy: { measuredAt: "desc" },
         take: 12,
@@ -1343,7 +1343,7 @@ export class VetPatientsService {
     since.setMonth(since.getMonth() - months);
 
     const series = await this.prisma.catWeightRecord.findMany({
-      where: { catId, measuredAt: { gte: since } },
+      where: { catId, measuredAt: { gte: since }, deletedAt: null },
       select: { id: true, weightKg: true, bcs: true, measuredAt: true, source: true },
       orderBy: { measuredAt: "asc" },
       take: 500,

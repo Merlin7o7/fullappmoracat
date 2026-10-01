@@ -6,6 +6,7 @@ import { AdminMetricsService } from "./metrics.service";
 import { AdminCatsService } from "./admin-cats.service";
 import { LifecycleService } from "../lifecycle/lifecycle.service";
 import { FulfilmentService } from "../subscriptions/fulfilment.service";
+import { CareJobsService } from "../care/care-jobs.service";
 import { AdminAuditService } from "./audit.service";
 import { AdminCustomersService } from "./customers.service";
 import { AdminOrdersService } from "./admin-orders.service";
@@ -35,7 +36,8 @@ export class AdminController {
     private readonly metrics_: AdminMetricsService,
     private readonly adminCats: AdminCatsService,
     private readonly lifecycle: LifecycleService,
-    private readonly fulfilment: FulfilmentService
+    private readonly fulfilment: FulfilmentService,
+    private readonly careJobs: CareJobsService
   ) {}
 
   // ── Me ────────────────────────────────────────────────────────────────
@@ -100,8 +102,14 @@ export class AdminController {
   // lease as the cron, so a manual run can never double up with a live tick.
   @Post("jobs/:name/run")
   @RequirePermissions("settings.write")
-  @ApiOperation({ summary: "Run a scheduled job now: lifecycle | metrics | fulfilment" })
+  @ApiOperation({ summary: "Run a scheduled job now: lifecycle | metrics | fulfilment | care | digest" })
   async runJob(@Param("name") name: string, @Body() body?: { asOf?: string }) {
+    if (name === "care") {
+      return { ran: "care", ...(await this.careJobs.run()).result };
+    }
+    if (name === "digest") {
+      return { ran: "digest", ...(await this.careJobs.digestPass()) };
+    }
     if (name === "fulfilment") {
       // `asOf` lets the e2e suite stand a month in the future. Never honoured
       // in production — there the job only ever runs against the real clock.

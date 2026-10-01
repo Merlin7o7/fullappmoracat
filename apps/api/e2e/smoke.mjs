@@ -315,6 +315,52 @@ console.log("━━ private health documents + launch readiness (Wave 1) ━━"
   ok(bad.status === 400, "non-PDF/JPEG/PNG bytes are refused whatever the name says");
   ok((await call(`/cats/${cat.id}/documents/${doc.id}`, "DELETE", undefined, C)).status === 200, "the owner removes the document");
 
+  console.log("━━ care engine + weight log (Wave 5) ━━");
+  {
+    const day = 86_400_000;
+    const iso = (d) => new Date(Date.now() + d * day).toISOString().slice(0, 10);
+    await call(`/cats/${cat.id}/vaccinations`, "POST", { name: "Care-e2e FVRCP", administeredAt: iso(-360), dueAt: iso(-3) }, C);
+    const care = (await call(`/cats/${cat.id}/care`, "GET", undefined, C)).json;
+    const kinds = new Set((care.tasks ?? []).map((t) => t.kind));
+    ok(kinds.has("WEIGH_IN") && kinds.has("CHECKUP") && kinds.has("VACCINE"), "care schedule: recorded vaccine + routine weigh-in + yearly check-up");
+    ok(care.protocolApproved === false && care.tasks.every((t) => !t.proposed), "no proposed medical schedule without a vet-approved protocol");
+    const vax = care.tasks.find((t) => t.kind === "VACCINE" && t.title.en === "Care-e2e FVRCP");
+    ok(vax?.state === "overdue", "a past due date reads as overdue (derived, not stored)");
+    ok((await call(`/care/${vax.id}/status`, "POST", { status: "SKIPPED" }, C)).status === 400, "a recorded vaccine can't be ticked away as skipped");
+    const again = (await call(`/cats/${cat.id}/care`, "GET", undefined, C)).json;
+    ok(again.tasks.length === care.tasks.length, "re-sync is idempotent (no duplicate tasks)");
+
+    const weighOpen = care.tasks.find((t) => t.kind === "WEIGH_IN" && t.state !== "done");
+    const w = await call(`/cats/${cat.id}/weights`, "POST", { weightKg: 4.6, measuredAt: iso(0) }, C);
+    ok(w.status === 201 && w.json?.source === "owner", "owner logs a weight");
+    const afterW = (await call(`/cats/${cat.id}/care`, "GET", undefined, C)).json;
+    ok(afterW.tasks.some((t) => t.id === weighOpen.id && t.state === "done"), "logging a weight completes the open weigh-in");
+    ok(afterW.tasks.some((t) => t.kind === "WEIGH_IN" && t.state !== "done" && t.id !== weighOpen.id), "…and schedules the next one");
+    ok((await call(`/cats/${cat.id}/weights`, "POST", { weightKg: 42 }, C)).status === 400, "an impossible weight (42 kg) is refused");
+    const edited = await call(`/cats/${cat.id}/weights/${w.json.id}`, "PATCH", { weightKg: 4.5 }, C);
+    ok(edited.status === 200 && edited.json.weightKg === 4.5, "owner corrects their own entry");
+    ok((await call(`/cats/${cat.id}`, "GET", undefined, C)).json.weightKg === 4.5, "the headline weight follows the latest entry");
+    const stranger = (await call("/auth/register", "POST", { email: `stranger+${rnd()}@e.com`, password: "S3cure!pass", firstName: "Stranger", acceptTerms: true })).json;
+    ok((await call(`/cats/${cat.id}/weights/${w.json.id}`, "DELETE", undefined, stranger.accessToken)).status === 404, "another member can't touch the weight log");
+    ok((await call(`/cats/${cat.id}/weights/${w.json.id}`, "DELETE", undefined, C)).status === 200, "owner removes an entry");
+    ok(!(await call(`/cats/${cat.id}/weights`, "GET", undefined, C)).json.some((r) => r.id === w.json.id), "a removed entry leaves the log");
+
+    const own = await call(`/cats/${cat.id}/care`, "POST", { title: "Deworming", dueAt: iso(5), kind: "DEWORM" }, C);
+    ok(own.status === 201 && own.json?.source === "OWNER" && own.json.state === "due", "owner adds their own reminder");
+    ok((await call(`/care/${own.json.id}/status`, "POST", { status: "DONE" }, C)).json?.state === "done", "…and marks it done");
+    const agenda = (await call("/care", "GET", undefined, C)).json;
+    ok(Array.isArray(agenda.tasks) && agenda.tasks.every((t) => t.state !== "done") && agenda.tasks.some((t) => t.cat?.id === cat.id), "the agenda lists open tasks across the member's cats");
+    ok((await call(`/care/${own.json.id}`, "DELETE", undefined, C)).status === 200, "owner removes their own reminder");
+    ok((await call(`/care/${vax.id}`, "DELETE", undefined, C)).status === 403, "generated tasks can't be deleted (only decided)");
+
+    const run = await call("/admin/jobs/care/run", "POST", {}, A);
+    ok(run.status === 201 || run.status === 200, "care job runs on demand (leased)");
+    const dig = await call("/admin/jobs/digest/run", "POST", {}, A);
+    ok(typeof dig.json?.sent === "number", "weekly digest runs and reports what it sent");
+    ok((await call("/jobs/tick", "POST", {})).status === 401, "the wake-up tick refuses a missing secret");
+    ok((await call("/jobs/tick", "POST", {}, undefined, { "x-cron-secret": "nope" })).status === 401, "…and a wrong one");
+  }
+
   const ready = await call("/admin/readiness", "GET", undefined, A);
   ok(ready.status === 200 && Array.isArray(ready.json?.checks) && ready.json.checks.some((c) => c.key === "clinic_terms" && c.owner === "counsel"),
     "admin readiness lists ops gaps and pending professional sign-offs");
