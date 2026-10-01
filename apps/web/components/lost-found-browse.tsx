@@ -4,13 +4,12 @@ import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import Link from "next/link";
 import { useInfiniteQuery, useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Search, MapPin, Loader2, ShieldCheck, Clock, Home } from "lucide-react";
+import { Search, MapPin, Loader2, ShieldCheck, Clock, Home, Cat } from "lucide-react";
 import { Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { useAuth } from "@/lib/auth";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloEmpty } from "@/components/illo-panel";
-import { Illo3D } from "@/components/illo-3d";
 import { localizeName } from "@/lib/translit";
 import { relativeTime } from "@/lib/datetime";
 import {
@@ -321,7 +320,7 @@ function LostFoundTile({ post, isAr }: { post: LostFoundCard; isAr: boolean }) {
             className="size-full object-cover"
             fallback={
               <span className="grid size-full place-items-center bg-cream/60">
-                <Illo3D name="cat" className="size-16" px={64} shadow={false} />
+                <Cat className="size-10 text-muted-foreground/60" aria-hidden />
               </span>
             }
           />

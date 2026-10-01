@@ -75,7 +75,7 @@ export function YearKeepsake({ cat, year, isAr }: { cat: PortalCat; year: number
         <IdBand
           kind={isAr ? "الكتاب السنوي" : "The yearbook"}
           serial={d.cat.catIdNumber}
-          seal={<Seal label={isAr ? "من سجل مرقط" : "From the Moracat register"} />}
+          seal={<Seal className="animate-stamp" label={isAr ? "من سجل مرقط" : "From the Moracat register"} />}
         />
         <div className="grid gap-6 p-6 sm:grid-cols-[1fr_auto] sm:items-end sm:p-8">
           <div>

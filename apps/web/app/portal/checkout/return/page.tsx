@@ -188,7 +188,7 @@ function ReturnInner() {
           <motion.span
             initial={{ scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 18 }}
+            transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
             className="mx-auto grid size-16 place-items-center rounded-full bg-success/15 text-success"
           >
             <CheckCircle2 className="size-8" />
@@ -212,7 +212,7 @@ function ReturnInner() {
             <motion.div
               initial={{ y: 16, opacity: 0, scale: 0.98 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 22 }}
+              transition={{ delay: 0.15, duration: 0.32, ease: [0.2, 0, 0, 1] }}
               className="mx-auto mt-6 w-[min(24rem,100%)]"
             >
               <CatIdCard

@@ -65,8 +65,8 @@ export function SiteFooter() {
         <div className="animate-marquee flex w-max items-end gap-[46vw] pt-3 [animation-duration:52s]">
           {[0, 1].map((i) => (
             <div key={i} className="flex items-end gap-14">
-              <IlloMouse tone="peach" className="h-7 w-auto animate-bob" />
-              <IlloCat tone="orange" className="h-11 w-auto animate-bob [animation-delay:0.15s]" />
+              <IlloMouse tone="peach" className="h-7 w-auto" />
+              <IlloCat tone="orange" className="h-11 w-auto" />
             </div>
           ))}
         </div>

@@ -24,7 +24,7 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
   React.useEffect(() => {
     const onOpen = () => {
       setOpen(true);
-      requestAnimationFrame(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
+      requestAnimationFrame(() => ref.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }));
     };
     window.addEventListener("moracat:open-found-form", onOpen);
     return () => window.removeEventListener("moracat:open-found-form", onOpen);

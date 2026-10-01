@@ -4,13 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Home, Loader2, MapPin, MessageCircle, Search, XCircle } from "lucide-react";
+import { ArrowRight, Home, Loader2, MapPin, MessageCircle, Search, XCircle, Cat } from "lucide-react";
 import { Badge, Button, Card, Skeleton, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloEmpty, IlloHeader } from "@/components/illo-panel";
-import { Illo3D } from "@/components/illo-3d";
 import { LostFoundForm } from "@/components/lost-found-form";
 import { LostFoundShare } from "@/components/lost-found-share";
 import { QueryError } from "@/components/query-error";
@@ -221,7 +220,7 @@ function NoticeRow({
             className="size-16 rounded-xl object-cover"
             fallback={
               <span className="grid size-16 place-items-center rounded-xl bg-cream/60">
-                <Illo3D name="cat" className="size-12" px={64} shadow={false} />
+                <Cat className="size-7 text-muted-foreground/60" aria-hidden />
               </span>
             }
           />

@@ -132,6 +132,7 @@ const preset: Partial<Config> = {
       transitionTimingFunction: {
         out: "var(--ease-out)",
         spring: "var(--ease-spring)",
+        stamp: "var(--ease-stamp)",
       },
       backdropBlur: { xs: "2px" },
       keyframes: {
@@ -142,6 +143,11 @@ const preset: Partial<Config> = {
         "fade-in": {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
+        },
+        // The register's one celebratory gesture: a seal pressed onto paper.
+        stamp: {
+          "0%": { opacity: "0", transform: "scale(1.06)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
         "scale-in": {
           "0%": { opacity: "0", transform: "scale(0.96)" },
@@ -194,6 +200,7 @@ const preset: Partial<Config> = {
         "marquee-rtl": "marquee-rtl 36s linear infinite",
         wiggle: "wiggle 2.6s ease-in-out infinite",
         bob: "bob 1.1s ease-in-out infinite",
+        stamp: "stamp 0.32s var(--ease-stamp) both",
       },
     },
   },

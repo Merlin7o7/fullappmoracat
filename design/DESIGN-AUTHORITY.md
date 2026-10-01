@@ -213,6 +213,8 @@ Warm, plain, never salesy (R081). Use the cat's name in copy everywhere possible
 Fixed lexicon: **member**, **Cat ID**, **benefit** — never drift (R087). Errors say
 what happened + exactly what to do next, never blame the member (R084, R113).
 Loading states have purpose: "Issuing your Cat ID…" (R119).
+Placement map, commission list and the photography brief: `design/brand-assets.md`
+and `design/photography.md`.
 
 ## Motion
 
@@ -220,6 +222,15 @@ Acknowledge taps ≤100ms (R071). Transitions 150–300ms (R072). Richest animat
 reserved for the Cat ID reveal (R073). Motion explains, never impresses (R074).
 Always honour `prefers-reduced-motion` (R075). Real pressed/loading/done button
 states (R078). Restraint (R080).
+
+**AD 2.1 — stamped, not bouncy (2026-10-01).** Things arrive decisively and
+settle; nothing overshoots. One easing for entrances, `--ease-stamp`
+(`cubic-bezier(0.2,0,0,1)`); `--ease-spring` survives only as an alias to it,
+and Framer `type: "spring"` with overshoot is retired. The one celebratory
+gesture is `animate-stamp` — a seal pressed onto paper (scale 1.06→1, 320ms).
+Infinite loops (bob, float) only on loading states and the hero, never in a
+footer, an error page or a list. `MotionConfig reducedMotion="user"` plus the
+global CSS kill-switch cover reduced motion; JS scrolls check it too.
 
 ## Accessibility & Saudi layer
 

@@ -440,7 +440,7 @@ function RevealAct({
       <motion.div
         initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.86, y: 26, rotateX: 16 }}
         animate={reduced ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0, rotateX: 0 }}
-        transition={reduced ? undefined : { type: "spring", stiffness: 170, damping: 19, mass: 0.9 }}
+        transition={reduced ? undefined : { duration: 0.45, ease: [0.2, 0, 0, 1] }}
         style={{ transformPerspective: 900 }}
         className="relative mt-8 w-full"
       >
@@ -780,7 +780,7 @@ function MiniAct({
       <motion.div
         initial={reduced ? { opacity: 0 } : { opacity: 0, y: -30, scale: 0.94 }}
         animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-        transition={reduced ? { duration: 0.3 } : { type: "spring", stiffness: 240, damping: 22, mass: 0.8 }}
+        transition={reduced ? { duration: 0.3 } : { duration: 0.32, ease: [0.2, 0, 0, 1] }}
         className="w-full"
       >
         <CatIdCard

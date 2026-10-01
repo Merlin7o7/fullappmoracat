@@ -872,7 +872,7 @@ function Celebration({ cat, draft, badges, completeness, isAr, dispName, reduced
         <motion.div
           initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.88, y: 20, rotateX: 14 }}
           animate={reduced ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0, rotateX: 0 }}
-          transition={reduced ? undefined : { type: "spring", stiffness: 170, damping: 19, delay: 0.2 }}
+          transition={reduced ? undefined : { duration: 0.45, ease: [0.2, 0, 0, 1], delay: 0.2 }}
           style={{ transformPerspective: 900 }}
           className="mt-7 w-full"
         >

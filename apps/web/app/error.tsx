@@ -13,7 +13,7 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
   return (
     <div className="mesh-bg grid min-h-dvh place-items-center px-4">
       <div className="flex max-w-md flex-col items-center text-center">
-        <Illo3D name="mouse" className="size-28 animate-bob" px={112} />
+        <Illo3D name="mouse" className="size-28" px={112} />
         <h1 className="mt-7 font-display text-2xl font-semibold tracking-tight" lang="ar" dir="rtl">
           حدث خطأ ما — ليس منك
         </h1>

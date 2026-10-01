@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { useCats } from "@/lib/cat-context";
 import { friendlyError } from "@/lib/errors";
 import { formatDate, relativeTime } from "@/lib/datetime";
+import { MomentShare } from "@/components/moments/moment-share";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
 
@@ -20,7 +21,10 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
  */
 export function LostModeCard({ catId, catName, qrToken, lostModeAt, isAr }: { catId: string; catName: string; qrToken: string | null; lostModeAt: string | null | undefined; isAr: boolean }) {
   const { authedFetch } = useAuth();
-  const { refresh } = useCats();
+  const { refresh, cats } = useCats();
+  const self = cats.find((c) => c.id === catId);
+  // Set when the owner ends lost mode here — offers the reunion poster once.
+  const [cameHome, setCameHome] = React.useState(false);
   const qc = useQueryClient();
   const { toast } = useToast();
   const [copied, setCopied] = React.useState(false);
@@ -43,6 +47,7 @@ export function LostModeCard({ catId, catName, qrToken, lostModeAt, isAr }: { ca
   const toggle = useMutation({
     mutationFn: (enabled: boolean) => authedFetch(`/cats/${catId}/lost-mode`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
     onSuccess: (_r, enabled) => {
+      setCameHome(!enabled);
       refresh();
       void qc.invalidateQueries({ queryKey: ["cats"] });
       toast({
@@ -71,6 +76,24 @@ export function LostModeCard({ catId, catName, qrToken, lostModeAt, isAr }: { ca
           {on ? (isAr ? "عاد إلى البيت" : "Found — turn off") : (isAr ? "أبلغ عن فقدان" : "Report lost")}
         </Button>
       </div>
+      {/* The poster travels where the link alone doesn't: neighbourhood
+          WhatsApp groups, building chats. Once home, the reunion. */}
+      {(on || cameHome) && (
+        <div className="mt-3">
+          <MomentShare
+            kind={on ? "lost" : "reunion"}
+            isAr={isAr}
+            catName={catName}
+            photoUrl={self?.photoUrl ?? null}
+            catIdNumber={self?.catIdNumber}
+            lines={on ? [...(self?.district ? [self.district] : []), isAr ? `مفقود منذ ${formatDate(lostModeAt!, "ar")}` : `Missing since ${formatDate(lostModeAt!, "en")}`] : [isAr ? "شكراً لكل من ساعد 🤍" : "Thank you to everyone who helped 🤍"]}
+            qrUrl={on ? publicUrl : null}
+            shareText={on ? (isAr ? `${catName} مفقود — لو شفته امسح الرمز في الصورة 🙏` : `${catName} is missing — if you see them, scan the code in the image 🙏`) : (isAr ? `${catName} رجع للبيت 🤍 شكراً لكل من ساعد` : `${catName} is home 🤍 Thank you to everyone who helped`)}
+            label={on ? (isAr ? "شارك ملصق البحث" : "Share the missing poster") : (isAr ? "شارك خبر رجوعه" : "Share that they're home")}
+            variant={on ? "destructive" : "secondary"}
+          />
+        </div>
+      )}
       {publicUrl && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span>{isAr ? "الصفحة العامة:" : "Public page:"}</span>

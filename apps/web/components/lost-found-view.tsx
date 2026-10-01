@@ -5,25 +5,12 @@ import { LostFoundShare } from "@/components/lost-found-share";
 import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Clock,
-  Eye,
-  Home,
-  Loader2,
-  Mail,
-  MapPin,
-  MessageCircle,
-  Phone,
-  ShieldCheck,
-  Tag,
-} from "lucide-react";
+import { ArrowLeft, Clock, Eye, Home, Loader2, Mail, MapPin, MessageCircle, Phone, ShieldCheck, Tag, Cat } from "lucide-react";
 import { Badge, Button, Dialog, Skeleton, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 import { IlloEmpty } from "@/components/illo-panel";
-import { Illo3D } from "@/components/illo-3d";
 import { localizeName } from "@/lib/translit";
 import { relativeTime, formatDate } from "@/lib/datetime";
 import { friendlyMessage } from "@/lib/errors";
@@ -127,7 +114,7 @@ export function LostFoundView({ id }: { id: string }) {
             className="size-full object-cover"
             fallback={
               <span className="grid size-full place-items-center bg-cream/60">
-                <Illo3D name="cat" className="size-36" px={144} priority />
+                <Cat className="size-16 text-muted-foreground/60" aria-hidden />
               </span>
             }
           />

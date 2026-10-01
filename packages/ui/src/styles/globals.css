@@ -99,8 +99,12 @@
     --elevation-3: 0 6px 12px -6px hsl(var(--shadow-color) / 0.12), 0 24px 48px -12px hsl(var(--shadow-color) / 0.18);
 
     /* Motion tokens */
+    /* AD 2.1 motion is "stamped, not bouncy": things arrive decisively and
+       settle — no overshoot. --ease-spring is kept as a name for old call
+       sites but no longer overshoots. */
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-stamp: cubic-bezier(0.2, 0, 0, 1);
+    --ease-spring: var(--ease-stamp);
 
     /* Fonts (wired by next/font) */
     --font-sans: "Inter", system-ui, sans-serif;
@@ -392,12 +396,12 @@
     animation-play-state: paused;
   }
 
-  /* Slow, affectionate wobble for decorative stickers on hover. */
+  /* A small, settled lift for decorative stickers on hover (no wobble). */
   .sticker-hover {
-    transition: transform 0.35s var(--ease-spring);
+    transition: transform 0.25s var(--ease-stamp);
   }
   .sticker-hover:hover {
-    transform: rotate(-4deg) scale(1.08);
+    transform: rotate(-2deg) scale(1.03);
   }
 }
 

@@ -2,13 +2,12 @@
 
 import * as React from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, Cat } from "lucide-react";
 import { Button, Card, cn } from "@moraqat/ui";
 import { SAUDI_CITIES } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { useCats } from "@/lib/cat-context";
 import { ImgWithFallback } from "@/components/img-with-fallback";
-import { Illo3D } from "@/components/illo-3d";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { localizeName } from "@/lib/translit";
 import { friendlyMessage } from "@/lib/errors";
@@ -147,7 +146,7 @@ export function LostFoundForm({
                     className="size-10 rounded-xl object-cover"
                     fallback={
                       <span className="grid size-10 place-items-center rounded-xl bg-cream/60">
-                        <Illo3D name="cat" className="size-8" px={64} shadow={false} />
+                        <Cat className="size-5 text-muted-foreground/60" aria-hidden />
                       </span>
                     }
                   />
