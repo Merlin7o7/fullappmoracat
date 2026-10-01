@@ -27,7 +27,7 @@ interface CatIdCardProps {
   catNumber?: number | null;
   /**
    * The full founding class as composed by the API — «عضو مؤسِّس — دفعة جدة
-   * ٢٠٢٦». Passed in rather than built here because only the server knows the
+   * 2026». Passed in rather than built here because only the server knows the
    * cat's city. Used in detailed mode, which has room for it; the simple card
    * shows the short form plus the ordinal instead.
    */

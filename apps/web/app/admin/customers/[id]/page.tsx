@@ -98,7 +98,7 @@ export default function AdminCustomerDetail() {
     return (
       <div className="mx-auto max-w-3xl py-16 text-center">
         <p className="text-sm text-muted-foreground">{isAr ? "تعذّر تحميل العميل." : "Couldn’t load this customer."}</p>
-        <Link href="/admin/customers"><Button variant="outline" size="sm" className="mt-4">{isAr ? "العودة للعملاء" : "Back to customers"}</Button></Link>
+        <Link href="/admin/customers"><Button variant="secondary" size="sm" className="mt-4">{isAr ? "العودة للعملاء" : "Back to customers"}</Button></Link>
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function AdminCustomerDetail() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <Link href="/admin/customers" aria-label={isAr ? "رجوع" : "Back"}>
-            <Button variant="ghost" size="sm"><ArrowLeft className={isAr ? "size-4 rotate-180" : "size-4"} /></Button>
+            <Button variant="tertiary" size="sm"><ArrowLeft className={isAr ? "size-4 rotate-180" : "size-4"} /></Button>
           </Link>
           <div>
             <div className="flex items-center gap-2">
@@ -227,17 +227,17 @@ export default function AdminCustomerDetail() {
                   {(canPause || canResume || canCancel) && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {canPause && (
-                        <Button variant="outline" size="sm" onClick={() => setSubConfirm({ sub, action: "pause" })}>
+                        <Button variant="secondary" size="sm" onClick={() => setSubConfirm({ sub, action: "pause" })}>
                           <Pause className="size-4" /> {isAr ? "إيقاف مؤقت" : "Pause"}
                         </Button>
                       )}
                       {canResume && (
-                        <Button variant="outline" size="sm" onClick={() => setSubConfirm({ sub, action: "resume" })}>
+                        <Button variant="secondary" size="sm" onClick={() => setSubConfirm({ sub, action: "resume" })}>
                           <Play className="size-4" /> {isAr ? "استئناف" : "Resume"}
                         </Button>
                       )}
                       {canCancel && (
-                        <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => setSubConfirm({ sub, action: "cancel" })}>
+                        <Button variant="tertiary" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => setSubConfirm({ sub, action: "cancel" })}>
                           <XCircle className="size-4" /> {isAr ? "إلغاء" : "Cancel"}
                         </Button>
                       )}

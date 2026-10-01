@@ -18,6 +18,7 @@ import {
   type FeedingInput,
 } from "@moraqat/core";
 import { localizeName } from "./translit"; // relative so the unit tests resolve it too
+import { formatNumber } from "@moraqat/core";
 
 /* ── Contracts ─────────────────────────────────────────────────────────────── */
 
@@ -106,8 +107,8 @@ function ageMonths(birthDate: string | null): number | undefined {
 }
 
 /** Localized display numbers — Arabic reasons read in Arabic-Indic digits. */
-const fmtAr = (n: number) => n.toLocaleString("ar-SA", { maximumFractionDigits: 1 });
-const fmtEn = (n: number) => n.toLocaleString("en-GB", { maximumFractionDigits: 1 });
+const fmtAr = (n: number) => formatNumber(n, "ar", { maximumFractionDigits: 1 });
+const fmtEn = (n: number) => formatNumber(n, "en", { maximumFractionDigits: 1 });
 
 function toFeedingInput(cat: RecommendableCat): FeedingInput {
   return {
@@ -255,8 +256,8 @@ export function recommendPlan(
     reasons.push({
       ar:
         cats.length === 1
-          ? "عمره أقل من ٩ أشهر — باقة قطتي الصغيرة مصممة لمرحلته، وتنتقل لخطة البالغين لما يكبر"
-          : "كلهم أصغر من ٩ أشهر — باقة قطتي الصغيرة مصممة لمرحلتهم، وتنتقل لخطة البالغين لما يكبرون",
+          ? "عمره أقل من 9 أشهر — باقة قطتي الصغيرة مصممة لمرحلته، وتنتقل لخطة البالغين لما يكبر"
+          : "كلهم أصغر من 9 أشهر — باقة قطتي الصغيرة مصممة لمرحلتهم، وتنتقل لخطة البالغين لما يكبرون",
       en:
         cats.length === 1
           ? "Under 9 months old — the Kitten box is built for this stage, and graduates to an adult plan as they grow"

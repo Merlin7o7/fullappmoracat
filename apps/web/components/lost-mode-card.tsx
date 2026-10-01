@@ -67,7 +67,7 @@ export function LostModeCard({ catId, catName, qrToken, lostModeAt, isAr }: { ca
             </p>
           </div>
         </div>
-        <Button variant={on ? "outline" : "primary"} size="sm" loading={toggle.isPending} onClick={() => toggle.mutate(!on)} className="min-h-11">
+        <Button variant={on ? "secondary" : "primary"} size="sm" loading={toggle.isPending} onClick={() => toggle.mutate(!on)} className="min-h-11">
           {on ? (isAr ? "عاد إلى البيت" : "Found — turn off") : (isAr ? "أبلغ عن فقدان" : "Report lost")}
         </Button>
       </div>
@@ -91,7 +91,7 @@ export function LostModeCard({ catId, catName, qrToken, lostModeAt, isAr }: { ca
               : `Post a notice for ${catName} on Lost & Found and share it to your neighbourhood WhatsApp — that is what reaches people.`}
           </p>
           <Link href="/portal/lost-found?kind=LOST">
-            <Button size="sm" variant="brand" className="min-h-11">
+            <Button size="sm" variant="primary" className="min-h-11">
               <Megaphone className="size-4" aria-hidden />
               {isAr ? "انشر إعلاناً" : "Post a notice"}
             </Button>

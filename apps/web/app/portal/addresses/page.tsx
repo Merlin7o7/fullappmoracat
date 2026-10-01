@@ -92,7 +92,7 @@ export default function AddressesPage() {
                 {isAr ? a.city.nameAr : a.city.nameEn}
               </p>
               <Button
-                variant="ghost"
+                variant="tertiary"
                 size="sm"
                 className="mt-3 text-destructive"
                 onClick={() => remove.mutate(a.id)}

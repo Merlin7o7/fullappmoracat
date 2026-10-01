@@ -78,7 +78,7 @@ export function HoursEditor({
       <legend className="text-sm font-medium">{isAr ? "أوقات العمل" : "Opening hours"}</legend>
       <p id={`${groupId}-hint`} className="-mt-1 text-xs text-muted-foreground">
         {isAr
-          ? "إذا تجاوز الإغلاق منتصف الليل، اكتب وقت الإغلاق كما هو (مثلاً ٠١:٠٠)."
+          ? "إذا تجاوز الإغلاق منتصف الليل، اكتب وقت الإغلاق كما هو (مثلاً 01:00)."
           : "If you close after midnight, enter the closing time as it is (e.g. 01:00)."}
       </p>
       <ul className="flex flex-col divide-y divide-border rounded-xl border border-border">

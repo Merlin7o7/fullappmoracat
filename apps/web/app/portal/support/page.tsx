@@ -56,7 +56,7 @@ export default function SupportPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{isAr ? "الدعم" : "Support"}</h1>
-          <p className="text-sm text-muted-foreground">{isAr ? "نرد خلال ٢٤ ساعة — وغالباً أسرع" : "We reply within 24 hours — usually much faster"}</p>
+          <p className="text-sm text-muted-foreground">{isAr ? "نرد خلال 24 ساعة — وغالباً أسرع" : "We reply within 24 hours — usually much faster"}</p>
         </div>
         {!active && (
           <Button size="sm" onClick={() => setShowForm((v) => !v)}><Plus className="size-4" /> {isAr ? "تذكرة جديدة" : "New ticket"}</Button>
@@ -104,7 +104,7 @@ export default function SupportPage() {
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "لا توجد تذاكر — كل شيء تمام 🎉" : "No tickets — everything's purring 🎉"}
           </p>
-          <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setShowForm(true)}>
             <Plus className="size-4" /> {isAr ? "افتح تذكرة" : "Open a ticket"}
           </Button>
         </Card>
@@ -137,7 +137,7 @@ function TicketThread({ ticket, isAr, onBack, authedFetch, onChanged }: {
     <Card className="p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} aria-label={isAr ? "رجوع" : "Back"}>
+          <Button variant="tertiary" size="sm" onClick={onBack} aria-label={isAr ? "رجوع" : "Back"}>
             <ArrowLeft className="size-4 rtl:rotate-180" />
           </Button>
           <div>
@@ -148,7 +148,7 @@ function TicketThread({ ticket, isAr, onBack, authedFetch, onChanged }: {
         <div className="flex items-center gap-2">
           <TicketStatusBadge status={ticket.status} isAr={isAr} />
           {!isClosed && (
-            <Button variant="outline" size="sm" onClick={() => close.mutate()} loading={close.isPending}>
+            <Button variant="secondary" size="sm" onClick={() => close.mutate()} loading={close.isPending}>
               <X className="size-4" /> {isAr ? "إغلاق" : "Close"}
             </Button>
           )}
@@ -158,7 +158,7 @@ function TicketThread({ ticket, isAr, onBack, authedFetch, onChanged }: {
       <div className="mb-5 flex max-h-96 flex-col gap-3 overflow-y-auto">
         {ticket.messages.map((m) => (
           <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-3 text-sm", m.isStaff ? "self-start bg-muted" : "self-end bg-primary/10")}>
-            <p className="mb-1 text-[11px] font-medium text-muted-foreground">
+            <p className="mb-1 text-xs font-medium text-muted-foreground">
               {m.isStaff ? (isAr ? "فريق مرقط" : "Moracat Care") : (isAr ? "أنت" : "You")} · {fmtTime(m.createdAt)}
             </p>
             <p className="whitespace-pre-wrap">{m.body}</p>

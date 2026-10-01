@@ -83,7 +83,7 @@ export function RegistrationWizard({ orgId, isAr }: { orgId: string; isAr: boole
       return (
         <Centered>
           <ErrorNote error={loadError} className="w-full text-start" />
-          <Button variant="outline" onClick={() => void load()}>
+          <Button variant="secondary" onClick={() => void load()}>
             <RefreshCw aria-hidden />
             {isAr ? "حاول مجدداً" : "Try again"}
           </Button>
@@ -260,7 +260,7 @@ function Stepper({
             <>
               <span
                 className={cn(
-                  "grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold tabular",
+                  "grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold tabular",
                   current ? "bg-primary text-primary-foreground" : done ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
                 )}
                 aria-hidden

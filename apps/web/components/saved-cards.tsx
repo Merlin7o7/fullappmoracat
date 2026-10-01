@@ -104,7 +104,7 @@ export function SavedCardsSection({ isAr }: { isAr: boolean }) {
                   )}
                 </span>
               </span>
-              <Button variant="ghost" size="sm" onClick={() => setRemoving(c)} aria-label={isAr ? "حذف البطاقة" : "Remove card"}>
+              <Button variant="tertiary" size="sm" onClick={() => setRemoving(c)} aria-label={isAr ? "حذف البطاقة" : "Remove card"}>
                 <Trash2 className="size-4" aria-hidden />
               </Button>
             </li>
@@ -127,7 +127,7 @@ export function SavedCardsSection({ isAr }: { isAr: boolean }) {
         }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setRemoving(null)}>{isAr ? "إبقاء" : "Keep"}</Button>
+            <Button variant="tertiary" onClick={() => setRemoving(null)}>{isAr ? "إبقاء" : "Keep"}</Button>
             <Button variant="destructive" loading={remove.isPending} onClick={() => removing && remove.mutate(removing.id)}>
               {isAr ? "حذف" : "Remove"}
             </Button>

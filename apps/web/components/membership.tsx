@@ -128,10 +128,10 @@ export function MembershipCard({
         {commerce && (
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href="/portal/subscriptions">
-              <Button variant="glass" size="sm"><Settings className="size-4" /> {isAr ? "إدارة العضوية" : "Manage membership"}</Button>
+              <Button variant="secondary" size="sm"><Settings className="size-4" /> {isAr ? "إدارة العضوية" : "Manage membership"}</Button>
             </Link>
             <Link href={subscribeHref}>
-              <Button variant="glass" size="sm"><ArrowRight className="size-4 rtl:rotate-180" /> {isAr ? "ترقية الباقة" : "Upgrade plan"}</Button>
+              <Button variant="secondary" size="sm"><ArrowRight className="size-4 rtl:rotate-180" /> {isAr ? "ترقية الباقة" : "Upgrade plan"}</Button>
             </Link>
           </div>
         )}

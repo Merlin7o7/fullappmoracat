@@ -128,7 +128,7 @@ export function CatPhotosPanel({
                 className={cn(
                   "absolute end-1 top-1 grid place-items-center rounded-full text-white transition-all focus:opacity-100",
                   armedId === p.id
-                    ? "h-6 min-w-6 gap-1 bg-destructive px-2 text-[11px] font-semibold opacity-100"
+                    ? "h-6 min-w-6 gap-1 bg-destructive px-2 text-xs font-semibold opacity-100"
                     : "size-6 bg-black/55 opacity-60 group-hover:opacity-100 sm:opacity-0"
                 )}
               >

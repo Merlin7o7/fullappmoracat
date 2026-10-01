@@ -6,6 +6,7 @@
 //  fallback, and the brand promise. The cat is the hero.
 // ════════════════════════════════════════════════════════════════════════
 import { VAT_ENABLED, vatPercentLabel } from "../common/config/pricing";
+import { formatDate, formatSAR } from "@moraqat/core";
 
 export type Locale = "ar" | "en";
 
@@ -206,7 +207,7 @@ export function verifyEmailTemplate(locale: Locale, name: string | null, url: st
   const body = [
     hiName(ar, name),
     ar
-      ? "خطوة أخيرة صغيرة لتأمين حسابك في مرقط — أكّد بريدك بالضغط على الزر أدناه. الرابط صالح لمدة ٢٤ ساعة."
+      ? "خطوة أخيرة صغيرة لتأمين حسابك في مرقط — أكّد بريدك بالضغط على الزر أدناه. الرابط صالح لمدة 24 ساعة."
       : "One small step to secure your Moracat account — confirm your email using the button below. This link is valid for 24 hours.",
   ];
   const cta = { label: ar ? "تأكيد البريد" : "Confirm email", url };
@@ -222,7 +223,7 @@ export function otpEmailTemplate(locale: Locale, name: string | null, code: stri
   const heading = ar ? "رمز تأكيد بريدك" : "Your verification code";
   const body = [
     hiName(ar, name),
-    ar ? "استخدم هذا الرمز لتأكيد بريدك في مرقط. صالح لمدة ١٠ دقائق." : "Use this code to confirm your email on Moracat. It's valid for 10 minutes.",
+    ar ? "استخدم هذا الرمز لتأكيد بريدك في مرقط. صالح لمدة 10 دقائق." : "Use this code to confirm your email on Moracat. It's valid for 10 minutes.",
   ];
   const codeBlock = `<div style="margin:14px 0 4px;text-align:center;"><span style="display:inline-block;padding:14px 22px;border-radius:14px;background:${BRAND.chipBg};border:1px solid ${BRAND.hairline};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:10px;color:${BRAND.green};">${code}</span></div>`;
   return {
@@ -310,7 +311,7 @@ export function emailChangeTemplate(locale: Locale, url: string): BuiltEmail {
   const heading = ar ? "أكّد بريدك الجديد" : "Confirm your new email";
   const body = [
     ar
-      ? "طلبت تغيير البريد الإلكتروني لحسابك في مرقط إلى هذا العنوان. أكّد للمتابعة. الرابط صالح لمدة ٢٤ ساعة."
+      ? "طلبت تغيير البريد الإلكتروني لحسابك في مرقط إلى هذا العنوان. أكّد للمتابعة. الرابط صالح لمدة 24 ساعة."
       : "You requested to change your Moracat account email to this address. Confirm to continue. This link is valid for 24 hours.",
   ];
   const cta = { label: ar ? "تأكيد البريد الجديد" : "Confirm new email", url };
@@ -396,7 +397,7 @@ export function supportReplyTemplate(locale: Locale, name: string | null, ticket
 
 // ── Commerce (fire when COMMERCE_ENABLED; templates ready for launch) ─────────
 
-const sar = (n: number, ar: boolean) => `${n.toFixed(2)} ${ar ? "ر.س" : "SAR"}`;
+const sar = (n: number, ar: boolean) => formatSAR(n, ar ? "ar" : "en");
 
 export function orderConfirmationTemplate(
   locale: Locale, name: string | null, orderNumber: string, total: number, items: { name: string; qty: number }[]
@@ -721,7 +722,7 @@ export function refundRequestedTemplate(
   const body = [
     hiName(ar, name),
     ar
-      ? `استلمنا طلبك بخصوص استرداد المتبقّي من باقة «${planName}». سيتواصل معك فريق العناية خلال ٢٤ ساعة عمل، ولن تُخصم منك أي رسوم إضافية.`
+      ? `استلمنا طلبك بخصوص استرداد المتبقّي من باقة «${planName}». سيتواصل معك فريق العناية خلال 24 ساعة عمل، ولن تُخصم منك أي رسوم إضافية.`
       : `We've received your request to refund the remainder of your ${planName} plan. Our care team will reach out within one business day, and you won't be charged anything further.`,
   ];
   const cta = { label: ar ? "تواصل مع العناية" : "Contact Care", url: supportUrl() };
@@ -757,12 +758,8 @@ function quoted(text: string, rtl: boolean): string {
     </div>`;
 }
 
-const fmtDate = (locale: Locale, at: Date) =>
-  new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(at);
+// Gregorian + Western digits (bare "ar-SA" silently meant Hijri and ٠–٩ here).
+const fmtDate = (locale: Locale, at: Date) => formatDate(at, locale, { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Riyadh" });
 
 /**
  * "Someone wants to hand you their cat." The most consequential email Moracat

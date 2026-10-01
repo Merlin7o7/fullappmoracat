@@ -234,7 +234,7 @@ export function HomeView() {
           <h2 id="faq-title" className="mb-8 text-center font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             {t.faq.title}
           </h2>
-          <div className="divide-y divide-border overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-e1">
+          <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-e1">
             {/* Commerce questions join the list only when there is commerce —
                 the FAQPage JSON-LD in app/page.tsx gates on the same flag, so
                 markup and page always tell the same story (R040/R006). */}
@@ -253,7 +253,7 @@ export function HomeView() {
 
       {/* ── Closing invitation ────────────────────────────────────────────── */}
       <section id="closing-invite" className="container py-20 sm:py-24">
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-border bg-card px-6 py-16 text-center shadow-e2 sm:py-20">
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-e2 sm:py-20">
           <Sticker rotate={-12} className="start-8 top-8 hidden md:block">
             <IlloHeart tone="orange" className="size-9 opacity-80" />
           </Sticker>
@@ -429,7 +429,7 @@ function FeatureRow({ index, eyebrow, title, body, flip }: { index: number; eyeb
       className="grid items-stretch gap-6 lg:grid-cols-2 lg:gap-8"
     >
       {/* Copy panel */}
-      <div className={cn("relative flex flex-col items-start justify-center rounded-[2rem] border border-border bg-card p-8 shadow-e1 sm:p-12", flip && "lg:order-2")}>
+      <div className={cn("relative flex flex-col items-start justify-center rounded-2xl border border-border bg-card p-8 shadow-e1 sm:p-12", flip && "lg:order-2")}>
         <span className={cn("inline-flex items-center rounded-full border border-foreground/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.12em]", PILLAR_CHIP[index % PILLAR_CHIP.length])}>
           {eyebrow}
         </span>
@@ -438,7 +438,7 @@ function FeatureRow({ index, eyebrow, title, body, flip }: { index: number; eyeb
       </div>
 
       {/* Illustration panel */}
-      <div className={cn("relative grid min-h-56 place-items-center overflow-hidden rounded-[2rem] border border-border/60 p-8 sm:min-h-72", art.tint, flip && "lg:order-1")}>
+      <div className={cn("relative grid min-h-56 place-items-center overflow-hidden rounded-2xl border border-border/60 p-8 sm:min-h-72", art.tint, flip && "lg:order-1")}>
         {art.art}
       </div>
     </motion.div>
@@ -483,7 +483,7 @@ function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
-          className="relative mx-auto mt-14 max-w-2xl overflow-hidden rounded-[2rem] border border-border bg-card p-8 shadow-e1 sm:p-10"
+          className="relative mx-auto mt-14 max-w-2xl overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-e1 sm:p-10"
         >
           <Sticker rotate={-12} className="start-7 top-7 hidden sm:block">
             <IlloHeart tone="orange" className="size-8 opacity-80" />
@@ -500,7 +500,7 @@ function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
-          className="mx-auto mt-10 max-w-2xl rounded-[2rem] border border-dashed border-border bg-transparent p-8 text-center sm:p-10"
+          className="mx-auto mt-10 max-w-2xl rounded-2xl border border-dashed border-border bg-transparent p-8 text-center sm:p-10"
         >
           <h3 className="font-display text-xl font-semibold tracking-tight">{t.census.soonTitle}</h3>
           <p className="mx-auto mt-3 max-w-lg text-base leading-relaxed text-muted-foreground">
@@ -519,7 +519,7 @@ function MembershipPanel({ t }: { t: ReturnType<typeof useLocale>["t"] }) {
   const fromPrice = Math.min(...PLANS.map((p) => p.price));
 
   return (
-    <div className="relative mx-auto max-w-4xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-e2">
+    <div className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-e2">
       <div className="grid lg:grid-cols-[1.2fr_1fr]">
         {/* What the membership carries */}
         <div className="p-8 sm:p-10">
@@ -591,7 +591,7 @@ function MemberVoices({ isAr, title }: { isAr: boolean; title: string }) {
               viewport={{ once: true, margin: "-60px" }} custom={i}
             >
               {/* Speech bubble */}
-              <div className="relative rounded-[1.75rem] border border-border bg-card p-6 shadow-e1">
+              <div className="relative rounded-2xl border border-border bg-card p-6 shadow-e1">
                 <div className="mb-3 flex gap-0.5" aria-label={`${tst.rating} / 5`}>
                   {Array.from({ length: 5 }).map((_, s) => (
                     <Star key={s} className={`size-4 ${s < tst.rating ? "fill-accent text-accent" : "text-muted"}`} />

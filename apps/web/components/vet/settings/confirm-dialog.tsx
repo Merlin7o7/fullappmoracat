@@ -74,10 +74,10 @@ export function ConfirmDialog({
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>
+          <Button type="button" variant="tertiary" onClick={onClose} disabled={busy}>
             {cancelLabel}
           </Button>
-          <Button type="submit" variant={destructive ? "destructive" : "brand"} loading={busy}>
+          <Button type="submit" variant={destructive ? "destructive" : "primary"} loading={busy}>
             {confirmLabel}
           </Button>
         </div>

@@ -63,7 +63,7 @@ export function ConfirmDialog({
       description={description}
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={pending}>
+          <Button variant="tertiary" size="sm" onClick={onClose} disabled={pending}>
             {cancelLabel ?? (isAr ? "إلغاء" : "Cancel")}
           </Button>
           <Button

@@ -205,7 +205,7 @@ export default function ChartsPanel({ catId, className }: { catId: string; class
       </ul>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button size="sm" variant="outline" onClick={() => setAsTable((v) => !v)}>
+        <Button size="sm" variant="secondary" onClick={() => setAsTable((v) => !v)}>
           <Table2 className="size-4" />
           {asTable ? (isAr ? "اعرض المنحنى" : "Show the chart") : isAr ? "اعرض الجدول" : "Show the table"}
         </Button>

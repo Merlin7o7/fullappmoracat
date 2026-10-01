@@ -31,7 +31,7 @@ function clearSignupDraft() {
 /** The DTO's password rules (see apps/api/src/auth/password-policy.ts) — the
  *  checklist ticks green as the member types, so WEAK_PASSWORD never surprises. */
 const PASSWORD_CHECKS = [
-  { id: "minLength", ar: "٨ أحرف على الأقل", en: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { id: "minLength", ar: "8 أحرف على الأقل", en: "At least 8 characters", test: (p: string) => p.length >= 8 },
   { id: "letter", ar: "حرف واحد على الأقل", en: "At least one letter", test: (p: string) => /\p{L}/u.test(p) },
   { id: "number", ar: "رقم واحد على الأقل", en: "At least one number", test: (p: string) => /\p{Nd}/u.test(p) },
 ] as const;
@@ -238,7 +238,7 @@ export default function RegisterPage() {
             isAr={isAr}
             autoFocus
           />
-          <p className="text-xs text-muted-foreground">{isAr ? "٦ أرقام وصلتك برسالة نصية" : "6 digits sent by SMS"}</p>
+          <p className="text-xs text-muted-foreground">{isAr ? "6 أرقام وصلتك برسالة نصية" : "6 digits sent by SMS"}</p>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" disabled={loading || otp.length !== 6} className="mt-1 w-full">
             {loading && <Loader2 className="size-4 animate-spin" />}
@@ -300,7 +300,7 @@ export default function RegisterPage() {
         )}
         <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" autoComplete="email" />
         <div className="flex flex-col gap-1.5">
-          <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder={isAr ? "٨ أحرف على الأقل" : "At least 8 characters"} autoComplete="new-password" />
+          <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder={isAr ? "8 أحرف على الأقل" : "At least 8 characters"} autoComplete="new-password" />
           <PasswordChecklist isAr={isAr} password={form.password} />
         </div>
 

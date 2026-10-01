@@ -166,7 +166,7 @@ export function IlloHeader({
       </div>
       <div className={cn("min-w-0", centred && "flex flex-col items-center")}>
         {eyebrow && (
-          <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
             {eyebrow}
           </p>
         )}

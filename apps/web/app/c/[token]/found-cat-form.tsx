@@ -63,7 +63,7 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
 
   if (!open) {
     return (
-      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>
+      <Button variant="secondary" className="w-full" onClick={() => setOpen(true)}>
         <MessageSquareHeart className="size-4" /> {isAr ? `وجدت ${catName}؟ أرسل رسالة للمالك` : `Found ${catName}? Message the owner`}
       </Button>
     );
@@ -78,7 +78,7 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
       <Button type="submit" className="w-full" loading={busy} disabled={message.trim().length < 2}>
         <MessageSquareHeart className="size-4" /> {isAr ? "أرسل للمالك" : "Send to the owner"}
       </Button>
-      <p className="text-[11px] text-muted-foreground">{isAr ? "لا نشارك رقمك مع أحد سوى المالك، ولا نكشف لك بيانات المالك." : "Your number goes to the owner only, and the owner's details are never shown to you."}</p>
+      <p className="text-xs text-muted-foreground">{isAr ? "لا نشارك رقمك مع أحد سوى المالك، ولا نكشف لك بيانات المالك." : "Your number goes to the owner only, and the owner's details are never shown to you."}</p>
     </form>
   );
 }

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import QRCode from "qrcode";
 import fontkit, { type Font as ShapingFont } from "fontkit";
 import { Document, Font, Image, Page, Path, StyleSheet, Svg, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { formatDate } from "@moraqat/core";
 
 /**
  * The Cat ID certificate (MRC-PROD-001 T9) — a printable, verifiable document
@@ -155,7 +156,7 @@ function fmt(iso: string | null, locale: "en" | "ar"): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString(locale === "ar" ? "ar-SA-u-ca-gregory" : "en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Riyadh" });
+  return formatDate(d, locale === "ar" ? "ar" : "en", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Riyadh" });
 }
 
 const GENDER: Record<string, { en: string; ar: string }> = {

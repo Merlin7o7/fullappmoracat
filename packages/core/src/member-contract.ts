@@ -26,6 +26,8 @@
  * Shared primitives
  * ──────────────────────────────────────────────────────────────────────────*/
 
+import { formatAge } from "./format";
+
 export interface CityLabel {
   code: string;
   ar: string | null;
@@ -573,14 +575,9 @@ export function transferStatusLabel(status: TransferStatus, isAr: boolean): stri
   }
 }
 
-/** "3 years" / "٨ أشهر" — months are what an owner of a kitten actually knows. */
+/** "3 years" / "8 أشهر" — months are what an owner of a kitten actually knows. */
 export function formatCatAge(months: number | null | undefined, isAr: boolean): string | null {
-  if (months == null || months < 0) return null;
-  if (months < 12) {
-    return isAr ? `${months} ${months === 1 ? "شهر" : "شهر"}` : `${months} mo`;
-  }
-  const years = Math.floor(months / 12);
-  return isAr ? `${years} ${years <= 10 ? "سنوات" : "سنة"}`.replace("1 سنوات", "سنة") : `${years} yr`;
+  return formatAge(months, isAr ? "ar" : "en");
 }
 
 /** A rehoming fee as the owner stated it — free is the honest default. */

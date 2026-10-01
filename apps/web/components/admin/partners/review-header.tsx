@@ -131,20 +131,20 @@ export function ReviewHeader({ state, actions, isAr }: { state: RegistrationStat
 
         <div className="flex flex-wrap items-center gap-2">
           {preSubmit && (
-            <Button variant="outline" size="sm" onClick={() => actions.run({ kind: "resend" })} loading={pending === "resend"}>
+            <Button variant="secondary" size="sm" onClick={() => actions.run({ kind: "resend" })} loading={pending === "resend"}>
               <Send aria-hidden />
               {isAr ? "إعادة إرسال الدعوة" : "Resend invitation"}
             </Button>
           )}
           {status === "INVITED" && (
-            <Button variant="outline" size="sm" className={destructiveBtn} onClick={() => setDialog("revoke")}>
+            <Button variant="secondary" size="sm" className={destructiveBtn} onClick={() => setDialog("revoke")}>
               <Undo2 aria-hidden />
               {isAr ? "سحب الدعوة" : "Withdraw invitation"}
             </Button>
           )}
           {inReview && (
             <>
-              <Button variant="outline" size="sm" onClick={() => setDialog("request-changes")}>
+              <Button variant="secondary" size="sm" onClick={() => setDialog("request-changes")}>
                 <MessageSquareWarning aria-hidden />
                 {isAr ? "طلب تعديلات" : "Request changes"}
               </Button>
@@ -160,7 +160,7 @@ export function ReviewHeader({ state, actions, isAr }: { state: RegistrationStat
             </>
           )}
           {(inReview || status === "REGISTERING" || status === "CHANGES_REQUESTED") && (
-            <Button variant="outline" size="sm" className={destructiveBtn} onClick={() => setDialog("reject")}>
+            <Button variant="secondary" size="sm" className={destructiveBtn} onClick={() => setDialog("reject")}>
               <X aria-hidden />
               {isAr ? "رفض" : "Reject"}
             </Button>
@@ -178,24 +178,24 @@ export function ReviewHeader({ state, actions, isAr }: { state: RegistrationStat
           )}
           {status === "LIVE" &&
             (org.verified ? (
-              <Button variant="outline" size="sm" onClick={() => setDialog("unverify")}>
+              <Button variant="secondary" size="sm" onClick={() => setDialog("unverify")}>
                 <ShieldOff aria-hidden />
                 {isAr ? "إزالة التوثيق" : "Unverify"}
               </Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => setDialog("verify")}>
+              <Button variant="secondary" size="sm" onClick={() => setDialog("verify")}>
                 <ShieldCheck aria-hidden />
                 {isAr ? "توثيق" : "Verify"}
               </Button>
             ))}
           {(status === "APPROVED" || status === "LIVE") && (
-            <Button variant="outline" size="sm" className={destructiveBtn} onClick={() => setDialog("suspend")}>
+            <Button variant="secondary" size="sm" className={destructiveBtn} onClick={() => setDialog("suspend")}>
               <PauseCircle aria-hidden />
               {isAr ? "إيقاف" : "Suspend"}
             </Button>
           )}
           {status === "SUSPENDED" && (
-            <Button variant="outline" size="sm" onClick={() => setDialog("unsuspend")}>
+            <Button variant="secondary" size="sm" onClick={() => setDialog("unsuspend")}>
               <PlayCircle aria-hidden />
               {isAr ? "إعادة العيادة" : "Reinstate"}
             </Button>

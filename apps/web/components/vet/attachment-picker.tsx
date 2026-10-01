@@ -42,7 +42,7 @@ export function AttachmentPicker({
     setError(
       rejected
         ? isAr
-          ? `تجاهلنا ${rejected} ملف — المقبول: PDF أو JPEG أو PNG حتى ٢٠ ميغابايت.`
+          ? `تجاهلنا ${rejected} ملف — المقبول: PDF أو JPEG أو PNG حتى 20 ميغابايت.`
           : `${rejected} file(s) skipped — PDF, JPEG or PNG up to 20 MB.`
         : null
     );

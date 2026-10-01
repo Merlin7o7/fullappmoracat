@@ -115,7 +115,7 @@ export function BranchesSection() {
           title={settingsError(branches.error, isAr).title}
           body={settingsError(branches.error, isAr).message}
           action={
-            <Button size="sm" variant="outline" onClick={() => void branches.refetch()} loading={branches.isFetching}>
+            <Button size="sm" variant="secondary" onClick={() => void branches.refetch()} loading={branches.isFetching}>
               {isAr ? "أعد المحاولة" : "Try again"}
             </Button>
           }
@@ -175,7 +175,7 @@ export function BranchesSection() {
                       ? "راجع الأسماء والعناوين وأوقات العمل أعلاه. صحيحة؟"
                       : "Check the names, addresses and hours above. All correct?"}
                   </p>
-                  <Button size="sm" variant="brand" onClick={() => void confirm()} loading={confirming}>
+                  <Button size="sm" variant="primary" onClick={() => void confirm()} loading={confirming}>
                     <CheckCircle2 className="size-4" aria-hidden />
                     {isAr ? "أؤكد صحة البيانات" : "Confirm details"}
                   </Button>
@@ -222,7 +222,7 @@ function BranchCard({ branch: b, isAr }: { branch: OrgBranch; isAr: boolean }) {
           {b.emergency24h && (
             <Badge variant="info">
               <Siren className="size-3" aria-hidden />
-              {isAr ? "طوارئ ٢٤ ساعة" : "24h emergency"}
+              {isAr ? "طوارئ 24 ساعة" : "24h emergency"}
             </Badge>
           )}
           <Badge variant={b.directoryVisible ? "success" : "secondary"} dot>

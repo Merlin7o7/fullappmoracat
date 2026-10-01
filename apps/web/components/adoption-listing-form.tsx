@@ -299,7 +299,7 @@ export function AdoptionListingForm({
           {create.isPending && <Loader2 className="size-4 animate-spin" />}
           {isAr ? `اعرض ${catName}` : `List ${catName}`}
         </Button>
-        <Button variant="ghost" onClick={onCancel}>
+        <Button variant="tertiary" onClick={onCancel}>
           {isAr ? "تراجع" : "Cancel"}
         </Button>
       </div>

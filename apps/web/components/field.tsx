@@ -30,7 +30,7 @@ export function Field({
   const isAr = locale === "ar";
   const [show, setShow] = React.useState(false);
   const isPassword = type === "password";
-  // A native number input refuses ٠–٩ outright, so numbers are a text field
+  // A native number input refuses 0–9 outright, so numbers are a text field
   // with a numeric keyboard, normalised to Latin digits as they are typed (R101).
   const isNumber = type === "number";
   const numericMode = isNumber ? inputMode ?? "decimal" : inputMode;

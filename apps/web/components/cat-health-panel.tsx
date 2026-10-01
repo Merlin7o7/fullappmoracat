@@ -104,7 +104,7 @@ export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }
           >
             <t.icon className="size-3.5" />
             <span className="hidden sm:inline">{isAr ? t.ar : t.en}</span>
-            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">{t.count}</Badge>
+            <Badge variant="secondary" className="px-1.5 py-0 text-xs">{t.count}</Badge>
           </button>
         ))}
       </div>
@@ -137,7 +137,7 @@ export function CatHealthPanel({ catId, isAr }: { catId: string; isAr: boolean }
           </div>
 
           {!adding ? (
-            <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => setAdding(true)}>
+            <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={() => setAdding(true)}>
               <Plus className="size-4" /> {isAr ? "إضافة" : "Add"}
             </Button>
           ) : (
@@ -213,7 +213,7 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
     setUploadError(null);
     if (!next) return;
     if (next.size > 10 * 1024 * 1024) {
-      setUploadError(isAr ? "الملف أكبر من ١٠ ميغابايت — صوّره بدقة أقل." : "That file is over 10 MB — try a smaller photo.");
+      setUploadError(isAr ? "الملف أكبر من 10 ميغابايت — صوّره بدقة أقل." : "That file is over 10 MB — try a smaller photo.");
       return;
     }
     setFile(next);
@@ -258,7 +258,7 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
             <span className="flex-1 text-xs text-muted-foreground">
               {isAr ? "جاهز — يُحفظ بشكل خاص، لا يراه أحد غيرك" : "Ready — stored privately, only you can open it"}
             </span>
-            <Button type="button" size="sm" variant="ghost" onClick={() => { setFile(null); setPreview(null); }}>
+            <Button type="button" size="sm" variant="tertiary" onClick={() => { setFile(null); setPreview(null); }}>
               {isAr ? "تغيير" : "Change"}
             </Button>
           </div>
@@ -266,7 +266,7 @@ function DocForm({ isAr, pending, onSubmit, onCancel }: FormProps) {
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="secondary"
             onClick={() => fileRef.current?.click()}
             className="w-fit"
           >
@@ -308,7 +308,7 @@ function FormShell({ isAr, pending, disabled, submitLabel, onCancel, onSubmit, c
       <div className="flex gap-2 sm:col-span-2">
         {/* Buttons name the action, never "Save" (R086). */}
         <Button type="submit" size="sm" loading={pending} disabled={disabled}>{submitLabel}</Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>{isAr ? "إلغاء" : "Cancel"}</Button>
+        <Button type="button" size="sm" variant="tertiary" onClick={onCancel}>{isAr ? "إلغاء" : "Cancel"}</Button>
       </div>
     </form>
   );

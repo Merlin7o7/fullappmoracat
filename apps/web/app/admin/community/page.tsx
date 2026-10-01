@@ -152,23 +152,23 @@ export default function AdminCommunityPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         {c.publicSlug && (
                           <a href={`/community/${c.publicSlug}`} target="_blank" rel="noreferrer">
-                            <Button size="sm" variant="ghost" aria-label={isAr ? "عرض" : "View"}><ExternalLink className="size-4" /></Button>
+                            <Button size="sm" variant="tertiary" aria-label={isAr ? "عرض" : "View"}><ExternalLink className="size-4" /></Button>
                           </a>
                         )}
                         <Button
                           size="sm"
-                          variant="ghost"
+                          variant="tertiary"
                           onClick={() => mut.mutate({ path: `/admin/community/cats/${c.id}/feature`, body: { featured: !c.isFeatured } })}
                           aria-label={isAr ? "تمييز" : "Feature"}
                         >
                           <Star className={cn("size-4", c.isFeatured && "fill-accent text-accent")} />
                         </Button>
                         {c.hiddenAt ? (
-                          <Button size="sm" variant="outline" onClick={() => mut.mutate({ path: `/admin/community/cats/${c.id}/unhide` })}>
+                          <Button size="sm" variant="secondary" onClick={() => mut.mutate({ path: `/admin/community/cats/${c.id}/unhide` })}>
                             <Eye className="size-4" /> {isAr ? "إظهار" : "Unhide"}
                           </Button>
                         ) : (
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => setHideTarget(c)}>
+                          <Button size="sm" variant="secondary" className="text-destructive" onClick={() => setHideTarget(c)}>
                             <EyeOff className="size-4" /> {isAr ? "إخفاء" : "Hide"}
                           </Button>
                         )}

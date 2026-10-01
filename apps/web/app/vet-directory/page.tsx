@@ -11,6 +11,7 @@ import { Illo3D } from "@/components/illo-3d";
 import { fetchWithTimeout, httpError } from "@/lib/http";
 import { jsonLdProps } from "@/lib/json-ld";
 import { normalizeDirectory, type DirectoryClinic } from "@/lib/vet-directory";
+import { formatNumber } from "@moraqat/core";
 
 /**
  * The public verified-clinic directory.
@@ -161,7 +162,7 @@ export default async function VetDirectoryPage({
               defaultChecked={emergency}
               className="size-4 accent-[hsl(var(--primary))]"
             />
-            {isAr ? "طوارئ ٢٤ ساعة فقط" : "24h emergency only"}
+            {isAr ? "طوارئ 24 ساعة فقط" : "24h emergency only"}
           </label>
 
           <Button type="submit" className="min-h-[44px]">
@@ -186,7 +187,7 @@ export default async function VetDirectoryPage({
                   : "We couldn't load the clinic directory just now — nothing's lost, we just couldn't reach it. Refresh in a moment."}
               </p>
               <Link href="/vet-directory">
-                <Button variant="outline" size="sm">{isAr ? "أعد المحاولة" : "Try again"}</Button>
+                <Button variant="secondary" size="sm">{isAr ? "أعد المحاولة" : "Try again"}</Button>
               </Link>
             </Card>
           ) : clinics.length === 0 ? (
@@ -204,7 +205,7 @@ export default async function VetDirectoryPage({
               </p>
               {(city || emergency) && (
                 <Link href="/vet-directory">
-                  <Button variant="outline" size="sm">{isAr ? "اعرض كل العيادات" : "Show all clinics"}</Button>
+                  <Button variant="secondary" size="sm">{isAr ? "اعرض كل العيادات" : "Show all clinics"}</Button>
                 </Link>
               )}
             </Card>
@@ -212,7 +213,7 @@ export default async function VetDirectoryPage({
             <>
               <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">
                 {isAr
-                  ? `${clinics.length.toLocaleString("ar-SA")} ${clinics.length === 1 ? "عيادة موثّقة" : "عيادة موثّقة"}`
+                  ? `${formatNumber(clinics.length, "ar")} ${clinics.length === 1 ? "عيادة موثّقة" : "عيادة موثّقة"}`
                   : `${clinics.length} verified clinic${clinics.length === 1 ? "" : "s"}`}
               </p>
               <ul className="grid gap-4 sm:grid-cols-2">
@@ -289,7 +290,7 @@ function ClinicCard({ clinic: c, name, isAr }: { clinic: DirectoryClinic; name: 
             {c.emergency24h && (
               <Badge variant="destructive" className="gap-1">
                 <Siren aria-hidden className="size-3" />
-                {isAr ? "طوارئ ٢٤ ساعة" : "24h emergency"}
+                {isAr ? "طوارئ 24 ساعة" : "24h emergency"}
               </Badge>
             )}
           </div>

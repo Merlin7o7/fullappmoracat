@@ -90,12 +90,12 @@ function PortalLostFoundInner() {
               <Search className="size-4" aria-hidden />
               {isAr ? "ضاع قطي" : "My cat is missing"}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setReporting("FOUND")}>
+            <Button size="sm" variant="secondary" onClick={() => setReporting("FOUND")}>
               <MapPin className="size-4" aria-hidden />
               {isAr ? "لقيت قطاً" : "I found a cat"}
             </Button>
             <Link href="/lost-found">
-              <Button size="sm" variant="ghost">
+              <Button size="sm" variant="tertiary">
                 {isAr ? "اللوحة" : "The board"}
                 <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
               </Button>
@@ -142,7 +142,7 @@ function PortalLostFoundInner() {
               : "If you ever need it, posting takes under a minute and your cat's Cat ID switches to lost mode automatically."
           }
           action={
-            <Button size="sm" variant="outline" onClick={() => setReporting("LOST")}>
+            <Button size="sm" variant="secondary" onClick={() => setReporting("LOST")}>
               {isAr ? "بلّغ عن قط مفقود" : "Report a lost cat"}
             </Button>
           }
@@ -241,7 +241,7 @@ function NoticeRow({
         </div>
         <Button
           size="sm"
-          variant={post.messageCount > 0 ? "primary" : "outline"}
+          variant={post.messageCount > 0 ? "primary" : "secondary"}
           onClick={() => setOpen((v) => !v)}
           className="shrink-0"
         >
@@ -306,7 +306,7 @@ function NoticeRow({
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="tertiary"
                   onClick={() => setStatus.mutate("CLOSED")}
                   disabled={setStatus.isPending}
                 >
@@ -317,7 +317,7 @@ function NoticeRow({
             ) : (
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setStatus.mutate("ACTIVE")}
                 disabled={setStatus.isPending}
               >

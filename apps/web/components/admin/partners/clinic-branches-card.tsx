@@ -118,7 +118,7 @@ function BranchCity({ branch: b, orgId, isAr }: { branch: RegBranch; orgId: stri
         id={`city-${b.id}`}
         value={code}
         onChange={(e) => setCode(e.target.value)}
-        className="h-11 rounded-[10px] border border-input bg-background px-3 text-base"
+        className="h-11 rounded-md border border-input bg-background px-3 text-base"
       >
         <option value="" disabled>{isAr ? "اختر المدينة" : "Choose a city"}</option>
         {SAUDI_CITIES.filter((c) => c.code !== "other").map((c) => (
@@ -128,7 +128,7 @@ function BranchCity({ branch: b, orgId, isAr }: { branch: RegBranch; orgId: stri
       <Button size="sm" disabled={!code} loading={save.isPending} onClick={() => save.mutate()}>
         {isAr ? "حفظ" : "Save"}
       </Button>
-      <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+      <Button size="sm" variant="tertiary" onClick={() => setEditing(false)}>
         {isAr ? "إلغاء" : "Cancel"}
       </Button>
     </span>
@@ -152,7 +152,7 @@ function BranchBlock({ branch: b, index, isAr, orgId }: { branch: RegBranch; ind
           {b.emergency24h && (
             <Badge variant="destructive">
               <Siren aria-hidden className="size-3" />
-              {isAr ? "طوارئ ٢٤ ساعة" : "24h emergency"}
+              {isAr ? "طوارئ 24 ساعة" : "24h emergency"}
             </Badge>
           )}
           {b.directoryVisible ? (

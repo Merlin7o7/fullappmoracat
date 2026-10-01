@@ -37,6 +37,7 @@ import { InviteSignIn } from "@/components/vet/invite-sign-in";
 import { PARTNERS_EMAIL } from "./status-screens";
 import { Centered, ErrorNote, TextField } from "./ui";
 import { RegistrationWizard } from "./wizard-shell";
+import { formatDate as coreFormatDate } from "@moraqat/core";
 
 type UrlParams = { token: string | null; org: string | null };
 
@@ -149,7 +150,7 @@ function InviteFlow({ token, isAr, onResolved }: { token: string; isAr: boolean;
             {PARTNERS_EMAIL}
           </a>
         </p>
-        <Link href={LOGIN_NEXT} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+        <Link href={LOGIN_NEXT} className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}>
           {isAr ? "لدي حساب — تسجيل الدخول" : "I have an account — sign in"}
         </Link>
       </Centered>
@@ -197,7 +198,7 @@ function InviteFlow({ token, isAr, onResolved }: { token: string; isAr: boolean;
       return (
         <Centered>
           <ErrorNote error={claimError} className="w-full text-start" />
-          <Button variant="outline" onClick={() => setClaimError(null)}>
+          <Button variant="secondary" onClick={() => setClaimError(null)}>
             {isAr ? "حاول مجدداً" : "Try again"}
           </Button>
         </Centered>
@@ -257,19 +258,19 @@ function InviteWelcome({ isAr, clinicName, preview }: { isAr: boolean; clinicNam
         <IlloHeart tone="orange" className="mb-6 size-6 -rotate-12" />
       </span>
       <p className="text-xs font-medium text-muted-foreground">
-        {isAr ? `الخطوة ١ من ${REGISTRATION_STEPS.length} · ${first?.ar ?? ""}` : `Step 1 of ${REGISTRATION_STEPS.length} · ${first?.en ?? ""}`}
+        {isAr ? `الخطوة 1 من ${REGISTRATION_STEPS.length} · ${first?.ar ?? ""}` : `Step 1 of ${REGISTRATION_STEPS.length} · ${first?.en ?? ""}`}
       </p>
       <h1 className="max-w-[80%] font-display text-2xl font-semibold leading-tight sm:text-3xl">
         {isAr ? `أهلاً بـ ${clinicName} في شبكة مرقط` : `Welcome, ${clinicName}, to the Moracat network`}
       </h1>
       <p className="text-sm leading-relaxed text-muted-foreground">
         {isAr
-          ? "التسجيل يأخذ نحو ١٥ دقيقة: بيانات السجل، الفروع، المستندات، الفريق، ثم التوقيع. كل ما تكتبه يُحفظ، فتقدر تكمل لاحقاً من أي جهاز."
+          ? "التسجيل يأخذ نحو 15 دقيقة: بيانات السجل، الفروع، المستندات، الفريق، ثم التوقيع. كل ما تكتبه يُحفظ، فتقدر تكمل لاحقاً من أي جهاز."
           : "Registration takes about 15 minutes: CR details, branches, documents, team, then signing. Everything you enter is saved, so you can finish later on any device."}
       </p>
       <p className="text-xs text-muted-foreground">
         {isAr ? "صلاحية الدعوة حتى " : "Invitation valid until "}
-        {new Intl.DateTimeFormat(isAr ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB", { dateStyle: "medium" }).format(new Date(preview.expiresAt))}
+        {coreFormatDate(preview.expiresAt, isAr ? "ar" : "en", "medium")}
       </p>
     </div>
   );
@@ -308,7 +309,7 @@ function CreateAccountCard({
         password: PASSWORD_OK(password)
           ? undefined
           : isAr
-            ? "٨ أحرف على الأقل، تجمع حروفاً وأرقاماً."
+            ? "8 أحرف على الأقل، تجمع حروفاً وأرقاماً."
             : "At least 8 characters, with letters and numbers.",
         confirm: confirm === password ? undefined : isAr ? "كلمتا المرور غير متطابقتين." : "The passwords don't match.",
       }
@@ -403,7 +404,7 @@ function CreateAccountCard({
           value={password}
           onChange={setPassword}
           error={errors.password}
-          hint={isAr ? "٨ أحرف على الأقل، تجمع حروفاً وأرقاماً." : "At least 8 characters, with letters and numbers."}
+          hint={isAr ? "8 أحرف على الأقل، تجمع حروفاً وأرقاماً." : "At least 8 characters, with letters and numbers."}
           required
           dir="ltr"
           autoComplete="new-password"
@@ -498,7 +499,7 @@ function MyRegistrations({
     return (
       <Centered>
         <ErrorNote error={error} className="w-full text-start" />
-        <Button variant="outline" onClick={() => setAttempt((n) => n + 1)}>
+        <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
           {isAr ? "حاول مجدداً" : "Try again"}
         </Button>
       </Centered>
@@ -527,7 +528,7 @@ function MyRegistrations({
           <Link href="/vet/apply" className={buttonVariants({ size: "sm" })}>
             {isAr ? "قدّم طلب انضمام" : "Apply to join"}
           </Link>
-          <Button size="sm" variant="ghost" onClick={() => void logout()}>
+          <Button size="sm" variant="tertiary" onClick={() => void logout()}>
             <LogOut aria-hidden />
             {isAr ? "دخول بحساب آخر" : "Use another account"}
           </Button>

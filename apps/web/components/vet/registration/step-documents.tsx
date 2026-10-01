@@ -45,7 +45,7 @@ function checkFile(file: File, isAr: boolean): RegFriendlyError | null {
   }
   if (file.size > CLINIC_DOCUMENT_MAX_BYTES) {
     return isAr
-      ? { title: "الملف كبير", message: `حجمه ${formatBytes(file.size, true)} والحد ١٠ م.ب. صوّره بجودة أقل أو احفظه PDF.` }
+      ? { title: "الملف كبير", message: `حجمه ${formatBytes(file.size, true)} والحد 10 م.ب. صوّره بجودة أقل أو احفظه PDF.` }
       : { title: "File too large", message: `It's ${formatBytes(file.size, false)} and the limit is 10 MB. Photograph it at lower quality or save it as a PDF.` };
   }
   return null;
@@ -64,7 +64,7 @@ export function StepDocuments({ orgId, state, api, isAr, onState, onNext, onBack
 
       <Notice tone="info" title={isAr ? "مستنداتك محفوظة بسرية" : "Your documents are stored privately"}>
         {isAr
-          ? "لا تُنشر ولا تظهر في الدليل. يطّلع عليها فريق المراجعة في مرقط فقط للتحقق من العيادة. PDF أو JPG أو PNG، حتى ١٠ م.ب لكل ملف."
+          ? "لا تُنشر ولا تظهر في الدليل. يطّلع عليها فريق المراجعة في مرقط فقط للتحقق من العيادة. PDF أو JPG أو PNG، حتى 10 م.ب لكل ملف."
           : "They're never published or shown in the directory. Only Moracat's review team sees them, to verify the clinic. PDF, JPG or PNG, up to 10 MB each."}
       </Notice>
 
@@ -85,7 +85,7 @@ export function StepDocuments({ orgId, state, api, isAr, onState, onNext, onBack
             tone="warning"
             title={isAr ? "ترخيص وزارة البيئة لكل فرع" : "A MEWA licence for each branch"}
             action={
-              <Button type="button" size="sm" variant="outline" onClick={() => goTo("branches")}>
+              <Button type="button" size="sm" variant="secondary" onClick={() => goTo("branches")}>
                 {isAr ? "أضف الفروع" : "Add branches"}
               </Button>
             }
@@ -387,26 +387,26 @@ function DocSlot({
         <div className="flex flex-wrap items-center gap-2">
           {doc ? (
             <>
-              <Button type="button" variant="outline" size="sm" onClick={() => void view()} loading={viewing}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => void view()} loading={viewing}>
                 {!viewing && <Eye aria-hidden />}
                 {isAr ? "عرض" : "View"}
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => inputRef.current?.click()}>
                 <RefreshCw aria-hidden />
                 {isAr ? "استبدال" : "Replace"}
               </Button>
-              <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirmDelete(true)}>
+              <Button type="button" variant="tertiary" size="sm" className="text-destructive" onClick={() => setConfirmDelete(true)}>
                 <Trash2 aria-hidden />
                 {isAr ? "حذف" : "Remove"}
               </Button>
             </>
           ) : (
-            <Button type="button" variant={required ? "brand" : "outline"} size="sm" onClick={() => inputRef.current?.click()}>
+            <Button type="button" variant={required ? "primary" : "secondary"} size="sm" onClick={() => inputRef.current?.click()}>
               <Upload aria-hidden />
               {isAr ? "ارفع الملف" : "Upload file"}
             </Button>
           )}
-          <span className="ms-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+          <span className="ms-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Lock className="size-3" aria-hidden />
             {isAr ? "خاص" : "Private"}
           </span>

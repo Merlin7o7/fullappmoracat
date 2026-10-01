@@ -1,6 +1,7 @@
 "use client";
 
 import { formatDate, formatDateTime } from "@/lib/datetime";
+import { formatNumber } from "@moraqat/core";
 
 /**
  * Shared bilingual helpers for the admin surface. Admin is Arabic-first
@@ -20,7 +21,7 @@ export function fmtDateTime(d: string | Date, isAr: boolean) {
 
 /** Locale-aware number formatting (Arabic-Indic numerals in ar). */
 export function fmtNum(n: number, isAr: boolean) {
-  return n.toLocaleString(isAr ? "ar-SA" : "en-US");
+  return formatNumber(n, isAr ? "ar" : "en");
 }
 
 /** ENUM_LIKE_LABEL → "Enum Like Label" (English fallback). */

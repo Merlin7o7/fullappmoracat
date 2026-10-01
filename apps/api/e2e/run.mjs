@@ -146,7 +146,8 @@ async function stopApi(api, port) {
 
 async function runSuite({ label, suiteFile, port, extraEnv }) {
   const url = `http://localhost:${port}`;
-  const childEnv = { ...env, ...extraEnv, API_PORT: String(port) };
+  // Signed /api/files links must point at THIS suite's API, not a dev server on :4000.
+  const childEnv = { ...env, ...extraEnv, API_PORT: String(port), API_PUBLIC_URL: `http://localhost:${port}` };
 
   if (!(await assertPortFree(port))) return 1;
 

@@ -72,7 +72,7 @@ export function DataTable<T>({ columns, data, rowKey, loading, emptyState, onRow
                       className={cn("inline-flex items-center gap-1 rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", active && "text-foreground")}
                     >
                       {c.header}
-                      <span className="text-[10px]" aria-hidden>{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+                      <span className="text-xs" aria-hidden>{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
                     </button>
                   ) : (
                     c.header

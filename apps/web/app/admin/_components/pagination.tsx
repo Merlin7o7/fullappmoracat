@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button, cn } from "@moraqat/ui";
+import { formatNumber } from "@moraqat/core";
 
 interface PaginationProps {
   page: number;
@@ -32,7 +33,7 @@ export function Pagination({ page, totalPages, onPageChange, isAr = false, class
       aria-label={isAr ? "ترقيم الصفحات" : "Pagination"}
     >
       <Button
-        variant="outline"
+        variant="secondary"
         size="sm"
         onClick={() => onPageChange(page - 1)}
         disabled={atStart}
@@ -44,7 +45,7 @@ export function Pagination({ page, totalPages, onPageChange, isAr = false, class
       <p className="text-sm tabular-nums text-muted-foreground" aria-live="polite">
         {isAr ? (
           <>
-            صفحة {page.toLocaleString("ar-SA")} من {totalPages.toLocaleString("ar-SA")}
+            صفحة {formatNumber(page, "ar")} من {formatNumber(totalPages, "ar")}
           </>
         ) : (
           <>
@@ -54,7 +55,7 @@ export function Pagination({ page, totalPages, onPageChange, isAr = false, class
       </p>
 
       <Button
-        variant="outline"
+        variant="secondary"
         size="sm"
         onClick={() => onPageChange(page + 1)}
         disabled={atEnd}

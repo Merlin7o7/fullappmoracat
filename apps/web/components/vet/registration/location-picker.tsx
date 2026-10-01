@@ -165,7 +165,7 @@ export function LocationPicker({
           : "This is how members find you. If you're at the clinic right now, the first option is quickest."}
       </p>
 
-      <Button type="button" variant="outline" onClick={locate} loading={locating} className="self-start">
+      <Button type="button" variant="secondary" onClick={locate} loading={locating} className="self-start">
         {!locating && <LocateFixed aria-hidden />}
         {isAr ? "استخدم موقعي الحالي" : "Use my current location"}
       </Button>

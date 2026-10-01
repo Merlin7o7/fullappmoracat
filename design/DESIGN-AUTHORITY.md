@@ -101,6 +101,66 @@ Copper is a warm metal, not luxury gold: it appears only as the dark-theme
 mouse and never as a finish on UI, type or the Cat ID. Motion is a slow float
 or bob at most, and reduced-motion is honoured.
 
+### Amendment (2026-10-01) — AD 2.1 «السجل»: the cat's archive (founder-approved hybrid)
+
+The brand audit (MRC-BRAND-001) proposed AD 2.0 «السجل» — Moracat as the
+*register* of a cat's life. The founder approved it as a **hybrid**: «السجل» is
+the **structure** of the brand; warmth stays in the **material**.
+
+**Why the register is the right idea.** Moracat's promise is identity +
+history + care + belonging + continuity — a permanent record that outlives a
+household, travels to any clinic, and survives a change of owner. A register
+is exactly that object. It gives every artifact (ID, health summary,
+certificate, Wallet pass, lost poster, email, yearly keepsake) one family
+resemblance: *the cat has a personal archive.*
+
+**Why not the full 2.0.** Retiring all warmth for emerald-and-copper reads
+bureaucratic on the owner side, and "official register" language collides with
+the regulatory risk of «هوية رسمية». So:
+
+- **Framing:** always *your cat's archive, kept by Moracat* — a private
+  company. Never "official", "national", "government" or "census of Saudi
+  Arabia". (Copy fixed 2026-10-01; counsel owns final wording.)
+- **Structure (from 2.0):** the **ID band** (perforated strip naming a
+  document: kind · serial · seal), **ledger rows** (hairline-ruled
+  label…value, records are ruled not boxed), the **copper seal** (`--seal`,
+  only where Moracat vouches: issued / verified), document-grade layouts.
+  Components: `IdBand`, `Ledger`/`LedgerRow`, `Seal` in `packages/ui`.
+- **Colour:** emerald is the action colour (primary buttons are solid emerald,
+  no gradients). Warm paper stays the ground. One warm accent remains, for
+  *contextual* actions only (share, Wallet, celebrate). Pastels survive only as
+  grounds behind photos and 3D objects — never as UI chrome.
+- **Shape — three radius families only:** control `10px` (inputs, buttons,
+  rows, small tiles), card `18px` (cards, sheets, dialogs), full (chips,
+  avatars, the seal). Buttons are not pills.
+- **Buttons — five types only:** primary · secondary · tertiary · destructive
+  · contextual (see `packages/ui/src/components/button.tsx` for when each is
+  allowed). At most one primary and at most one contextual per view.
+- **States — one pattern each:** `EmptyState`, `ErrorState`, `LoadingState`,
+  `StatusTag` (words + shape, never colour alone, R093).
+
+**Typography (R103, binding):**
+- Arabic text face: **IBM Plex Sans Arabic** (400/500/600/700) for body, UI,
+  labels and headings below display size. Real weights; `font-synthesis: none`.
+- Arabic display face: **Lyon Arabic Display**, one weight, used only at
+  display sizes (`text-3xl`+) at weight 400 — size carries hierarchy.
+- **Zero letter-spacing on Arabic.** Tracking is allowed only on Latin
+  (`dir="ltr"`, mono serials, Latin display).
+- Minimum 13px (`text-xs`); inputs are 16px on phones.
+- **One formatter** (`packages/core/src/format.ts`): Western digits in both
+  languages (IDs, prices, dates are things people compare and copy),
+  Gregorian by default with Hijri as an explicit choice, «199 ر.س» / "SAR 199",
+  real Arabic dual/plural for counts and ages. Never `toLocaleString("ar-SA")`.
+
+**3D objects — revised rule.** The founder's twelve renders remain the only 3D
+assets (no generated or stock substitutes). They may now appear **once per
+viewport/chapter** — a long page may carry several, but never two in view at
+once — and still never as icons, never in distress contexts (lost cat, medical
+alert), never recoloured. Product artifacts (ID card, health summary, Wallet
+pass, poster) are drawn as real UI "document objects", not faked as renders.
+Objects the language still lacks (collar, QR/NFC tag, bowl, carrier, scale,
+vaccination card) are a commission list, not a gap to fill with substitutes.
+
 ## The two moments that decide everything
 
 Over-invest here before anything else:

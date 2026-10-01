@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Pagination } from "@/app/admin/_components/pagination";
 import { statusMeta } from "@/app/admin/_components/i18n";
+import { formatNumber } from "@moraqat/core";
 
 interface CustomerRow {
   id: string; email: string; name: string; phone: string | null;
@@ -50,7 +51,7 @@ export default function AdminCustomers() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "العملاء" : "Customers"}</h1>
           <p className="text-sm text-muted-foreground">
-            {data ? (isAr ? `${data.pagination.total.toLocaleString("ar-SA")} إجمالاً` : `${data.pagination.total} total`) : "—"}
+            {data ? (isAr ? `${formatNumber(data.pagination.total, "ar")} إجمالاً` : `${data.pagination.total} total`) : "—"}
           </p>
         </div>
         <div className="relative">

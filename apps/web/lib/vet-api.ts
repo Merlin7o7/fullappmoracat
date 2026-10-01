@@ -49,6 +49,7 @@ import {
   type VetWireTimelineEntry,
   type VetWireWeightSeries,
 } from "@/lib/vet-wire";
+import { formatAge } from "@moraqat/core";
 
 export type { VetCapability, VetRole };
 
@@ -1822,18 +1823,9 @@ export function useVetApi(): VetApi {
  * Small shared formatting helpers (bilingual, used across portal screens)
  * ──────────────────────────────────────────────────────────────────────────*/
 
-/** "3y 2m" / "٣ سنوات و شهرين" — an age a clinician reads at a glance. */
+/** "3y 2m" / "3 سنوات و شهرين" — an age a clinician reads at a glance. */
 export function formatCatAge(months: number | null | undefined, isAr: boolean): string | null {
-  if (months == null || months < 0) return null;
-  const y = Math.floor(months / 12);
-  const m = months % 12;
-  if (isAr) {
-    const yPart = y === 0 ? "" : y === 1 ? "سنة" : y === 2 ? "سنتان" : y <= 10 ? `${y} سنوات` : `${y} سنة`;
-    const mPart = m === 0 ? "" : m === 1 ? "شهر" : m === 2 ? "شهران" : m <= 10 ? `${m} أشهر` : `${m} شهراً`;
-    return [yPart, mPart].filter(Boolean).join(" و ") || "أقل من شهر";
-  }
-  const parts = [y > 0 ? `${y}y` : "", m > 0 ? `${m}m` : ""].filter(Boolean);
-  return parts.join(" ") || "<1m";
+  return formatAge(months, isAr ? "ar" : "en");
 }
 
 /** Bilingual label for a visit state — colour is never the only signal (R093). */

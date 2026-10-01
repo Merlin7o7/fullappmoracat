@@ -47,7 +47,7 @@ export default function CatPrivacyPage() {
           </div>
         </div>
         <Link href="/portal/health-access">
-          <Button variant="outline" size="sm">{isAr ? "إدارة الأذونات" : "Manage permissions"} <ArrowRight className="size-4 rtl:rotate-180" /></Button>
+          <Button variant="secondary" size="sm">{isAr ? "إدارة الأذونات" : "Manage permissions"} <ArrowRight className="size-4 rtl:rotate-180" /></Button>
         </Link>
       </Card>
 

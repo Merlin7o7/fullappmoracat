@@ -177,7 +177,7 @@ export function AdoptionBrowse({ compact = false }: { compact?: boolean }) {
           title={isAr ? "ما قدرنا نحمّل القائمة" : "We couldn't load this"}
           body={isAr ? "الخطأ من عندنا، مو منك. جرّب مرة ثانية." : "That one's on us, not you. Give it another try."}
           action={
-            <Button size="sm" variant="outline" onClick={() => void refetch()}>
+            <Button size="sm" variant="secondary" onClick={() => void refetch()}>
               {isAr ? "أعد المحاولة" : "Try again"}
             </Button>
           }
@@ -191,7 +191,7 @@ export function AdoptionBrowse({ compact = false }: { compact?: boolean }) {
             title={isAr ? "ما لقينا قط يطابق بحثك" : "No cats match that"}
             body={isAr ? "جرّب مدينة ثانية، أو امسح المرشّحات وشوف الكل." : "Try another city, or clear the filters and see everyone."}
             action={
-              <Button size="sm" variant="outline" onClick={clearFilters}>
+              <Button size="sm" variant="secondary" onClick={clearFilters}>
                 {isAr ? "امسح المرشّحات" : "Clear filters"}
               </Button>
             }
@@ -226,7 +226,7 @@ export function AdoptionBrowse({ compact = false }: { compact?: boolean }) {
           {hasNextPage && (
             <div className="mt-8 flex flex-col items-center gap-3">
               <div ref={sentinelRef} aria-hidden className="h-px w-full" />
-              <Button variant="outline" onClick={() => void fetchNextPage()} disabled={isFetchingNextPage}>
+              <Button variant="secondary" onClick={() => void fetchNextPage()} disabled={isFetchingNextPage}>
                 {isFetchingNextPage && <Loader2 className="size-4 animate-spin" />}
                 {isAr ? "عرض المزيد" : "Show more"}
               </Button>
@@ -274,7 +274,7 @@ function AdoptionCardTile({ item, isAr }: { item: AdoptionCard; isAr: boolean })
           {/* The identity travels — the single most important thing this page
               says that a classifieds board cannot (R040). */}
           {item.cat.catIdNumber && (
-            <span className="absolute end-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-1 text-[10px] font-medium text-primary backdrop-blur">
+            <span className="absolute end-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-1 text-xs font-medium text-primary backdrop-blur">
               <ShieldCheck className="size-3" aria-hidden />
               {isAr ? "بهوية" : "Has a Cat ID"}
             </span>
@@ -286,14 +286,14 @@ function AdoptionCardTile({ item, isAr }: { item: AdoptionCard; isAr: boolean })
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span
               className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                "rounded-full px-2 py-0.5 text-xs font-medium",
                 item.feeSar === 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               )}
             >
               {feeLabel(item.feeSar, isAr)}
             </span>
             {vaccinated && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                 <Syringe className="size-2.5" aria-hidden />
                 {isAr ? "مطعّم" : "Vaccinated"}
               </span>

@@ -505,7 +505,7 @@ export class VetRecordsService {
     if (file.size > VET_ATTACHMENT_MAX_BYTES) {
       throw vetBadRequest("VET_ATTACHMENT_INVALID", "Attachment exceeds 20 MB", {
         maxBytes: VET_ATTACHMENT_MAX_BYTES,
-        hint: { ar: "الحد الأقصى ٢٠ ميغابايت للملف الواحد.", en: "Files are limited to 20 MB each." },
+        hint: { ar: "الحد الأقصى 20 ميغابايت للملف الواحد.", en: "Files are limited to 20 MB each." },
       });
     }
     const sniffed = this.storage.sniffDocument(file.buffer);

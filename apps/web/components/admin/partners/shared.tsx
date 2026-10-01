@@ -14,6 +14,7 @@ import { Badge, Card, cn } from "@moraqat/ui";
 import type { ClinicOrgStatus, RegistrationGap } from "@moraqat/core";
 import { registrationError } from "@/lib/vet-registration";
 import { fmtDate } from "@/app/admin/_components/i18n";
+import { formatNumber } from "@moraqat/core";
 
 export type BadgeVariant = "default" | "secondary" | "accent" | "success" | "warning" | "info" | "destructive" | "outline";
 
@@ -60,7 +61,7 @@ export function daysSince(iso: string | null | undefined): number | null {
 }
 
 export function fmtNumber(n: number, isAr: boolean) {
-  return n.toLocaleString(isAr ? "ar-SA" : "en-US");
+  return formatNumber(n, isAr ? "ar" : "en");
 }
 
 /** Expiry tone: past → red, ≤60 days → amber, otherwise neutral. */

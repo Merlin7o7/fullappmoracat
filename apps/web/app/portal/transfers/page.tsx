@@ -179,7 +179,7 @@ function TransferRow({
           </p>
         )}
         {transfer.cat.catIdNumber && (
-          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground" dir="ltr">
+          <p className="mt-0.5 font-mono text-xs text-muted-foreground" dir="ltr">
             {transfer.cat.catIdNumber}
           </p>
         )}
@@ -198,7 +198,7 @@ function TransferRow({
         {onCancel && (
           <Button
             size="sm"
-            variant="ghost"
+            variant="tertiary"
             className="text-destructive hover:bg-destructive/10"
             onClick={onCancel}
             disabled={cancelling}

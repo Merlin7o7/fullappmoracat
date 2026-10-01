@@ -67,7 +67,7 @@ export function RequestChangesDialog({
       className="max-w-lg"
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={pending}>
+          <Button variant="tertiary" size="sm" onClick={onClose} disabled={pending}>
             {isAr ? "إلغاء" : "Cancel"}
           </Button>
           <Button size="sm" onClick={submit} loading={pending}>
@@ -100,7 +100,7 @@ export function RequestChangesDialog({
           />
           {tried && noteError && (
             <p id="changes-note-error" className="mt-1 text-xs font-medium text-destructive">
-              {isAr ? "اكتب ملاحظة من ٥ أحرف على الأقل." : "Write a note of at least 5 characters."}
+              {isAr ? "اكتب ملاحظة من 5 أحرف على الأقل." : "Write a note of at least 5 characters."}
             </p>
           )}
         </div>

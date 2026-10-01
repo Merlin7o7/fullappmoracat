@@ -210,7 +210,7 @@ export class VetRegistrationService {
       headingEn: `${org?.contactName ? `Hello ${org.contactName}, ` : ""}you're invited to register ${org?.nameEn ?? "your clinic"}`,
       bodyAr: [
         "شبكة عيادات مرقط بالدعوة فقط — نختار شركاءنا بعناية لأن الأعضاء يثقون بمن نرشّحه لهم.",
-        "التسجيل يأخذ نحو ١٥ دقيقة ويُحفظ تلقائياً. جهّز: شهادة السجل التجاري، ترخيص وزارة البيئة والمياه والزراعة لكل فرع، وأسماء الأطباء وأرقام تراخيصهم.",
+        "التسجيل يأخذ نحو 15 دقيقة ويُحفظ تلقائياً. جهّز: شهادة السجل التجاري، ترخيص وزارة البيئة والمياه والزراعة لكل فرع، وأسماء الأطباء وأرقام تراخيصهم.",
       ],
       bodyEn: [
         "The Moracat clinic network is invitation-only — we choose partners carefully because members trust who we recommend.",
@@ -733,7 +733,7 @@ export class VetRegistrationService {
         headingAr: "وصلنا طلبك — شكراً لك",
         headingEn: "Your registration is in — thank you",
         bodyAr: [
-          "فريق شراكات مرقط يراجع كل مستند بنفسه. نرد عليك خلال ٥–٧ أيام عمل، وسنراسلك عند كل خطوة.",
+          "فريق شراكات مرقط يراجع كل مستند بنفسه. نرد عليك خلال 5–7 أيام عمل، وسنراسلك عند كل خطوة.",
           invitesSent > 0
             ? `أرسلنا دعوات الانضمام إلى ${invitesSent} من فريقك. يستطيعون إنشاء حساباتهم الآن، ويبدأ العمل بعد الموافقة.`
             : "لم يكن هناك أعضاء فريق جدد لدعوتهم.",

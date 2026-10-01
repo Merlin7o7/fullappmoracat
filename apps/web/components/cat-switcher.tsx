@@ -75,7 +75,7 @@ export function CatSwitcher({ isAr }: { isAr: boolean }) {
         <Avatar size="sm" name={activeCat?.name} src={activeCat?.photoUrl} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold leading-tight">{localizeName(activeCat?.name, isAr ? "ar" : "en")}</span>
-          <span className="block truncate font-mono text-[10px] leading-tight text-muted-foreground" dir="ltr">
+          <span className="block truncate font-mono text-xs leading-tight text-muted-foreground" dir="ltr">
             {activeCat?.catIdNumber}
           </span>
         </span>
@@ -139,12 +139,12 @@ export function CatSwitcher({ isAr }: { isAr: boolean }) {
                         <span className="flex items-center gap-1.5">
                           <span className="truncate text-sm font-medium">{localizeName(c.name, isAr ? "ar" : "en")}</span>
                           {c.isPrimary && (
-                            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
                               {isAr ? "الأساسي" : "Primary"}
                             </Badge>
                           )}
                         </span>
-                        <span className="block truncate font-mono text-[10px] text-muted-foreground" dir="ltr">
+                        <span className="block truncate font-mono text-xs text-muted-foreground" dir="ltr">
                           {c.catIdNumber}
                         </span>
                       </span>

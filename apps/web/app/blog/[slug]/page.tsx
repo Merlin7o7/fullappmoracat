@@ -162,9 +162,9 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
         {/* Cover — the real image when present, else a tinted brand panel. */}
         {post.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={post.coverUrl} alt={title} className="my-12 aspect-[21/9] w-full rounded-[2rem] border border-border/60 object-cover" />
+          <img src={post.coverUrl} alt={title} className="my-12 aspect-[21/9] w-full rounded-2xl border border-border/60 object-cover" />
         ) : (
-          <div className="relative my-12 grid aspect-[21/9] place-items-center overflow-hidden rounded-[2rem] border border-border/60 bg-cream">
+          <div className="relative my-12 grid aspect-[21/9] place-items-center overflow-hidden rounded-2xl border border-border/60 bg-cream">
             <IlloCat tone="green" className="h-24 w-auto sm:h-32" />
             <Sticker rotate={14} className="end-8 top-6">
               <IlloSprig tone="leaf" className="h-12 w-auto opacity-60" />
@@ -178,7 +178,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           dangerouslySetInnerHTML={{ __html: bodyHtml }}
         />
 
-        <div className="relative mt-16 overflow-hidden rounded-[2rem] border border-border bg-butter/40 p-8 text-center shadow-e1 dark:bg-butter/15 sm:p-10">
+        <div className="relative mt-16 overflow-hidden rounded-2xl border border-border bg-butter/40 p-8 text-center shadow-e1 dark:bg-butter/15 sm:p-10">
           <IlloFish tone="orange" className="pointer-events-none absolute -bottom-2 -end-3 h-10 w-auto rotate-[-10deg] opacity-60" />
           <h3 className="font-display text-2xl font-semibold tracking-tight">
             {isAr ? "قطك يستاهل هوية خاصة فيه" : "Your cat deserves an identity of their own"}

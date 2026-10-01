@@ -93,7 +93,7 @@ export class CreateCatDto {
    * Where the cat lives — a census city code (SAUDI_CITIES in packages/core).
    *
    * Required because the founding class printed on the Cat ID card is built
-   * from it. Before this existed the card claimed «دفعة الرياض ٢٠٢٦» for
+   * from it. Before this existed the card claimed «دفعة الرياض 2026» for
    * everyone, including owners in Jeddah and Makkah — a false statement on an
    * identity document (R040). Validated against the list so a typo can never
    * become a city.

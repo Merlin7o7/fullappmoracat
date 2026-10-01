@@ -109,7 +109,7 @@ export function TeamSection() {
       toast({
         title: isAr ? "أُرسلت الدعوة" : "Invitation sent",
         description: isAr
-          ? `يصل الرابط إلى ${address} ويبقى صالحاً ٧ أيام.`
+          ? `يصل الرابط إلى ${address} ويبقى صالحاً 7 أيام.`
           : `The link is on its way to ${address} and stays valid for 7 days.`,
         variant: "success",
       });
@@ -228,10 +228,10 @@ export function TeamSection() {
       </div>
       <InlineError error={inviteError} />
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" size="sm" variant="ghost" disabled={inviting} onClick={() => setFormOpen(false)}>
+        <Button type="button" size="sm" variant="tertiary" disabled={inviting} onClick={() => setFormOpen(false)}>
           {isAr ? "إلغاء" : "Cancel"}
         </Button>
-        <Button type="submit" size="sm" variant="brand" loading={inviting} disabled={!role}>
+        <Button type="submit" size="sm" variant="primary" loading={inviting} disabled={!role}>
           <MailPlus className="size-4" aria-hidden />
           {isAr ? "أرسل الدعوة" : "Send invitation"}
         </Button>
@@ -250,7 +250,7 @@ export function TeamSection() {
       icon={Users}
       action={
         !formOpen && roles.length > 0 ? (
-          <Button size="sm" variant="outline" onClick={() => setFormOpen(true)}>
+          <Button size="sm" variant="secondary" onClick={() => setFormOpen(true)}>
             <UserPlus className="size-4" aria-hidden />
             <span className="hidden sm:inline">{isAr ? "ادعُ زميلاً" : "Invite teammate"}</span>
             <span className="sm:hidden">{isAr ? "دعوة" : "Invite"}</span>
@@ -273,7 +273,7 @@ export function TeamSection() {
             title={settingsError(staff.error, isAr).title}
             body={settingsError(staff.error, isAr).message}
             action={
-              <Button size="sm" variant="outline" onClick={() => void staff.refetch()} loading={staff.isFetching}>
+              <Button size="sm" variant="secondary" onClick={() => void staff.refetch()} loading={staff.isFetching}>
                 {isAr ? "أعد المحاولة" : "Try again"}
               </Button>
             }
@@ -291,7 +291,7 @@ export function TeamSection() {
                 }
                 action={
                   roles.length > 0 ? (
-                    <Button size="sm" variant="brand" onClick={() => setFormOpen(true)}>
+                    <Button size="sm" variant="primary" onClick={() => setFormOpen(true)}>
                       <UserPlus className="size-4" aria-hidden />
                       {isAr ? "ادعُ زميلاً" : "Invite a teammate"}
                     </Button>
@@ -476,7 +476,7 @@ function ActionButton({
   return (
     <Button
       size="sm"
-      variant="ghost"
+      variant="tertiary"
       loading={loading}
       onClick={onClick}
       className={cn("px-3", destructive && "text-destructive hover:bg-destructive/10")}

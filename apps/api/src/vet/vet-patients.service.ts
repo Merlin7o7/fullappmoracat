@@ -1414,7 +1414,7 @@ export class VetPatientsService {
         : `${first.weightKg} kg → ${last.weightKg} kg over ${spanDays} days — ${direction === "up" ? "up" : "down"} ${abs}%.`;
     const ar =
       direction === "steady"
-        ? `${first.weightKg} كجم ← ${last.weightKg} كجم خلال ${spanDays} يومًا — ضمن ±٢٪.`
+        ? `${first.weightKg} كجم ← ${last.weightKg} كجم خلال ${spanDays} يومًا — ضمن ±2٪.`
         : `${first.weightKg} كجم ← ${last.weightKg} كجم خلال ${spanDays} يومًا — ${direction === "up" ? "ارتفاع" : "انخفاض"} ${abs}٪.`;
     return {
       direction,

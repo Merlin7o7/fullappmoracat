@@ -65,7 +65,7 @@ export function SummaryCard({
           )}
         </h3>
         {onEdit && (
-          <Button type="button" variant="ghost" size="sm" onClick={onEdit}>
+          <Button type="button" variant="tertiary" size="sm" onClick={onEdit}>
             <Pencil aria-hidden />
             {isAr ? "تعديل" : "Edit"}
           </Button>
@@ -118,8 +118,8 @@ export function BranchesSummary({ state, isAr }: { state: RegistrationState; isA
           <p className="text-sm font-semibold">
             {isAr ? `الفرع ${i + 1}` : `Branch ${i + 1}`} · {isAr ? b.nameAr : b.nameEn || b.nameAr}
             {b.emergency24h && (
-              <span className="ms-2 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
-                {isAr ? "طوارئ ٢٤ ساعة" : "24h emergency"}
+              <span className="ms-2 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                {isAr ? "طوارئ 24 ساعة" : "24h emergency"}
               </span>
             )}
           </p>
@@ -214,7 +214,7 @@ export function DocumentsSummary({
               </p>
             )}
           </div>
-          <Button type="button" variant="ghost" size="sm" loading={opening === d.id} onClick={() => void view(d)}>
+          <Button type="button" variant="tertiary" size="sm" loading={opening === d.id} onClick={() => void view(d)}>
             {opening !== d.id && <Eye aria-hidden />}
             {isAr ? "عرض" : "View"}
           </Button>

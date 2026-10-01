@@ -342,7 +342,7 @@ export function Omnibox({
           </>
         )}
         {!trimmed && (
-          <kbd className="hidden shrink-0 rounded-md border border-border px-1.5 py-0.5 font-mono text-[0.625rem] text-muted-foreground sm:block">
+          <kbd className="hidden shrink-0 rounded-md border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground sm:block">
             /
           </kbd>
         )}
@@ -357,7 +357,7 @@ export function Omnibox({
         >
           {showRecents && (
             <>
-              <p className="flex items-center gap-1.5 px-2.5 py-1.5 text-[0.6875rem] font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <Clock className="size-3" aria-hidden />
                 {isAr ? "آخر من بحثت عنهم" : "Recent lookups"}
               </p>
@@ -393,7 +393,7 @@ export function Omnibox({
                   </div>
                 </div>
               ))}
-              <p className="px-2.5 pb-1 text-[0.6875rem] text-muted-foreground">
+              <p className="px-2.5 pb-1 text-xs text-muted-foreground">
                 {isAr ? "نتحقق من العضوية…" : "Checking membership…"}
               </p>
             </div>
@@ -415,7 +415,7 @@ export function Omnibox({
           {!showRecents && status === "done" && results.length > 0 && (
             <>
               {scoped && (
-                <p className="flex items-start gap-1.5 px-2.5 py-1.5 text-[0.6875rem] leading-relaxed text-muted-foreground">
+                <p className="flex items-start gap-1.5 px-2.5 py-1.5 text-xs leading-relaxed text-muted-foreground">
                   <ShieldCheck className="mt-px size-3 shrink-0" aria-hidden />
                   {isAr
                     ? "البحث بالاسم يشمل مرضى عيادتك فقط."
@@ -541,7 +541,7 @@ function ResultRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate font-display text-sm font-medium leading-tight">{name}</span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[0.6875rem] text-muted-foreground">
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           {catIdNumber && <span className="font-mono tabular">{catIdNumber}</span>}
           {meta}
         </span>

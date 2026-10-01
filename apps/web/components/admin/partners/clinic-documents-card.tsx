@@ -214,7 +214,7 @@ function DocumentRow({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={onView}
             loading={opening}
@@ -224,7 +224,7 @@ function DocumentRow({
             {isAr ? "عرض" : "View"}
           </Button>
           <Button
-            variant={doc.verified ? "ghost" : "brand"}
+            variant={doc.verified ? "tertiary" : "primary"}
             size="sm"
             onClick={onToggle}
             loading={toggling}

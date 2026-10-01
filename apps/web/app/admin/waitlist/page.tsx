@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { Pagination } from "@/app/admin/_components/pagination";
 import { fmtDate } from "@/app/admin/_components/i18n";
+import { formatNumber } from "@moraqat/core";
 
 interface WaitlistEntry {
   id: string;
@@ -63,12 +64,12 @@ export default function AdminWaitlistPage() {
           <h1 className="font-display text-2xl font-bold">{isAr ? "قائمة انتظار العضوية" : "Membership waitlist"}</h1>
           <p className="text-sm text-muted-foreground">
             {data
-              ? (isAr ? `${data.pagination.total.toLocaleString("ar-SA")} شخصاً في الانتظار` : `${data.pagination.total} people waiting`)
+              ? (isAr ? `${formatNumber(data.pagination.total, "ar")} شخصاً في الانتظار` : `${data.pagination.total} people waiting`)
               : (isAr ? "أشخاص ينتظرون الإطلاق." : "People waiting for launch.")}
           </p>
         </div>
         {(data?.pagination.total ?? 0) > 0 && (
-          <Button size="sm" variant="outline" onClick={exportCsv} disabled={exporting}>
+          <Button size="sm" variant="secondary" onClick={exportCsv} disabled={exporting}>
             {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             {isAr ? "تصدير الكل CSV" : "Export all CSV"}
           </Button>

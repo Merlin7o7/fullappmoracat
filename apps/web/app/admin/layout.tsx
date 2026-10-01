@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-destructive/10 text-destructive"><ShieldAlert className="size-8" /></span>
           <h1 className="font-display text-xl font-bold tracking-tight">{isAr ? "للموظفين فقط" : "Staff access only"}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{isAr ? "لا يملك حسابك صلاحيات الإدارة." : "Your account doesn’t have admin permissions."}</p>
-          <Link href="/portal"><Button className="mt-5" variant="outline">{isAr ? "الذهاب إلى حسابي" : "Go to my account"}</Button></Link>
+          <Link href="/portal"><Button className="mt-5" variant="secondary">{isAr ? "الذهاب إلى حسابي" : "Go to my account"}</Button></Link>
         </div>
       </div>
     );
@@ -98,7 +98,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-e border-border bg-card p-4 md:flex">
         <div className="mb-8 flex items-center gap-2 px-2">
           <Logo className="h-8" priority />
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{isAr ? "الإدارة" : "Admin"}</span>
+          <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">{isAr ? "الإدارة" : "Admin"}</span>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {nav.map((item) => {
@@ -112,7 +112,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             );
           })}
         </nav>
-        <Button variant="ghost" size="sm" className="justify-start" onClick={signOut}>
+        <Button variant="tertiary" size="sm" className="justify-start" onClick={signOut}>
           <LogOut className="size-4" /> {isAr ? "تسجيل الخروج" : "Log out"}
         </Button>
       </aside>
@@ -130,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <ThemeToggle />
             {/* Mobile logout (M7): desktop logout lives in the aside, hidden on mobile. */}
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="sm"
               className="md:hidden"
               onClick={signOut}

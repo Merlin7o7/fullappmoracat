@@ -90,7 +90,7 @@ export default function PortalAdoptionPage() {
               </Button>
             )}
             <Link href="/adopt">
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="secondary">
                 {isAr ? "تصفّح القطط" : "Browse cats"}
                 <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
               </Button>
@@ -151,7 +151,7 @@ export default function PortalAdoptionPage() {
                       <Button size="sm">{isAr ? "سجّل قطك" : "Register a cat"}</Button>
                     </Link>
                   ) : listable.length > 0 && !creating ? (
-                    <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+                    <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>
                       {isAr ? "اعرض قطاً" : "List a cat"}
                     </Button>
                   ) : undefined
@@ -270,7 +270,7 @@ function ListingRow({
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <Button size="sm" variant={listing.pendingRequests > 0 ? "primary" : "outline"} onClick={() => setOpen((v) => !v)}>
+          <Button size="sm" variant={listing.pendingRequests > 0 ? "primary" : "secondary"} onClick={() => setOpen((v) => !v)}>
             <MessageCircle className="size-4" aria-hidden />
             {listing.pendingRequests > 0
               ? isAr
@@ -314,7 +314,7 @@ function ListingRow({
             <div className="mt-3 flex justify-end">
               <Button
                 size="sm"
-                variant="ghost"
+                variant="tertiary"
                 className="text-destructive hover:bg-destructive/10"
                 onClick={() => withdraw.mutate()}
                 disabled={withdraw.isPending}
@@ -457,7 +457,7 @@ function EnquiryRow({
               {handover.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               {isAr ? "أرسل الهوية" : "Send the Cat ID"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setDeciding(null)}>
+            <Button size="sm" variant="tertiary" onClick={() => setDeciding(null)}>
               {isAr ? "تراجع" : "Cancel"}
             </Button>
           </div>
@@ -485,7 +485,7 @@ function EnquiryRow({
               {act.isPending && <Loader2 className="size-4 animate-spin" />}
               {deciding === "accept" ? (isAr ? "وافق" : "Accept") : isAr ? "اعتذر" : "Decline"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setDeciding(null)}>
+            <Button size="sm" variant="tertiary" onClick={() => setDeciding(null)}>
               {isAr ? "تراجع" : "Cancel"}
             </Button>
           </div>
@@ -509,14 +509,14 @@ function EnquiryRow({
               <Button size="sm" onClick={() => setDeciding("accept")}>
                 {isAr ? "وافق" : "Accept"}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setDeciding("decline")}>
+              <Button size="sm" variant="tertiary" onClick={() => setDeciding("decline")}>
                 <X className="size-4" aria-hidden />
                 {isAr ? "اعتذر" : "Decline"}
               </Button>
             </>
           )}
           {accepted && (
-            <Button size="sm" variant="ghost" onClick={() => setDeciding("decline")}>
+            <Button size="sm" variant="tertiary" onClick={() => setDeciding("decline")}>
               {isAr ? "تراجع عن الموافقة" : "Change my mind"}
             </Button>
           )}

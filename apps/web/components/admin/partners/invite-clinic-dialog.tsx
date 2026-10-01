@@ -48,7 +48,7 @@ function validate(f: FormState, isAr: boolean): Errors {
     e.nameAr = isAr ? "اكتب اسم العيادة بالعربية (حرفان على الأقل)." : "Enter the clinic name in Arabic (at least 2 characters).";
   }
   if (f.nameEn.trim().length > 160) {
-    e.nameEn = isAr ? "الاسم أطول من ١٦٠ حرفاً." : "The name is longer than 160 characters.";
+    e.nameEn = isAr ? "الاسم أطول من 160 حرفاً." : "The name is longer than 160 characters.";
   }
   if (f.contactName.trim().length < 2) {
     e.contactName = isAr ? "اكتب اسم الشخص المسؤول." : "Enter the contact person's name.";
@@ -191,10 +191,10 @@ export function InviteClinicDialog({ open, onClose, isAr }: { open: boolean; onC
             >
               {isAr ? "فتح ملف العيادة" : "Open clinic record"}
             </Link>
-            <Button variant="outline" onClick={inviteAnother}>
+            <Button variant="secondary" onClick={inviteAnother}>
               {isAr ? "دعوة عيادة أخرى" : "Invite another clinic"}
             </Button>
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="tertiary" onClick={onClose}>
               {isAr ? "تم" : "Done"}
             </Button>
           </div>
@@ -203,7 +203,7 @@ export function InviteClinicDialog({ open, onClose, isAr }: { open: boolean; onC
         <form onSubmit={submit} noValidate className="space-y-4">
           <p className="text-sm text-muted-foreground">
             {isAr
-              ? "الانضمام للشبكة بالدعوة فقط. يصل المالك بريد برابط شخصي صالح ١٤ يوماً."
+              ? "الانضمام للشبكة بالدعوة فقط. يصل المالك بريد برابط شخصي صالح 14 يوماً."
               : "The network is invitation-only. The owner receives a personal link valid for 14 days."}
           </p>
 
@@ -334,7 +334,7 @@ export function InviteClinicDialog({ open, onClose, isAr }: { open: boolean; onC
           </Field>
 
           <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={invite.isPending}>
+            <Button type="button" variant="tertiary" onClick={onClose} disabled={invite.isPending}>
               {isAr ? "إلغاء" : "Cancel"}
             </Button>
             <Button type="submit" loading={invite.isPending}>

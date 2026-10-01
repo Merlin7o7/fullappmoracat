@@ -151,7 +151,7 @@ export function CatOnboardingJourney({ catId }: { catId: string }) {
       {/* Header — warm, name-first, honest about being optional (R081/R082). */}
       <div className="relative mb-6">
         <IlloPaw tone="peach" className="pointer-events-none absolute -top-4 end-0 size-10 rotate-[14deg] opacity-40" />
-        <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-accent-ink">
+        <p className="font-mono text-xs uppercase tracking-[0.24em] text-accent-ink">
           {isAr ? "عائلة مرقط" : "The Moracat family"}
         </p>
         <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
@@ -193,11 +193,11 @@ export function CatOnboardingJourney({ catId }: { catId: string }) {
           {/* Nav — one clear action, always (R005). */}
           <div className="mt-6 flex items-center justify-between gap-3">
             {step > 0 ? (
-              <Button variant="ghost" size="sm" onClick={() => go(step - 1)} disabled={persist.isPending}>
+              <Button variant="tertiary" size="sm" onClick={() => go(step - 1)} disabled={persist.isPending}>
                 <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "رجوع" : "Back"}
               </Button>
             ) : (
-              <Button variant="ghost" size="sm" onClick={() => router.push("/portal/cats")} disabled={persist.isPending}>
+              <Button variant="tertiary" size="sm" onClick={() => router.push("/portal/cats")} disabled={persist.isPending}>
                 {isAr ? "لاحقاً" : "Later"}
               </Button>
             )}
@@ -859,7 +859,7 @@ function Celebration({ cat, draft, badges, completeness, isAr, dispName, reduced
       {!reduced && <DriftLayer />}
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative flex w-full max-w-sm flex-col items-center py-8 text-center">
-        <motion.p {...fade(0.35)} className="font-mono text-[10px] uppercase tracking-[0.28em] text-[hsl(18_93%_62%)]">
+        <motion.p {...fade(0.35)} className="font-mono text-xs uppercase tracking-[0.28em] text-[hsl(18_93%_62%)]">
           {isAr ? "أهلاً في العائلة" : "Welcome to the family"}
         </motion.p>
         <motion.h2 {...fade(0.5)} className="mt-3 font-display text-3xl font-semibold tracking-tight text-white">

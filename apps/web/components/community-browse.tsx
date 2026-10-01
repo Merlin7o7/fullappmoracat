@@ -394,7 +394,7 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
             title={isAr ? "لا توجد نتائج مطابقة" : "No matches found"}
             body={isAr ? "جرّب مصطلحاً آخر أو امسح المرشّحات." : "Try a different term or clear your filters."}
             action={
-              <Button variant="outline" size="sm" onClick={clearFilters}>
+              <Button variant="secondary" size="sm" onClick={clearFilters}>
                 {isAr ? "مسح المرشّحات" : "Clear filters"}
               </Button>
             }
@@ -438,7 +438,7 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
             <div className="mt-8 flex flex-col items-center gap-3">
               <div ref={sentinelRef} aria-hidden className="h-px w-full" />
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
               >
@@ -545,7 +545,7 @@ function CommunityCatCard({ cat, isAr, likes }: { cat: CommunityCard; isAr: bool
               <p className="truncate font-display font-semibold">{name}</p>
               {/* Tenure fact, quietly worn — never points (§04). */}
               {cat.isFounding && (
-                <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                   {isAr ? "عضو مؤسس" : "Founding member"}
                 </span>
               )}

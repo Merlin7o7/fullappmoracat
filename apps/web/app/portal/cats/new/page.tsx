@@ -112,7 +112,7 @@ function CatAge({
 
 /* ══ The census city ══════════════════════════════════════════════════════
  * The field whose absence made the Cat ID lie. The founding class is printed
- * on the card, and until this existed it read «دفعة الرياض ٢٠٢٦» for an owner
+ * on the card, and until this existed it read «دفعة الرياض 2026» for an owner
  * in Jeddah or Makkah (R040).
  *
  * The list is SAUDI_CITIES from packages/core — deliberately NOT the delivery
@@ -653,7 +653,7 @@ function IssueIdFlow() {
                 </p>
               )}
               <div className="mt-2 flex items-center justify-between gap-3">
-                <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")} disabled={create.isPending}>
+                <Button type="button" variant="tertiary" size="sm" onClick={() => router.push("/portal/cats")} disabled={create.isPending}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "إلغاء" : "Cancel"}
                 </Button>
                 <Button type="submit" size="lg" disabled={!allReady || create.isPending}>
@@ -723,7 +723,7 @@ function IssueIdFlow() {
                 </p>
               )}
               <div className="mt-2 flex items-center justify-between gap-3">
-                <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/portal/cats")}>
+                <Button type="button" variant="tertiary" size="sm" onClick={() => router.push("/portal/cats")}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "إلغاء" : "Cancel"}
                 </Button>
                 <Button type="submit" size="lg" disabled={!catStepReady}>
@@ -783,7 +783,7 @@ function IssueIdFlow() {
                 </p>
               )}
               <div className="mt-2 flex items-center justify-between gap-3">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setStep(0)} disabled={create.isPending}>
+                <Button type="button" variant="tertiary" size="sm" onClick={() => setStep(0)} disabled={create.isPending}>
                   <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "رجوع" : "Back"}
                 </Button>
                 <Button type="submit" size="lg" disabled={!allReady || create.isPending}>
@@ -835,7 +835,7 @@ function IssueIdFlow() {
         description={isAr ? "تبي تسوي هوية ثانية بنفس الاسم؟" : "Create another with the same name?"}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setDupConfirmOpen(false)}>
+            <Button variant="tertiary" onClick={() => setDupConfirmOpen(false)}>
               {isAr ? "لا، بعدّل الاسم" : "No, I'll change the name"}
             </Button>
             <Button onClick={() => { setDupConfirmOpen(false); create.mutate(); }}>
@@ -950,7 +950,7 @@ function NoCatYetDoor({ isAr }: { isAr: boolean }) {
           ? "تقدر تنضم بدون قط — تتابع التعداد، وتتصفح القطط اللي تدوّر بيتاً، وتسجّل أول قط لك متى ما جاك."
           : "You can join without one — follow the census, browse the cats looking for a home, and register your first cat whenever they arrive."}
       </p>
-      <Button variant="ghost" size="sm" className="mt-2" onClick={() => void go()} disabled={pending}>
+      <Button variant="tertiary" size="sm" className="mt-2" onClick={() => void go()} disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}
         {isAr ? "أكمل بدون قط" : "Continue without a cat"}
       </Button>

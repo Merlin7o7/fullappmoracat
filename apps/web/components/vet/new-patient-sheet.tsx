@@ -124,7 +124,7 @@ export function NewPatientSheet({
           <Button type="submit" loading={create.isPending} disabled={!f.name.trim() || !phoneOk}>
             <UserPlus className="size-4" /> {isAr ? "سجّل وافتح الزيارة" : "Register and open visit"}
           </Button>
-          <Button type="button" variant="ghost" onClick={onClose}>{isAr ? "إلغاء" : "Cancel"}</Button>
+          <Button type="button" variant="tertiary" onClick={onClose}>{isAr ? "إلغاء" : "Cancel"}</Button>
         </div>
       </form>
     </Drawer>

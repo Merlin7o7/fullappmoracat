@@ -88,7 +88,7 @@ export function LostFoundView({ id }: { id: string }) {
             </Link>
           }
           secondary={
-            <Button size="sm" variant="ghost" onClick={() => void refetch()}>
+            <Button size="sm" variant="tertiary" onClick={() => void refetch()}>
               {isAr ? "أعد المحاولة" : "Try again"}
             </Button>
           }
@@ -268,7 +268,7 @@ export function LostFoundView({ id }: { id: string }) {
                   </div>
                 )}
                 <Link href="/portal/lost-found">
-                  <Button variant={closed ? "primary" : "outline"} className="w-full sm:w-auto">
+                  <Button variant={closed ? "primary" : "secondary"} className="w-full sm:w-auto">
                     {isAr ? "أدر إعلانك" : "Manage your notice"}
                   </Button>
                 </Link>
@@ -525,7 +525,7 @@ function RelayDialog({
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="tertiary" onClick={onClose}>
             {isAr ? "إلغاء" : "Cancel"}
           </Button>
           <Button type="submit" disabled={mutation.isPending || message.trim().length < 5}>

@@ -117,7 +117,7 @@ export default function BlogPage() {
             })}
           </div>
         ) : (
-          <div className="mx-auto max-w-md rounded-[2rem] bg-cream/60 px-6 py-16 text-center dark:bg-cream/40">
+          <div className="mx-auto max-w-md rounded-2xl bg-cream/60 px-6 py-16 text-center dark:bg-cream/40">
             <Illo3D name="mouse" variant="green" directional className="mx-auto mb-5 size-24 animate-float" px={96} />
             <p className="font-display text-xl font-semibold tracking-tight">{isAr ? "لا مقالات بعد" : "No articles yet"}</p>
           </div>

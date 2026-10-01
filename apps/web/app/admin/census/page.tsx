@@ -104,7 +104,7 @@ export default function AdminCensusPage() {
             {data && (
               <p className="mt-1 text-xs text-muted-foreground">
                 {isAr
-                  ? `${fmtNum(data.registeredLast30Days, true)} خلال آخر ٣٠ يوماً`
+                  ? `${fmtNum(data.registeredLast30Days, true)} خلال آخر 30 يوماً`
                   : `${fmtNum(data.registeredLast30Days, false)} in the last 30 days`}
               </p>
             )}
@@ -178,7 +178,7 @@ export default function AdminCensusPage() {
                     <tr>
                       <th className="p-3 text-start">{isAr ? "المصدر" : "Source"}</th>
                       <th className="p-3 text-start">{isAr ? "الإجمالي" : "Total"}</th>
-                      <th className="p-3 text-start">{isAr ? "آخر ٣٠ يوماً" : "Last 30 days"}</th>
+                      <th className="p-3 text-start">{isAr ? "آخر 30 يوماً" : "Last 30 days"}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -203,7 +203,7 @@ export default function AdminCensusPage() {
                               {/* Factual marker, not an alarm — the word carries
                                   the meaning, the tint only echoes it (R093). */}
                               {below && !isDirect && (
-                                <Badge variant="outline" className="text-[11px] font-normal text-muted-foreground">
+                                <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
                                   {isAr
                                     ? `دون ${fmtNum(YIELD_THRESHOLD_30D, true)}/شهر`
                                     : `under ${YIELD_THRESHOLD_30D}/mo`}

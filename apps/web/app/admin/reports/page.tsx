@@ -139,10 +139,10 @@ export default function AdminReportsPage() {
                 </div>
                 {status === "PENDING" && (
                   <div className="flex shrink-0 gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => resolve.mutate({ id: r.id, action: "dismiss" })} disabled={resolve.isPending}>
+                    <Button size="sm" variant="tertiary" onClick={() => resolve.mutate({ id: r.id, action: "dismiss" })} disabled={resolve.isPending}>
                       <Check className="size-4" /> {isAr ? "تجاهل" : "Dismiss"}
                     </Button>
-                    <Button size="sm" variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => setHiding(r)}>
+                    <Button size="sm" variant="secondary" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => setHiding(r)}>
                       <ShieldAlert className="size-4" /> {isAr ? "إخفاء القط" : "Hide cat"}
                     </Button>
                   </div>

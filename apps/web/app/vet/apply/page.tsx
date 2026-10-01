@@ -115,7 +115,7 @@ export default function VetPartnershipsPage() {
             </Button>
           </a>
           <a href={CONTACT.instagramUrl} target="_blank" rel="noopener noreferrer" className="sm:flex-1">
-            <Button size="lg" variant="outline" className="w-full">
+            <Button size="lg" variant="secondary" className="w-full">
               <Instagram className="size-4" aria-hidden />
               <span dir="ltr">{CONTACT.instagramHandle}</span>
             </Button>

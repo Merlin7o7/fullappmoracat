@@ -45,7 +45,7 @@ export function EmergencyContactForm({ record, isAr }: { record: HealthRecord; i
           <p className="text-xs text-muted-foreground">{isAr ? "من تتصل به العيادة إذا لم تصل إليك." : "Who the clinic calls if they can't reach you."}</p>
         </div>
         {!editing && (
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}><Pencil className="size-4" /> {current ? (isAr ? "تعديل" : "Edit") : (isAr ? "إضافة" : "Add")}</Button>
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}><Pencil className="size-4" /> {current ? (isAr ? "تعديل" : "Edit") : (isAr ? "إضافة" : "Add")}</Button>
         )}
       </div>
       {!editing ? (
@@ -61,7 +61,7 @@ export function EmergencyContactForm({ record, isAr }: { record: HealthRecord; i
           <Field label={isAr ? "الصلة" : "Relation"} value={f.relation} onChange={(v) => setF({ ...f, relation: v })} placeholder={isAr ? "أخت، صديق…" : "Sister, friend…"} />
           <div className="flex gap-2 sm:col-span-3">
             <Button type="submit" size="sm" loading={save.isPending} disabled={!f.name || digitsOnly(f.phone).length < 8}>{isAr ? "حفظ جهة الاتصال" : "Save contact"}</Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>{isAr ? "إلغاء" : "Cancel"}</Button>
+            <Button type="button" size="sm" variant="tertiary" onClick={() => setEditing(false)}>{isAr ? "إلغاء" : "Cancel"}</Button>
           </div>
         </form>
       )}

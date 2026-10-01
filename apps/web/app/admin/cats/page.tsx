@@ -11,6 +11,7 @@ import { friendlyError } from "@/lib/errors";
 import { Pagination } from "@/app/admin/_components/pagination";
 import { fmtDate } from "@/app/admin/_components/i18n";
 import { Field } from "@/components/field";
+import { formatNumber } from "@moraqat/core";
 
 /**
  * The cat CRM (MRC-PROD-001 T4): find any cat by Cat ID, microchip, owner
@@ -67,7 +68,7 @@ export default function AdminCats() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "القطط" : "Cats"}</h1>
-          <p className="text-sm text-muted-foreground">{data ? (isAr ? `${data.pagination.total.toLocaleString("ar-SA")} إجمالاً` : `${data.pagination.total} total`) : "—"}</p>
+          <p className="text-sm text-muted-foreground">{data ? (isAr ? `${formatNumber(data.pagination.total, "ar")} إجمالاً` : `${data.pagination.total} total`) : "—"}</p>
         </div>
         <div className="relative">
           <Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -99,7 +100,7 @@ export default function AdminCats() {
               ) : data.items.map((c) => (
                 <tr key={c.id} className="align-top">
                   <td className="px-4 py-3">
-                    <p className="font-medium">{c.name} {c.isDemo && <Badge variant="outline" className="ms-1 text-[10px]">demo</Badge>}</p>
+                    <p className="font-medium">{c.name} {c.isDemo && <Badge variant="outline" className="ms-1 text-xs">demo</Badge>}</p>
                     <p className="font-mono text-xs text-muted-foreground" dir="ltr">{c.catIdNumber ?? "—"} · #{c.catNumber}{c.microchipNo ? ` · ${c.microchipNo}` : ""}</p>
                   </td>
                   <td className="px-4 py-3">
@@ -113,7 +114,7 @@ export default function AdminCats() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(c.createdAt, isAr)}</td>
                   <td className="px-4 py-3 text-end">
                     {c.claimStatus === "CLAIMED" && c.status === "ACTIVE" && (
-                      <Button size="sm" variant="ghost" onClick={() => { setMerging(c); setTargetId(""); }}><GitMerge className="size-4" /> {isAr ? "دمج" : "Merge"}</Button>
+                      <Button size="sm" variant="tertiary" onClick={() => { setMerging(c); setTargetId(""); }}><GitMerge className="size-4" /> {isAr ? "دمج" : "Merge"}</Button>
                     )}
                   </td>
                 </tr>
@@ -136,7 +137,7 @@ export default function AdminCats() {
           <Field label={isAr ? "معرّف القط الهدف (id)" : "Target cat id"} value={targetId} onChange={setTargetId} placeholder="clx…" />
           <div className="flex gap-2">
             <Button loading={merge.isPending} disabled={!targetId.trim() || targetId.trim() === merging?.id} onClick={() => merge.mutate()}>{isAr ? "ادمج" : "Merge"}</Button>
-            <Button variant="ghost" onClick={() => setMerging(null)}>{isAr ? "إلغاء" : "Cancel"}</Button>
+            <Button variant="tertiary" onClick={() => setMerging(null)}>{isAr ? "إلغاء" : "Cancel"}</Button>
           </div>
         </div>
       </Dialog>

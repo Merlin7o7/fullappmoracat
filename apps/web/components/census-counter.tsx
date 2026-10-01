@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@moraqat/ui";
 import { api, type CensusSnapshot } from "@/lib/api";
+import { formatNumber } from "@moraqat/core";
 
 /**
  * The live census count (MRC-GTM-001 §1) — the number Phase 0 exists to move.
@@ -31,9 +32,9 @@ export function useCensus() {
   });
 }
 
-/** Latin digits with locale grouping — the number is an identifier people read aloud. */
+/** The one number formatter (@moraqat/core) — Western digits, locale grouping. */
 function formatCount(n: number, isAr: boolean) {
-  return new Intl.NumberFormat(isAr ? "ar-SA-u-nu-latn" : "en-US").format(n);
+  return formatNumber(n, isAr ? "ar" : "en");
 }
 
 interface CensusCounterProps {

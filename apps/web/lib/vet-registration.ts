@@ -609,7 +609,7 @@ const COPY: Record<string, { ar: [string, string]; en: [string, string] }> = {
     en: ["Choose a file", "No file was received."],
   },
   VET_DOC_TOO_LARGE: {
-    ar: ["الملف كبير", "الحد الأقصى ١٠ ميجابايت. صوّره بجودة أقل أو احفظه PDF."],
+    ar: ["الملف كبير", "الحد الأقصى 10 ميجابايت. صوّره بجودة أقل أو احفظه PDF."],
     en: ["File too large", "The limit is 10 MB. Photograph it at lower quality or save it as a PDF."],
   },
   VET_DOC_TYPE: {
@@ -645,7 +645,7 @@ const COPY: Record<string, { ar: [string, string]; en: [string, string] }> = {
     en: ["You already have an account", "This email is already on Moracat — sign in to continue."],
   },
   WEAK_PASSWORD: {
-    ar: ["كلمة المرور ضعيفة", "استخدم ٨ أحرف على الأقل تجمع حروفاً وأرقاماً."],
+    ar: ["كلمة المرور ضعيفة", "استخدم 8 أحرف على الأقل تجمع حروفاً وأرقاماً."],
     en: ["Password too weak", "Use at least 8 characters mixing letters and numbers."],
   },
 };

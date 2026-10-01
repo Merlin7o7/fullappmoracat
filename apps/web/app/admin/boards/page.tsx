@@ -188,13 +188,13 @@ function AdoptionBoard({
                   {row.hiddenAt ? (isAr ? "مخفي" : "Hidden") : row.status}
                 </Badge>
                 {row.cat.catIdNumber && (
-                  <span className="font-mono text-[11px] text-muted-foreground" dir="ltr">
+                  <span className="font-mono text-xs text-muted-foreground" dir="ltr">
                     {row.cat.catIdNumber}
                   </span>
                 )}
               </div>
               <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{row.excerpt}</p>
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-3 text-[11px] text-muted-foreground">
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
                 <span dir="ltr">{row.owner.email}</span>
                 <span className="inline-flex items-center gap-1">
                   <Eye className="size-3" aria-hidden /> {row.viewCount}
@@ -205,7 +205,7 @@ function AdoptionBoard({
                 <span>{fmtDateTime(row.createdAt, isAr)}</span>
               </p>
               {row.hiddenReason && (
-                <p className="mt-1 text-[11px] text-destructive">
+                <p className="mt-1 text-xs text-destructive">
                   {isAr ? "السبب: " : "Reason: "}
                   {row.hiddenReason}
                 </p>
@@ -272,13 +272,13 @@ function LostFoundBoard({
                   </Badge>
                 )}
                 {row.catIdNumber && (
-                  <span className="font-mono text-[11px] text-muted-foreground" dir="ltr">
+                  <span className="font-mono text-xs text-muted-foreground" dir="ltr">
                     {row.catIdNumber}
                   </span>
                 )}
               </div>
               <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{row.excerpt}</p>
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-3 text-[11px] text-muted-foreground">
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
                 <span dir="ltr">{row.reporter.email}</span>
                 <span className="inline-flex items-center gap-1">
                   <Eye className="size-3" aria-hidden /> {row.viewCount}
@@ -289,7 +289,7 @@ function LostFoundBoard({
                 <span>{fmtDateTime(row.createdAt, isAr)}</span>
               </p>
               {row.hiddenReason && (
-                <p className="mt-1 text-[11px] text-destructive">
+                <p className="mt-1 text-xs text-destructive">
                   {isAr ? "السبب: " : "Reason: "}
                   {row.hiddenReason}
                 </p>
@@ -371,7 +371,7 @@ function Actions({
         {isAr ? "افتح الصفحة" : "Open page"}
       </a>
       {hidden ? (
-        <Button size="sm" variant="outline" onClick={onUnhide} disabled={busy}>
+        <Button size="sm" variant="secondary" onClick={onUnhide} disabled={busy}>
           {busy ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
           {isAr ? "إعادة النشر" : "Restore"}
         </Button>
@@ -398,7 +398,7 @@ function Actions({
             >
               {isAr ? "أخفِ" : "Hide"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setAsking(false)}>
+            <Button size="sm" variant="tertiary" onClick={() => setAsking(false)}>
               {isAr ? "إلغاء" : "Cancel"}
             </Button>
           </div>
@@ -406,7 +406,7 @@ function Actions({
       ) : (
         <Button
           size="sm"
-          variant="ghost"
+          variant="tertiary"
           className="text-destructive hover:bg-destructive/10"
           onClick={() => setAsking(true)}
         >

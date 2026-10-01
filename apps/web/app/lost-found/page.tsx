@@ -72,13 +72,13 @@ export default function LostFoundPage() {
                 one you need depends entirely on the worst day you're having. */}
             <div className="mt-7 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Link href={reportHref("LOST")}>
-                <Button size="lg" variant="brand">
+                <Button size="lg" variant="primary">
                   <Search className="size-4" aria-hidden />
                   {isAr ? "ضاع قطي" : "My cat is missing"}
                 </Button>
               </Link>
               <Link href={reportHref("FOUND")}>
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="secondary">
                   <MapPin className="size-4" aria-hidden />
                   {isAr ? "لقيت قطاً" : "I found a cat"}
                 </Button>
@@ -105,7 +105,7 @@ export default function LostFoundPage() {
             </p>
             {!user && (
               <Link href="/register" className="mt-1">
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="secondary">
                   {isAr ? "سجّل قطك مجاناً" : "Register your cat, free"}
                 </Button>
               </Link>

@@ -125,7 +125,7 @@ export function SiteHeader() {
                 is the page's one action: register your cat (R005). On the
                 narrowest screens the hero input and the sticky bar carry it. */}
             <Link href="/login" className="ms-1 inline-flex">
-              <Button variant="ghost" size="sm" className="px-3">{t.nav.login}</Button>
+              <Button variant="tertiary" size="sm" className="px-3">{t.nav.login}</Button>
             </Link>
             <Link href="/register" className="hidden sm:inline-flex">
               <Button size="sm">{t.hero.cta}</Button>

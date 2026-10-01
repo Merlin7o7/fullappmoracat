@@ -142,7 +142,7 @@ function MockForm({ session, isAr }: { session: ClientSession; isAr: boolean }) 
         <Button size="sm" onClick={() => go(`mockpay_${session.reference}`)}>
           {isAr ? "محاكاة دفع ناجح" : "Simulate successful payment"}
         </Button>
-        <Button size="sm" variant="outline" onClick={() => go(`mockpay_declined_${session.reference}`)}>
+        <Button size="sm" variant="secondary" onClick={() => go(`mockpay_declined_${session.reference}`)}>
           {isAr ? "محاكاة رفض" : "Simulate decline"}
         </Button>
       </div>

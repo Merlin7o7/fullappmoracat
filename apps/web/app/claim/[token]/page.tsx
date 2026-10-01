@@ -159,7 +159,7 @@ export default function ClaimPage() {
                 {isAr ? "لاستلام هوية قطك تحتاج حساباً في مرقط — دقيقة واحدة." : "To claim your cat's ID you need a Moracat account — it takes a minute."}
               </p>
               <Link href={`/register?next=${encodeURIComponent(next)}`} className="block"><Button className="w-full">{isAr ? "أنشئ حساباً واستلم" : "Create an account and claim"}</Button></Link>
-              <Link href={`/login?next=${encodeURIComponent(next)}`} className="block"><Button variant="outline" className="w-full">{isAr ? "عندي حساب — تسجيل الدخول" : "I have an account — sign in"}</Button></Link>
+              <Link href={`/login?next=${encodeURIComponent(next)}`} className="block"><Button variant="secondary" className="w-full">{isAr ? "عندي حساب — تسجيل الدخول" : "I have an account — sign in"}</Button></Link>
             </Card>
           ) : candidates ? (
             <Card className="space-y-3 p-5">

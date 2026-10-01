@@ -22,6 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck, ArrowRight, Stethoscope, Siren } from "lucide-react";
 import { Card, Badge, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { formatNumber } from "@moraqat/core";
 
 /** Owner-grantable tiers. T0 (identity + medical alerts) is always on — never granted. */
 export type VetTier = "T1" | "T2";
@@ -437,7 +438,7 @@ export function VetConsentCard({
           ) : (
             <p className="mt-1 text-sm text-muted-foreground">
               {isAr
-                ? `${live.length === 1 ? "عيادة واحدة" : `${live.length.toLocaleString("ar-SA")} عيادات`} لديها إذن بفتح سجل ${cat}.`
+                ? `${live.length === 1 ? "عيادة واحدة" : `${formatNumber(live.length, "ar")} عيادات`} لديها إذن بفتح سجل ${cat}.`
                 : `${live.length} clinic${live.length === 1 ? "" : "s"} can open ${cat}'s record.`}
             </p>
           )}

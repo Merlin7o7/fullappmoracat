@@ -233,7 +233,7 @@ function WelcomeInner() {
           {PLANS.map((p) => (
             <div key={p.tier} className={cn("relative rounded-2xl border bg-card p-5 shadow-e1", p.popular ? "border-primary ring-1 ring-primary/30" : "border-border")}>
               {p.popular && (
-                <span className="absolute -top-2.5 start-4 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold text-primary-foreground">
+                <span className="absolute -top-2.5 start-4 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">
                   {isAr ? "الأكثر شيوعاً" : "Most popular"}
                 </span>
               )}
@@ -254,7 +254,7 @@ function WelcomeInner() {
         </div>
         <p className="text-center text-xs text-muted-foreground">
           {isAr
-            ? "الحد الأدنى ٣ أشهر · تُدفع المدة مقدّماً عبر تمارا · بدون ضريبة"
+            ? "الحد الأدنى 3 أشهر · تُدفع المدة مقدّماً عبر تمارا · بدون ضريبة"
             : "3-month minimum · pay the term upfront via Tamara · no VAT"}
         </p>
         </>

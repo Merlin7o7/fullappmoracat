@@ -23,6 +23,7 @@ import type { OnboardingState } from "@/lib/vet-registration";
 import { InlineError } from "@/components/vet/settings/confirm-dialog";
 import { settingsError } from "@/components/vet/settings/errors";
 import { useOnboarding, useSetOnboarding } from "@/components/vet/settings/use-onboarding";
+import { formatNumber } from "@moraqat/core";
 
 const PARTNERS_EMAIL = "partners@moracat.co";
 
@@ -88,7 +89,7 @@ export function GoLiveChecklist({ className }: { className?: string }) {
         {data && (
           <Badge variant={data.ready ? "success" : "secondary"} className="tabular">
             {isAr
-              ? `${doneRequired.toLocaleString("ar-SA")} من ${required.length.toLocaleString("ar-SA")} مطلوبة`
+              ? `${formatNumber(doneRequired, "ar")} من ${formatNumber(required.length, "ar")} مطلوبة`
               : `${doneRequired} of ${required.length} required`}
           </Badge>
         )}
@@ -120,7 +121,7 @@ export function GoLiveChecklist({ className }: { className?: string }) {
         ) : query.isError || !data ? (
           <div className="flex flex-col items-start gap-2 p-3">
             <InlineError error={settingsError(query.error, isAr)} />
-            <Button size="sm" variant="outline" onClick={() => void query.refetch()} loading={query.isFetching}>
+            <Button size="sm" variant="secondary" onClick={() => void query.refetch()} loading={query.isFetching}>
               {isAr ? "أعد المحاولة" : "Try again"}
             </Button>
           </div>
@@ -159,7 +160,7 @@ export function GoLiveChecklist({ className }: { className?: string }) {
                 <p className="text-sm font-medium">
                   {isAr ? "كل البنود المطلوبة مكتملة." : "Every required item is done."}
                 </p>
-                <Button variant="brand" onClick={() => void post("/vet/org/onboarding/request-go-live", "golive")} loading={busy === "golive"}>
+                <Button variant="primary" onClick={() => void post("/vet/org/onboarding/request-go-live", "golive")} loading={busy === "golive"}>
                   <Rocket className="size-4" aria-hidden />
                   {isAr ? "اطلب من مرقط تفعيل العيادة" : "Ask Moracat to switch us live"}
                 </Button>
@@ -204,7 +205,7 @@ export function GoLiveChecklist({ className }: { className?: string }) {
             <StepLink href="/vet/settings#branches">{isAr ? "راجع الفروع" : "Review branches"}</StepLink>
             <Button
               size="sm"
-              variant="outline"
+              variant="secondary"
               onClick={() => void post("/vet/org/onboarding/confirm-branches", "branches")}
               loading={busy === "branches"}
             >
@@ -217,7 +218,7 @@ export function GoLiveChecklist({ className }: { className?: string }) {
         const it = data.items.device;
         const summary = it.done
           ? isAr
-            ? `${it.count.toLocaleString("ar-SA")} ${it.count === 1 ? "جهاز مسجّل" : "أجهزة مسجّلة"}`
+            ? `${formatNumber(it.count, "ar")} ${it.count === 1 ? "جهاز مسجّل" : "أجهزة مسجّلة"}`
             : `${it.count} registered`
           : null;
         return (
@@ -239,7 +240,7 @@ export function GoLiveChecklist({ className }: { className?: string }) {
           <span className="flex flex-wrap items-center gap-2">
             <span className="tabular">
               {isAr
-                ? `${it.count.toLocaleString("ar-SA")} من ${it.of.toLocaleString("ar-SA")} عيّنوا رموزهم`
+                ? `${formatNumber(it.count, "ar")} من ${formatNumber(it.of, "ar")} عيّنوا رموزهم`
                 : `${it.count} of ${it.of} have set a PIN`}
             </span>
             <StepLink href="/vet/settings#pin">{isAr ? "رمزي السري" : "My PIN"}</StepLink>
@@ -280,7 +281,7 @@ export function GoLiveChecklist({ className }: { className?: string }) {
               </code>
               {can("patient.search") && (
                 <Link href="/vet/scan">
-                  <Button size="sm" variant="brand">
+                  <Button size="sm" variant="primary">
                     <ScanLine className="size-4" aria-hidden />
                     {isAr ? "افتح الماسح" : "Open the scanner"}
                   </Button>

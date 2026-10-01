@@ -83,7 +83,7 @@ export function AutoRenewToggle({
         </span>
         <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
           {isAr
-            ? `نذكّرك قبل ٧ أيام ويوم واحد، وتقدر توقفه بضغطة. نفس المدة (${termLabel}) على نفس البطاقة.`
+            ? `نذكّرك قبل 7 أيام ويوم واحد، وتقدر توقفه بضغطة. نفس المدة (${termLabel}) على نفس البطاقة.`
             : `We remind you 7 days and 1 day before, and you can stop it in one tap. Same term (${termLabel}) on the same card.`}
         </span>
       </span>

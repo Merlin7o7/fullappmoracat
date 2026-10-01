@@ -95,7 +95,7 @@ export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, 
         <IlloSprig tone="leaf" className="absolute -bottom-12 -start-9 h-16 w-auto rotate-[-16deg] opacity-80" />
         <IlloPaw tone="butter" className="absolute -bottom-10 -end-7 size-12 rotate-[16deg]" />
 
-        <div className="rotate-[-3deg] rounded-[1.2rem] shadow-[0_24px_48px_-12px_hsl(165_40%_14%/0.35)]">
+        <div className="rotate-[-3deg] rounded-2xl shadow-[0_24px_48px_-12px_hsl(165_40%_14%/0.35)]">
           <CatIdCard
             exportMode
             catName={catName}

@@ -273,7 +273,7 @@ export default function VetScanPage() {
         </div>
         <div className="flex items-center gap-2">
           {canCreate && (
-            <Button size="sm" variant="outline" onClick={() => setNewPatient(true)}>
+            <Button size="sm" variant="secondary" onClick={() => setNewPatient(true)}>
               {isAr ? "مريض جديد" : "New patient"}
             </Button>
           )}
@@ -367,7 +367,7 @@ export default function VetScanPage() {
                       ? "استخدم الماسح السلكي أو اكتب الرقم المطبوع تحت الرمز — كلاهما يعطي نفس النتيجة."
                       : "Use the hardware scanner or type the number printed under the code — both reach the same answer."}
                 </p>
-                <Button size="sm" variant="glass" onClick={() => void startCamera()}>
+                <Button size="sm" variant="secondary" onClick={() => void startCamera()}>
                   {isAr ? "أعد المحاولة" : "Try the camera again"}
                 </Button>
               </div>
@@ -416,7 +416,7 @@ export default function VetScanPage() {
         <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/30 bg-destructive/[0.06] px-3 py-2.5">
           <p className="text-xs leading-relaxed text-muted-foreground">{error}</p>
           {noMatchFor && canCreate && (
-            <Button size="sm" variant="outline" onClick={() => setNewPatient(true)}>
+            <Button size="sm" variant="secondary" onClick={() => setNewPatient(true)}>
               {isAr ? "مريض جديد" : "New patient"}
             </Button>
           )}

@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { orderStatusLabel, titleCase, fmtDate, fmtDateTime, fmtNum } from "@/app/admin/_components/i18n";
 import { ORDER_STEPPER_PATH } from "@/app/admin/_components/order-transitions";
+import { formatNumber } from "@moraqat/core";
 
 interface RefundRow { id: string; amount: number; reason: string | null; providerRef: string | null; createdAt: string }
 interface PaymentRow {
@@ -65,7 +66,7 @@ export default function AdminOrderDetail() {
     return (
       <div className="mx-auto max-w-3xl py-16 text-center">
         <p className="text-sm text-muted-foreground">{isAr ? "تعذّر تحميل الطلب." : "Couldn’t load this order."}</p>
-        <Link href="/admin/orders"><Button variant="outline" size="sm" className="mt-4">{isAr ? "العودة للطلبات" : "Back to orders"}</Button></Link>
+        <Link href="/admin/orders"><Button variant="secondary" size="sm" className="mt-4">{isAr ? "العودة للطلبات" : "Back to orders"}</Button></Link>
       </div>
     );
   }
@@ -79,7 +80,7 @@ export default function AdminOrderDetail() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <Link href="/admin/orders" aria-label={isAr ? "رجوع" : "Back"}>
-            <Button variant="ghost" size="sm"><ArrowLeft className={isAr ? "size-4 rotate-180" : "size-4"} /></Button>
+            <Button variant="tertiary" size="sm"><ArrowLeft className={isAr ? "size-4 rotate-180" : "size-4"} /></Button>
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -208,7 +209,7 @@ export default function AdminOrderDetail() {
                         <p className="text-xs text-muted-foreground">
                           {isAr ? `قابل للاسترداد: ${money(p.refundable)}` : `Refundable: ${money(p.refundable)}`}
                         </p>
-                        <Button variant="outline" size="sm" onClick={() => setRefundFor(p)}>
+                        <Button variant="secondary" size="sm" onClick={() => setRefundFor(p)}>
                           <RotateCcw className="size-4" /> {isAr ? "استرداد" : "Refund"}
                         </Button>
                       </div>
@@ -322,7 +323,7 @@ function StatusStepper({ status, isAr }: { status: string; isAr: boolean }) {
               <span className="flex flex-col items-center gap-1 px-1">
                 <span
                   className={cn(
-                    "grid size-6 place-items-center rounded-full border text-[10px] font-semibold",
+                    "grid size-6 place-items-center rounded-full border text-xs font-semibold",
                     done && "border-primary bg-primary text-primary-foreground",
                     active && "border-primary bg-primary/10 text-primary",
                     !done && !active && "border-border text-muted-foreground"
@@ -330,7 +331,7 @@ function StatusStepper({ status, isAr }: { status: string; isAr: boolean }) {
                 >
                   {done ? <Check className="size-3.5" /> : i + 1}
                 </span>
-                <span className={cn("text-[10px]", active ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                <span className={cn("text-xs", active ? "font-semibold text-foreground" : "text-muted-foreground")}>
                   {orderStatusLabel(step, isAr)}
                 </span>
               </span>
@@ -387,8 +388,8 @@ function RefundDialog({ payment, orderNumber, currency, isAr, onClose }: {
       toast({
         title: isAr ? "تم تنفيذ الاسترداد" : "Refund executed",
         description: isAr
-          ? `${r.refunded.toLocaleString("ar-SA")} ${currency}${r.fullyRefunded ? " — استرداد كامل" : ""}`
-          : `${r.refunded.toLocaleString("en-US")} ${currency}${r.fullyRefunded ? " — fully refunded" : ""}`,
+          ? `${formatNumber(r.refunded, "ar")} ${currency}${r.fullyRefunded ? " — استرداد كامل" : ""}`
+          : `${formatNumber(r.refunded, "en")} ${currency}${r.fullyRefunded ? " — fully refunded" : ""}`,
         variant: "success",
       });
     },
@@ -412,7 +413,7 @@ function RefundDialog({ payment, orderNumber, currency, isAr, onClose }: {
       }
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={refund.isPending}>
+          <Button variant="tertiary" size="sm" onClick={onClose} disabled={refund.isPending}>
             {isAr ? "إلغاء" : "Cancel"}
           </Button>
           <Button variant="destructive" size="sm" onClick={() => refund.mutate()} disabled={!canSubmit} loading={refund.isPending}>

@@ -58,3 +58,7 @@ export * from "./plans";
 
 // What happens at the end of a paid term — one wording for every surface (R021/R025).
 export * from "./renewal-policy";
+
+// One formatter for numbers, money, dates, ages and weights — Western digits,
+// Gregorian by default, real Arabic plural grammar (R110).
+export * from "./format";

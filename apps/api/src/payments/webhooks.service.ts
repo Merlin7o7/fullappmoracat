@@ -27,6 +27,7 @@ import {
 import { normalizeMoyasarPayment, type MoyasarPayment } from "./adapters/moyasar.adapter";
 import { firstDeliveryOn } from "../common/config/launch";
 import { EventsService } from "../events/events.service";
+import { formatDate } from "@moraqat/core";
 
 /**
  * Verifies and settles PSP webhooks. Each provider authenticates differently:
@@ -608,11 +609,7 @@ export class WebhooksService {
     const tax = Number(full.taxTotal);
 
     if (activated) {
-      const nextAt = activated.next.toLocaleDateString(loc === "ar" ? "ar-SA" : "en-GB", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
+      const nextAt = formatDate(activated.next, loc === "ar" ? "ar" : "en", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Riyadh" });
       const planName = loc === "ar" ? activated.plan.nameAr : activated.plan.nameEn;
       const conf = subscriptionConfirmedTemplate(loc, buyer.firstName, planName, nextAt);
       void this.mail.send({ to: buyer.email, subject: conf.subject, html: conf.html, text: conf.text });

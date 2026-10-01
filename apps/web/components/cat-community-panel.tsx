@@ -141,7 +141,7 @@ export function CatCommunityPanel({
         }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setConsentOpen(false)} disabled={patch.isPending}>
+            <Button variant="tertiary" onClick={() => setConsentOpen(false)} disabled={patch.isPending}>
               {isAr ? "ليس الآن" : "Not now"}
             </Button>
             <Button
@@ -190,14 +190,14 @@ export function CatCommunityPanel({
           {/* Public link — only while it actually resolves (the photo rule). */}
           {publicUrl && photoUrl && (
             <div className="flex items-center gap-2 rounded-xl bg-muted/50 p-2">
-              <span dir="ltr" className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted-foreground">
+              <span dir="ltr" className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
                 {publicUrl}
               </span>
-              <Button size="sm" variant="ghost" onClick={copyLink} aria-label={isAr ? "نسخ" : "Copy"}>
+              <Button size="sm" variant="tertiary" onClick={copyLink} aria-label={isAr ? "نسخ" : "Copy"}>
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
               </Button>
               <a href={publicUrl} target="_blank" rel="noreferrer">
-                <Button size="sm" variant="ghost" aria-label={isAr ? "فتح" : "Open"}>
+                <Button size="sm" variant="tertiary" aria-label={isAr ? "فتح" : "Open"}>
                   <ExternalLink className="size-4" />
                 </Button>
               </a>

@@ -33,7 +33,7 @@ export const FOUNDING_MEMBER_LIMIT = 1000;
 /**
  * The founding cohort's name — assembled from facts, never hard-coded.
  *
- * This used to read "دفعة الرياض ٢٠٢٦ / Riyadh Class of 2026" for everybody,
+ * This used to read "دفعة الرياض 2026 / Riyadh Class of 2026" for everybody,
  * lifted verbatim from the strategy doc, while registration never asked where
  * anyone lived. For a Jeddah owner that was not marketing shorthand — it was a
  * false statement printed on their cat's identity card, which is the one
@@ -61,18 +61,13 @@ export function foundingClassLabel(
   if (locale === "ar") {
     // Arabic-Indic digits for a prose year (this is a phrase, not an
     // identifier — unlike the Cat ID number, which stays Latin, dir=ltr).
-    const y = year ? toArabicDigits(year) : null;
+    const y = year ? String(year) : null; // one digit system (format.ts)
     const parts = ["عضو مؤسِّس", ["دفعة", cityLabel, y].filter(Boolean).join(" ")];
     return parts.filter((p) => p && p !== "دفعة").join(" — ");
   }
 
   const tail = [cityLabel, year ? `Class of ${year}` : null].filter(Boolean).join(" ");
   return tail ? `Founding Member — ${tail}` : "Founding Member";
-}
-
-const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
-function toArabicDigits(n: number): string {
-  return String(n).replace(/\d/g, (d) => ARABIC_DIGITS[Number(d)]!);
 }
 
 /**
@@ -87,7 +82,7 @@ export function isFoundingMember(catNumber: number | null | undefined): boolean 
 }
 
 /**
- * The ordinal as people actually say it — «قط رقم ٣٤٧» / "Cat #347".
+ * The ordinal as people actually say it — «قط رقم 347» / "Cat #347".
  *
  * Arabic-Indic digits are NOT used here: the number is an identifier the owner
  * will read aloud, screenshot, and compare with a friend's, and the rest of the

@@ -106,7 +106,7 @@ export class AdminReadinessService {
       level: SELLER_CR_NUMBER && env.NEXT_PUBLIC_CR_NUMBER ? "ok" : "warn",
       titleAr: "رقم السجل التجاري",
       titleEn: "Commercial registration (CR)",
-      fixAr: "ضع CR_NUMBER على الخادم و NEXT_PUBLIC_CR_NUMBER على الموقع (١٠ أرقام). لا نخترع أرقاماً.",
+      fixAr: "ضع CR_NUMBER على الخادم و NEXT_PUBLIC_CR_NUMBER على الموقع (10 أرقام). لا نخترع أرقاماً.",
       fixEn: "Set CR_NUMBER on the API and NEXT_PUBLIC_CR_NUMBER on the web (10 digits). We never invent numbers.",
       owner: "ops",
     });
@@ -116,7 +116,7 @@ export class AdminReadinessService {
       level: env.CRON_SECRET && env.CRON_SECRET.length >= 24 ? "ok" : prod ? "warn" : "ok",
       titleAr: "منبّه المهام المجدولة",
       titleEn: "Scheduled-job wake-up",
-      fixAr: "الخادم المجاني ينام فتتأخر التذكيرات. ضع CRON_SECRET على Render وفي أسرار GitHub ليوقظه منبّه كل ٣٠ دقيقة.",
+      fixAr: "الخادم المجاني ينام فتتأخر التذكيرات. ضع CRON_SECRET على Render وفي أسرار GitHub ليوقظه منبّه كل 30 دقيقة.",
       fixEn: "The free server sleeps and reminders slip. Set CRON_SECRET on Render and as a GitHub secret so the 30-minute wake-up runs.",
       owner: "ops",
     });

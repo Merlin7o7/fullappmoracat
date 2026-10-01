@@ -22,6 +22,7 @@ import {
   type IPaymentProviderFactory,
   type PaymentProviderKey,
 } from "../payments/payment-provider.interface";
+import { formatDate } from "@moraqat/core";
 
 const DAY_MS = 86_400_000;
 const SITE = () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -727,16 +728,11 @@ export class LifecycleService {
   }
 }
 
-/** Localized long date, e.g. "١٧ يوليو ٢٠٢٦" / "17 July 2026". Gregorian is
+/** Localized long date, e.g. "17 يوليو 2026" / "17 July 2026". Gregorian is
  *  forced explicitly — bare "ar-SA" defaults to Umm-al-Qura (Hijri) in ICU,
  *  which would date money events in a calendar the invoice doesn't use. */
 function fmtDate(d: Date, loc: "ar" | "en"): string {
-  return d.toLocaleDateString(loc === "ar" ? "ar-SA-u-ca-gregory" : "en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Asia/Riyadh",
-  });
+  return formatDate(d, loc, { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Riyadh" });
 }
 
 /** Riyadh-local Y/M/D parts, so birthdays don't fire a day early at UTC midnight. */

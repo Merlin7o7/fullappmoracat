@@ -65,7 +65,7 @@ export function AccessAuditCard({ orgId, isAr }: { orgId: string; isAr: boolean 
         <div className="py-6 text-center">
           <p className="text-sm font-medium">{registrationError(error, isAr).title}</p>
           <p className="text-sm text-muted-foreground">{isAr ? "تعذّر تحميل سجل الاطلاع." : "Couldn't load the access log."}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => void refetch()}>
+          <Button variant="secondary" size="sm" className="mt-3" onClick={() => void refetch()}>
             <RotateCw aria-hidden />
             {isAr ? "إعادة المحاولة" : "Try again"}
           </Button>

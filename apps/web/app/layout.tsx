@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Fraunces, IBM_Plex_Mono } from "next/font/google";
+import { Inter, Fraunces, IBM_Plex_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
 import localFont from "next/font/local";
 import { cookies, headers } from "next/headers";
 import { Providers } from "./providers";
@@ -27,7 +27,20 @@ const fraunces = Fraunces({
   axes: ["SOFT", "opsz"],
 });
 
-// Brand Arabic face — Lyon Arabic Display (licensed; provided by the brand).
+// Arabic TEXT face — IBM Plex Sans Arabic (OFL) in four real weights, so a
+// semibold Arabic heading is drawn by the font, never synthesised by the
+// browser (MRC-BRAND-001: the one-weight Lyon made every Arabic heading
+// faux-bold). Body copy, UI, labels and anything under display size use it.
+const arabicText = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-arabic-text",
+  display: "swap",
+});
+
+// Brand Arabic DISPLAY face — Lyon Arabic Display (licensed; provided by the
+// brand). One weight exists, so it is used only at display sizes (≥ 30px,
+// see globals.css) at weight 400: size, not synthetic bold, carries hierarchy.
 // #10: Lyon is restricted to Arabic LETTER ranges only. Latin glyphs and BOTH
 // digit blocks (Western U+0030–0039 and Arabic-Indic U+0660–0669 / U+06F0–06F9)
 // fall outside this range, so they render in the clean sans (Inter) via the
@@ -35,7 +48,7 @@ const fraunces = Fraunces({
 // Arabic copy keeps its premium Lyon identity.
 const arabic = localFont({
   src: "./fonts/lyon-arabic-display-regular.otf",
-  variable: "--font-arabic",
+  variable: "--font-arabic-display",
   display: "swap",
   // No auto-generated metric fallback: next/font's adjusted face covers
   // U+0-10FFFF and would sit between Lyon and Inter in the RTL stack, so
@@ -155,7 +168,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
-      <body className={`${inter.variable} ${fraunces.variable} ${arabic.variable} ${plexMono.variable} font-sans`}>
+      <body className={`${inter.variable} ${fraunces.variable} ${arabic.variable} ${arabicText.variable} ${plexMono.variable} font-sans`}>
         <script {...jsonLdProps(orgJsonLd)} />
         {/* Skip link — keyboard users jump past the nav to content (R097). */}
         <a

@@ -414,12 +414,12 @@ function SubscriptionsInner() {
                     </span>
                   </span>
                   {sub.autoRenew ? (
-                    <Button variant="ghost" size="sm" loading={autoRenewPending(sub.id)} onClick={() => setAutoRenew.mutate({ id: sub.id, enabled: false })}>
+                    <Button variant="tertiary" size="sm" loading={autoRenewPending(sub.id)} onClick={() => setAutoRenew.mutate({ id: sub.id, enabled: false })}>
                       {isAr ? "أوقف التجديد التلقائي" : "Turn off auto-renew"}
                     </Button>
                   ) : defaultCard ? (
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       loading={autoRenewPending(sub.id)}
                       onClick={() => setAutoRenew.mutate({ id: sub.id, enabled: true, paymentMethodId: defaultCard.id })}
@@ -532,7 +532,7 @@ function SubscriptionsInner() {
                       {isAr ? "أكمل الدفع" : "Complete payment"}
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="tertiary"
                       size="sm"
                       loading={actionPending(sub.id, "cancel")}
                       onClick={() => action.mutate({ id: sub.id, verb: "cancel" })}
@@ -553,7 +553,7 @@ function SubscriptionsInner() {
                 {status === "ACTIVE" && !wontRenew && (
                   <>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       loading={actionPending(sub.id, "pause")}
                       onClick={() => action.mutate({ id: sub.id, verb: "pause" })}
@@ -562,7 +562,7 @@ function SubscriptionsInner() {
                       {isAr ? "إيقاف مؤقت" : "Pause"}
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       loading={actionPending(sub.id, "skip")}
                       onClick={() => action.mutate({ id: sub.id, verb: "skip" })}
@@ -571,7 +571,7 @@ function SubscriptionsInner() {
                       {isAr ? "تخطَّ الصندوق القادم" : "Skip next box"}
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="tertiary"
                       size="sm"
                       onClick={() => {
                         setPlanFor(sub);
@@ -581,7 +581,7 @@ function SubscriptionsInner() {
                       <ArrowLeftRight className="size-4" aria-hidden />
                       {isAr ? "غيّر الباقة" : "Change plan"}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setCancelFor(sub)}>
+                    <Button variant="tertiary" size="sm" onClick={() => setCancelFor(sub)}>
                       <X className="size-4" aria-hidden />
                       {isAr ? "إلغاء التجديد" : "Cancel renewal"}
                     </Button>
@@ -644,7 +644,7 @@ function SubscriptionsInner() {
         }
         footer={
           <>
-            <Button variant="ghost" onClick={closeCancelDialog}>
+            <Button variant="tertiary" onClick={closeCancelDialog}>
               {isAr ? "احتفظ بها" : "Keep it"}
             </Button>
             <Button
@@ -747,7 +747,7 @@ function SubscriptionsInner() {
                 className="w-full resize-none rounded-xl border border-input bg-background p-3 text-sm text-foreground shadow-e1 outline-none transition-shadow placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               />
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 loading={requestRefund.isPending}
                 onClick={() => {
@@ -786,7 +786,7 @@ function SubscriptionsInner() {
         footer={
           <>
             <Button
-              variant="ghost"
+              variant="tertiary"
               onClick={() => {
                 setPlanFor(null);
                 setPlanPick(null);
@@ -854,7 +854,7 @@ function SubscriptionsInner() {
         }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setSkipRenewalFor(null)}>{isAr ? "خلّها تتجدد" : "Keep renewing"}</Button>
+            <Button variant="tertiary" onClick={() => setSkipRenewalFor(null)}>{isAr ? "خلّها تتجدد" : "Keep renewing"}</Button>
             <Button loading={setAutoRenew.isPending} onClick={() => skipRenewalFor && setAutoRenew.mutate({ id: skipRenewalFor, enabled: false })}>
               {isAr ? "نعم، لا تجدّدها" : "Yes, don't renew"}
             </Button>

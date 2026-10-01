@@ -12,6 +12,13 @@
  * don't need the value threaded through every call site — they read the current
  * preference here.
  */
+import {
+  formatDate as coreFormatDate,
+  formatMonths,
+  formatRelative,
+  type CalendarChoice,
+} from "@moraqat/core";
+
 export type CalendarPref = "auto" | "gregorian" | "hijri";
 export type UiLocale = "ar" | "en";
 
@@ -26,31 +33,31 @@ export function getCurrentCalendar(): CalendarPref {
   return currentCalendar;
 }
 
+/** The calendar a preference resolves to. Gregorian unless the member chose Hijri. */
+export function calendarFor(pref: CalendarPref = currentCalendar): CalendarChoice {
+  return pref === "hijri" ? "hijri" : "gregorian";
+}
+
 /**
- * Resolve a BCP-47 locale with the right `-u-ca-` calendar extension.
- * `auto` → Hijri for Arabic, Gregorian for English (the localized default).
+ * BCP-47 locale with the calendar AND the one digit system (Western) baked in,
+ * for the few call sites that still hand a locale string to Intl directly.
+ * `auto` now means Gregorian in both languages — Hijri is an explicit choice
+ * (UX reassessment kill list: "Hijri-by-default → Gregorian default, Hijri opt-in").
  */
 export function dateLocale(locale: UiLocale, pref: CalendarPref = currentCalendar): string {
-  const base = locale === "ar" ? "ar-SA" : "en-GB";
-  const calendar =
-    pref === "hijri"
-      ? "islamic-umalqura"
-      : pref === "gregorian"
-        ? "gregory"
-        : locale === "ar"
-          ? "islamic-umalqura"
-          : "gregory";
-  return `${base}-u-ca-${calendar}`;
+  const ca = calendarFor(pref) === "hijri" ? "islamic-umalqura" : "gregory";
+  return locale === "ar" ? `ar-SA-u-ca-${ca}-nu-latn` : `en-GB-u-ca-${ca}`;
 }
 
 const DEFAULT_DATE_OPTS: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
 
+/** Every date in the web app — delegates to @moraqat/core with the member's calendar. */
 export function formatDate(
   value: string | Date,
   locale: UiLocale,
   opts: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTS
 ): string {
-  return new Date(value).toLocaleDateString(dateLocale(locale), opts);
+  return coreFormatDate(value, locale, opts, calendarFor());
 }
 
 export function formatDateTime(
@@ -58,7 +65,7 @@ export function formatDateTime(
   locale: UiLocale,
   opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }
 ): string {
-  return new Date(value).toLocaleString(dateLocale(locale), opts);
+  return coreFormatDate(value, locale, opts, calendarFor());
 }
 
 /**
@@ -68,11 +75,7 @@ export function formatDateTime(
  * singular/plural. Covers every term option (1, 3, 6, 12).
  */
 export function monthsLabel(n: number, locale: UiLocale): string {
-  if (locale !== "ar") return `${n} ${n === 1 ? "month" : "months"}`;
-  if (n === 1) return "شهر واحد";
-  if (n === 2) return "شهرين";
-  if (n <= 10) return `${n} أشهر`;
-  return `${n} شهراً`;
+  return n === 1 ? (locale === "ar" ? "شهر واحد" : "1 month") : formatMonths(n, locale);
 }
 
 /** Just the AR/EN unit word for a month count (for "12 | months" split labels). */
@@ -82,7 +85,7 @@ export function monthUnit(n: number, locale: UiLocale): string {
 }
 
 /**
- * "3 days ago" / "قبل ٣ أيام" — via Intl.RelativeTimeFormat, so the plural and
+ * "3 days ago" / "قبل 3 أيام" — via Intl.RelativeTimeFormat, so the plural and
  * the numerals are the language's own, not a template with English grammar
  * (R110). Used where recency is the fact that matters more than the date: a
  * lost-cat notice, a message on a board, an enquiry waiting for an answer.
@@ -93,21 +96,7 @@ export function monthUnit(n: number, locale: UiLocale): string {
 export function relativeTime(value: string | Date, isAr: boolean): string {
   const then = new Date(value).getTime();
   if (Number.isNaN(then)) return "";
-  const seconds = Math.round((then - Date.now()) / 1000);
-  const rtf = new Intl.RelativeTimeFormat(isAr ? "ar" : "en", { numeric: "auto" });
-
-  const units: [Intl.RelativeTimeFormatUnit, number][] = [
-    ["year", 31_536_000],
-    ["month", 2_592_000],
-    ["week", 604_800],
-    ["day", 86_400],
-    ["hour", 3_600],
-    ["minute", 60],
-  ];
-  const abs = Math.abs(seconds);
-  for (const [unit, size] of units) {
-    if (abs >= size) return rtf.format(Math.round(seconds / size), unit);
-  }
-  // Under a minute reads better as a phrase than as "in 0 seconds".
-  return isAr ? "الآن" : "just now";
+  // Under a minute reads better as a phrase than as "in 0 minutes".
+  if (Math.abs(then - Date.now()) < 60_000) return isAr ? "الآن" : "just now";
+  return formatRelative(value, isAr ? "ar" : "en");
 }

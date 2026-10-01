@@ -13,6 +13,7 @@ import * as React from "react";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Info, RotateCcw, TriangleAlert } from "lucide-react";
 import { Button, Dialog, Input, cn } from "@moraqat/ui";
 import type { RegFriendlyError } from "@/lib/vet-registration";
+import { formatDate as coreFormatDate } from "@moraqat/core";
 
 /* ── Formatting ─────────────────────────────────────────────────────────── */
 
@@ -20,7 +21,7 @@ export function formatDate(iso: string | null | undefined, isAr: boolean): strin
   if (!iso) return "—";
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat(isAr ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB", { dateStyle: "medium" }).format(d);
+  return coreFormatDate(d, isAr ? "ar" : "en", "medium");
 }
 
 /** "YYYY-MM-DD" (or ISO) is on or before today. */
@@ -448,7 +449,7 @@ export function ActionBar({
         {note && <div className="mb-2 text-center text-xs text-muted-foreground sm:text-start">{note}</div>}
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           {onBack && (
-            <Button type="button" variant="outline" size="lg" onClick={onBack} className="shrink-0 px-5">
+            <Button type="button" variant="secondary" size="lg" onClick={onBack} className="shrink-0 px-5">
               <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
               {isAr ? "رجوع" : "Back"}
             </Button>
@@ -505,7 +506,7 @@ export function ConfirmDialog({
       description={description}
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="tertiary" onClick={onClose}>
             {isAr ? "إلغاء" : "Cancel"}
           </Button>
           <Button type="button" variant="destructive" loading={busy} onClick={onConfirm}>

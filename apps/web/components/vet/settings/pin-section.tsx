@@ -51,7 +51,7 @@ export function PinSection() {
     if (!PIN_RE.test(pin)) {
       setError(
         isAr
-          ? { title: "الرمز من ٤ إلى ٦ أرقام", message: "اختر رمزاً تتذكره ولا يسهل تخمينه — تجنّب ١٢٣٤ وتاريخ ميلادك." }
+          ? { title: "الرمز من 4 إلى 6 أرقام", message: "اختر رمزاً تتذكره ولا يسهل تخمينه — تجنّب 1234 وتاريخ ميلادك." }
           : { title: "A PIN is 4 to 6 digits", message: "Pick one you'll remember that isn't easy to guess — avoid 1234 and your birthday." },
       );
       return;
@@ -136,7 +136,7 @@ export function PinSection() {
                 {org.staffId}
               </p>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => void copyStaffNumber()} aria-live="polite">
+            <Button size="sm" variant="tertiary" onClick={() => void copyStaffNumber()} aria-live="polite">
               {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
               {copied ? (isAr ? "نُسخ" : "Copied") : isAr ? "انسخ" : "Copy"}
             </Button>
@@ -151,12 +151,12 @@ export function PinSection() {
                   ? "رمزك معيّن. غيّره متى شئت — تحتاج الرمز الحالي."
                   : "Your PIN is set. Change it any time — you'll need the current one."
                 : isAr
-                  ? "عيّن رمزاً من ٤ إلى ٦ أرقام لتعمل على جهاز الاستقبال."
+                  ? "عيّن رمزاً من 4 إلى 6 أرقام لتعمل على جهاز الاستقبال."
                   : "Set a 4–6 digit PIN to work on the front-desk device."}
             </p>
             <Button
               size="sm"
-              variant={hasPin ? "outline" : "brand"}
+              variant={hasPin ? "secondary" : "primary"}
               onClick={() => {
                 reset();
                 setOpen(true);
@@ -178,7 +178,7 @@ export function PinSection() {
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
-                variant="ghost"
+                variant="tertiary"
                 size="sm"
                 disabled={busy}
                 onClick={() => {
@@ -188,7 +188,7 @@ export function PinSection() {
               >
                 {isAr ? "إلغاء" : "Cancel"}
               </Button>
-              <Button type="submit" variant="brand" size="sm" loading={busy}>
+              <Button type="submit" variant="primary" size="sm" loading={busy}>
                 {hasPin ? (isAr ? "احفظ الرمز الجديد" : "Save new PIN") : isAr ? "عيّن الرمز" : "Set PIN"}
               </Button>
             </div>

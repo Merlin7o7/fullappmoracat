@@ -189,7 +189,7 @@ export function LostFoundBrowse({
           title={isAr ? "ما قدرنا نحمّل اللوحة" : "We couldn't load the board"}
           body={isAr ? "جرّب مرة ثانية — الخطأ من عندنا." : "Give it another try — that one's on us."}
           action={
-            <Button size="sm" variant="outline" onClick={() => void refetch()}>
+            <Button size="sm" variant="secondary" onClick={() => void refetch()}>
               {isAr ? "أعد المحاولة" : "Try again"}
             </Button>
           }
@@ -206,7 +206,7 @@ export function LostFoundBrowse({
           {hasNextPage && (
             <div className="mt-8 flex flex-col items-center gap-3">
               <div ref={sentinelRef} aria-hidden className="h-px w-full" />
-              <Button variant="outline" onClick={() => void fetchNextPage()} disabled={isFetchingNextPage}>
+              <Button variant="secondary" onClick={() => void fetchNextPage()} disabled={isFetchingNextPage}>
                 {isFetchingNextPage && <Loader2 className="size-4 animate-spin" />}
                 {isAr ? "عرض المزيد" : "Show more"}
               </Button>
@@ -355,7 +355,7 @@ function LostFoundTile({ post, isAr }: { post: LostFoundCard; isAr: boolean }) {
                 : `Found ${relativeTime(post.happenedAt, isAr)}`}
           </p>
           {post.registered && (
-            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
               <ShieldCheck className="size-3" aria-hidden />
               {isAr ? "مسجّل بهوية مرقط" : "Has a Moracat Cat ID"}
             </span>

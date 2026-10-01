@@ -12,6 +12,7 @@ import { LikeButton, useCommunityLikes } from "@/components/community-browse";
 import { ReportCatButton } from "@/components/community-report";
 import { localizeName } from "@/lib/translit";
 import type { CommunityProfile } from "@/lib/api";
+import { formatDate as coreFormatDate } from "@moraqat/core";
 
 const STAGE_LABEL: Record<string, [string, string]> = {
   KITTEN: ["Kitten", "هريرة"],
@@ -60,7 +61,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
   const age = cat.ageMonths != null ? formatAge(cat.ageMonths, isAr) : null;
   // "Member since {month year}" — the credential line (tenure, not points).
   const memberSince = cat.issuedAt
-    ? new Intl.DateTimeFormat(isAr ? "ar" : "en", { month: "long", year: "numeric" }).format(new Date(cat.issuedAt))
+    ? coreFormatDate(cat.issuedAt, isAr ? "ar" : "en", "monthYear")
     : null;
   const stage = cat.lifeStage ? (isAr ? STAGE_LABEL[cat.lifeStage]?.[1] : STAGE_LABEL[cat.lifeStage]?.[0]) : null;
   const breed = cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : null;
@@ -142,7 +143,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
             <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {facts.map((f) => (
                 <div key={f.label} className="rounded-xl border border-border bg-card p-3">
-                  <dt className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
                     <f.icon className="size-3.5" /> {f.label}
                   </dt>
                   <dd className="mt-0.5 truncate font-medium">{f.value}</dd>

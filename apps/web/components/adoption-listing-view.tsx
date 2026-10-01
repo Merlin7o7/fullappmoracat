@@ -104,7 +104,7 @@ export function AdoptionListingView({ id }: { id: string }) {
             </Link>
           }
           secondary={
-            <Button size="sm" variant="ghost" onClick={() => void refetch()}>
+            <Button size="sm" variant="tertiary" onClick={() => void refetch()}>
               {isAr ? "أعد المحاولة" : "Try again"}
             </Button>
           }
@@ -259,7 +259,7 @@ export function AdoptionListingView({ id }: { id: string }) {
             <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {facts.map((f) => (
                 <div key={f.label} className="rounded-2xl border border-border bg-background p-3">
-                  <dt className="text-[0.6875rem] uppercase tracking-wide text-muted-foreground">{f.label}</dt>
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">{f.label}</dt>
                   <dd className="mt-0.5 truncate text-sm font-medium">{f.value}</dd>
                 </div>
               ))}
@@ -268,7 +268,7 @@ export function AdoptionListingView({ id }: { id: string }) {
 
           {goodWith.length > 0 && (
             <div className="mt-5">
-              <p className="text-[0.6875rem] uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 {isAr ? "ينسجم مع" : "Gets on with"}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -354,7 +354,7 @@ export function AdoptionListingView({ id }: { id: string }) {
                   <Button className="w-full">{isAr ? `سجّل الدخول وتواصل عن ${name}` : `Sign in to ask about ${name}`}</Button>
                 </Link>
                 <Link href={`/register?next=${encodeURIComponent(`/adopt/${id}`)}`} className="sm:w-auto">
-                  <Button variant="outline" className="w-full">{isAr ? "جديد؟ أنشئ حساباً" : "New here? Create an account"}</Button>
+                  <Button variant="secondary" className="w-full">{isAr ? "جديد؟ أنشئ حساباً" : "New here? Create an account"}</Button>
                 </Link>
                 <p className="self-center text-xs text-muted-foreground">
                   {isAr ? "نمرّر رسالتك لصاحب القط بدون ما نكشف بياناتك." : "We pass your message on without revealing your details."}
@@ -564,7 +564,7 @@ function AskDialog({
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="tertiary" onClick={onClose}>
             {isAr ? "لاحقاً" : "Not now"}
           </Button>
           <Button type="submit" disabled={mutation.isPending || message.trim().length < 20}>

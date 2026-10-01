@@ -61,7 +61,7 @@ export function ProviderPicker({
         ? "تختار الطريقة في صفحة تمارا (حسب الأهلية). لا يتجدد تلقائياً."
         : "You choose on Tamara's page (subject to eligibility). Never renews itself.",
       badge: (
-        <span className="grid h-10 w-12 shrink-0 place-items-center rounded-lg bg-primary px-1 text-[11px] font-bold lowercase tracking-tight text-primary-foreground">
+        <span className="grid h-10 w-12 shrink-0 place-items-center rounded-lg bg-primary px-1 text-xs font-bold lowercase tracking-tight text-primary-foreground">
           tamara
         </span>
       ),

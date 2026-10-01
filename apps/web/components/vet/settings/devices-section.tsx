@@ -160,7 +160,7 @@ export function DevicesSection() {
       icon={Tablet}
       action={
         !thisDevice && !formOpen && activeBranches.length > 0 ? (
-          <Button size="sm" variant="outline" onClick={() => setFormOpen(true)}>
+          <Button size="sm" variant="secondary" onClick={() => setFormOpen(true)}>
             <Plus className="size-4" aria-hidden />
             <span className="hidden sm:inline">{isAr ? "سجّل هذا الجهاز" : "Register this device"}</span>
             <span className="sm:hidden">{isAr ? "تسجيل" : "Register"}</span>
@@ -207,10 +207,10 @@ export function DevicesSection() {
             </div>
             <InlineError error={formError} />
             <div className="flex flex-wrap justify-end gap-2">
-              <Button type="button" variant="ghost" size="sm" onClick={() => setFormOpen(false)} disabled={registering}>
+              <Button type="button" variant="tertiary" size="sm" onClick={() => setFormOpen(false)} disabled={registering}>
                 {isAr ? "إلغاء" : "Cancel"}
               </Button>
-              <Button type="submit" variant="brand" size="sm" loading={registering}>
+              <Button type="submit" variant="primary" size="sm" loading={registering}>
                 {isAr ? "سجّل الجهاز" : "Register device"}
               </Button>
             </div>
@@ -229,7 +229,7 @@ export function DevicesSection() {
             title={settingsError(devices.error, isAr).title}
             body={settingsError(devices.error, isAr).message}
             action={
-              <Button size="sm" variant="outline" onClick={() => void devices.refetch()} loading={devices.isFetching}>
+              <Button size="sm" variant="secondary" onClick={() => void devices.refetch()} loading={devices.isFetching}>
                 {isAr ? "أعد المحاولة" : "Try again"}
               </Button>
             }
@@ -246,7 +246,7 @@ export function DevicesSection() {
               }
               action={
                 activeBranches.length > 0 ? (
-                  <Button size="sm" variant="brand" onClick={() => setFormOpen(true)}>
+                  <Button size="sm" variant="primary" onClick={() => setFormOpen(true)}>
                     <Plus className="size-4" aria-hidden />
                     {isAr ? "سجّل هذا الجهاز" : "Register this device"}
                   </Button>
@@ -293,7 +293,7 @@ export function DevicesSection() {
                   {d.active && (
                     <Button
                       size="sm"
-                      variant="ghost"
+                      variant="tertiary"
                       className="text-destructive hover:bg-destructive/10"
                       onClick={() => {
                         setRevokeError(null);

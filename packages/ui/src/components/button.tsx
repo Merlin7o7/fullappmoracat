@@ -2,37 +2,37 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/cn";
 
+/**
+ * Five button types — and only five (AD 2.1 «السجل», MRC-BRAND-001).
+ *
+ *   primary     the one action a screen exists for. Solid emerald, no gradient.
+ *   secondary   a real alternative. Paper with a hairline border.
+ *   tertiary    low-emphasis: "cancel", "edit", "see all". Text in emerald.
+ *   destructive irreversible or alarming (remove, report lost). Solid red.
+ *   contextual  a warm, celebratory or sharing action that belongs to its
+ *               moment (share the poster, add to Wallet). Solid warm accent;
+ *               at most one per screen, never beside a primary.
+ *
+ * One radius family for controls (10px). Pills are reserved for chips,
+ * avatars and the seal. Every size clears the 44px target except `sm`, which
+ * is for dense desktop rows only (R092).
+ */
 const buttonVariants = cva(
-  // Base: crisp focus ring, tap-optimised, spring-y press, consistent icon sizing.
-  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium [touch-action:manipulation] transition-[transform,box-shadow,background-color,filter] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] [&_svg]:size-4 [&_svg]:shrink-0",
+  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium [touch-action:manipulation] transition-[transform,box-shadow,background-color,border-color,color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:translate-y-px [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        // Primary CTA = brand orange (Moracat brand: orange for primary actions).
-        primary:
-          "bg-gradient-to-b from-accent to-[hsl(var(--accent-hover))] text-accent-foreground shadow-e1 ring-hairline hover:shadow-e2 hover:brightness-[1.04]",
-        // Brand green — dominant chrome buttons where green is wanted.
-        brand:
-          "bg-gradient-to-b from-primary to-[hsl(var(--primary-hover))] text-primary-foreground shadow-e1 ring-hairline hover:shadow-glow hover:brightness-[1.08]",
-        secondary:
-          "bg-secondary text-secondary-foreground shadow-e1 hover:brightness-[0.97]",
-        accent:
-          "bg-gradient-to-b from-accent to-[hsl(var(--accent-hover))] text-accent-foreground shadow-e1 ring-hairline hover:brightness-[1.04]",
-        outline:
-          "border border-border bg-background/40 hover:border-primary/40 hover:bg-muted",
-        ghost: "hover:bg-muted",
-        glass: "glass text-foreground hover:bg-white/80 dark:hover:bg-white/[0.09]",
-        destructive:
-          "bg-destructive text-destructive-foreground shadow-e1 hover:brightness-[1.08]",
-        link: "text-primary underline-offset-4 hover:underline",
+        primary: "bg-primary text-primary-foreground shadow-e1 hover:bg-[hsl(var(--primary-hover))]",
+        secondary: "border border-border bg-card text-foreground hover:border-foreground/25 hover:bg-muted",
+        tertiary: "text-primary hover:bg-primary/[0.07]",
+        destructive: "bg-destructive text-destructive-foreground shadow-e1 hover:brightness-[1.08]",
+        contextual: "bg-accent text-accent-foreground shadow-e1 hover:bg-[hsl(var(--accent-hover))]",
       },
       size: {
-        // sm is for dense desktop rows; primary mobile actions should use md+.
-        // Lifted 36→40px to reduce the gap to the 44px touch target (R092).
         sm: "h-10 px-4",
-        md: "h-11 px-6",
-        lg: "h-13 px-8 text-base",
-        xl: "h-14 px-9 text-base",
+        md: "h-11 px-5",
+        lg: "h-13 px-7 text-base",
+        xl: "h-14 px-8 text-base",
         icon: "size-11",
       },
     },

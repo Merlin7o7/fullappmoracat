@@ -200,7 +200,7 @@ export function VetDemoCard() {
             {!enter.isPending && <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />}
           </Button>
           {inside && (
-            <Button variant="ghost" size="sm" onClick={() => leave.mutate()} disabled={leave.isPending}>
+            <Button variant="tertiary" size="sm" onClick={() => leave.mutate()} disabled={leave.isPending}>
               {leave.isPending ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
               {isAr ? "اخرج من التجريبية" : "Leave the demo"}
             </Button>

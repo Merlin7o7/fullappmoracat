@@ -139,7 +139,7 @@ export function ProductIntro({
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-display text-sm font-semibold">{isAr ? b.titleAr : b.titleEn}</p>
                 {(b.chipEn || b.chipAr) && (
-                  <Badge variant="success" className="gap-1 text-[10px]">
+                  <Badge variant="success" className="gap-1 text-xs">
                     <Check className="size-2.5" /> {isAr ? b.chipAr : b.chipEn}
                   </Badge>
                 )}
@@ -157,7 +157,7 @@ export function ProductIntro({
           <Arrow className="size-4" />
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          {isAr ? "٤ أسئلة سريعة عن استهلاككم الشهري — أقل من دقيقة" : "4 quick questions about your monthly use — under a minute"}
+          {isAr ? "4 أسئلة سريعة عن استهلاككم الشهري — أقل من دقيقة" : "4 quick questions about your monthly use — under a minute"}
         </p>
         {/* The money truth arrives before any number does (R004/R025): terms are
             prepaid, start at one month, and nothing ever renews silently. */}

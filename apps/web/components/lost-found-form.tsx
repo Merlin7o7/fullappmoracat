@@ -416,7 +416,7 @@ export function LostFoundForm({
           {create.isPending && <Loader2 className="size-4 animate-spin" />}
           {isAr ? "انشر الإعلان" : "Post the notice"}
         </Button>
-        <Button variant="ghost" onClick={onCancel}>
+        <Button variant="tertiary" onClick={onCancel}>
           {isAr ? "تراجع" : "Cancel"}
         </Button>
       </div>

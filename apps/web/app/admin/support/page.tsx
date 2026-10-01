@@ -12,6 +12,7 @@ import { TicketStatusBadge } from "@/components/ticket-status-badge";
 import { ConfirmDialog } from "@/app/admin/_components/confirm";
 import { titleCase, fmtDate, fmtDateTime } from "@/app/admin/_components/i18n";
 import { QueryError } from "@/components/query-error";
+import { formatNumber } from "@moraqat/core";
 
 interface TicketMessage { id: string; body: string; isStaff: boolean; createdAt: string }
 interface TicketRow {
@@ -75,7 +76,7 @@ export default function AdminSupport() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "الدعم" : "Support"}</h1>
-          <p className="text-sm text-muted-foreground">{data ? (isAr ? `${data.length.toLocaleString("ar-SA")} تذكرة` : `${data.length} tickets`) : "—"}</p>
+          <p className="text-sm text-muted-foreground">{data ? (isAr ? `${formatNumber(data.length, "ar")} تذكرة` : `${data.length} tickets`) : "—"}</p>
         </div>
         {!active && (
           <select value={filter} onChange={(e) => setFilter(e.target.value)}
@@ -131,7 +132,7 @@ function StaffThread({ ticket, authedFetch, onBack, onChanged, isAr }: {
     <Card className="p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} aria-label="Back"><ArrowLeft className="size-4" /></Button>
+          <Button variant="tertiary" size="sm" onClick={onBack} aria-label="Back"><ArrowLeft className="size-4" /></Button>
           <div>
             <p className="font-display font-semibold">{ticket.subject}</p>
             <p className="text-xs text-muted-foreground">
@@ -146,12 +147,12 @@ function StaffThread({ ticket, authedFetch, onBack, onChanged, isAr }: {
         <div className="flex items-center gap-2">
           <TicketStatusBadge status={ticket.status} isAr={isAr} />
           {!isClosed && ticket.status !== "RESOLVED" && (
-            <Button variant="outline" size="sm" onClick={() => act.mutate({ verb: "resolve" })} disabled={act.isPending}>
+            <Button variant="secondary" size="sm" onClick={() => act.mutate({ verb: "resolve" })} disabled={act.isPending}>
               <CheckCheck className="size-4" /> {isAr ? "حل" : "Resolve"}
             </Button>
           )}
           {!isClosed && (
-            <Button variant="ghost" size="sm" onClick={() => setConfirmClose(true)} disabled={act.isPending}>
+            <Button variant="tertiary" size="sm" onClick={() => setConfirmClose(true)} disabled={act.isPending}>
               <X className="size-4" /> {isAr ? "إغلاق" : "Close"}
             </Button>
           )}
@@ -161,7 +162,7 @@ function StaffThread({ ticket, authedFetch, onBack, onChanged, isAr }: {
       <div className="mb-5 flex max-h-96 flex-col gap-3 overflow-y-auto">
         {ticket.messages.map((m) => (
           <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-3 text-sm", m.isStaff ? "self-end bg-primary/10" : "self-start bg-muted")}>
-            <p className="mb-1 text-[11px] font-medium text-muted-foreground">
+            <p className="mb-1 text-xs font-medium text-muted-foreground">
               {m.isStaff ? (isAr ? "الموظف" : "Staff") : ticket.customer.name} · {fmtDateTime(m.createdAt, isAr)}
             </p>
             <p className="whitespace-pre-wrap">{m.body}</p>

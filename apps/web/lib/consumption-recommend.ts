@@ -19,6 +19,7 @@
  */
 
 import type { ApiPlan, PlanTier, BilingualReason } from "./plan-recommend";
+import { formatNumber } from "@moraqat/core";
 
 /** The four questions, as tappable levels (effortless > free-typed numbers, R002). */
 export type WetLevel = "none" | "few" | "regular" | "lots";
@@ -102,8 +103,8 @@ export function recommendFromConsumption(
     reasons.push({
       ar:
         cats.length === 1
-          ? "عمره أقل من ٩ أشهر — باقة قطتي الصغيرة مبنية لمرحلته: طعام صغار، وتنتقل لخطة البالغين لما يكبر"
-          : "كلهم أصغر من ٩ أشهر — باقة قطتي الصغيرة مبنية لمرحلتهم، وتنتقل لخطة البالغين لما يكبرون",
+          ? "عمره أقل من 9 أشهر — باقة قطتي الصغيرة مبنية لمرحلته: طعام صغار، وتنتقل لخطة البالغين لما يكبر"
+          : "كلهم أصغر من 9 أشهر — باقة قطتي الصغيرة مبنية لمرحلتهم، وتنتقل لخطة البالغين لما يكبرون",
       en:
         cats.length === 1
           ? "Under 9 months old — the Kitten box is built for this stage: kitten food, graduating to an adult plan as they grow"
@@ -113,7 +114,7 @@ export function recommendFromConsumption(
     tier = "PREMIUM";
     headline = { ar: "التوقيع — طقس العناية الكامل", en: "Signature — the full care ritual" };
     reasons.push({
-      ar: "استهلاككم عالي في كل شي — باقة التوقيع تجي بـ ٣٩ كيساً رطباً (منها تشكيلة فاخرة) مع المكافآت والمكملات",
+      ar: "استهلاككم عالي في كل شي — باقة التوقيع تجي بـ 39 كيساً رطباً (منها تشكيلة فاخرة) مع المكافآت والمكملات",
       en: "Your use is high across the board — the Signature box brings 39 wet pouches (incl. a premium rotation) plus treats and supplements",
     });
   } else if (heavyWet || wantsTreats) {
@@ -122,7 +123,7 @@ export function recommendFromConsumption(
     reasons.push(
       heavyWet
         ? {
-            ar: "تستهلكون طعاماً رطباً بكثرة — العناية الكاملة تجي بـ ٣٠ كيساً: شهر حقيقي من التغذية المختلطة",
+            ar: "تستهلكون طعاماً رطباً بكثرة — العناية الكاملة تجي بـ 30 كيساً: شهر حقيقي من التغذية المختلطة",
             en: "You go through a lot of wet food — Complete brings 30 pouches: a real month of mixed feeding",
           }
         : {
@@ -142,7 +143,7 @@ export function recommendFromConsumption(
   // Litter arrives in EVERY box — worth saying where the member uses it.
   if (litterBags > 0 && tier !== "KITTEN") {
     reasons.push({
-      ar: "ويشمل رمل ١٠ لتر شهرياً — ما يحتاج تشتريه بره",
+      ar: "ويشمل رمل 10 لتر شهرياً — ما يحتاج تشتريه بره",
       en: "It includes 10L of litter each month — nothing to buy separately",
     });
   }
@@ -180,4 +181,4 @@ export function coversWet(plan: ApiPlan | undefined, a: ConsumptionAnswers): boo
   return has >= need;
 }
 
-const arNum = (n: number) => n.toLocaleString("ar-SA", { maximumFractionDigits: 1 });
+const arNum = (n: number) => formatNumber(n, "ar", { maximumFractionDigits: 1 });

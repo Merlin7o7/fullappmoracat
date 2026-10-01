@@ -66,7 +66,7 @@ export const PLANS: Plan[] = [
     modulePrice: planPrice("kitten").modulePrice,
     kitten: true,
     taglineEn: "Stage-aware care for 3–8 months",
-    taglineAr: "عناية مرحلية لعمر ٣–٨ أشهر",
+    taglineAr: "عناية مرحلية لعمر 3–8 أشهر",
     featuresEn: [
       "2kg kitten dry food",
       "15 kitten wet pouches & cans",
@@ -74,10 +74,10 @@ export const PLANS: Plan[] = [
       "Grows with her — graduates to an adult plan at ~9 months",
     ],
     featuresAr: [
-      "٢كجم طعام جاف للصغار",
-      "١٥ كيساً وعلبة طعام رطب للصغار",
-      "١٠ لتر رمل متكتل لطيف",
-      "تكبر معها — تنتقل لخطة البالغين عند ~٩ أشهر",
+      "2كجم طعام جاف للصغار",
+      "15 كيساً وعلبة طعام رطب للصغار",
+      "10 لتر رمل متكتل لطيف",
+      "تكبر معها — تنتقل لخطة البالغين عند ~9 أشهر",
     ],
   },
   {
@@ -95,9 +95,9 @@ export const PLANS: Plan[] = [
       "No extras — necessities at market price",
     ],
     featuresAr: [
-      "٢كجم طعام جاف",
-      "١٥ كيس طعام رطب",
-      "١٠ لتر رمل متكتل",
+      "2كجم طعام جاف",
+      "15 كيس طعام رطب",
+      "10 لتر رمل متكتل",
       "بدون إضافات — الضروريات بسعر السوق",
     ],
   },
@@ -116,8 +116,8 @@ export const PLANS: Plan[] = [
       "Genuinely below the same basket at market prices",
     ],
     featuresAr: [
-      "٣٠ كيساً رطباً — شهر حقيقي من التغذية المختلطة",
-      "٢كجم طعام جاف + ١٠ لتر رمل",
+      "30 كيساً رطباً — شهر حقيقي من التغذية المختلطة",
+      "2كجم طعام جاف + 10 لتر رمل",
       "مكافآت ولعبة ومناديل عناية",
       "أقل فعلياً من نفس السلة بأسعار السوق",
     ],
@@ -139,7 +139,7 @@ export const PLANS: Plan[] = [
     ],
     featuresAr: [
       "كل ما في العناية الكاملة",
-      "+٩ أكياس تشكيلة رطب فاخرة",
+      "+9 أكياس تشكيلة رطب فاخرة",
       "ترقية إلى رمل متكتل متقدم",
       "كورس مكملات شهري ولعبة فاخرة",
     ],

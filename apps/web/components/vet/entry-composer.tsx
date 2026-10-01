@@ -293,14 +293,14 @@ export const TYPE_FIELDS: Record<ClinicalEntryType, Field[]> = {
     { name: "weightKg", ar: "الوزن (كجم)", en: "Weight (kg)", kind: "number", required: true, min: 0.1, max: 25, step: 0.01, half: true },
     {
       name: "bcs",
-      ar: "مؤشر كتلة الجسم (١–٩)",
+      ar: "مؤشر كتلة الجسم (1–9)",
       en: "Body condition score (1–9)",
       kind: "number",
       min: 1,
       max: 9,
       step: 1,
       half: true,
-      hintAr: "٤–٥ مثالي",
+      hintAr: "4–5 مثالي",
       hintEn: "4–5 is ideal",
     },
   ],
@@ -476,7 +476,7 @@ export function EntryComposer({
 
     if (allergyHits.length && override.trim().length < 10) {
       next.override = isAr
-        ? "اكتب مبرراً سريرياً (١٠ أحرف على الأقل) للمتابعة رغم الحساسية المسجّلة."
+        ? "اكتب مبرراً سريرياً (10 أحرف على الأقل) للمتابعة رغم الحساسية المسجّلة."
         : "Type a clinical justification (10+ characters) to proceed despite the recorded allergy.";
     }
 
@@ -872,7 +872,7 @@ export function EntryComposer({
       )}
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Button type="submit" variant="brand" loading={saving} disabled={blockedByAllergy}>
+        <Button type="submit" variant="primary" loading={saving} disabled={blockedByAllergy}>
           {!saving && <Check className="size-4" />}
           {isAmend
             ? isAr
@@ -887,7 +887,7 @@ export function EntryComposer({
                 : "Add to the record"}
         </Button>
         {onCancel && (
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
+          <Button type="button" variant="tertiary" onClick={onCancel} disabled={saving}>
             {isAr ? "إلغاء" : "Cancel"}
           </Button>
         )}

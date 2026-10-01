@@ -54,6 +54,7 @@ import { ProviderPicker, useApplePayAvailable, type CheckoutProvider } from "@/c
 import { AutoRenewToggle } from "@/components/checkout/auto-renew-toggle";
 import { MoyasarForm, type ClientSession } from "@/components/checkout/moyasar-form";
 import { track } from "@/lib/track";
+import { formatNumber } from "@moraqat/core";
 
 const TIERS: PlanTier[] = ["KITTEN", "STARTER", "STANDARD", "PREMIUM"];
 
@@ -336,7 +337,7 @@ function CheckoutInner() {
             <Button size="lg" onClick={() => router.push("/portal")}>
               {isAr ? "إلى بوابتك" : "Go to your portal"}
             </Button>
-            <Button variant="outline" size="lg" onClick={() => router.push("/portal/subscriptions")}>
+            <Button variant="secondary" size="lg" onClick={() => router.push("/portal/subscriptions")}>
               {isAr ? "إدارة اشتراكك" : "Manage your subscription"}
             </Button>
           </div>
@@ -404,11 +405,11 @@ function CheckoutInner() {
             {/* Per-cat breakdown, visible before any payment (R021): the base
                 covers the first cat; every extra cat adds their module (§5). */}
             {catCount > 1 && (
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {isAr ? (
                   <>
                     <span dir="ltr" className="tabular">{formatSAR(plan.price, true)}</span> للقط الأول +{" "}
-                    <span dir="ltr" className="tabular">{formatSAR(modulePrice, true)}</span> × {extraCats.toLocaleString("ar-SA")} لكل قط إضافي
+                    <span dir="ltr" className="tabular">{formatSAR(modulePrice, true)}</span> × {formatNumber(extraCats, "ar")} لكل قط إضافي
                   </>
                 ) : (
                   <>
@@ -450,7 +451,7 @@ function CheckoutInner() {
             {isAr ? "التوصيل" : "Delivery"}
           </h2>
           {!showAddForm && (
-            <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)} disabled={citiesQ.isLoading}>
+            <Button variant="secondary" size="sm" onClick={() => setShowAddForm(true)} disabled={citiesQ.isLoading}>
               {citiesQ.isLoading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
               {isAr ? "عنوان جديد" : "New address"}
             </Button>
@@ -495,7 +496,7 @@ function CheckoutInner() {
                         <span className="flex items-center gap-2 text-sm font-medium">
                           {a.label || a.recipient}
                           {a.isDefault && (
-                            <Badge variant="success" className="gap-1 text-[10px]">
+                            <Badge variant="success" className="gap-1 text-xs">
                               <Star className="size-2.5" /> {isAr ? "افتراضي" : "Default"}
                             </Badge>
                           )}
@@ -565,15 +566,15 @@ function CheckoutInner() {
                 )}
               >
                 {flexible && (
-                  <span className="absolute -top-2 start-1/2 -translate-x-1/2 rounded-full bg-secondary px-1.5 py-0.5 text-[9px] font-semibold text-secondary-foreground rtl:translate-x-1/2">
+                  <span className="absolute -top-2 start-1/2 -translate-x-1/2 rounded-full bg-secondary px-1.5 py-0.5 text-xs font-semibold text-secondary-foreground rtl:translate-x-1/2">
                     {isAr ? "الأكثر مرونة" : "Most flexible"}
                   </span>
                 )}
                 <span className="block font-display text-lg font-bold tabular" dir="ltr">{t}</span>
                 <span className="block text-xs text-muted-foreground">{monthUnit(t, uiLocale)}</span>
                 {termPct > 0 && (
-                  <span className="block text-[10px] font-semibold text-success">
-                    {isAr ? `خصم ${termPct.toLocaleString("ar-SA")}٪` : `−${termPct}%`}
+                  <span className="block text-xs font-semibold text-success">
+                    {isAr ? `خصم ${formatNumber(termPct, "ar")}٪` : `−${termPct}%`}
                   </span>
                 )}
               </button>
@@ -618,8 +619,8 @@ function CheckoutInner() {
             <p className="text-xs text-muted-foreground">
               {isAr ? (
                 <>
-                  {catCount.toLocaleString("ar-SA")} قطط: <span dir="ltr" className="tabular">{formatSAR(plan.price, true)}</span> للقط الأول +{" "}
-                  <span dir="ltr" className="tabular">{formatSAR(modulePrice, true)}</span> × {extraCats.toLocaleString("ar-SA")} إضافي ={" "}
+                  {formatNumber(catCount, "ar")} قطط: <span dir="ltr" className="tabular">{formatSAR(plan.price, true)}</span> للقط الأول +{" "}
+                  <span dir="ltr" className="tabular">{formatSAR(modulePrice, true)}</span> × {formatNumber(extraCats, "ar")} إضافي ={" "}
                   <span dir="ltr" className="tabular">{formatSAR(monthly, true)}</span> شهرياً
                 </>
               ) : (
@@ -637,7 +638,7 @@ function CheckoutInner() {
             <p className="text-xs font-medium text-success">
               {isAr ? (
                 <>
-                  خصم {discountPct.toLocaleString("ar-SA")}٪ على الدفع المقدّم — بدل{" "}
+                  خصم {formatNumber(discountPct, "ar")}٪ على الدفع المقدّم — بدل{" "}
                   <span dir="ltr" className="tabular line-through opacity-70">{formatSAR(undiscounted, true)}</span>
                 </>
               ) : (
@@ -652,7 +653,7 @@ function CheckoutInner() {
             {isAr ? (
               <>
                 <span dir="ltr" className="tabular">{formatSAR(monthly, true)}</span> × {monthsLabel(termMonths, "ar")}
-                {discountPct > 0 ? ` − ${discountPct.toLocaleString("ar-SA")}٪` : ""} ={" "}
+                {discountPct > 0 ? ` − ${formatNumber(discountPct, "ar")}٪` : ""} ={" "}
                 <span dir="ltr" className="tabular font-bold">{formatSAR(upfrontTotal, true)}</span> تُدفع اليوم
               </>
             ) : (
@@ -772,7 +773,7 @@ function CheckoutInner() {
             <p className="font-display text-base font-bold leading-tight">
               <span dir="ltr" className="tabular">{formatSAR(upfrontTotal, isAr)}</span>
             </p>
-            <p className="truncate text-[11px] text-muted-foreground">
+            <p className="truncate text-xs text-muted-foreground">
               {wantsAutoRenew
                 ? isAr ? `${monthsLabel(termMonths, "ar")} — يتجدد تلقائياً` : `${monthsLabel(termMonths, "en")} — renews automatically`
                 : isAr ? `${monthsLabel(termMonths, "ar")} — بدون تجديد تلقائي` : `${monthsLabel(termMonths, "en")} — no auto-renewal`}

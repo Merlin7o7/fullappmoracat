@@ -124,7 +124,7 @@ export function ReportCatButton({
         }
         footer={
           <>
-            <Button variant="ghost" onClick={close} disabled={sending}>
+            <Button variant="tertiary" onClick={close} disabled={sending}>
               {isAr ? "إلغاء" : "Cancel"}
             </Button>
             <Button onClick={submit} disabled={!reason} loading={sending}>

@@ -243,14 +243,14 @@ function CatCard({
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <Button variant="outline" size="sm" onClick={onIdCard} disabled={!cat.catIdNumber}>
+        <Button variant="secondary" size="sm" onClick={onIdCard} disabled={!cat.catIdNumber}>
           <IdCard className="size-4" /> {isAr ? "الهوية" : "ID"}
         </Button>
-        <Button variant="outline" size="sm" onClick={onFeed} disabled={feeding || inactive}>
+        <Button variant="secondary" size="sm" onClick={onFeed} disabled={feeding || inactive}>
           {feeding ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
           {isAr ? "التغذية" : "Feeding"}
         </Button>
-        <Button variant="outline" size="sm" onClick={onManage}>
+        <Button variant="secondary" size="sm" onClick={onManage}>
           <Settings2 className="size-4" /> {isAr ? "إدارة" : "Manage"}
         </Button>
       </div>
@@ -454,20 +454,20 @@ function IdCardBody({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
 
       {/* #6 Export — PDF / high-res PNG / print, full branding preserved. */}
       <div className="grid w-full max-w-sm grid-cols-3 gap-2">
-        <Button variant="outline" size="sm" onClick={() => run("pdf")} disabled={!!busy}>
+        <Button variant="secondary" size="sm" onClick={() => run("pdf")} disabled={!!busy}>
           {busy === "pdf" ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4" />} PDF
         </Button>
-        <Button variant="outline" size="sm" onClick={() => run("png")} disabled={!!busy}>
+        <Button variant="secondary" size="sm" onClick={() => run("png")} disabled={!!busy}>
           {busy === "png" ? <Loader2 className="size-4 animate-spin" /> : <ImageDown className="size-4" />} PNG
         </Button>
-        <Button variant="outline" size="sm" onClick={() => run("print")} disabled={!!busy}>
+        <Button variant="secondary" size="sm" onClick={() => run("print")} disabled={!!busy}>
           {busy === "print" ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />} {isAr ? "طباعة" : "Print"}
         </Button>
       </div>
 
       {/* The card where cards live — shown only when the pass can be issued (R034, R040). */}
       {wallet.data?.google && (
-        <Button variant="outline" size="sm" className="w-full max-w-sm" onClick={addToGoogleWallet} disabled={walletBusy}>
+        <Button variant="secondary" size="sm" className="w-full max-w-sm" onClick={addToGoogleWallet} disabled={walletBusy}>
           {walletBusy ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
           {isAr ? "أضفها إلى Google Wallet" : "Add to Google Wallet"}
         </Button>

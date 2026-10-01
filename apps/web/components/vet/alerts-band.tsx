@@ -361,7 +361,7 @@ export function AlertsBand({
             total
               ? "border-destructive/30 text-destructive"
               : "ms-auto border-border text-muted-foreground",
-            display ? "px-3 py-1 text-sm" : "ms-2 px-2 py-0.5 text-[10px]"
+            display ? "px-3 py-1 text-sm" : "ms-2 px-2 py-0.5 text-xs"
           )}
         >
           {isAr ? "دائماً مرئي" : "Always shown"}
@@ -397,7 +397,7 @@ export function AlertsBand({
                     className={cn(
                       "font-semibold uppercase tracking-wide",
                       g.weight === "calm" ? "text-muted-foreground" : "text-destructive",
-                      display ? "text-base" : "text-[11px]"
+                      display ? "text-base" : "text-xs"
                     )}
                   >
                     {isAr ? g.labelAr : g.labelEn}

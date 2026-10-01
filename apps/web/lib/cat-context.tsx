@@ -32,7 +32,7 @@ export interface PortalCat {
   cityCode: string | null;
   /**
    * The founding class, pre-composed by the API in both languages — e.g.
-   * «عضو مؤسِّس — دفعة جدة ٢٠٢٦». Null when not a founding member; the city
+   * «عضو مؤسِّس — دفعة جدة 2026». Null when not a founding member; the city
    * is simply omitted when unknown, never guessed (R040).
    */
   foundingClass: { ar: string | null; en: string | null };

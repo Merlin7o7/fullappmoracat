@@ -139,7 +139,7 @@ function VisitGroup({
                     {vetVisitStateLabel(v.state, isAr)}
                   </Badge>
                   {v.state === "OPEN" && v.waitMinutes !== null && (
-                    <span className="text-[0.625rem] text-muted-foreground tabular">
+                    <span className="text-xs text-muted-foreground tabular">
                       {isAr ? `${v.waitMinutes} د` : `${v.waitMinutes} min`}
                     </span>
                   )}

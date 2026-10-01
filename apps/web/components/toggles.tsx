@@ -15,7 +15,7 @@ export function ThemeToggle() {
   const isDark = theme === "dark";
   return (
     <Button
-      variant="ghost"
+      variant="tertiary"
       size="icon"
       aria-label={isAr ? (isDark ? "الوضع الفاتح" : "الوضع الداكن") : isDark ? "Light mode" : "Dark mode"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
@@ -29,7 +29,7 @@ export function LangToggle() {
   const { locale, setLocale } = useLocale();
   return (
     <Button
-      variant="ghost"
+      variant="tertiary"
       size="sm"
       aria-label={locale === "ar" ? "التبديل إلى الإنجليزية" : "Switch to Arabic"}
       onClick={() => setLocale(locale === "ar" ? "en" : "ar")}

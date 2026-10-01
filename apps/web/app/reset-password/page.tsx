@@ -129,7 +129,7 @@ function ResetPasswordInner() {
   return (
     <AuthShell isAr={isAr} title={isAr ? "كلمة مرور جديدة" : "Set a new password"} subtitle={isAr ? "اختر كلمة مرور قوية لحسابك" : "Choose a strong password for your account"}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label={isAr ? "كلمة المرور الجديدة" : "New password"} type="password" required value={password} onChange={setPassword} placeholder={isAr ? "٨ أحرف على الأقل" : "At least 8 characters"} autoComplete="new-password" />
+        <Field label={isAr ? "كلمة المرور الجديدة" : "New password"} type="password" required value={password} onChange={setPassword} placeholder={isAr ? "8 أحرف على الأقل" : "At least 8 characters"} autoComplete="new-password" />
         <Field label={isAr ? "تأكيد كلمة المرور" : "Confirm password"} type="password" required value={confirm} onChange={setConfirm} autoComplete="new-password" />
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button type="submit" size="lg" disabled={loading}>{loading && <Loader2 className="size-4 animate-spin" />}{isAr ? "تحديث كلمة المرور" : "Update password"}</Button>

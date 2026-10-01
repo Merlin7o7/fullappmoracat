@@ -97,7 +97,7 @@ export default function PartnerReviewPage() {
               : f.message}
           </p>
           {!notFound && (
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => void refetch()} loading={isFetching}>
+            <Button variant="secondary" size="sm" className="mt-4" onClick={() => void refetch()} loading={isFetching}>
               {!isFetching && <RotateCw aria-hidden />}
               {isAr ? "إعادة المحاولة" : "Try again"}
             </Button>

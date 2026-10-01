@@ -201,7 +201,7 @@ export function OrgSwitcher({ className }: { className?: string }) {
       <div className={cn("min-w-0", className)}>
         <p className="truncate text-sm font-medium leading-tight">{label}</p>
         {branches.length === 1 && (
-          <p className="truncate text-[0.6875rem] text-muted-foreground">
+          <p className="truncate text-xs text-muted-foreground">
             {vetBranchName(branches[0] ?? null, isAr)}
           </p>
         )}
@@ -220,7 +220,7 @@ export function OrgSwitcher({ className }: { className?: string }) {
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium leading-tight">{label}</span>
-          {sub && <span className="block truncate text-[0.6875rem] text-muted-foreground">{sub}</span>}
+          {sub && <span className="block truncate text-xs text-muted-foreground">{sub}</span>}
         </span>
         <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
       </button>
@@ -233,7 +233,7 @@ export function OrgSwitcher({ className }: { className?: string }) {
         >
           {memberships.length > 1 && (
             <>
-              <p className="px-2.5 py-1.5 text-[0.6875rem] font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="px-2.5 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {isAr ? "العيادة" : "Clinic"}
               </p>
               {memberships.map((m) => {
@@ -256,7 +256,7 @@ export function OrgSwitcher({ className }: { className?: string }) {
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate">{vetOrgName(m, isAr)}</span>
-                      <span className="block truncate text-[0.6875rem] text-muted-foreground">
+                      <span className="block truncate text-xs text-muted-foreground">
                         {VET_ROLE_LABELS[m.role][isAr ? "ar" : "en"]}
                         {suspended && ` · ${isAr ? "موقوف" : "paused"}`}
                       </span>
@@ -270,7 +270,7 @@ export function OrgSwitcher({ className }: { className?: string }) {
 
           {branches.length > 1 && (
             <>
-              <p className="mt-1 px-2.5 py-1.5 text-[0.6875rem] font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="mt-1 px-2.5 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {isAr ? "الفرع" : "Branch"}
               </p>
               <button
@@ -422,7 +422,7 @@ export function CounterLock({ className }: { className?: string }) {
         </Badge>
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={() => void lock()}
           loading={busy}
           aria-label={isAr ? "إقفال الكاونتر" : "Lock the counter"}
@@ -438,7 +438,7 @@ export function CounterLock({ className }: { className?: string }) {
     <>
       <Button
         size="sm"
-        variant="ghost"
+        variant="tertiary"
         onClick={() => setOpen(true)}
         className={className}
         aria-label={isAr ? "تشغيل وضع الكاونتر" : "Start counter mode"}
@@ -551,7 +551,7 @@ export function PatientRow({
       {avatar}
       <span className="min-w-0 flex-1">
         <span className="block truncate font-display text-sm font-medium leading-tight">{name}</span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.6875rem] text-muted-foreground">
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           {catIdNumber && <span className="font-mono tabular">{catIdNumber}</span>}
           {meta}
         </span>

@@ -347,13 +347,13 @@ function LinePicker({
                 <span className="min-w-0 flex-1 text-sm">
                   {flavor ?? (isAr ? "التركيبة الأساسية" : "Original recipe")}
                   {o.sterilized && (
-                    <span className="ms-1.5 text-[10px] text-muted-foreground">
+                    <span className="ms-1.5 text-xs text-muted-foreground">
                       {isAr ? "· تركيبة للمعقّم" : "· sterilised formula"}
                     </span>
                   )}
                 </span>
                 {o.recommended && (
-                  <Badge variant="success" className="shrink-0 gap-1 text-[10px]">
+                  <Badge variant="success" className="shrink-0 gap-1 text-xs">
                     <Sparkles className="size-2.5" />
                     {isAr ? "نرشّحه" : "Our pick"}
                   </Badge>
@@ -409,7 +409,7 @@ function SourcingChip({ inStock, isAr, compact }: { inStock: boolean; isAr: bool
     return (
       <span
         className={cn(
-          "inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success",
+          "inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success",
           compact && "px-1.5"
         )}
       >
@@ -421,7 +421,7 @@ function SourcingChip({ inStock, isAr, compact }: { inStock: boolean; isAr: bool
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground",
+        "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground",
         compact && "px-1.5"
       )}
       title={isAr ? "نوفّره لك خصيصاً" : "We'll source it for you"}

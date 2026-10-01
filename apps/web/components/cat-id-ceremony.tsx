@@ -9,13 +9,14 @@ import { CatIdCard } from "./cat-id-card";
 import { CatIdStory } from "./cat-id-story";
 import { shareStoryPng, exportSafeSrc } from "@/lib/card-export";
 import { IlloPaw } from "./illustrations";
+import { formatDate as coreFormatDate } from "@moraqat/core";
 
 interface CeremonyCat {
   name: string;
   catIdNumber: string;
   /** Census ordinal — lets the reveal show founding standing (MRC-GTM-001 §1). */
   catNumber?: number | null;
-  /** Full founding class from the API, e.g. «عضو مؤسِّس — دفعة جدة ٢٠٢٦». */
+  /** Full founding class from the API, e.g. «عضو مؤسِّس — دفعة جدة 2026». */
   foundingClass?: string | null;
   idIssuedAt?: string | null;
   photoUrl?: string | null;
@@ -49,11 +50,7 @@ const SCRIM_BTN = "bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/20
 /** The inscription date — Gregorian, in the member's language (R110). */
 function formatIssued(iso: string | null | undefined, isAr: boolean): string {
   const d = iso ? new Date(iso) : new Date();
-  return d.toLocaleDateString(isAr ? "ar-SA-u-ca-gregory" : "en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  return coreFormatDate(d, isAr ? "ar" : "en", "medium");
 }
 
 /**
@@ -249,7 +246,7 @@ function StampingAct({ isAr, catName, idNumber, onDone }: { isAr: boolean; catNa
       >
         <IlloPaw tone="orange" className="size-7" />
       </motion.span>
-      <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.28em] text-white/50">
+      <p className="mt-6 font-mono text-xs uppercase tracking-[0.28em] text-white/50">
         {isAr ? `نطبع هوية ${catName}…` : `Stamping ${catName}'s ID…`}
       </p>
       {/* The name — stamped first, glyph by glyph. */}
@@ -429,7 +426,7 @@ function RevealAct({
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative my-auto flex w-full max-w-sm flex-col items-center py-4 text-center">
-      <motion.p {...fade(0.45)} className="font-mono text-[10px] uppercase tracking-[0.28em] text-[hsl(18_93%_62%)]">
+      <motion.p {...fade(0.45)} className="font-mono text-xs uppercase tracking-[0.28em] text-[hsl(18_93%_62%)]">
         {isAr ? "صار له رقمه" : "The number is theirs"}
       </motion.p>
       <motion.p {...fade(0.6)} aria-hidden className="mt-3 font-display text-3xl font-semibold tracking-tight text-white">
@@ -471,7 +468,7 @@ function RevealAct({
       </motion.div>
 
       {/* The inscription — quiet, engraved, permanent (R032). */}
-      <motion.p {...fade(0.85)} className="mt-4 font-mono text-[10px] uppercase tracking-[0.22em] text-white/45">
+      <motion.p {...fade(0.85)} className="mt-4 font-mono text-xs uppercase tracking-[0.22em] text-white/45">
         {isAr ? (
           <>عضو رقم <bdi dir="ltr">{cat.catIdNumber}</bdi> · صدرت في {formatIssued(cat.idIssuedAt, true)}</>
         ) : (
@@ -485,11 +482,11 @@ function RevealAct({
       {isFoundingMember(cat.catNumber) && (
         <motion.p
           {...fade(0.9)}
-          className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[hsl(30_80%_82%)]"
+          className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 font-mono text-xs uppercase tracking-[0.2em] text-[hsl(30_80%_82%)]"
         >
           <IlloPaw tone="orange" className="size-3.5" />
           {/* The class comes from the API, built from THIS cat's city and issue
-              year. It was once hard-coded to "دفعة الرياض ٢٠٢٦" for everybody,
+              year. It was once hard-coded to "دفعة الرياض 2026" for everybody,
               which told a Jeddah owner their cat belonged to a Riyadh cohort —
               a false claim in the one moment the product asks to be believed
               (R040). An unknown city drops out of the phrase; it is never
@@ -539,7 +536,7 @@ function RevealAct({
                     </p>
                     <div className="flex items-center justify-center gap-2">
                       <Button
-                        variant="ghost"
+                        variant="tertiary"
                         size="sm"
                         className={cn("flex-1", SCRIM_BTN)}
                         disabled={saving !== null || storyBusy}
@@ -548,7 +545,7 @@ function RevealAct({
                         {isAr ? "خصّص ظهورك" : "Customize how you appear"}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="tertiary"
                         size="sm"
                         className={cn("flex-1", SCRIM_BTN)}
                         disabled={saving !== null || storyBusy}
@@ -561,7 +558,7 @@ function RevealAct({
                   </div>
                 ) : (
                   <Button
-                    variant="ghost"
+                    variant="tertiary"
                     size="lg"
                     className={cn("w-full", SCRIM_BTN)}
                     disabled={saving !== null || storyBusy}
@@ -675,7 +672,7 @@ function RevealAct({
               {/* Clearly skippable (R010/R116): Later is a full peer button,
                   and it returns to the celebration, not to a pitch. */}
               <Button
-                variant="ghost"
+                variant="tertiary"
                 size="lg"
                 className={cn("mt-2 w-full", SCRIM_BTN)}
                 disabled={saving !== null}

@@ -76,12 +76,12 @@ export function CertificateCard({ catId, catName, hasCatId, isAr }: { catId: str
         <div className="flex flex-wrap gap-2">
           {cert && (
             <a href={cert.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex">
-              <Button variant="outline" size="sm">
+              <Button variant="secondary" size="sm">
                 <Download className="size-4" aria-hidden /> PDF
               </Button>
             </a>
           )}
-          <Button size="sm" variant={cert ? "ghost" : "primary"} loading={issue.isPending} disabled={!hasCatId} onClick={() => issue.mutate()}>
+          <Button size="sm" variant={cert ? "tertiary" : "primary"} loading={issue.isPending} disabled={!hasCatId} onClick={() => issue.mutate()}>
             {cert ? (
               <>
                 <RefreshCcw className="size-4" aria-hidden /> {isAr ? "أصدر نسخة محدّثة" : "Issue an updated one"}

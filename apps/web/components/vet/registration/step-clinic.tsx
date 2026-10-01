@@ -50,14 +50,14 @@ function validate(f: ClinicForm, isAr: boolean): Errors {
   if (f.legalNameAr.trim().length < 2)
     e.legalNameAr = t("اكتب الاسم كما يظهر في السجل التجاري.", "Enter the name exactly as it appears on the CR.");
   if (!CR_NUMBER_RE.test(digitsOnly(f.crNumber)))
-    e.crNumber = t("رقم السجل التجاري ١٠ أرقام.", "The CR number is 10 digits.");
+    e.crNumber = t("رقم السجل التجاري 10 أرقام.", "The CR number is 10 digits.");
   if (!UNIFIED_NUMBER_RE.test(digitsOnly(f.unifiedNumber)))
-    e.unifiedNumber = t("الرقم الوطني الموحد ١٠ أرقام ويبدأ بـ ٧.", "The unified number is 10 digits and starts with 7.");
+    e.unifiedNumber = t("الرقم الوطني الموحد 10 أرقام ويبدأ بـ 7.", "The unified number is 10 digits and starts with 7.");
   if (!f.crExpiresAt) e.crExpiresAt = t("اختر تاريخ انتهاء السجل.", "Choose the CR expiry date.");
   else if (isPastDate(f.crExpiresAt))
     e.crExpiresAt = t("هذا السجل منتهٍ — جدّده أولاً ثم أكمل التسجيل.", "This CR has expired — renew it first, then continue.");
   if (f.vatNumber.trim() && !VAT_NUMBER_RE.test(digitsOnly(f.vatNumber)))
-    e.vatNumber = t("الرقم الضريبي ١٥ رقماً، يبدأ وينتهي بـ ٣.", "A VAT number is 15 digits, starting and ending with 3.");
+    e.vatNumber = t("الرقم الضريبي 15 رقماً، يبدأ وينتهي بـ 3.", "A VAT number is 15 digits, starting and ending with 3.");
   return e;
 }
 
@@ -170,7 +170,7 @@ export function StepClinic({ orgId, state, api, isAr, onState, onNext, onBack }:
             <TextField
               isAr={isAr}
               label={isAr ? "رقم السجل التجاري" : "Commercial registration (CR) number"}
-              hint={isAr ? "١٠ أرقام — مثل 1010123456" : "10 digits — e.g. 1010123456"}
+              hint={isAr ? "10 أرقام — مثل 1010123456" : "10 digits — e.g. 1010123456"}
               value={f.crNumber}
               onChange={(v) => update({ crNumber: v })}
               onBlur={() => f.crNumber && update({ crNumber: digitsOnly(f.crNumber) })}
@@ -184,7 +184,7 @@ export function StepClinic({ orgId, state, api, isAr, onState, onNext, onBack }:
             <TextField
               isAr={isAr}
               label={isAr ? "الرقم الوطني الموحد" : "Unified national number"}
-              hint={isAr ? "١٠ أرقام تبدأ بـ ٧ — مكتوب أعلى السجل." : "10 digits starting with 7 — printed at the top of the CR."}
+              hint={isAr ? "10 أرقام تبدأ بـ 7 — مكتوب أعلى السجل." : "10 digits starting with 7 — printed at the top of the CR."}
               value={f.unifiedNumber}
               onChange={(v) => update({ unifiedNumber: v })}
               onBlur={() => f.unifiedNumber && update({ unifiedNumber: digitsOnly(f.unifiedNumber) })}
@@ -209,7 +209,7 @@ export function StepClinic({ orgId, state, api, isAr, onState, onNext, onBack }:
             <TextField
               isAr={isAr}
               label={isAr ? "الرقم الضريبي" : "VAT registration number"}
-              hint={isAr ? "إن كانت العيادة مسجّلة في ضريبة القيمة المضافة — ١٥ رقماً." : "If the clinic is VAT-registered — 15 digits."}
+              hint={isAr ? "إن كانت العيادة مسجّلة في ضريبة القيمة المضافة — 15 رقماً." : "If the clinic is VAT-registered — 15 digits."}
               value={f.vatNumber}
               onChange={(v) => update({ vatNumber: v })}
               onBlur={() => f.vatNumber && update({ vatNumber: digitsOnly(f.vatNumber) })}

@@ -222,7 +222,7 @@ export default function VetInvitePage() {
             : "Open the full link from your invitation email — some mail apps clip it. If it has expired, a clinic manager can send a fresh one in seconds."}
         </p>
         <Link href="/vet/login">
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="secondary">
             {isAr ? "دخول فريق العيادة" : "Clinic team sign-in"}
           </Button>
         </Link>
@@ -250,7 +250,7 @@ export default function VetInvitePage() {
               : " Your clinic manager can send a new one from Clinic settings.")}
         </p>
         <Link href="/vet/login">
-          <Button size="sm" variant={used ? "primary" : "outline"}>
+          <Button size="sm" variant={used ? "primary" : "secondary"}>
             {isAr ? "دخول فريق العيادة" : "Clinic team sign-in"}
           </Button>
         </Link>
@@ -382,7 +382,7 @@ export default function VetInvitePage() {
               : "I've read the confidentiality undertaking and will keep to it, and I understand every action is attributed to me."}
           </span>
         </label>
-        <p className="text-[0.6875rem] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {isAr ? `نسخة ${doc.version}` : `Version ${doc.version}`}
         </p>
       </Card>
@@ -412,7 +412,7 @@ export default function VetInvitePage() {
                 </p>
               </div>
             </div>
-            <Button size="lg" variant="outline" className="w-full" onClick={() => void logout()}>
+            <Button size="lg" variant="secondary" className="w-full" onClick={() => void logout()}>
               <LogOut className="size-4" aria-hidden />
               {isAr ? "سجّل الخروج وتابع" : "Sign out and continue"}
             </Button>
@@ -489,7 +489,7 @@ export default function VetInvitePage() {
               onChange={setPassword}
               autoComplete="new-password"
               dir="ltr"
-              hint={isAr ? "٨ خانات على الأقل، تجمع حروفاً إنجليزية وأرقاماً." : "At least 8 characters, mixing letters (A–Z) and numbers."}
+              hint={isAr ? "8 خانات على الأقل، تجمع حروفاً إنجليزية وأرقاماً." : "At least 8 characters, mixing letters (A–Z) and numbers."}
               required
             />
             <TextField
@@ -560,7 +560,7 @@ function AcceptedScreen({ accepted, isAr }: { accepted: StaffInviteAccepted; isA
           <Button onClick={() => router.replace("/vet/settings#pin")} size="lg">
             {isAr ? "عيّن رمزي السري" : "Set my counter PIN"}
           </Button>
-          <Button onClick={() => router.replace("/vet")} size="lg" variant="ghost">
+          <Button onClick={() => router.replace("/vet")} size="lg" variant="tertiary">
             {isAr ? "افتح البوابة" : "Open the portal"}
           </Button>
         </div>
@@ -580,7 +580,7 @@ function AcceptedScreen({ accepted, isAr }: { accepted: StaffInviteAccepted; isA
           : `You've joined ${orgName} as ${role}. The clinic is under review by Moracat — we'll email you when it's live, and nothing is needed from you until then.`}
       </p>
       <Link href="/">
-        <Button size="lg" variant="outline">
+        <Button size="lg" variant="secondary">
           {isAr ? "تعرّف على مرقط" : "Explore Moracat"}
         </Button>
       </Link>

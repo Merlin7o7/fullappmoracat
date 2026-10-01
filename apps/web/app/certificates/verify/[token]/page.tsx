@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { formatDate as coreFormatDate } from "@moraqat/core";
 
 /**
  * Public certificate verification (MRC-PROD-001 T9). Whoever holds the
@@ -53,7 +54,7 @@ export default async function VerifyCertificatePage({ params }: { params: { toke
   const v = await verify(params.token);
   const isAr = cookies().get("locale")?.value !== "en";
   const fmt = (iso?: string) =>
-    iso ? new Date(iso).toLocaleDateString(isAr ? "ar-SA-u-ca-gregory" : "en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Riyadh" }) : "—";
+    iso ? coreFormatDate(iso, isAr ? "ar" : "en", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Riyadh" }) : "—";
   const standing = v.vaccinationStanding ? STANDING[v.vaccinationStanding] ?? STANDING.UNKNOWN : null;
 
   return (

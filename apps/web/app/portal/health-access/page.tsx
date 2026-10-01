@@ -50,6 +50,7 @@ import {
   toConsentResponse,
 } from "@/components/vet-consent-card";
 import { dedupeByOrg, normalizeDirectory, type DirectoryClinic } from "@/lib/vet-directory";
+import { formatNumber } from "@moraqat/core";
 
 
 export default function HealthAccessPage() {
@@ -207,7 +208,7 @@ function ClinicRequestCard({
           <CheckCircle2 className="size-4" aria-hidden />
           {isAr ? `اسمح لـ${name}` : `Allow ${name}`}
         </Button>
-        <Button variant="ghost" onClick={onDone} disabled={approve.isPending}>
+        <Button variant="tertiary" onClick={onDone} disabled={approve.isPending}>
           {isAr ? "مو الحين" : "Not now"}
         </Button>
       </div>
@@ -378,7 +379,7 @@ function ConsentSection({ catId, catName, isAr }: { catId: string; catName: stri
           >
             <History aria-hidden className="size-4" />
             {isAr
-              ? `أذونات سابقة (${past.length.toLocaleString("ar-SA")})`
+              ? `أذونات سابقة (${formatNumber(past.length, "ar")})`
               : `Past permissions (${past.length})`}
           </button>
           {showPast && (
@@ -504,7 +505,7 @@ function GrantCard({
 
         {!ended && onRevoke && (
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={onRevoke}
             className="min-h-[44px] border-destructive/40 text-destructive hover:bg-destructive/10"
@@ -615,11 +616,11 @@ function GrantDialog({
       hintAr: "يبقى الإذن قائماً وتقدر تسحبه أي وقت", hintEn: "Stays on until you take it back",
     },
     {
-      value: "30", ar: "٣٠ يوماً", en: "30 days",
+      value: "30", ar: "30 يوماً", en: "30 days",
       hintAr: "ينتهي تلقائياً بعد شهر", hintEn: "Ends by itself after a month",
     },
     {
-      value: "90", ar: "٩٠ يوماً", en: "90 days",
+      value: "90", ar: "90 يوماً", en: "90 days",
       hintAr: "مناسب لخطة علاج ممتدة", hintEn: "Good for an ongoing course of treatment",
     },
   ];
@@ -638,7 +639,7 @@ function GrantDialog({
         }
         footer={
           <>
-            <Button variant="ghost" size="sm" onClick={() => setPicked(null)} disabled={grant.isPending}>
+            <Button variant="tertiary" size="sm" onClick={() => setPicked(null)} disabled={grant.isPending}>
               {isAr ? "رجوع" : "Back"}
             </Button>
             <Button size="sm" onClick={() => grant.mutate()} loading={grant.isPending}>
@@ -731,7 +732,7 @@ function GrantDialog({
           : "Only clinics verified by Moracat — we've checked their licence ourselves."
       }
       footer={
-        <Button variant="ghost" size="sm" onClick={onClose}>
+        <Button variant="tertiary" size="sm" onClick={onClose}>
           {isAr ? "إلغاء" : "Cancel"}
         </Button>
       }
@@ -775,7 +776,7 @@ function GrantDialog({
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium">{orgName(c, isAr)}</span>
                       {c.emergency24h && (
-                        <Badge variant="destructive">{isAr ? "طوارئ ٢٤ ساعة" : "24h emergency"}</Badge>
+                        <Badge variant="destructive">{isAr ? "طوارئ 24 ساعة" : "24h emergency"}</Badge>
                       )}
                     </span>
                     {(c.city || c.addressLine) && (

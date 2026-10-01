@@ -36,7 +36,7 @@ export function PortalMobileNav({ items, isAr, isStaff, onLogout }: PortalMobile
 
   const tabClass = (active: boolean) =>
     cn(
-      "flex min-w-0 flex-col items-center justify-center gap-1 rounded-[1.35rem] py-1.5 text-[0.6875rem] font-medium leading-tight transition-colors",
+      "flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 text-xs font-medium leading-tight transition-colors",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
     );
@@ -45,7 +45,7 @@ export function PortalMobileNav({ items, isAr, isStaff, onLogout }: PortalMobile
     <>
       <nav
         aria-label={isAr ? "التنقل" : "Navigation"}
-        className="glass bottom-safe ps-safe pe-safe fixed inset-x-3 z-40 grid auto-cols-fr grid-flow-col items-stretch gap-0.5 rounded-[1.75rem] p-1.5 md:hidden"
+        className="glass bottom-safe ps-safe pe-safe fixed inset-x-3 z-40 grid auto-cols-fr grid-flow-col items-stretch gap-0.5 rounded-2xl p-1.5 md:hidden"
       >
         {primary.map((item) => {
           const active = isActive(item);

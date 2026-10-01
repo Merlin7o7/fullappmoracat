@@ -84,13 +84,13 @@ export default function AdoptPage() {
             )}
             <div className="mt-7 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Link href={user ? "/portal/adoption" : "/register"}>
-                <Button size="lg" variant="brand">
+                <Button size="lg" variant="primary">
                   <FileHeart className="size-4" aria-hidden />
                   {isAr ? "اعرض قطاً للتبني" : "List a cat for adoption"}
                 </Button>
               </Link>
               <Link href="/lost-found">
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="secondary">
                   {isAr ? "مفقود وموجود" : "Lost & Found"}
                   <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
                 </Button>

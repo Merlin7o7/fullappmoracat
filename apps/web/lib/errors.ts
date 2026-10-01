@@ -82,7 +82,7 @@ const MAP: Record<string, Copy> = {
     en: { title: "We couldn't find that account", message: "No account matches those details. Double-check them, or create a new account — it takes a minute." },
   },
   WEAK_PASSWORD: {
-    ar: { title: "كلمة مرور أقوى تحميك أكثر", message: "استخدم ٨ أحرف على الأقل، فيها حرف ورقم." },
+    ar: { title: "كلمة مرور أقوى تحميك أكثر", message: "استخدم 8 أحرف على الأقل، فيها حرف ورقم." },
     en: { title: "A stronger password keeps you safer", message: "Use at least 8 characters, with a letter and a number." },
   },
   TOKEN_INVALID: {

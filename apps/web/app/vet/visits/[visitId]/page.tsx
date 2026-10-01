@@ -89,7 +89,7 @@ function builtInTemplates(isAr: boolean): SoapTemplate[] {
             subjective: "قط سليم ظاهرياً، حضر للتحصين الدوري. لا شكوى من المالك.",
             objective: "نشِط ومتيقّظ. الحرارة والنبض والتنفس ضمن الطبيعي. الغدد اللمفاوية سليمة.",
             assessment: "سليم — مناسب للتحصين اليوم.",
-            plan: "أُعطي اللقاح. الجرعة القادمة مجدولة. المالك أُبلغ بالأعراض المتوقعة خلال ٢٤ ساعة.",
+            plan: "أُعطي اللقاح. الجرعة القادمة مجدولة. المالك أُبلغ بالأعراض المتوقعة خلال 24 ساعة.",
           },
         },
         {
@@ -111,7 +111,7 @@ function builtInTemplates(isAr: boolean): SoapTemplate[] {
             subjective: "المالك يلاحظ رائحة الفم / صعوبة في الأكل.",
             objective: "درجة التهاب اللثة: \nالجير: \nالأسنان المتحركة: ",
             assessment: "",
-            plan: "تنظيف تحت التخدير / متابعة بعد ٦ أشهر.",
+            plan: "تنظيف تحت التخدير / متابعة بعد 6 أشهر.",
           },
         },
       ]
@@ -441,7 +441,7 @@ function SoapEditor({ visitId, catId }: { visitId: string; catId: string }) {
             </span>
           ))}
           {hasContent && (
-            <Button size="sm" variant="ghost" onClick={() => setSaveTplOpen(true)}>
+            <Button size="sm" variant="tertiary" onClick={() => setSaveTplOpen(true)}>
               <BookmarkPlus className="size-4" />
               {isAr ? "احفظ كقالب" : "Save as template"}
             </Button>
@@ -467,7 +467,7 @@ function SoapEditor({ visitId, catId }: { visitId: string; catId: string }) {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button variant="brand" loading={save.isPending} disabled={!hasContent} onClick={() => save.mutate()}>
+        <Button variant="primary" loading={save.isPending} disabled={!hasContent} onClick={() => save.mutate()}>
           <Save className="size-4" />
           {isAr ? "احفظ الفحص" : "Save examination"}
         </Button>
@@ -487,11 +487,11 @@ function SoapEditor({ visitId, catId }: { visitId: string; catId: string }) {
         }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setSaveTplOpen(false)}>
+            <Button variant="tertiary" onClick={() => setSaveTplOpen(false)}>
               {isAr ? "إلغاء" : "Cancel"}
             </Button>
             <Button
-              variant="brand"
+              variant="primary"
               onClick={() => {
                 const name = tplName.trim();
                 if (!name) return;
@@ -541,7 +541,7 @@ function AddEntry({
         </p>
         <Button
           size="sm"
-          variant={open ? "ghost" : "outline"}
+          variant={open ? "tertiary" : "secondary"}
           className="ms-auto"
           onClick={() => setOpen((v) => !v)}
         >
@@ -708,7 +708,7 @@ function OwnerSummary({
       <div className="mt-3 flex flex-wrap gap-2">
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={generate}
           disabled={timeline.isLoading || timeline.isError}
         >
@@ -754,7 +754,7 @@ function OwnerSummary({
 
       <Button
         className="mt-3"
-        variant="brand"
+        variant="primary"
         loading={send.isPending}
         disabled={text.trim().length < 10}
         onClick={() => send.mutate()}
@@ -800,7 +800,7 @@ function CloseVisit({ visitId, catName }: { visitId: string; catName: string }) 
   return (
     <>
       <div className="flex justify-end">
-        <Button variant="brand" size="lg" onClick={() => setOpen(true)}>
+        <Button variant="primary" size="lg" onClick={() => setOpen(true)}>
           <CheckCheck className="size-4" />
           {isAr ? "أغلق الزيارة" : "Close the visit"}
         </Button>
@@ -817,10 +817,10 @@ function CloseVisit({ visitId, catName }: { visitId: string; catName: string }) 
         }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setOpen(false)} disabled={close.isPending}>
+            <Button variant="tertiary" onClick={() => setOpen(false)} disabled={close.isPending}>
               {isAr ? "ليس بعد" : "Not yet"}
             </Button>
-            <Button variant="brand" loading={close.isPending} onClick={() => close.mutate()}>
+            <Button variant="primary" loading={close.isPending} onClick={() => close.mutate()}>
               {isAr ? "أغلق الزيارة" : "Close the visit"}
             </Button>
           </>

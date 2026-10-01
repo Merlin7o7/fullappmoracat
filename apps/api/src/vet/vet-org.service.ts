@@ -384,7 +384,7 @@ export class VetOrgService {
         id: "consents",
         severity: "INFO",
         titleEn: `${expiringConsents.length} record ${expiringConsents.length === 1 ? "permission expires" : "permissions expire"} within 3 days`,
-        titleAr: `${expiringConsents.length} ${expiringConsents.length === 1 ? "إذن سجل ينتهي" : "أذونات سجل تنتهي"} خلال ٣ أيام`,
+        titleAr: `${expiringConsents.length} ${expiringConsents.length === 1 ? "إذن سجل ينتهي" : "أذونات سجل تنتهي"} خلال 3 أيام`,
         href: `/vet/patients/${expiringConsents[0]!.catId}`,
         actionEn: "Ask the owner to renew",
         actionAr: "اطلب من المالك التجديد",

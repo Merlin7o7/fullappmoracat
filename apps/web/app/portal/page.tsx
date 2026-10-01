@@ -19,6 +19,7 @@ import { QueryError } from "@/components/query-error";
 import { IlloFish, IlloPaw } from "@/components/illustrations";
 import { Illo3D } from "@/components/illo-3d";
 import { ExploreHome } from "@/components/explore-home";
+import { formatNumber } from "@moraqat/core";
 
 /** Quiet paw watermark for the value strip. */
 function IlloPawSticker() {
@@ -211,8 +212,8 @@ export default function OverviewPage() {
             <div className="grid grid-cols-2 gap-2">
               {/* Two actions, two destinations — each carries the featured cat so
                   the next screen opens on THEIR card/record, not a generic list (R005). */}
-              <Link href={`/portal/cats?cat=${featured.id}`}><Button variant="outline" size="sm" className="w-full"><IdCard className="size-4" /> {isAr ? "الهوية" : "Cat ID"}</Button></Link>
-              <Link href={`/portal/cats/${featured.id}/health`}><Button variant="outline" size="sm" className="w-full"><HeartPulse className="size-4" /> {isAr ? "السجل الصحي" : "Health"}</Button></Link>
+              <Link href={`/portal/cats?cat=${featured.id}`}><Button variant="secondary" size="sm" className="w-full"><IdCard className="size-4" /> {isAr ? "الهوية" : "Cat ID"}</Button></Link>
+              <Link href={`/portal/cats/${featured.id}/health`}><Button variant="secondary" size="sm" className="w-full"><HeartPulse className="size-4" /> {isAr ? "السجل الصحي" : "Health"}</Button></Link>
             </div>
           </div>
 
@@ -355,7 +356,7 @@ export default function OverviewPage() {
                     <p className="font-display text-2xl font-semibold tabular leading-tight">
                       <AnimatedCounter value={s.num} locale={numLocale} />
                     </p>
-                    <p className="mt-0.5 text-[11px] text-primary-foreground/75">{s.label}</p>
+                    <p className="mt-0.5 text-xs text-primary-foreground/75">{s.label}</p>
                   </div>
                 ))}
               </div>
@@ -378,11 +379,11 @@ export default function OverviewPage() {
               </div>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/portal/community"><Button variant="glass" size="sm"><Users className="size-4" /> {isAr ? "استكشف المجتمع" : "Explore community"}</Button></Link>
-              <Link href="/portal/cats"><Button variant="glass" size="sm"><IdCard className="size-4" /> {isAr ? "أكمل ملف قطك" : "Complete your cat's file"}</Button></Link>
+              <Link href="/portal/community"><Button variant="secondary" size="sm"><Users className="size-4" /> {isAr ? "استكشف المجتمع" : "Explore community"}</Button></Link>
+              <Link href="/portal/cats"><Button variant="secondary" size="sm"><IdCard className="size-4" /> {isAr ? "أكمل ملف قطك" : "Complete your cat's file"}</Button></Link>
             </div>
             {/* One quiet forward-looking line — a footnote, never the headline (R048). */}
-            <p className="mt-4 text-[11px] text-primary-foreground/60">
+            <p className="mt-4 text-xs text-primary-foreground/60">
               {isAr
                 ? "أسعار الأعضاء والتوصيل يجون لما تنزل العضويات."
                 : "Member rates and delivery arrive when memberships launch."}
@@ -420,7 +421,7 @@ export default function OverviewPage() {
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-lg font-semibold">{isAr ? "أحدث الطلبات" : "Recent orders"}</h2>
-              <Link href="/portal/orders"><Button variant="ghost" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4 rtl:rotate-180" /></Button></Link>
+              <Link href="/portal/orders"><Button variant="tertiary" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4 rtl:rotate-180" /></Button></Link>
             </div>
             {isLoading ? (
               <Skeleton className="h-24 w-full" />
@@ -490,7 +491,7 @@ function CatRail({
           {isAr ? "قطط البيت" : "Your household"}
           <span className="ms-2 text-sm font-normal text-muted-foreground">{cats.length}</span>
         </h2>
-        <Link href="/portal/cats"><Button variant="ghost" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4 rtl:rotate-180" /></Button></Link>
+        <Link href="/portal/cats"><Button variant="tertiary" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4 rtl:rotate-180" /></Button></Link>
       </div>
 
       <div className="grid flex-1 auto-rows-min grid-cols-2 gap-2 sm:grid-cols-3">
@@ -511,7 +512,7 @@ function CatRail({
                     <span className="truncate text-sm font-medium">{localizeName(c.name, isAr ? "ar" : "en")}</span>
                     {c.isPrimary && <Star className="size-3 shrink-0 fill-accent text-accent" />}
                   </span>
-                  <span className="block truncate font-mono text-[10px] text-muted-foreground" dir="ltr">{c.catIdNumber}</span>
+                  <span className="block truncate font-mono text-xs text-muted-foreground" dir="ltr">{c.catIdNumber}</span>
                 </span>
               </button>
               {/* Visible at rest on touch (no hover exists there, R098); the
@@ -591,11 +592,11 @@ function ReferralCard({ isAr }: { isAr: boolean }) {
             <code className="truncate font-mono text-sm" dir="ltr">{data.code}</code>
             {data.invited > 0 && (
               <span className="ms-2 shrink-0 text-xs text-muted-foreground">
-                {isAr ? `دعوت ${data.invited.toLocaleString("ar-SA")}` : `${data.invited} invited`}
+                {isAr ? `دعوت ${formatNumber(data.invited, "ar")}` : `${data.invited} invited`}
               </span>
             )}
           </div>
-          <Button size="sm" variant="outline" onClick={share} className="w-fit">
+          <Button size="sm" variant="secondary" onClick={share} className="w-fit">
             {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
             {isAr ? "شارك رابط الدعوة" : "Share invite link"}
           </Button>

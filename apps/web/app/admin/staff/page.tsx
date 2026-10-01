@@ -159,7 +159,7 @@ export default function AdminStaffPage() {
                     <td className="p-3 text-muted-foreground">{fmtDate(m.createdAt, isAr)}</td>
                     <td className="p-3 text-end">
                       <Button
-                        variant="ghost"
+                        variant="tertiary"
                         size="sm"
                         disabled={isSelf || revoke.isPending}
                         title={isSelf ? (isAr ? "لا يمكنك إزالة نفسك" : "You can't remove yourself") : undefined}

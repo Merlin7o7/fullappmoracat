@@ -133,7 +133,7 @@ export function CatHandoverPanel({
           </p>
           <Button
             size="sm"
-            variant="ghost"
+            variant="tertiary"
             className="mt-2 text-destructive hover:bg-destructive/10"
             onClick={() => cancel.mutate(pending.id)}
             disabled={cancel.isPending}
@@ -144,12 +144,12 @@ export function CatHandoverPanel({
         </div>
       ) : !open ? (
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
             <ArrowRightLeft className="size-4" aria-hidden />
             {isAr ? "انقل الملكية" : "Transfer ownership"}
           </Button>
           <Link href="/portal/adoption">
-            <Button variant="ghost" size="sm">
+            <Button variant="tertiary" size="sm">
               <Search className="size-4" aria-hidden />
               {isAr ? "أو اعرضه للتبني" : "Or list for adoption"}
             </Button>
@@ -233,7 +233,7 @@ export function CatHandoverPanel({
             <Button
               type="button"
               size="sm"
-              variant="ghost"
+              variant="tertiary"
               onClick={() => {
                 setOpen(false);
                 setError(null);

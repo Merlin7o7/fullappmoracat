@@ -100,7 +100,7 @@ export default function NotificationsPage() {
           </p>
         </div>
         {unread > 0 && (
-          <Button variant="outline" size="sm" onClick={() => markAll.mutate()} disabled={markAll.isPending}>
+          <Button variant="secondary" size="sm" onClick={() => markAll.mutate()} disabled={markAll.isPending}>
             {markAll.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCheck className="size-4" />}
             {isAr ? "تحديد الكل كمقروء" : "Mark all read"}
           </Button>
@@ -168,11 +168,11 @@ export default function NotificationsPage() {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
-              <Button variant="outline" size="sm" disabled={page <= 1 || isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <Button variant="secondary" size="sm" disabled={page <= 1 || isFetching} onClick={() => setPage((p) => Math.max(1, p - 1))}>
                 <ChevronLeft className="size-4 rtl:rotate-180" /> {isAr ? "السابق" : "Previous"}
               </Button>
               <span className="text-xs text-muted-foreground">{isAr ? `${page} من ${totalPages}` : `${page} of ${totalPages}`}</span>
-              <Button variant="outline" size="sm" disabled={!data.pagination.hasMore || isFetching} onClick={() => setPage((p) => p + 1)}>
+              <Button variant="secondary" size="sm" disabled={!data.pagination.hasMore || isFetching} onClick={() => setPage((p) => p + 1)}>
                 {isAr ? "التالي" : "Next"} <ChevronRight className="size-4 rtl:rotate-180" />
               </Button>
             </div>
@@ -187,7 +187,7 @@ export default function NotificationsPage() {
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             {isAr ? "كل شي تمام — حين يحدث شيء يخص قطك ستجده هنا" : "You're all caught up — when something happens for your cat, it lands here"}
           </p>
-          <Link href="/portal"><Button variant="outline" size="sm">{isAr ? "ارجع إلى لوحتك" : "Back to your dashboard"}</Button></Link>
+          <Link href="/portal"><Button variant="secondary" size="sm">{isAr ? "ارجع إلى لوحتك" : "Back to your dashboard"}</Button></Link>
         </Card>
       )}
     </div>

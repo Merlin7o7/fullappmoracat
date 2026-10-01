@@ -25,7 +25,7 @@ export const RENEWAL_SHORT: Bilingual = {
 
 /** The billing note on plan cards and the membership page. */
 export const RENEWAL_BILLING_NOTE: Bilingual = {
-  ar: "شهر واحد أو مدة مدفوعة مقدّماً — خصم على مدتَي ٦ و١٢ شهراً. لا تجديد إلا باختيارك، ونذكّرك قبل أي خصم.",
+  ar: "شهر واحد أو مدة مدفوعة مقدّماً — خصم على مدتَي 6 و12 شهراً. لا تجديد إلا باختيارك، ونذكّرك قبل أي خصم.",
   en: "One month or a prepaid term — 6 and 12-month terms carry a discount. Nothing renews unless you choose it, and we remind you before any charge.",
 };
 

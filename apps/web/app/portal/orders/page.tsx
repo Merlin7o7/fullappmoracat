@@ -132,7 +132,7 @@ export default function OrdersPage() {
                 <OrderStatusBadge status={o.status} isAr={isAr} />
                 <span className="font-display font-semibold tabular" dir="ltr">{formatSAR(o.grandTotal, isAr)}</span>
                 <Button
-                  variant="ghost"
+                  variant="tertiary"
                   size="sm"
                   aria-label={isAr ? `عرض فاتورة الطلب ${o.orderNumber}` : `View invoice for order ${o.orderNumber}`}
                   onClick={() => setOpenOrder(o.orderNumber)}
@@ -226,8 +226,8 @@ export default function OrdersPage() {
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>
                   {inv.taxTotal > 0
-                    ? isAr ? "ضريبة القيمة المضافة (١٥٪)" : "VAT (15%)"
-                    : isAr ? "ضريبة القيمة المضافة (٠٪)" : "VAT (0%)"}
+                    ? isAr ? "ضريبة القيمة المضافة (15٪)" : "VAT (15%)"
+                    : isAr ? "ضريبة القيمة المضافة (0٪)" : "VAT (0%)"}
                 </span>
                 <span className="tabular" dir="ltr">{formatSAR(inv.taxTotal, isAr)}</span>
               </div>

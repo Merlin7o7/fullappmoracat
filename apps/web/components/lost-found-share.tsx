@@ -65,18 +65,18 @@ export function LostFoundShare({
         rel="noopener noreferrer"
         className={compact ? undefined : "w-full sm:w-auto"}
       >
-        <Button size={size} variant="brand" className="w-full">
+        <Button size={size} variant="primary" className="w-full">
           <MessageCircle className="size-4" aria-hidden />
           {isAr ? "شارك في واتساب" : "Share on WhatsApp"}
         </Button>
       </a>
       {canNativeShare && (
-        <Button size={size} variant="outline" onClick={nativeShare}>
+        <Button size={size} variant="secondary" onClick={nativeShare}>
           <Share2 className="size-4" aria-hidden />
           {isAr ? "مشاركة" : "Share"}
         </Button>
       )}
-      <Button size={size} variant="outline" onClick={copy} aria-live="polite">
+      <Button size={size} variant="secondary" onClick={copy} aria-live="polite">
         {copied ? <Check className="size-4 text-success" aria-hidden /> : <Link2 className="size-4" aria-hidden />}
         {copied ? (isAr ? "انتسخ الرابط" : "Link copied") : isAr ? "انسخ الرابط" : "Copy link"}
       </Button>

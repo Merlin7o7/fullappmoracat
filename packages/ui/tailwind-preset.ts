@@ -79,15 +79,22 @@ const preset: Partial<Config> = {
         leaf: "hsl(var(--leaf))",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 4px)",
-        sm: "calc(var(--radius) - 8px)",
-        xl: "calc(var(--radius) + 4px)",
-        "2xl": "calc(var(--radius) + 12px)",
+        // Three families only: control (inputs, buttons, rows, small tiles),
+        // card (cards, sheets, dialogs, panels) and full (chips, avatars, seal).
+        none: "0",
+        DEFAULT: "var(--radius-control)",
+        sm: "var(--radius-control)",
+        md: "var(--radius-control)",
+        lg: "var(--radius-control)",
+        xl: "var(--radius-control)",
+        "2xl": "var(--radius-card)",
+        "3xl": "var(--radius-card)",
+        full: "9999px",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         arabic: ["var(--font-arabic)", "system-ui", "sans-serif"],
+        "arabic-display": ["var(--font-arabic-display)", "var(--font-arabic-text)", "system-ui", "sans-serif"],
         display: ["var(--font-display)", "var(--font-sans)", "sans-serif"],
         // Deterministic mono (IBM Plex Mono via next/font) — the official layer
         // (Cat ID numbers, card microtype) must render identically on every
@@ -95,18 +102,22 @@ const preset: Partial<Config> = {
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
       },
       fontSize: {
-        // Type scale with paired line-heights + tracking (display is tighter).
-        xs: ["0.75rem", { lineHeight: "1rem" }],
-        sm: ["0.875rem", { lineHeight: "1.35rem" }],
-        base: ["1rem", { lineHeight: "1.65rem" }],
-        lg: ["1.125rem", { lineHeight: "1.7rem" }],
-        xl: ["1.25rem", { lineHeight: "1.75rem", letterSpacing: "-0.01em" }],
-        "2xl": ["1.5rem", { lineHeight: "1.95rem", letterSpacing: "-0.015em" }],
-        "3xl": ["1.9rem", { lineHeight: "2.25rem", letterSpacing: "-0.02em" }],
-        "4xl": ["2.4rem", { lineHeight: "2.6rem", letterSpacing: "-0.025em" }],
-        "5xl": ["3.15rem", { lineHeight: "1.05", letterSpacing: "-0.03em" }],
-        "6xl": ["3.85rem", { lineHeight: "1.02", letterSpacing: "-0.035em" }],
-        "7xl": ["4.75rem", { lineHeight: "1", letterSpacing: "-0.04em" }],
+        // One scale for both scripts. Leading is set for Arabic (taller
+        // ascenders/descenders, dots and marks) and reads fine in Latin; no
+        // letter-spacing is baked in — Arabic must never be tracked, and Latin
+        // display tracking lives in globals.css under [dir="ltr"]. The smallest
+        // step is 13px: Arabic below that stops being legible (MRC-BRAND-001).
+        xs: ["0.8125rem", { lineHeight: "1.3rem" }],
+        sm: ["0.875rem", { lineHeight: "1.45rem" }],
+        base: ["1rem", { lineHeight: "1.75rem" }],
+        lg: ["1.125rem", { lineHeight: "1.85rem" }],
+        xl: ["1.25rem", { lineHeight: "1.9rem" }],
+        "2xl": ["1.5rem", { lineHeight: "2.15rem" }],
+        "3xl": ["1.9rem", { lineHeight: "2.55rem" }],
+        "4xl": ["2.4rem", { lineHeight: "3.05rem" }],
+        "5xl": ["3.15rem", { lineHeight: "1.2" }],
+        "6xl": ["3.85rem", { lineHeight: "1.15" }],
+        "7xl": ["4.75rem", { lineHeight: "1.1" }],
       },
       boxShadow: {
         // Consistent elevation ladder (mapped to CSS vars → theme-aware).

@@ -10,6 +10,7 @@ import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
 import { VetDemoCard } from "./_components/vet-demo-card";
 import { ReadinessCard } from "./_components/readiness-card";
+import { formatNumber } from "@moraqat/core";
 
 interface Dashboard {
   /** The commerce switch, so "nothing sold" reads as a state, not a fault. */
@@ -73,8 +74,8 @@ export default function AdminDashboard() {
   const recordStats = [
     { icon: Stethoscope, label: isAr ? "قطط موثّقة من عيادة" : "Clinic-verified active cats", num: m?.cvac, sub: isAr ? "المؤشر الأول" : "north star" },
     { icon: Cat, label: isAr ? "قطط مسجّلة" : "Registered cats", num: m?.catsRegisteredTotal, sub: m ? (isAr ? `${m.catsByOrigin.CLINIC} عبر العيادات` : `${m.catsByOrigin.CLINIC} via clinics`) : "" },
-    { icon: ListChecks, label: isAr ? "هويات صدرت — ٣٠ يوماً" : "Cat IDs issued — 30d", num: metrics.data ? last30("catIdsIssued") : undefined, sub: metrics.data ? (isAr ? `${last30("claimsAccepted")} مطالبات مقبولة` : `${last30("claimsAccepted")} claims accepted`) : "" },
-    { icon: Stethoscope, label: isAr ? "عيادات فعّالة" : "Clinics live", num: m?.clinicsLive, sub: metrics.data ? (isAr ? `${last30("clinicalEntries")} سجلاً — ٣٠ يوماً` : `${last30("clinicalEntries")} entries — 30d`) : "" },
+    { icon: ListChecks, label: isAr ? "هويات صدرت — 30 يوماً" : "Cat IDs issued — 30d", num: metrics.data ? last30("catIdsIssued") : undefined, sub: metrics.data ? (isAr ? `${last30("claimsAccepted")} مطالبات مقبولة` : `${last30("claimsAccepted")} claims accepted`) : "" },
+    { icon: Stethoscope, label: isAr ? "عيادات فعّالة" : "Clinics live", num: m?.clinicsLive, sub: metrics.data ? (isAr ? `${last30("clinicalEntries")} سجلاً — 30 يوماً` : `${last30("clinicalEntries")} entries — 30d`) : "" },
   ];
 
   const kpis = data?.kpis;
@@ -84,10 +85,10 @@ export default function AdminDashboard() {
     { icon: Users, label: isAr ? "إجمالي الأعضاء" : "Total members", num: data?.kpis.totalCustomers },
   ];
   const cards = [
-    { icon: Wallet, label: isAr ? "إجمالي الإيرادات" : "Total revenue", num: kpis?.revenueTotal, suffix: sar, sub: kpis ? (isAr ? `${fmt(kpis.revenue30d)} آخر ٣٠ يوماً` : `${fmt(kpis.revenue30d)} last 30d`) : "" },
+    { icon: Wallet, label: isAr ? "إجمالي الإيرادات" : "Total revenue", num: kpis?.revenueTotal, suffix: sar, sub: kpis ? (isAr ? `${fmt(kpis.revenue30d)} آخر 30 يوماً` : `${fmt(kpis.revenue30d)} last 30d`) : "" },
     { icon: Repeat, label: isAr ? "الإيراد الشهري المتكرر" : "MRR", num: kpis?.mrr, suffix: sar, sub: kpis ? (isAr ? `${fmt(kpis.arr)} سنوياً` : `${fmt(kpis.arr)} ARR`) : "" },
     { icon: ShoppingBag, label: isAr ? "طلبات مدفوعة" : "Paid orders", num: kpis?.ordersTotal, sub: kpis ? (isAr ? `متوسط الطلب ${kpis.aov} ر.س` : `AOV ${kpis.aov} SAR`) : "" },
-    { icon: Users, label: isAr ? "العملاء" : "Customers", num: kpis?.totalCustomers, sub: kpis ? (isAr ? `+${kpis.newCustomers30d} آخر ٣٠ يوماً` : `+${kpis.newCustomers30d} last 30d`) : "" },
+    { icon: Users, label: isAr ? "العملاء" : "Customers", num: kpis?.totalCustomers, sub: kpis ? (isAr ? `+${kpis.newCustomers30d} آخر 30 يوماً` : `+${kpis.newCustomers30d} last 30d`) : "" },
     {
       icon: TrendingUp, label: isAr ? "الاشتراكات النشطة" : "Active subs", num: kpis?.activeSubscribers,
       // The whole picture, not one number: who is paused, who is behind on a
@@ -196,7 +197,7 @@ export default function AdminDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Revenue chart */}
         <Card className="p-6 lg:col-span-2">
-          <h2 className="mb-4 font-display font-semibold">{isAr ? "الإيرادات — آخر ١٤ يوماً" : "Revenue — last 14 days"}</h2>
+          <h2 className="mb-4 font-display font-semibold">{isAr ? "الإيرادات — آخر 14 يوماً" : "Revenue — last 14 days"}</h2>
           {isLoading || !data ? <Skeleton className="h-40 w-full" /> : <RevenueChart data={data.revenueByDay} />}
         </Card>
 
@@ -251,7 +252,7 @@ export default function AdminDashboard() {
                     <p className="text-sm font-medium">
                       <span dir="ltr">{o.orderNumber}</span>
                       {o.test && (
-                        <span className="ms-2 rounded-full border border-border px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">
+                        <span className="ms-2 rounded-full border border-border px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
                           {isAr ? "تجريبي" : "test"}
                         </span>
                       )}
@@ -294,11 +295,11 @@ function RevenueChart({ data }: { data: { date: string; total: number }[] }) {
               <div className="h-px w-full bg-border" title={`${d.date}: 0 SAR`} />
             )}
           </div>
-          <span className="text-[9px] text-muted-foreground">{d.date.slice(8)}</span>
+          <span className="text-xs text-muted-foreground">{d.date.slice(8)}</span>
         </div>
       ))}
     </div>
   );
 }
 
-const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+const fmt = (n: number) => formatNumber(n, "en", { maximumFractionDigits: 0 });

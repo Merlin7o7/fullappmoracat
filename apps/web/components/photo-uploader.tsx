@@ -67,7 +67,7 @@ export function PhotoUploader({
       return;
     }
     if (file.size > MAX_INPUT_BYTES) {
-      toast({ title: isAr ? "الصورة كبيرة جداً (الحد ٢٥MB)" : "That image is too large (25 MB max)", variant: "error" });
+      toast({ title: isAr ? "الصورة كبيرة جداً (الحد 25MB)" : "That image is too large (25 MB max)", variant: "error" });
       return;
     }
     setPreparing(true);
@@ -437,7 +437,7 @@ function ImageCropper({ initialSrc, aspect, maxEdge, rounded, isAr, onCancel, on
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+          <Button variant="tertiary" size="sm" onClick={onCancel}>
             {isAr ? "إلغاء" : "Cancel"}
           </Button>
           <Button size="sm" onClick={confirm} disabled={!nat || rendering}>

@@ -149,7 +149,7 @@ export default function TransferPage({ params }: { params: { token: string } }) 
                   />
                 </div>
                 <div className="p-6 sm:p-8">
-                  <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     {isAr ? "نقل ملكية" : "A hand-over"}
                   </p>
                   <h1 className="mt-2 font-display text-2xl font-bold tracking-tight sm:text-3xl">
@@ -242,7 +242,7 @@ export default function TransferPage({ params }: { params: { token: string } }) 
                             <Button className="w-full sm:w-auto">{isAr ? "تسجيل الدخول" : "Sign in"}</Button>
                           </Link>
                           <Link href={`/register?next=${encodeURIComponent(`/transfer/${token}`)}`}>
-                            <Button variant="outline" className="w-full sm:w-auto">
+                            <Button variant="secondary" className="w-full sm:w-auto">
                               {isAr ? "أنشئ حساباً" : "Create an account"}
                             </Button>
                           </Link>
@@ -265,7 +265,7 @@ export default function TransferPage({ params }: { params: { token: string } }) 
                             {accept.isPending && <Loader2 className="size-4 animate-spin" />}
                             {isAr ? "نعم، أستلمه" : "Yes, they're mine now"}
                           </Button>
-                          <Button variant="ghost" onClick={() => setConfirming(false)} disabled={accept.isPending}>
+                          <Button variant="tertiary" onClick={() => setConfirming(false)} disabled={accept.isPending}>
                             {isAr ? "رجوع" : "Back"}
                           </Button>
                         </div>
@@ -277,7 +277,7 @@ export default function TransferPage({ params }: { params: { token: string } }) 
                         </Button>
                         <Button
                           size="lg"
-                          variant="ghost"
+                          variant="tertiary"
                           onClick={() => decline.mutate()}
                           disabled={decline.isPending}
                         >

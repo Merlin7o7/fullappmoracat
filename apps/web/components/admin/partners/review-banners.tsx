@@ -15,6 +15,7 @@ import type { RegistrationState } from "@/lib/vet-registration";
 import { fmtDate } from "@/app/admin/_components/i18n";
 import { GapList } from "./shared";
 import type { ActionError } from "./use-clinic-actions";
+import { formatNumber } from "@moraqat/core";
 
 function Banner({
   tone,
@@ -149,7 +150,7 @@ export function ReviewBanners({
           icon={ListChecks}
           title={
             isAr
-              ? `ينقص التسجيل ${state.gaps.length.toLocaleString("ar-SA")} بند — لا يمكن القبول قبل إكمالها`
+              ? `ينقص التسجيل ${formatNumber(state.gaps.length, "ar")} بند — لا يمكن القبول قبل إكمالها`
               : `${state.gaps.length} gap${state.gaps.length === 1 ? "" : "s"} block approval`
           }
           isAr={isAr}

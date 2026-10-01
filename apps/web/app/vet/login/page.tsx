@@ -140,12 +140,12 @@ export default function VetLoginPage() {
               </p>
             )}
             <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              <Button size="sm" variant="outline" onClick={() => router.push("/vet/apply")}>
+              <Button size="sm" variant="secondary" onClick={() => router.push("/vet/apply")}>
                 {isAr ? "الشراكات بالدعوة" : "Partnerships are by invitation"}
               </Button>
               <Button
                 size="sm"
-                variant="ghost"
+                variant="tertiary"
                 onClick={() => {
                   void logout();
                   setMemberships(null);

@@ -176,7 +176,7 @@ function VetShell({ children }: { children: React.ReactNode }) {
           title={vetFriendlyError(actor.error, isAr).title}
           body={vetFriendlyError(actor.error, isAr).message}
           action={
-            <Button size="sm" variant="outline" onClick={() => void actor.refresh()} loading={actor.loading}>
+            <Button size="sm" variant="secondary" onClick={() => void actor.refresh()} loading={actor.loading}>
               <RefreshCw className="size-4" aria-hidden />
               {isAr ? "أعد المحاولة" : "Try again"}
             </Button>
@@ -246,7 +246,7 @@ function VetShell({ children }: { children: React.ReactNode }) {
         <Link href="/vet" aria-label="Moracat" className="mb-6 flex items-center gap-2 px-2 pt-1">
           <Logo className="h-8" priority onDark />
         </Link>
-        <p className="px-2 pb-2 text-[0.6875rem] font-medium uppercase tracking-wide text-primary-foreground/60">
+        <p className="px-2 pb-2 text-xs font-medium uppercase tracking-wide text-primary-foreground/60">
           {isAr ? "بوابة العيادات" : "Partner portal"}
         </p>
         <nav className="flex flex-1 flex-col gap-0.5" aria-label={isAr ? "التنقل" : "Navigation"}>
@@ -271,7 +271,7 @@ function VetShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="mt-2 border-t border-primary-foreground/15 pt-2">
-          <p className="truncate px-3 pb-1 text-[0.6875rem] text-primary-foreground/70">
+          <p className="truncate px-3 pb-1 text-xs text-primary-foreground/70">
             {user.firstName ?? user.email}
           </p>
           <button
@@ -298,7 +298,7 @@ function VetShell({ children }: { children: React.ReactNode }) {
 
             <Button
               size="sm"
-              variant="brand"
+              variant="primary"
               onClick={() => router.push("/vet/scan")}
               className="shrink-0"
               aria-label={isAr ? "افتح الماسح" : "Open the scanner"}
@@ -410,7 +410,7 @@ function VetShell({ children }: { children: React.ReactNode }) {
       {/* ── Counter tablet / phone: thumb-zone tabs (R100), 56px targets ── */}
       <nav
         aria-label={isAr ? "التنقل" : "Navigation"}
-        className="glass bottom-safe ps-safe pe-safe fixed inset-x-3 z-40 grid auto-cols-fr grid-flow-col items-stretch gap-0.5 rounded-[1.75rem] p-1.5 lg:hidden"
+        className="glass bottom-safe ps-safe pe-safe fixed inset-x-3 z-40 grid auto-cols-fr grid-flow-col items-stretch gap-0.5 rounded-2xl p-1.5 lg:hidden"
       >
         {primary.map((item) => {
           const active = isActive(item);
@@ -420,7 +420,7 @@ function VetShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-[1.35rem] py-1.5 text-[0.625rem] font-medium leading-none transition-colors",
+                "flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 text-xs font-medium leading-none transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
               )}
@@ -437,7 +437,7 @@ function VetShell({ children }: { children: React.ReactNode }) {
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
             className={cn(
-              "flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-[1.35rem] py-1.5 text-[0.625rem] font-medium leading-none transition-colors",
+              "flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 text-xs font-medium leading-none transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               secondary.some(isActive) ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
             )}
@@ -573,7 +573,7 @@ function blockedCopy(m: VetMembership, isAr: boolean): BlockedCopy | null {
           : "Your account is ready. The clinic is under review by Moracat — we'll email you when it's live.",
       action: isOwner ? (
         <Link href="/vet/register">
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="secondary">
             {isAr ? "تابع حالة الطلب" : "Track the registration"}
           </Button>
         </Link>

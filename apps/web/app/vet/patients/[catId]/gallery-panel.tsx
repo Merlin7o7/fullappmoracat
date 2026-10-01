@@ -219,7 +219,7 @@ export default function GalleryPanel({ catId, className }: { catId: string; clas
               <Button
                 key={`${p.a.id}-${p.b.id}`}
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setCompare(p)}
               >
                 <Columns2 className="size-4" />
@@ -253,7 +253,7 @@ export default function GalleryPanel({ catId, className }: { catId: string; clas
                 <span className="block text-xs font-medium text-foreground">
                   {isAr ? KIND_LABEL[img.kind].ar : KIND_LABEL[img.kind].en}
                 </span>
-                <span className="block text-[11px] tabular-nums text-muted-foreground">
+                <span className="block text-xs tabular-nums text-muted-foreground">
                   {formatDate(img.capturedAt, locale)}
                 </span>
               </span>
@@ -342,7 +342,7 @@ function Lightbox({
           </span>
           <Button
             size="icon"
-            variant="ghost"
+            variant="tertiary"
             className="ms-auto"
             onClick={onClose}
             aria-label={isAr ? "أغلق" : "Close"}
@@ -361,7 +361,7 @@ function Lightbox({
           {index > 0 && (
             <Button
               size="icon"
-              variant="glass"
+              variant="secondary"
               className="absolute start-3"
               onClick={() => go(-1)}
               aria-label={isAr ? "الصورة السابقة" : "Previous image"}
@@ -372,7 +372,7 @@ function Lightbox({
           {index < images.length - 1 && (
             <Button
               size="icon"
-              variant="glass"
+              variant="secondary"
               className="absolute end-3"
               onClick={() => go(1)}
               aria-label={isAr ? "الصورة التالية" : "Next image"}
@@ -455,7 +455,7 @@ function CompareView({
           </span>
           <Button
             size="icon"
-            variant="ghost"
+            variant="tertiary"
             className="ms-auto"
             onClick={onClose}
             aria-label={isAr ? "أغلق" : "Close"}

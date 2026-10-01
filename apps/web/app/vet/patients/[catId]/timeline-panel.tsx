@@ -154,7 +154,7 @@ export default function TimelinePanel({
           </ol>
           {filtered.length > visible.length ? (
             <div className="flex justify-center pt-1">
-              <Button variant="outline" size="sm" onClick={() => setShown((n) => n + PAGE)}>
+              <Button variant="secondary" size="sm" onClick={() => setShown((n) => n + PAGE)}>
                 {isAr
                   ? `حمّل المزيد (${filtered.length - visible.length} متبقٍ)`
                   : `Load more (${filtered.length - visible.length} left)`}
@@ -347,7 +347,7 @@ function TimelineRow({
             )}
             <span
               className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                "rounded-full px-2 py-0.5 text-xs font-medium",
                 ownClinic
                   ? "bg-primary/10 text-primary"
                   : "border border-border bg-muted text-muted-foreground"
@@ -431,19 +431,19 @@ function TimelineRow({
           {(canAmend || canRetract || canCosign) && (
             <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
               {canCosign && (
-                <Button size="sm" variant="brand" loading={cosign.isPending} onClick={() => cosign.mutate()}>
+                <Button size="sm" variant="primary" loading={cosign.isPending} onClick={() => cosign.mutate()}>
                   <Signature className="size-4" />
                   {isAr ? "وقّع بالمشاركة" : "Co-sign"}
                 </Button>
               )}
               {canAmend && (
-                <Button size="sm" variant="outline" onClick={() => setAmending((v) => !v)}>
+                <Button size="sm" variant="secondary" onClick={() => setAmending((v) => !v)}>
                   <PenLine className="size-4" />
                   {amending ? (isAr ? "أغلق التعديل" : "Close amendment") : isAr ? "عدّل" : "Amend"}
                 </Button>
               )}
               {canRetract && (
-                <Button size="sm" variant="ghost" onClick={() => setRetractOpen(true)}>
+                <Button size="sm" variant="tertiary" onClick={() => setRetractOpen(true)}>
                   <RotateCcw className="size-4" />
                   {isAr ? "اسحب" : "Retract"}
                 </Button>
@@ -484,7 +484,7 @@ function TimelineRow({
         }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setRetractOpen(false)} disabled={retract.isPending}>
+            <Button variant="tertiary" onClick={() => setRetractOpen(false)} disabled={retract.isPending}>
               {isAr ? "تراجع" : "Never mind"}
             </Button>
             <Button
@@ -574,7 +574,7 @@ function EmptyTimeline({
             : "No clinical record yet. The first entry you write here becomes the beginning of this cat's medical story."}
       </p>
       {filtered && (
-        <Button size="sm" variant="outline" onClick={onClear}>
+        <Button size="sm" variant="secondary" onClick={onClear}>
           {isAr ? "أظهر كل الأنواع" : "Show all types"}
         </Button>
       )}

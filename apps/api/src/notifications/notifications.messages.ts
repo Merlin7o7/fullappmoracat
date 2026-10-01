@@ -249,7 +249,7 @@ export function buildNotificationText(
       return {
         ar: {
           title: "رجّعنا لك المبلغ",
-          body: `${p(params, "orderNumber")} — ${p(params, "total")} ${p(params, "currency")}. يوصل حسابك خلال ٥ إلى ١٠ أيام عمل حسب بنكك.`,
+          body: `${p(params, "orderNumber")} — ${p(params, "total")} ${p(params, "currency")}. يوصل حسابك خلال 5 إلى 10 أيام عمل حسب بنكك.`,
         },
         en: {
           title: "Your refund is on its way",
@@ -373,7 +373,7 @@ export function buildNotificationText(
       return {
         ar: {
           title: "استلمنا طلب الاسترداد",
-          body: "سيتواصل معك فريق العناية خلال ٢٤ ساعة عمل. طلبك مسجّل ومحفوظ.",
+          body: "سيتواصل معك فريق العناية خلال 24 ساعة عمل. طلبك مسجّل ومحفوظ.",
         },
         en: {
           title: "We've received your refund request",

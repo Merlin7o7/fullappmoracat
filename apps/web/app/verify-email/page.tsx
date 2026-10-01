@@ -162,7 +162,7 @@ function VerifyEmailInner() {
       title={isAr ? "أكّد بريدك" : "Verify your email"}
       subtitle={
         isAr
-          ? `أدخل الرمز المكوّن من ٦ أرقام الذي أرسلناه إلى ${user?.email ?? "بريدك"}`
+          ? `أدخل الرمز المكوّن من 6 أرقام الذي أرسلناه إلى ${user?.email ?? "بريدك"}`
           : `Enter the 6-digit code we sent to ${user?.email ?? "your email"}`
       }
     >
@@ -246,7 +246,7 @@ function VerifyEmailInner() {
                 <Button size="sm" onClick={() => void saveEmail()} loading={savingEmail} disabled={!newEmail.trim()}>
                   {isAr ? "عدّل وأرسل الرمز" : "Correct & resend code"}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => { setFixing(false); setNewEmail(""); }}>
+                <Button size="sm" variant="tertiary" onClick={() => { setFixing(false); setNewEmail(""); }}>
                   {isAr ? "إلغاء" : "Cancel"}
                 </Button>
               </div>

@@ -114,12 +114,12 @@ export default function VetTodayPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="brand" onClick={() => router.push("/vet/scan")}>
+          <Button size="sm" variant="primary" onClick={() => router.push("/vet/scan")}>
             <ScanLine className="size-4" aria-hidden />
             {isAr ? "امسح بطاقة" : "Scan a card"}
           </Button>
           {can("emergency.access") && (
-            <Button size="sm" variant="outline" onClick={() => router.push("/vet/emergency")}>
+            <Button size="sm" variant="secondary" onClick={() => router.push("/vet/emergency")}>
               <ShieldAlert className="size-4" aria-hidden />
               {isAr ? "طوارئ" : "Emergency"}
             </Button>
@@ -264,7 +264,7 @@ export default function VetTodayPage() {
                 title={vetFriendlyError(visitsQuery.error, isAr).title}
                 body={vetFriendlyError(visitsQuery.error, isAr).message}
                 action={
-                  <Button size="sm" variant="outline" onClick={() => void visitsQuery.refetch()} loading={visitsQuery.isFetching}>
+                  <Button size="sm" variant="secondary" onClick={() => void visitsQuery.refetch()} loading={visitsQuery.isFetching}>
                     {isAr ? "أعد المحاولة" : "Try again"}
                   </Button>
                 }
@@ -279,7 +279,7 @@ export default function VetTodayPage() {
                     : "The first time a member's card is scanned, this page starts filling itself."
                 }
                 action={
-                  <Button size="sm" variant="outline" onClick={() => router.push("/vet/scan")}>
+                  <Button size="sm" variant="secondary" onClick={() => router.push("/vet/scan")}>
                     <ScanLine className="size-4" aria-hidden />
                     {isAr ? "جرّب مسحاً" : "Try a scan"}
                   </Button>
@@ -418,7 +418,7 @@ function StatCard({
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="mt-0.5 font-display text-xl font-semibold leading-tight tabular">{value}</p>
-        {hint && <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{hint}</p>}
+        {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       </div>
     </Card>
   );
@@ -451,7 +451,7 @@ function VisitRow({ visit, isAr }: { visit: VetVisit; isAr: boolean }) {
             {vetVisitStateLabel(visit.state, isAr)}
           </Badge>
           {visit.state === "OPEN" && (
-            <span className="text-[0.625rem] text-muted-foreground tabular">
+            <span className="text-xs text-muted-foreground tabular">
               {isAr ? `${waitingMinutes} د` : `${waitingMinutes} min`}
             </span>
           )}

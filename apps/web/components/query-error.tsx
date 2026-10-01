@@ -38,7 +38,7 @@ export function QueryError({
       <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
         {title ?? (isAr ? "تعذّر تحميل هذا الآن — لا شيء مفقود، فقط لم نصل إليه" : "We couldn't load this just now — nothing's lost, we just couldn't reach it")}
       </p>
-      <Button size="sm" variant="outline" onClick={onRetry} disabled={retrying}>
+      <Button size="sm" variant="secondary" onClick={onRetry} disabled={retrying}>
         {retrying ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
         {isAr ? "أعد المحاولة" : "Try again"}
       </Button>

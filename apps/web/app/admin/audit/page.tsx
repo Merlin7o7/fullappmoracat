@@ -98,7 +98,7 @@ export default function AdminAuditPage() {
                     <td className="p-3" dir="ltr">{r.user?.email ?? <span className="text-muted-foreground">system</span>}</td>
                     <td className={cn("whitespace-nowrap p-3 font-mono text-xs font-medium", actionTone(r.action))}>{r.action}</td>
                     <td className="p-3 text-muted-foreground">
-                      {r.entityType ? <><Badge variant="secondary">{r.entityType}</Badge>{r.entityId && <span className="ms-1 font-mono text-[10px]">{r.entityId.slice(0, 8)}</span>}</> : "—"}
+                      {r.entityType ? <><Badge variant="secondary">{r.entityType}</Badge>{r.entityId && <span className="ms-1 font-mono text-xs">{r.entityId.slice(0, 8)}</span>}</> : "—"}
                     </td>
                     <td className="p-3 font-mono text-xs text-muted-foreground" dir="ltr">{r.ipAddress ?? "—"}</td>
                     <td className="max-w-[16rem] p-3">

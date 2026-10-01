@@ -484,7 +484,7 @@ const TIER_COPY: Record<
   { ar: string; en: string; whatAr: string; whatEn: string; hiddenAr: string[]; hiddenEn: string[] }
 > = {
   T0: {
-    ar: "المستوى ٠ — الهوية والتنبيهات",
+    ar: "المستوى 0 — الهوية والتنبيهات",
     en: "Tier 0 — identity & alerts",
     whatAr: "تشوف من هي، وما الذي قد يؤذيها. لا سجل طبي.",
     whatEn: "You see who she is, and what could harm her. No medical record.",
@@ -492,7 +492,7 @@ const TIER_COPY: Record<
     hiddenEn: ["Care summary", "Vaccinations", "Weight history", "Other clinics' records"],
   },
   T1: {
-    ar: "المستوى ١ — ملخّص الرعاية",
+    ar: "المستوى 1 — ملخّص الرعاية",
     en: "Tier 1 — care summary",
     whatAr: "التحصينات والحالات المعروفة والأدوية الحالية ومنحنى الوزن.",
     whatEn: "Vaccinations, known conditions, current medications and the weight history.",
@@ -500,7 +500,7 @@ const TIER_COPY: Record<
     hiddenEn: ["Other clinics' notes", "Lab & imaging reports", "Documents"],
   },
   T2: {
-    ar: "المستوى ٢ — السجل الكامل",
+    ar: "المستوى 2 — السجل الكامل",
     en: "Tier 2 — full history",
     whatAr: "يشمل ملاحظات وتقارير العيادات الأخرى، بموافقة المالك.",
     whatEn: "Includes notes and reports from other clinics, with the owner's consent.",
@@ -615,7 +615,7 @@ function ConsentBanner({ profile, catId }: { profile: PatientProfile; catId: str
 
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
             {isAr
-              ? "ما تكتبه عيادتكم يبقى مرئياً لكم دائماً. كل اطلاع على المستوى ١ أو ٢ يُسجَّل ويقرأه المالك."
+              ? "ما تكتبه عيادتكم يبقى مرئياً لكم دائماً. كل اطلاع على المستوى 1 أو 2 يُسجَّل ويقرأه المالك."
               : "What your clinic writes stays visible to your clinic forever. Every tier-1 and tier-2 view is logged and readable by the owner."}
           </p>
         </div>
@@ -623,7 +623,7 @@ function ConsentBanner({ profile, catId }: { profile: PatientProfile; catId: str
         {nextTier && (
           <Button
             size="sm"
-            variant="outline"
+            variant="secondary"
             className="shrink-0"
             loading={ask.isPending}
             disabled={requested}
@@ -709,13 +709,13 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
     <>
       <div className="flex flex-wrap gap-2">
         {canOpenVisit && (
-          <Button variant="brand" size="lg" onClick={() => setOpen(true)}>
+          <Button variant="primary" size="lg" onClick={() => setOpen(true)}>
             <CalendarDays className="size-4" />
             {isAr ? `افتح زيارة لـ${profile.name}` : `Start a visit for ${profile.name}`}
           </Button>
         )}
         {canCertify && (
-          <Button variant="outline" size="lg" loading={certify.isPending} onClick={() => certify.mutate()}>
+          <Button variant="secondary" size="lg" loading={certify.isPending} onClick={() => certify.mutate()}>
             {!certify.isPending && <Award className="size-4" />}
             {isAr ? "أصدر شهادة الهوية" : "Issue Cat ID certificate"}
           </Button>
@@ -723,7 +723,7 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
         {canEmergency && (
           <Link
             href={`/vet/emergency/${catId}`}
-            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}
+            className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "gap-2")}
           >
             <Siren className="size-4" aria-hidden />
             {isAr ? "وصول طارئ" : "Emergency access"}
@@ -742,11 +742,11 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
         }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setOpen(false)} disabled={start.isPending}>
+            <Button variant="tertiary" onClick={() => setOpen(false)} disabled={start.isPending}>
               {isAr ? "إلغاء" : "Cancel"}
             </Button>
             <Button
-              variant="brand"
+              variant="primary"
               loading={start.isPending}
               onClick={() => {
                 if (reason === "OTHER" && otherReason.trim().length < 2) {

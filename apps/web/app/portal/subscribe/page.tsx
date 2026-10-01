@@ -50,6 +50,7 @@ import { ProductIntro } from "@/components/product-intro";
 import { QueryError } from "@/components/query-error";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
+import { formatNumber } from "@moraqat/core";
 
 type Interest = "KITTEN" | "STARTER" | "STANDARD" | "PREMIUM" | "unsure";
 
@@ -249,8 +250,8 @@ function PlanBuilderInner() {
             options={[
               ["none", isAr ? "لا شيء" : "None"],
               ["few", isAr ? "قليل" : "A few"],
-              ["regular", isAr ? "~١٥" : "~15"],
-              ["lots", isAr ? "٢٠+" : "20+"],
+              ["regular", isAr ? "~15" : "~15"],
+              ["lots", isAr ? "20+" : "20+"],
             ]}
             onChange={(v) => { setWet(v as WetLevel); setChosenTier(null); }}
           />
@@ -259,8 +260,8 @@ function PlanBuilderInner() {
             value={dry ?? ""}
             options={[
               ["none", isAr ? "لا شيء" : "None"],
-              ["one", isAr ? "~٢كجم" : "~2kg"],
-              ["two", isAr ? "٤كجم+" : "4kg+"],
+              ["one", isAr ? "~2كجم" : "~2kg"],
+              ["two", isAr ? "4كجم+" : "4kg+"],
             ]}
             onChange={(v) => { setDry(v as DryLevel); setChosenTier(null); }}
           />
@@ -367,7 +368,7 @@ function PlanBuilderInner() {
               {selectedPlan.marketSavingsPct != null ? (
                 <p className="mt-1 text-xs font-semibold text-success">
                   {isAr
-                    ? `أوفر بنسبة ${selectedPlan.marketSavingsPct.toLocaleString("ar-SA")}٪ من نفس السلة بأسعار السوق`
+                    ? `أوفر بنسبة ${formatNumber(selectedPlan.marketSavingsPct, "ar")}٪ من نفس السلة بأسعار السوق`
                     : `${selectedPlan.marketSavingsPct}% below the same basket at market prices`}
                 </p>
               ) : (
@@ -452,7 +453,7 @@ function PlanBuilderInner() {
                           <span className="flex items-center gap-2">
                             <span className="text-sm font-medium">{isAr ? p.nameAr : p.nameEn}</span>
                             {rec && p.tier === rec.tier && (
-                              <span className="text-[11px] text-success">
+                              <span className="text-xs text-success">
                                 {isAr ? "المحسوبة لهم" : "computed for them"}
                               </span>
                             )}
@@ -467,9 +468,9 @@ function PlanBuilderInner() {
                           </span>
                           {/* Savings badge only from the API's market data (R006). */}
                           {p.marketSavingsPct != null && (
-                            <span className="block text-[10px] font-medium text-success">
+                            <span className="block text-xs font-medium text-success">
                               {isAr
-                                ? `أوفر ${p.marketSavingsPct.toLocaleString("ar-SA")}٪ من السوق`
+                                ? `أوفر ${formatNumber(p.marketSavingsPct, "ar")}٪ من السوق`
                                 : `${p.marketSavingsPct}% below market`}
                             </span>
                           )}
@@ -691,7 +692,7 @@ function ComingSoonInner() {
               >
                 <div className="mb-1 flex items-center justify-between">
                   <span className="font-display font-semibold">{isAr ? p.nameAr : p.nameEn}</span>
-                  <Badge variant="outline" className="text-[10px]">
+                  <Badge variant="outline" className="text-xs">
                     {isAr ? "قريباً" : "Soon"}
                   </Badge>
                 </div>
@@ -784,7 +785,7 @@ function ComingSoonInner() {
                 </span>
               </p>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => router.push("/portal")}>
+                <Button variant="tertiary" size="sm" onClick={() => router.push("/portal")}>
                   {isAr ? "لاحقاً" : "Later"}
                 </Button>
                 <Button size="lg" disabled={join.isPending} onClick={() => join.mutate()}>

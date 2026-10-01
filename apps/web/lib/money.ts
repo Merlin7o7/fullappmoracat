@@ -1,52 +1,38 @@
 /**
- * One way to render money, everywhere (R110). Before this, "SAR" rendered three
- * different ways — Latin "SAR" inside Arabic sentences, raw numbers without
- * locale digits, and ad-hoc `isAr ? "ر.س" : "SAR"` ternaries. Every price the
- * member sees goes through here: Arabic gets Arabic-Indic digits + «ر.س»,
- * English gets Latin digits + "SAR", and the digit run is always LTR-safe.
+ * One way to render money, everywhere (R110) — thin wrappers over the shared
+ * formatter in @moraqat/core: Western digits in both languages, «ر.س» / "SAR",
+ * halalas only when there are some. Kept as `isAr`-taking helpers so the many
+ * existing call sites read unchanged.
  */
 
-import { dateLocale } from "./datetime";
+import {
+  formatAmount as coreAmount,
+  formatSAR as coreSAR,
+  formatSARMonthly as coreSARMonthly,
+  SAR_SYMBOL_AR,
+  SAR_SYMBOL_EN,
+} from "@moraqat/core";
+import { formatDate } from "./datetime";
 
-export const SAR_AR = "ر.س";
-export const SAR_EN = "SAR";
+export const SAR_AR = SAR_SYMBOL_AR;
+export const SAR_EN = SAR_SYMBOL_EN;
 
-/** Locale-correct digits for an amount (no currency unit). */
+/** Digits for an amount (no currency unit). */
 export function formatAmount(amount: number, isAr: boolean): string {
-  return new Intl.NumberFormat(isAr ? "ar-SA" : "en-US", {
-    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
-    minimumFractionDigits: 0,
-  }).format(amount);
+  return coreAmount(amount, isAr ? "ar" : "en");
 }
 
-/**
- * "١٢٩ ر.س" / "129 SAR". Plain string — safe anywhere. For JSX contexts inside
- * RTL text where bidi could reorder, wrap in a `dir="ltr"` span or use the
- * `⁦…⁩` isolates this returns when `isolate` is set.
- */
+/** "199 ر.س" / "SAR 199". `isolate` keeps amount + unit atomic inside opposite-direction text. */
 export function formatSAR(amount: number, isAr: boolean, opts?: { isolate?: boolean }): string {
-  const n = formatAmount(amount, isAr);
-  const s = isAr ? `${n} ${SAR_AR}` : `${n} ${SAR_EN}`;
-  // FIRST-STRONG-ISOLATE keeps the amount+unit atomic inside surrounding RTL text.
-  return opts?.isolate ? `⁨${s}⁩` : s;
+  return coreSAR(amount, isAr ? "ar" : "en", opts);
 }
 
-/** "329 SAR / month" / "٣٢٩ ر.س / شهرياً". */
+/** "329 ر.س / شهرياً" / "SAR 329 / month". */
 export function formatSARMonthly(amount: number, isAr: boolean): string {
-  return isAr ? `${formatSAR(amount, true)} / شهرياً` : `${formatSAR(amount, false)} / month`;
+  return coreSARMonthly(amount, isAr ? "ar" : "en");
 }
 
-/**
- * Localized long date for money surfaces (renewal/term dates). Routes through
- * the member's calendar preference (lib/datetime) so a Hijri-pref member sees
- * one calendar EVERYWHERE — never a Hijri "paid through" beside a Gregorian
- * delivery date on the same card (R110).
- */
+/** Long date for money surfaces — same calendar as every other date (R110). */
 export function formatMoneyDate(d: Date | string, isAr: boolean): string {
-  const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleDateString(dateLocale(isAr ? "ar" : "en"), {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  return formatDate(d, isAr ? "ar" : "en", { day: "numeric", month: "long", year: "numeric" });
 }

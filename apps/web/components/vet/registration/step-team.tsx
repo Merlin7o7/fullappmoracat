@@ -354,7 +354,7 @@ function MemberCard({
           </span>
           {m.fullName.trim() || (isAr ? `عضو الفريق ${index + 1}` : `Team member ${index + 1}`)}
         </h3>
-        <Button type="button" variant="ghost" size="sm" onClick={onRemove} className="text-destructive">
+        <Button type="button" variant="tertiary" size="sm" onClick={onRemove} className="text-destructive">
           <Trash2 aria-hidden />
           <span>{isAr ? "إزالة" : "Remove"}</span>
         </Button>

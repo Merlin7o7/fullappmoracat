@@ -68,7 +68,7 @@ export function HealthProfileForm({ record, isAr }: { record: HealthRecord; isAr
           </p>
         </div>
         {!editing && (
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}><Pencil className="size-4" /> {isAr ? "تعديل" : "Edit"}</Button>
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}><Pencil className="size-4" /> {isAr ? "تعديل" : "Edit"}</Button>
         )}
       </div>
 
@@ -104,7 +104,7 @@ export function HealthProfileForm({ record, isAr }: { record: HealthRecord; isAr
           </div>
           <div className="flex gap-2 sm:col-span-2">
             <Button type="submit" size="sm" loading={save.isPending}>{isAr ? "حفظ الملف" : "Save profile"}</Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>{isAr ? "إلغاء" : "Cancel"}</Button>
+            <Button type="button" size="sm" variant="tertiary" onClick={() => setEditing(false)}>{isAr ? "إلغاء" : "Cancel"}</Button>
           </div>
         </form>
       )}

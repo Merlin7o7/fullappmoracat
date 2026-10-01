@@ -122,7 +122,7 @@ export function UnderReviewScreen({
         art={<IlloCat tone="sage" className="size-20 sm:size-24" />}
       >
         {isAr
-          ? "تستغرق المراجعة عادةً ٥ إلى ٧ أيام عمل. نرسل لكم بريداً عند كل خطوة، فلا حاجة لمتابعة هذه الصفحة. إن احتجنا توضيحاً سنطلبه بالتحديد."
+          ? "تستغرق المراجعة عادةً 5 إلى 7 أيام عمل. نرسل لكم بريداً عند كل خطوة، فلا حاجة لمتابعة هذه الصفحة. إن احتجنا توضيحاً سنطلبه بالتحديد."
           : "Review usually takes 5–7 working days. We email you at every step, so there's no need to keep checking this page. If we need anything, we'll ask for exactly that."}
       </Hero>
 
@@ -318,7 +318,7 @@ export function RejectedScreen({ state, isAr }: { state: RegistrationState; isAr
         <p className="text-sm leading-relaxed text-muted-foreground">
           {isAr ? "إن كان لديكم مستند جديد أو توضيح، راسلونا وسنرد خلال يومي عمل." : "If you have a new document or want to explain something, write to us — we reply within two working days."}
         </p>
-        <a href={`mailto:${PARTNERS_EMAIL}`} dir="ltr" className={cn(buttonVariants({ variant: "outline" }), "self-start")}>
+        <a href={`mailto:${PARTNERS_EMAIL}`} dir="ltr" className={cn(buttonVariants({ variant: "secondary" }), "self-start")}>
           {PARTNERS_EMAIL}
         </a>
       </Card>

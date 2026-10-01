@@ -177,7 +177,7 @@ function DangerZoneSection({ isAr, authedFetch, logout }: {
               {isAr ? "نزّل نسخة كاملة (JSON) من كل ما نحتفظ به عنك." : "Download a complete copy (JSON) of everything we hold about you."}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => exportData.mutate()} disabled={exportData.isPending} className="w-fit">
+          <Button variant="secondary" size="sm" onClick={() => exportData.mutate()} disabled={exportData.isPending} className="w-fit">
             {exportData.isPending ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             {isAr ? "تصدير" : "Export"}
           </Button>
@@ -194,7 +194,7 @@ function DangerZoneSection({ isAr, authedFetch, logout }: {
                     : "We'll remove your cats from the community and anonymize your identity. Billing records are kept de-identified as required by law."}
                 </p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="w-fit border-destructive/40 text-destructive hover:bg-destructive/10">
+              <Button variant="secondary" size="sm" onClick={() => setOpen(true)} className="w-fit border-destructive/40 text-destructive hover:bg-destructive/10">
                 <Trash2 className="size-4" />
                 {isAr ? "حذف حسابي" : "Delete my account"}
               </Button>
@@ -219,7 +219,7 @@ function DangerZoneSection({ isAr, authedFetch, logout }: {
                   {del.isPending && <Loader2 className="size-4 animate-spin" />}
                   {isAr ? "احذف حسابي نهائيًا" : "Permanently delete"}
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setOpen(false); setPassword(""); setConfirm(false); }} className="w-fit">
+                <Button type="button" variant="tertiary" size="sm" onClick={() => { setOpen(false); setPassword(""); setConfirm(false); }} className="w-fit">
                   {isAr ? "إلغاء" : "Cancel"}
                 </Button>
               </div>
@@ -231,13 +231,12 @@ function DangerZoneSection({ isAr, authedFetch, logout }: {
   );
 }
 
-/** Date-calendar preference — Hijri, Gregorian, or auto (by language). */
+/** Date-calendar preference — Gregorian by default, Hijri when chosen. */
 function PreferencesSection({ isAr }: { isAr: boolean }) {
   const { calendar, setCalendar } = useLocale();
   const options: { value: CalendarPref; label: string; hint: string }[] = [
-    { value: "auto", label: isAr ? "تلقائي" : "Automatic", hint: isAr ? "هجري مع العربية، ميلادي مع الإنجليزية" : "Hijri in Arabic, Gregorian in English" },
+    { value: "gregorian", label: isAr ? "ميلادي" : "Gregorian", hint: isAr ? "الافتراضي" : "The default" },
     { value: "hijri", label: isAr ? "هجري" : "Hijri", hint: isAr ? "تقويم أم القرى" : "Umm al-Qura calendar" },
-    { value: "gregorian", label: isAr ? "ميلادي" : "Gregorian", hint: isAr ? "التقويم الميلادي" : "Gregorian calendar" },
   ];
   // Live preview reflects the chosen preference immediately.
   const preview = formatDate(new Date(), isAr ? "ar" : "en", { day: "numeric", month: "long", year: "numeric" });
@@ -250,7 +249,8 @@ function PreferencesSection({ isAr }: { isAr: boolean }) {
     >
       <div role="radiogroup" aria-label={isAr ? "نوع التقويم" : "Calendar type"} className="grid gap-2 sm:grid-cols-3">
         {options.map((o) => {
-          const active = calendar === o.value;
+          // A stored "auto" predates Gregorian-by-default and now means Gregorian.
+          const active = (calendar === "auto" ? "gregorian" : calendar) === o.value;
           return (
             <button
               key={o.value}
@@ -448,7 +448,7 @@ function PasswordSection({ isAr, authedFetch, logout }: {
             : "After changing it, you'll be signed out and asked to sign in again with the new password."}
         </p>
         {change.error && <p role="alert" className="text-sm text-destructive">{change.error.message}</p>}
-        <Button type="submit" variant="outline" disabled={change.isPending || !f.currentPassword || !f.newPassword} className="w-fit">
+        <Button type="submit" variant="secondary" disabled={change.isPending || !f.currentPassword || !f.newPassword} className="w-fit">
           {change.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تحديث كلمة المرور" : "Update password"}
         </Button>
       </form>
@@ -484,12 +484,12 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
         <Badge variant={enabled ? "success" : "secondary"}>{enabled ? (isAr ? "مفعّل" : "Enabled") : (isAr ? "غير مفعّل" : "Disabled")}</Badge>
         {enabled ? (
           !disarming ? (
-            <Button variant="outline" size="sm" onClick={() => { disable.reset(); setDisarming(true); }}>
+            <Button variant="secondary" size="sm" onClick={() => { disable.reset(); setDisarming(true); }}>
               {isAr ? "تعطيل" : "Disable"}
             </Button>
           ) : null
         ) : !setup ? (
-          <Button variant="outline" size="sm" onClick={() => begin.mutate()} disabled={begin.isPending}>
+          <Button variant="secondary" size="sm" onClick={() => begin.mutate()} disabled={begin.isPending}>
             {begin.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تفعيل" : "Enable"}
           </Button>
         ) : null}
@@ -508,10 +508,10 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
             <p role="alert" className="text-sm text-destructive">{friendlyMessage(disable.error, isAr)}</p>
           )}
           <div className="flex gap-2">
-            <Button type="submit" variant="outline" size="sm" disabled={disable.isPending || !password}>
+            <Button type="submit" variant="secondary" size="sm" disabled={disable.isPending || !password}>
               {disable.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تأكيد التعطيل" : "Confirm & disable"}
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setDisarming(false); setPassword(""); disable.reset(); }}>
+            <Button type="button" variant="tertiary" size="sm" onClick={() => { setDisarming(false); setPassword(""); disable.reset(); }}>
               {isAr ? "إلغاء" : "Cancel"}
             </Button>
           </div>
@@ -520,7 +520,7 @@ function TwoFactorSection({ isAr, enabled, authedFetch, onChanged }: {
 
       {setup && (
         <div className="mt-4 space-y-3 rounded-xl bg-muted/50 p-4">
-          <p className="text-sm text-muted-foreground">{isAr ? "امسح الرمز بتطبيق المصادقة، ثم أدخل الرمز المكوّن من ٦ أرقام:" : "Scan with your authenticator app, then enter the 6-digit code:"}</p>
+          <p className="text-sm text-muted-foreground">{isAr ? "امسح الرمز بتطبيق المصادقة، ثم أدخل الرمز المكوّن من 6 أرقام:" : "Scan with your authenticator app, then enter the 6-digit code:"}</p>
           {/* The QR is the human path (hand-typing base32 is an effort tax, R002);
               the secret stays below as the copyable fallback. */}
           <div className="flex justify-center rounded-lg bg-white p-4" dir="ltr">

@@ -136,7 +136,7 @@ function validateBranch(b: BranchForm, isAr: boolean): BranchErrors {
   if (b.district.trim().length < 2) e.district = t("اكتب اسم الحي.", "Enter the district.");
   if (b.addressLine.trim().length < 3) e.addressLine = t("اكتب الشارع والمبنى.", "Enter the street and building.");
   if (b.nationalAddressCode.trim() && !NATIONAL_ADDRESS_CODE_RE.test(normalizeNationalAddressCode(b.nationalAddressCode)))
-    e.nationalAddressCode = t("العنوان المختصر ٤ حروف و٤ أرقام، مثل RRRD2929.", "The short address is 4 letters and 4 digits, e.g. RRRD2929.");
+    e.nationalAddressCode = t("العنوان المختصر 4 حروف و4 أرقام، مثل RRRD2929.", "The short address is 4 letters and 4 digits, e.g. RRRD2929.");
   const lat = Number(b.location.lat);
   const lng = Number(b.location.lng);
   if (!b.location.lat.trim() || !b.location.lng.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)
@@ -320,7 +320,7 @@ function BranchCard({
           {b.nameAr.trim() && <span className="ms-2 font-normal text-muted-foreground">· {b.nameAr}</span>}
         </h3>
         {canRemove && (
-          <Button type="button" variant="ghost" size="sm" onClick={onRemove} className="text-destructive">
+          <Button type="button" variant="tertiary" size="sm" onClick={onRemove} className="text-destructive">
             <Trash2 aria-hidden />
             {isAr ? "إزالة" : "Remove"}
           </Button>
@@ -381,7 +381,7 @@ function BranchCard({
           <TextField
             isAr={isAr}
             label={isAr ? "العنوان الوطني المختصر" : "National short address"}
-            hint={isAr ? "٤ حروف و٤ أرقام، مثل RRRD2929 — من تطبيق «سبل»." : "4 letters + 4 digits, e.g. RRRD2929 — from the SPL app."}
+            hint={isAr ? "4 حروف و4 أرقام، مثل RRRD2929 — من تطبيق «سبل»." : "4 letters + 4 digits, e.g. RRRD2929 — from the SPL app."}
             value={b.nationalAddressCode}
             onChange={(v) => onChange({ nationalAddressCode: v.toUpperCase() })}
             onBlur={() =>
@@ -534,7 +534,7 @@ function ServicesInput({ value, onChange, isAr }: { value: string[]; onChange: (
         />
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={() => {
             add(text);
             setText("");

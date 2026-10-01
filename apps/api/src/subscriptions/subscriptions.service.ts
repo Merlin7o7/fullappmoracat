@@ -38,6 +38,7 @@ import {
   termTotal as termUpfrontTotal,
 } from "../common/config/pricing";
 import { RECURRING_PROVIDERS, type ActivateSubscriptionDto, type CancelSubscriptionDto } from "./dto/subscription.dto";
+import { formatDate } from "@moraqat/core";
 
 const INTERVAL_DAYS: Record<string, number> = {
   MONTHLY: 30,
@@ -379,11 +380,7 @@ export class SubscriptionsService {
       if (user.email) {
         const loc = user.locale === "en" ? "en" : "ar";
         const planName = loc === "ar" ? plan.nameAr : plan.nameEn;
-        const nextAt = termEnd.toLocaleDateString(loc === "ar" ? "ar-SA" : "en-GB", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
+        const nextAt = formatDate(termEnd, loc, { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Riyadh" });
         const conf = subscriptionConfirmedTemplate(loc, user.firstName, planName, nextAt);
         const rcpt = paymentReceiptTemplate(loc, user.firstName, orderNumber, grandTotal, taxTotal, dto.provider);
         void this.mail.send({ to: user.email, subject: conf.subject, html: conf.html, text: conf.text });

@@ -165,7 +165,7 @@ export function StepTerms({ orgId, state, api, isAr, onState, onBack, goTo }: St
         )}
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           {onBack && (
-            <Button type="button" variant="outline" size="lg" onClick={onBack} className="shrink-0 px-5">
+            <Button type="button" variant="secondary" size="lg" onClick={onBack} className="shrink-0 px-5">
               <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />
               {isAr ? "رجوع" : "Back"}
             </Button>
@@ -243,7 +243,7 @@ function TermsReader({ isAr }: { isAr: boolean }) {
             {isAr ? `الإصدار ${VET_PARTNER_TERMS_VERSION} · النص العربي هو المعتمد.` : `Version ${VET_PARTNER_TERMS_VERSION} · The Arabic text prevails.`}
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => setReadAr((v) => !v)}>
+        <Button type="button" variant="secondary" size="sm" onClick={() => setReadAr((v) => !v)}>
           <Languages aria-hidden />
           {readAr ? "Read in English" : "اقرأ بالعربية"}
         </Button>

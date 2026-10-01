@@ -9,6 +9,7 @@ import { IlloBadge } from "@/components/illo-panel";
 import { Illo3D } from "@/components/illo-3d";
 import { api } from "@/lib/api";
 import { catLifeApi } from "@/lib/cat-life-api";
+import { formatNumber } from "@moraqat/core";
 
 /**
  * The portal home for a member who told us they don't have a cat yet.
@@ -106,13 +107,13 @@ export function ExploreHome({ isAr, firstName }: { isAr: boolean; firstName: str
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
               <Link href="/adopt">
-                <Button size="sm" variant="brand">
+                <Button size="sm" variant="primary">
                   <Heart className="size-4" aria-hidden />
                   {isAr ? "شوف من ينتظر بيتاً" : "See who's waiting"}
                 </Button>
               </Link>
               <Link href="/portal/cats/new">
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="secondary">
                   {isAr ? "عندي قط الحين" : "I have a cat now"}
                   <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
                 </Button>
@@ -139,7 +140,7 @@ export function ExploreHome({ isAr, firstName }: { isAr: boolean; firstName: str
               </div>
               {d.count != null && (
                 <p className="text-xs font-medium text-primary">
-                  {d.count.toLocaleString(isAr ? "ar-SA" : "en-GB")} {d.countLabel}
+                  {formatNumber(d.count, isAr ? "ar" : "en")} {d.countLabel}
                 </p>
               )}
             </Card>

@@ -11,6 +11,7 @@ import { Field, SelectField } from "@/components/field";
 import { Pagination } from "@/app/admin/_components/pagination";
 import { titleCase, fmtNum } from "@/app/admin/_components/i18n";
 import { QueryError } from "@/components/query-error";
+import { formatNumber } from "@moraqat/core";
 
 interface ProductRow {
   id: string; sku: string; type: string; nameEn: string; price: number;
@@ -66,7 +67,7 @@ export default function AdminProducts() {
     { key: "isActive", header: isAr ? "الحالة" : "Status", sortable: true, sortValue: (p) => (p.isActive ? 1 : 0), render: (p) => <Badge dot variant={p.isActive ? "success" : "secondary"}>{p.isActive ? (isAr ? "نشط" : "Active") : (isAr ? "مخفي" : "Hidden")}</Badge> },
     {
       key: "action", header: "", align: "end",
-      render: (p) => <Button variant="ghost" size="sm" onClick={() => toggle.mutate(p.id)} disabled={toggle.isPending}>{p.isActive ? (isAr ? "إخفاء" : "Hide") : (isAr ? "إظهار" : "Show")}</Button>,
+      render: (p) => <Button variant="tertiary" size="sm" onClick={() => toggle.mutate(p.id)} disabled={toggle.isPending}>{p.isActive ? (isAr ? "إخفاء" : "Hide") : (isAr ? "إظهار" : "Show")}</Button>,
     },
   ];
 
@@ -76,7 +77,7 @@ export default function AdminProducts() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">{isAr ? "المنتجات" : "Products"}</h1>
           <p className="text-sm text-muted-foreground">
-            {data ? (isAr ? `${data.pagination.total.toLocaleString("ar-SA")} إجمالاً` : `${data.pagination.total} total`) : "—"}
+            {data ? (isAr ? `${formatNumber(data.pagination.total, "ar")} إجمالاً` : `${data.pagination.total} total`) : "—"}
           </p>
         </div>
         <Button size="sm" onClick={() => setShowForm((v) => !v)}><Plus className="size-4" /> {isAr ? "منتج جديد" : "New product"}</Button>

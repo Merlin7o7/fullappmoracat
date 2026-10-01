@@ -95,7 +95,7 @@ export default function AdminContent() {
       key: "action", header: "", align: "end",
       render: (p) => (
         <Button
-          variant="ghost"
+          variant="tertiary"
           size="sm"
           disabled={publish.isPending}
           onClick={() => publish.mutate({ id: p.id, verb: p.status === "PUBLISHED" ? "unpublish" : "publish" })}
@@ -204,7 +204,7 @@ function FaqsPanel({ isAr }: { isAr: boolean }) {
                 <p className="mt-1 text-sm text-muted-foreground">{isAr ? q.answerAr : q.answerEn}</p>
                 {q.category && <Badge variant="secondary" className="mt-2">{q.category}</Badge>}
               </div>
-              <Button variant="ghost" size="sm" onClick={() => del.mutate(q.id)} aria-label={isAr ? "حذف" : "Delete"} className="shrink-0 text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /></Button>
+              <Button variant="tertiary" size="sm" onClick={() => del.mutate(q.id)} aria-label={isAr ? "حذف" : "Delete"} className="shrink-0 text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /></Button>
             </div>
           ))}
         </div>
@@ -259,10 +259,10 @@ function AnnouncementsPanel({ isAr }: { isAr: boolean }) {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Badge dot variant={a.status === "PUBLISHED" ? "success" : "warning"}>{a.status}</Badge>
-                <Button variant="ghost" size="sm" onClick={() => publish.mutate({ id: a.id, status: a.status === "PUBLISHED" ? "ARCHIVED" : "PUBLISHED" })}>
+                <Button variant="tertiary" size="sm" onClick={() => publish.mutate({ id: a.id, status: a.status === "PUBLISHED" ? "ARCHIVED" : "PUBLISHED" })}>
                   {a.status === "PUBLISHED" ? (isAr ? "أرشفة" : "Archive") : (isAr ? "نشر" : "Publish")}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => del.mutate(a.id)} aria-label={isAr ? "حذف" : "Delete"} className="text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /></Button>
+                <Button variant="tertiary" size="sm" onClick={() => del.mutate(a.id)} aria-label={isAr ? "حذف" : "Delete"} className="text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /></Button>
               </div>
             </div>
           ))}

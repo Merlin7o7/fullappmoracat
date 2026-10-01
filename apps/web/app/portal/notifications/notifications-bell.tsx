@@ -49,7 +49,7 @@ export function NotificationsBell({ className }: { className?: string }) {
       {unread > 0 && (
         <span
           aria-hidden="true"
-          className="absolute end-1.5 top-1.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-accent-foreground ring-2 ring-background"
+          className="absolute end-1.5 top-1.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-xs font-bold leading-4 text-accent-foreground ring-2 ring-background"
         >
           {unread > 9 ? "9+" : unread}
         </span>

@@ -258,7 +258,7 @@ function ReturnInner() {
             <Button size="lg" onClick={() => router.push("/portal")}>
               {isAr ? "إلى بوابتك" : "Go to your portal"}
             </Button>
-            <Button variant="outline" size="lg" onClick={() => router.push("/portal/subscriptions")}>
+            <Button variant="secondary" size="lg" onClick={() => router.push("/portal/subscriptions")}>
               {isAr ? "إدارة اشتراكك" : "Manage your subscription"}
             </Button>
           </div>
@@ -283,7 +283,7 @@ function ReturnInner() {
           <Button size="lg" onClick={() => router.push(retryHref)}>
             {isAr ? "جرّب مرة ثانية" : "Try again"}
           </Button>
-          <Button variant="outline" size="lg" onClick={() => router.push("/portal/support")}>
+          <Button variant="secondary" size="lg" onClick={() => router.push("/portal/support")}>
             {isAr ? "تواصل مع الدعم" : "Contact support"}
           </Button>
         </div>
@@ -310,7 +310,7 @@ function ReturnInner() {
           <Button size="lg" onClick={() => router.push("/portal/subscriptions")}>
             {isAr ? "اشتراكاتي" : "My subscriptions"}
           </Button>
-          <Button variant="outline" size="lg" onClick={() => router.push("/portal/support")}>
+          <Button variant="secondary" size="lg" onClick={() => router.push("/portal/support")}>
             {isAr ? "تواصل مع العناية" : "Contact Care"}
           </Button>
         </div>

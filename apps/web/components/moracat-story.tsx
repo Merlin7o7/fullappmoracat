@@ -136,11 +136,11 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
           </Sticker>
           <Badge variant="secondary" className="mb-3">{isAr ? "مجتمع مرقط — نسخة مبكرة" : "Moracat — Community Beta"}</Badge>
           <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            {isAr ? "أول ١٠٠٠ قط هم الأعضاء المؤسِّسون" : "The first 1,000 cats are the Founding Members"}
+            {isAr ? "أول 1000 قط هم الأعضاء المؤسِّسون" : "The first 1,000 cats are the Founding Members"}
           </h2>
           <p className="mt-3 text-base leading-relaxed text-muted-foreground">
             {isAr
-              ? "مرقط في بدايته، واللي ينضم الحين يساعدنا نبنيه صح. أرقام الهويات متسلسلة فعلاً: أول ١٠٠٠ قط يتسجّل يحمل صفة «عضو مؤسِّس» في هويته دايماً — الصفة تجي من رقم قطك نفسه، مو شي نعطيه أو نسحبه."
+              ? "مرقط في بدايته، واللي ينضم الحين يساعدنا نبنيه صح. أرقام الهويات متسلسلة فعلاً: أول 1000 قط يتسجّل يحمل صفة «عضو مؤسِّس» في هويته دايماً — الصفة تجي من رقم قطك نفسه، مو شي نعطيه أو نسحبه."
               : "Moracat is at its beginning, and those who join now help us build it right. Cat ID numbers are genuinely sequential: the first 1,000 cats registered carry “Founding Member” on their ID for good — the status comes from your cat's own number, not something we hand out or take away."}
           </p>
         </div>

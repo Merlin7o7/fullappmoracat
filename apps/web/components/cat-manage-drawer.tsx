@@ -92,7 +92,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
               <div className="rounded-2xl bg-white p-3 shadow-e1 ring-hairline">
                 <QRCodeSVG value={qrValue} size={112} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
               </div>
-              <p className="max-w-[16rem] text-center text-[11px] leading-relaxed text-muted-foreground">
+              <p className="max-w-[16rem] text-center text-xs leading-relaxed text-muted-foreground">
                 {isAr ? "أي كاميرا جوال تفتح صفحة القط العامة — من يجدها يصل إليك دون أن يعرف من أنت" : "Any phone camera opens the cat's public page — whoever finds them can reach you without learning who you are"}
               </p>
             </div>
@@ -103,14 +103,14 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
         {cat.status === "ACTIVE" && (
           <div className="grid grid-cols-2 gap-2">
             <Button
-              variant={cat.isPrimary ? "outline" : "primary"}
+              variant={cat.isPrimary ? "secondary" : "primary"}
               size="sm"
               disabled={cat.isPrimary}
               onClick={() => { void setPrimaryCat(cat.id).then(() => done(isAr ? `${cat.name} صار القط الأساسي` : `${cat.name} is now primary`)).catch(() => {}); }}
             >
               <Star className="size-4" /> {cat.isPrimary ? (isAr ? "الأساسي" : "Primary") : (isAr ? "اجعله الأساسي" : "Make primary")}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
+            <Button variant="secondary" size="sm" onClick={() => setEditing((v) => !v)}>
               <Pencil className="size-4" /> {isAr ? "تعديل" : "Edit"}
             </Button>
           </div>
@@ -162,7 +162,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={restore} disabled={action.isPending}>
+              <Button variant="secondary" size="sm" onClick={restore} disabled={action.isPending}>
                 {action.isPending ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
                 {isAr ? "استعادة" : "Restore"}
               </Button>
@@ -183,7 +183,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
                 <Button size="sm" variant={confirm === "remove" ? "destructive" : "primary"} loading={action.isPending} onClick={() => runLifecycle(confirm)}>
                   {isAr ? "تأكيد" : "Confirm"}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirm(null)}>{isAr ? "تراجع" : "Cancel"}</Button>
+                <Button size="sm" variant="tertiary" onClick={() => setConfirm(null)}>{isAr ? "تراجع" : "Cancel"}</Button>
               </div>
             </div>
           )}
@@ -195,7 +195,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
 
 function LifecycleButton({ icon: Icon, label, onClick, destructive }: { icon: React.ElementType | null; label: string; onClick: () => void; destructive?: boolean }) {
   return (
-    <Button variant="outline" size="sm" onClick={onClick} className={destructive ? "text-destructive hover:bg-destructive/10" : undefined}>
+    <Button variant="secondary" size="sm" onClick={onClick} className={destructive ? "text-destructive hover:bg-destructive/10" : undefined}>
       {Icon && <Icon className="size-4" />} {label}
     </Button>
   );

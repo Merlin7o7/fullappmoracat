@@ -165,7 +165,7 @@ export function ClinicPipeline({ isAr }: { isAr: boolean }) {
                   <td colSpan={COLS} className="px-4 py-14 text-center">
                     <p className="font-medium">{registrationError(error, isAr).title}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{registrationError(error, isAr).message}</p>
-                    <Button variant="outline" size="sm" className="mt-4" onClick={() => void refetch()}>
+                    <Button variant="secondary" size="sm" className="mt-4" onClick={() => void refetch()}>
                       <RotateCw aria-hidden />
                       {isAr ? "إعادة المحاولة" : "Try again"}
                     </Button>
@@ -226,13 +226,13 @@ function PipelineRow({ row, isAr, onOpen }: { row: AdminClinicRow; isAr: boolean
           {name}
           {row.verified && <ShieldCheck aria-label={isAr ? "موثّقة" : "Verified"} className="size-3.5 text-success" />}
           {row.isDemo && (
-            <Badge variant="outline" className="gap-1 px-1.5 py-0 text-[10px]">
+            <Badge variant="outline" className="gap-1 px-1.5 py-0 text-xs">
               <FlaskConical aria-hidden className="size-3" />
               {isAr ? "تجريبية" : "Demo"}
             </Badge>
           )}
           {row.tier === "founding" && (
-            <Badge variant="accent" className="px-1.5 py-0 text-[10px]">
+            <Badge variant="accent" className="px-1.5 py-0 text-xs">
               {isAr ? "مؤسس" : "Founding"}
             </Badge>
           )}

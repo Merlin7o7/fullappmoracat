@@ -101,7 +101,7 @@ export function CatHealthRecord({ record, isAr }: { record: HealthRecord; isAr: 
               key={v.id}
               title={v.name}
               meta={[fmt(v.administeredAt), v.dueAt ? (isAr ? `التالية ${fmt(v.dueAt)}` : `next ${fmt(v.dueAt)}`) : "", pick(v.clinic, isAr) || v.vetName || ""].filter(Boolean).join(" · ")}
-              badge={v.verified ? <Verified isAr={isAr} /> : <Badge variant="outline" className="text-[10px]">{isAr ? "مُدخل يدوياً" : "Self-reported"}</Badge>}
+              badge={v.verified ? <Verified isAr={isAr} /> : <Badge variant="outline" className="text-xs">{isAr ? "مُدخل يدوياً" : "Self-reported"}</Badge>}
             />
           ))}
         </Section>
@@ -125,7 +125,7 @@ export function CatHealthRecord({ record, isAr }: { record: HealthRecord; isAr: 
               key={rx.id}
               title={[rx.medication, rx.strength].filter(Boolean).join(" ")}
               meta={[rx.dosage, rx.frequency, rx.durationDays ? (isAr ? `${rx.durationDays} يوم` : `${rx.durationDays} days`) : "", fmt(rx.issuedAt), pick(rx.clinic, isAr)].filter(Boolean).join(" · ")}
-              badge={<Badge variant="secondary" className="text-[10px]">{rxStatus(rx.status, isAr)}</Badge>}
+              badge={<Badge variant="secondary" className="text-xs">{rxStatus(rx.status, isAr)}</Badge>}
             />
           ))}
         </Section>
@@ -188,7 +188,7 @@ function Row({ title, meta, sub, badge }: { title: string; meta: string; sub?: s
 
 function Verified({ isAr }: { isAr: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">
+    <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">
       <BadgeCheck className="size-3" /> {isAr ? "موثّق من العيادة" : "Clinic-verified"}
     </span>
   );

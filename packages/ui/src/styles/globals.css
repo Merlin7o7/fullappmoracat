@@ -42,6 +42,8 @@
     --accent: 18 93% 58%;
     --accent-foreground: 165 45% 8%;
     --accent-hover: 18 93% 50%;
+    /* Seal copper — the «السجل» stamp only (issued / verified). Never UI chrome. */
+    --seal: 18 62% 44%;
     /* Text-safe orange — darkened to clear 4.5:1 on the paper ground (R091). */
     --accent-ink: 16 92% 38%;
 
@@ -84,7 +86,11 @@
     --input: 32 18% 52%;
     --ring: 166 91% 24%;
 
-    --radius: 1rem;
+    --radius: 18px;
+    /* Three radius families (AD 2.1): controls, cards, and full (chips,
+       avatars, the seal). Nothing else. */
+    --radius-control: 10px;
+    --radius-card: 18px;
 
     /* Elevation ladder — warm green-black shadow */
     --shadow-color: 165 40% 14%;
@@ -100,8 +106,11 @@
     --font-sans: "Inter", system-ui, sans-serif;
     --font-display: "Fraunces", Georgia, serif;
     --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-    /* Overridden at runtime by next/font local (Lyon Arabic Display). */
-    --font-arabic: var(--font-sans);
+    /* Arabic faces — overridden on <body> by next/font (IBM Plex Sans Arabic
+       for text, Lyon Arabic Display for display sizes). */
+    --font-arabic-text: var(--font-sans);
+    --font-arabic-display: var(--font-arabic-text);
+    --font-arabic: var(--font-arabic-text);
   }
 
   .dark {
@@ -126,6 +135,7 @@
     --accent: 18 93% 58%;
     --accent-foreground: 168 45% 6%;
     --accent-hover: 18 94% 64%;
+    --seal: 20 62% 62%;
     /* On the dark ground, the bright orange already clears 4.5:1 as text. */
     --accent-ink: 20 96% 66%;
 
@@ -201,16 +211,37 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* RTL: Arabic uses the Lyon Arabic Display face; Latin glyphs (numbers, SAR,
-   * ID codes) fall back to the sans. Applies to body AND headings/labels so the
-   * display face never leaks Latin (Fraunces) into Arabic text. */
-  [dir="rtl"] {
-    font-family: var(--font-arabic), var(--font-sans);
+  /* ── Arabic typography (MRC-BRAND-001 §type, R103) ───────────────────────
+   * 1. Never let the browser fake a weight or a slant: a semibold Arabic
+   *    heading must be drawn by a real semibold font.
+   * 2. Arabic text — body, UI, labels, small headings — is IBM Plex Sans
+   *    Arabic (four real weights). Latin glyphs and the (Western) digits fall
+   *    through to the sans.
+   * 3. Lyon Arabic Display has ONE weight, so it is used only at display sizes
+   *    (text-3xl and up ≈ 30px+) at weight 400 — size carries the hierarchy.
+   * 4. Arabic is a joined script: any letter-spacing tears the joins, so it is
+   *    zero for everything that is not explicitly Latin (dir="ltr" or mono).
+   */
+  html {
+    font-synthesis: none;
   }
-  [dir="rtl"] .font-display,
+  [dir="rtl"] body,
   [dir="rtl"] .font-sans,
-  [dir="rtl"] .font-arabic {
-    font-family: var(--font-arabic), var(--font-sans);
+  [dir="rtl"] .font-arabic,
+  [dir="rtl"] .font-display {
+    font-family: var(--font-arabic-text), var(--font-sans);
+  }
+  [dir="rtl"] .font-display:is([class*="text-3xl"], [class*="text-4xl"], [class*="text-5xl"], [class*="text-6xl"], [class*="text-7xl"]),
+  [dir="rtl"] .font-arabic-display {
+    font-family: var(--font-arabic-display), var(--font-arabic-text), var(--font-sans);
+    font-weight: 400;
+  }
+  [dir="rtl"] body *:not([dir="ltr"]):not(.font-mono) {
+    letter-spacing: 0 !important;
+  }
+  /* Latin display type keeps its tight, editorial tracking — LTR only. */
+  [dir="ltr"] .font-display {
+    letter-spacing: -0.02em;
   }
 
   ::selection {

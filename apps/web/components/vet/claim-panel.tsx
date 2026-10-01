@@ -78,11 +78,11 @@ export function ClaimPanel({ catId, autoOpen }: { catId: string; autoOpen?: bool
         </div>
         {canShow && (
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" loading={refresh.isPending && !refresh.variables} onClick={() => refresh.mutate(false)}>
+            <Button size="sm" variant="secondary" loading={refresh.isPending && !refresh.variables} onClick={() => refresh.mutate(false)}>
               <QrCode className="size-4" /> {isAr ? "اعرض رمز الاستلام" : "Show claim code"}
             </Button>
             {s.smsAvailable && (
-              <Button size="sm" variant="outline" disabled={!s.canResend} loading={refresh.isPending && refresh.variables === true} onClick={() => refresh.mutate(true)}>
+              <Button size="sm" variant="secondary" disabled={!s.canResend} loading={refresh.isPending && refresh.variables === true} onClick={() => refresh.mutate(true)}>
                 <MessageSquare className="size-4" /> {isAr ? "أرسل برسالة" : "Send SMS"}
               </Button>
             )}
@@ -100,14 +100,14 @@ export function ClaimPanel({ catId, autoOpen }: { catId: string; autoOpen?: bool
             <p className="break-all font-mono text-xs text-muted-foreground" dir="ltr">{link.url}</p>
             <Button
               size="sm"
-              variant="ghost"
+              variant="tertiary"
               onClick={() => {
                 void navigator.clipboard?.writeText(link.url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
               }}
             >
               {copied ? <Check className="size-4" /> : <Copy className="size-4" />} {copied ? (isAr ? "نُسخ" : "Copied") : (isAr ? "انسخ الرابط" : "Copy link")}
             </Button>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {isAr ? "كل عرض جديد يبطل الرمز السابق." : "Each new code replaces the previous one."}
             </p>
           </div>
@@ -121,7 +121,7 @@ function smsReason(reason: VetClaimLink["smsReason"], isAr: boolean): string | u
   switch (reason) {
     case "disabled": return isAr ? "الإرسال بالرسائل غير مفعّل بعد — اعرض الرمز للمالك." : "SMS sending isn't switched on yet — show the owner the code.";
     case "cap": return isAr ? "بلغنا الحد الأقصى للإرسال لهذا القط." : "The send limit for this cat has been reached.";
-    case "cooldown": return isAr ? "أُرسل رابط خلال آخر ٢٤ ساعة — اعرض الرمز بدل ذلك." : "A link was sent in the last 24 hours — show the code instead.";
+    case "cooldown": return isAr ? "أُرسل رابط خلال آخر 24 ساعة — اعرض الرمز بدل ذلك." : "A link was sent in the last 24 hours — show the code instead.";
     case "provider": return isAr ? "تعذّر الإرسال من المزوّد. اعرض الرمز للمالك." : "The provider couldn't send it. Show the owner the code.";
     default: return undefined;
   }

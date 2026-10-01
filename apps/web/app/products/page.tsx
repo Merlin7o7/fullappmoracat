@@ -71,7 +71,7 @@ export default function ProductsPage() {
 
         {/* ── Census mode: an honest forthcoming page, not an empty grid ────── */}
         {!commerce ? (
-          <div className="mx-auto max-w-md rounded-[2rem] bg-cream/60 px-6 py-14 text-center dark:bg-cream/40">
+          <div className="mx-auto max-w-md rounded-2xl bg-cream/60 px-6 py-14 text-center dark:bg-cream/40">
             <Illo3D name="can" className="mx-auto mb-5 block size-24" px={96} />
             <h2 className="font-display text-xl font-semibold tracking-tight">
               {isAr ? "لا شيء معروض للبيع بعد" : "Nothing is for sale yet"}
@@ -83,7 +83,7 @@ export default function ProductsPage() {
                 : "We're in the Census right now — getting to know Saudi's cats first. We're curating carefully, and when the shop opens your cat's ID will already be waiting."}
             </p>
             {/* One clear action (R005), and it's free — trust precedes the ask (R004). */}
-            <Link href="/register" className={cn(buttonVariants({ variant: "brand", size: "md" }), "mt-6")}>
+            <Link href="/register" className={cn(buttonVariants({ variant: "primary", size: "md" }), "mt-6")}>
               <Sparkles className="size-4" />
               {isAr ? "سجّل هوية قطك مجاناً" : "Register your cat's ID — free"}
             </Link>
@@ -237,7 +237,7 @@ function ProductCard({ product, isAr, index }: { product: ProductListItem; isAr:
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="mx-auto max-w-md rounded-[2rem] bg-cream/60 px-6 py-16 text-center dark:bg-cream/40">
+    <div className="mx-auto max-w-md rounded-2xl bg-cream/60 px-6 py-16 text-center dark:bg-cream/40">
       <IlloMouse tone="sage" className="mx-auto mb-5 h-10 w-auto rtl:-scale-x-100" />
       <h3 className="font-display text-xl font-semibold tracking-tight">{title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{body}</p>

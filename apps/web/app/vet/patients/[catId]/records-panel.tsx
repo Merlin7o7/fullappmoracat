@@ -472,7 +472,7 @@ function PrescriptionsModule({
                       <Button
                         key={s}
                         size="sm"
-                        variant={s === "CANCELLED" ? "ghost" : "outline"}
+                        variant={s === "CANCELLED" ? "tertiary" : "secondary"}
                         loading={
                           advance.isPending &&
                           advance.variables?.id === rx.id &&
