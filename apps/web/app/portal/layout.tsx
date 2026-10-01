@@ -16,7 +16,7 @@ import { Logo } from "@/components/logo";
 import { IlloPaw } from "@/components/illustrations";
 import { NotificationsBell } from "@/app/portal/notifications/notifications-bell";
 import { localizeName } from "@/lib/translit";
-import { visiblePortalNav } from "./nav";
+import { visiblePortalTabs, activeTabKey } from "./nav";
 import { PortalMobileNav } from "./portal-mobile-nav";
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const isAr = locale === "ar";
   const router = useRouter();
   const pathname = usePathname();
-  const nav = visiblePortalNav();
+  const tabs = visiblePortalTabs();
+  const activeTab = activeTabKey(pathname);
   const handleLogout = React.useCallback(() => { void logout(); router.push("/login"); }, [logout, router]);
 
   // Redirect unauthenticated visitors to login once hydration settles — and
@@ -62,26 +63,49 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           <Link href="/" aria-label="Moracat" className="mb-8 flex px-2 pt-1">
             <Logo className="h-9" priority onDark />
           </Link>
-          <nav className="flex flex-1 flex-col gap-1">
-            {nav.map((item) => {
-              const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+          {/* The same four destinations as the phone bar; the active one opens
+              onto its own pages. Everything about a single cat lives inside
+              that cat's profile, not here. */}
+          <nav aria-label={isAr ? "التنقل" : "Navigation"} className="flex flex-1 flex-col gap-1">
+            {tabs.map((t) => {
+              const on = t.key === activeTab;
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary-foreground/[0.14] text-primary-foreground"
-                      : "text-primary-foreground/85 hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
+                <div key={t.key}>
+                  <Link
+                    href={t.href}
+                    aria-current={on && pathname === t.href ? "page" : undefined}
+                    className={cn(
+                      "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                      on
+                        ? "bg-primary-foreground/[0.14] text-primary-foreground"
+                        : "text-primary-foreground/85 hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
+                    )}
+                  >
+                    <t.icon className="size-4" aria-hidden />
+                    {isAr ? t.ar : t.en}
+                  </Link>
+                  {on && t.children.length > 0 && (
+                    <ul className="mb-2 mt-1 space-y-0.5 border-s border-primary-foreground/15 ps-3 ms-5">
+                      {t.children.map((c) => {
+                        const here = pathname === c.href || pathname.startsWith(c.href + "/");
+                        return (
+                          <li key={c.href}>
+                            <Link
+                              href={c.href}
+                              aria-current={here ? "page" : undefined}
+                              className={cn(
+                                "flex min-h-10 items-center gap-2 rounded-md px-2 text-sm transition-colors",
+                                here ? "text-primary-foreground" : "text-primary-foreground/70 hover:text-primary-foreground"
+                              )}
+                            >
+                              {isAr ? c.ar : c.en}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
-                >
-                  <item.icon className="size-4" />
-                  {isAr ? item.ar : item.en}
-                  {active && (
-                    <IlloPaw tone="orange" className="absolute end-3 size-3.5" />
-                  )}
-                </Link>
+                </div>
               );
             })}
           </nav>
@@ -90,7 +114,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           {user.isStaff && (
             <Link
               href="/admin"
-              className="mb-1 flex items-center gap-3 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-accent/20"
+              className="mb-1 flex items-center gap-3 rounded-md border border-accent/40 bg-accent/10 px-3 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-accent/20"
             >
               <ShieldCheck className="size-4 text-accent" />
               {isAr ? "لوحة الإدارة" : "Admin console"}
@@ -99,7 +123,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
+            className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-primary-foreground/[0.07] hover:text-primary-foreground"
           >
             <LogOut className="size-4" />
             {isAr ? "تسجيل الخروج" : "Log out"}
@@ -116,8 +140,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             <div className="flex items-center gap-1 sm:gap-2">
               <NotificationsBell />
               <CatSwitcher isAr={isAr} />
-              <LangToggle />
-              <ThemeToggle />
+              {/* On phones these live in «حسابي» — the header keeps room for the cat. */}
+              <div className="hidden items-center gap-1 sm:flex sm:gap-2">
+                <LangToggle />
+                <ThemeToggle />
+              </div>
             </div>
           </header>
           <OfflineBanner isAr={isAr} />
@@ -128,7 +155,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       </div>
 
       {/* ── Mobile: thumb-zone bottom nav (R100), ≥44px targets (R092), 320px-safe ── */}
-      <PortalMobileNav items={nav} isAr={isAr} isStaff={!!user.isStaff} onLogout={handleLogout} />
+      <PortalMobileNav tabs={tabs} isAr={isAr} />
     </CatProvider>
   );
 }

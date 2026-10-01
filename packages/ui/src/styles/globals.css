@@ -225,6 +225,12 @@
   html {
     font-synthesis: none;
   }
+  /* Never a horizontal page scroll (mobile-first). `clip`, not `hidden`, so
+     position: sticky headers keep working. */
+  html,
+  body {
+    overflow-x: clip;
+  }
   [dir="rtl"] body,
   [dir="rtl"] .font-sans,
   [dir="rtl"] .font-arabic,

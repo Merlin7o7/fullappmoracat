@@ -81,10 +81,8 @@ export default function TransferPage({ params }: { params: { token: string } }) 
           ? "هويته وسجله الصحي انتقلوا لك كاملين."
           : "Their Cat ID and full health record came with them.",
       });
-      // /portal/cats?cat=<id> is the deep-link convention (there is no
-      // /portal/cats/<id> page — only /health and /privacy live under it), and
-      // it opens the roster focused on the cat that just arrived.
-      router.push(`/portal/cats?cat=${res.catId}`);
+      // Straight onto the cat's own profile — the record that just arrived.
+      router.push(`/portal/cats/${res.catId}`);
     },
     onError: (err) => setError(friendlyMessage(err, isAr)),
   });

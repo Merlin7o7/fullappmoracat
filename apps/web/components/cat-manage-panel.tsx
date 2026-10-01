@@ -2,26 +2,28 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { QRCodeSVG } from "qrcode.react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Star, Pencil, Archive, RotateCcw, Trash2, Loader2, ArrowRight } from "lucide-react";
-import { Badge, Button, Drawer, useToast } from "@moraqat/ui";
+import { Badge, Button, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
-import { qrValueFor } from "@moraqat/core";
 import { useCats, type PortalCat } from "@/lib/cat-context";
 import { Field, SelectField } from "@/components/field";
-import { CatIdCard } from "@/components/cat-id-card";
 import { CatHealthPanel } from "@/components/cat-health-panel";
 import { CatPhotosPanel } from "@/components/cat-photos-panel";
 import { CatCommunityPanel } from "@/components/cat-community-panel";
 import { CatHandoverPanel } from "@/components/cat-handover-panel";
 
-export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: boolean; onClose: () => void }) {
+/**
+ * Everything an owner changes about a cat that isn't health: details, photos,
+ * community visibility, handing the cat on, and the lifecycle. Rendered as the
+ * cat's /edit page (it used to be a drawer — the only place the cat "lived").
+ */
+export function CatManagePanel({ cat, isAr, onClose }: { cat: PortalCat; isAr: boolean; onClose: () => void }) {
   const { authedFetch } = useAuth();
   const { setPrimaryCat, refresh } = useCats();
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [editing, setEditing] = React.useState(false);
+  const [editing, setEditing] = React.useState(true);
   const [confirm, setConfirm] = React.useState<null | "archive" | "deceased" | "remove">(null);
 
   const done = (msg: string) => {
@@ -59,11 +61,8 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
   const restore = () =>
     action.mutate({ path: `/cats/${cat.id}/restore` }, { onSuccess: () => done(isAr ? `عاد ${cat.name} 🐈` : `${cat.name} is back 🐈`) });
 
-  const qrValue = cat.qrToken ? qrValueFor(process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co", cat.qrToken) : null;
-
   return (
-    <Drawer open onClose={onClose} title={isAr ? `إدارة ${cat.name}` : `Manage ${cat.name}`}>
-      <div className="space-y-5 pt-1">
+    <div className="space-y-6">
         {/* Status line */}
         <div className="flex flex-wrap items-center gap-2">
           {cat.isPrimary && <Badge variant="secondary"><Star className="me-1 size-3 fill-accent text-accent" /> {isAr ? "القط الأساسي" : "Primary cat"}</Badge>}
@@ -72,30 +71,6 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
             <Badge variant={cat.status === "DECEASED" ? "secondary" : "outline"}>
               {cat.status === "DECEASED" ? (isAr ? "في الذاكرة 🤍" : "In memoriam 🤍") : (isAr ? "مؤرشف" : "Archived")}
             </Badge>
-          )}
-        </div>
-
-        {/* Identity + QR (the Cat ID made tangible + scannable) */}
-        <div className="flex flex-col items-center gap-4">
-          <CatIdCard
-            catName={cat.name}
-            catIdNumber={cat.catIdNumber ?? "MRC-••••-••••"}
-            catNumber={cat.catNumber}
-            foundingClass={isAr ? cat.foundingClass?.ar : cat.foundingClass?.en}
-            issuedAt={cat.idIssuedAt}
-            photoUrl={cat.photoUrl}
-            isAr={isAr}
-            membershipActive={cat.membershipStatus === "ACTIVE"}
-          />
-          {qrValue && (
-            <div className="flex flex-col items-center gap-2">
-              <div className="rounded-2xl bg-white p-3 shadow-e1 ring-hairline">
-                <QRCodeSVG value={qrValue} size={112} level="M" bgColor="#ffffff" fgColor="#0b3b30" />
-              </div>
-              <p className="max-w-[16rem] text-center text-xs leading-relaxed text-muted-foreground">
-                {isAr ? "أي كاميرا جوال تفتح صفحة القط العامة — من يجدها يصل إليك دون أن يعرف من أنت" : "Any phone camera opens the cat's public page — whoever finds them can reach you without learning who you are"}
-              </p>
-            </div>
           )}
         </div>
 
@@ -116,12 +91,12 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
           </div>
         )}
 
-        {editing && <EditForm cat={cat} isAr={isAr} onSaved={() => { setEditing(false); done(isAr ? "تم الحفظ" : "Saved"); }} />}
+        {editing && <EditForm cat={cat} isAr={isAr} onSaved={() => done(isAr ? "تم الحفظ" : "Saved")} />}
 
         {/* Photos — profile portrait + gallery */}
         {cat.status === "ACTIVE" && (
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">{isAr ? "الصور" : "Photos"}</h3>
+          <div id="photos" className="scroll-mt-20">
+            <h2 className="mb-2 font-display text-lg">{isAr ? "الصور" : "Photos"}</h2>
             <CatPhotosPanel catId={cat.id} currentPhotoUrl={cat.photoUrl} isAr={isAr} />
           </div>
         )}
@@ -188,8 +163,7 @@ export function CatManageDrawer({ cat, isAr, onClose }: { cat: PortalCat; isAr: 
             </div>
           )}
         </div>
-      </div>
-    </Drawer>
+    </div>
   );
 }
 

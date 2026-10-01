@@ -3,110 +3,54 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MoreHorizontal, LogOut, ShieldCheck } from "lucide-react";
-import { Drawer, cn } from "@moraqat/ui";
-import type { PortalNavItem } from "./nav";
-
-interface PortalMobileNavProps {
-  /** Already filtered for the active commerce mode. */
-  items: PortalNavItem[];
-  isAr: boolean;
-  isStaff: boolean;
-  onLogout: () => void;
-}
+import { cn } from "@moraqat/ui";
+import { activeTabKey, type PortalTab } from "./nav";
 
 /**
- * Thumb-zone bottom navigation (R100). Shows ≤5 primary destinations as
- * labelled tabs that fit down to 320px, with the remainder behind a "More"
- * bottom sheet. Sits above the iOS home indicator via `.bottom-safe`, and the
- * whole app reserves scroll room with `.pb-nav` on <main>.
+ * The phone's four tabs — قططي · العناية · اكتشف · حسابي — in the thumb zone
+ * (R100), ≥44px targets (R092), labelled (icons alone are guesses). No "More":
+ * every destination lives inside one of the four, so there is nothing left to
+ * hide. Sits above the iOS home indicator via `.bottom-safe`; the page
+ * reserves room with `.pb-nav` on <main>.
  */
-export function PortalMobileNav({ items, isAr, isStaff, onLogout }: PortalMobileNavProps) {
+export function PortalMobileNav({ tabs, isAr }: { tabs: PortalTab[]; isAr: boolean }) {
   const pathname = usePathname();
-  const [moreOpen, setMoreOpen] = React.useState(false);
-
-  const isActive = React.useCallback(
-    (item: PortalNavItem) => (item.exact ? pathname === item.href : pathname.startsWith(item.href)),
-    [pathname],
-  );
-
-  const primary = items.filter((i) => i.primary);
-  const secondary = items.filter((i) => !i.primary);
-  const moreActive = secondary.some(isActive);
-
-  const tabClass = (active: boolean) =>
-    cn(
-      "flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl py-1.5 text-xs font-medium leading-tight transition-colors",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-      active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-    );
+  const active = activeTabKey(pathname);
 
   return (
-    <>
-      <nav
-        aria-label={isAr ? "التنقل" : "Navigation"}
-        className="glass bottom-safe ps-safe pe-safe fixed inset-x-3 z-40 grid auto-cols-fr grid-flow-col items-stretch gap-0.5 rounded-2xl p-1.5 md:hidden"
-      >
-        {primary.map((item) => {
-          const active = isActive(item);
+    <nav
+      aria-label={isAr ? "التنقل" : "Navigation"}
+      className="ps-safe pe-safe fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)] border-t border-border bg-background/95 backdrop-blur md:hidden"
+    >
+      <ul className="mx-auto grid max-w-md grid-cols-4">
+        {tabs.map((t) => {
+          const on = t.key === active;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={tabClass(active)}
-            >
-              <item.icon className="size-[18px] shrink-0" aria-hidden />
-              <span className="max-w-full truncate">{isAr ? item.ar : item.en}</span>
-            </Link>
-          );
-        })}
-        <button type="button" onClick={() => setMoreOpen(true)} aria-haspopup="dialog" aria-expanded={moreOpen} className={tabClass(moreActive)}>
-          <MoreHorizontal className="size-[18px] shrink-0" aria-hidden />
-          <span>{isAr ? "المزيد" : "More"}</span>
-        </button>
-      </nav>
-
-      <Drawer open={moreOpen} onClose={() => setMoreOpen(false)} title={isAr ? "المزيد" : "More"}>
-        <div className="grid grid-cols-2 gap-2">
-          {secondary.map((item) => {
-            const active = isActive(item);
-            return (
+            <li key={t.key}>
               <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMoreOpen(false)}
-                aria-current={active ? "page" : undefined}
+                href={t.href}
+                aria-current={on ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors",
-                  active ? "border-primary/30 bg-primary/10 text-foreground" : "border-border hover:bg-muted",
+                  "flex min-h-[56px] flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  on ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <item.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="truncate">{isAr ? item.ar : item.en}</span>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "grid h-7 w-12 place-items-center rounded-full transition-colors",
+                    on ? "bg-primary/12" : "bg-transparent"
+                  )}
+                >
+                  <t.icon className="size-[19px]" strokeWidth={on ? 2.2 : 1.8} />
+                </span>
+                <span>{isAr ? t.ar : t.en}</span>
               </Link>
-            );
-          })}
-        </div>
-        {isStaff && (
-          <Link
-            href="/admin"
-            onClick={() => setMoreOpen(false)}
-            className="mt-2 flex items-center gap-3 rounded-xl border border-accent/40 bg-accent/10 px-3 py-3 text-sm font-semibold"
-          >
-            <ShieldCheck className="size-4 text-accent-ink" aria-hidden />
-            {isAr ? "لوحة الإدارة" : "Admin console"}
-          </Link>
-        )}
-        <button
-          type="button"
-          onClick={() => { setMoreOpen(false); onLogout(); }}
-          className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-        >
-          <LogOut className="size-4" aria-hidden />
-          {isAr ? "تسجيل الخروج" : "Log out"}
-        </button>
-      </Drawer>
-    </>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }

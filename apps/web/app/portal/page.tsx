@@ -3,608 +3,208 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Cat as CatIcon, Wallet, PiggyBank, ArrowRight, Star, IdCard, HeartPulse, Plus, Users, Sparkles, Gift, Copy, Check, CalendarClock } from "lucide-react";
-import { Card, Button, Skeleton, AnimatedCounter, Avatar, cn, useToast } from "@moraqat/ui";
+import { Plus, ArrowLeft, Siren, CalendarCheck } from "lucide-react";
+import { Card, EmptyState, IdBand, Seal, Skeleton, StatusTag, cn } from "@moraqat/ui";
+import { ageInMonths, formatAge } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
-import { commerceEnabled } from "@/lib/features";
 import { useLocale } from "@/app/providers";
-import { useCats } from "@/lib/cat-context";
-import { buildGreeting, type Gender } from "@/lib/greeting";
+import { useCats, type PortalCat } from "@/lib/cat-context";
+import type { Gender } from "@/lib/greeting";
 import { localizeName } from "@/lib/translit";
-import { formatDate } from "@/lib/datetime";
-import { CatIdCard } from "@/components/cat-id-card";
-import { MembershipCard } from "@/components/membership";
-import { OrderStatusBadge } from "@/components/order-status-badge";
 import { QueryError } from "@/components/query-error";
-import { IlloFish, IlloPaw } from "@/components/illustrations";
 import { Illo3D } from "@/components/illo-3d";
 import { ExploreHome } from "@/components/explore-home";
-import { formatNumber } from "@moraqat/core";
+import { ReferralCard } from "@/components/referral-card";
 
-/** Quiet paw watermark for the value strip. */
-function IlloPawSticker() {
-  return (
-    <IlloPaw
-      tone="peach"
-      className="pointer-events-none absolute -top-5 end-16 size-16 rotate-[16deg] opacity-[0.13]"
-    />
-  );
-}
-
-interface Completion { percent: number; done: number; total: number; missing: string[] }
 interface Overview {
-  owner: {
-    firstName: string | null;
-    gender: Gender;
-    memberSince: string | null;
-    /** They joined deliberately without a cat — the home becomes an explore. */
-    noCatYet?: boolean;
-  };
-  primaryCat: { id: string; name: string; catIdNumber: string | null; photoUrl: string | null; completion: Completion | null } | null;
-  activeSubscription: null | {
-    id: string;
-    plan: { nameEn: string; nameAr: string; tier: string } | null;
-    price: number;
-    nextDeliveryAt: string | null;
-    nextBillingAt: string | null;
-  };
-  stats: {
-    orders: number;
-    cats: number;
-    catCounts: { total: number; active: number; archived: number; deceased: number };
-    walletBalance: number;
-    totalSaved: number;
-    loyaltyPoints: number;
-    loyaltyTier: string;
-    unreadNotifications: number;
-    /** The beta value ledger (R041/R048/R049) — care accrued, not money. */
-    healthRecords: number;
-    photos: number;
-    communityLikes: number;
-  };
-  recentOrders: { orderNumber: string; status: string; grandTotal: number; placedAt: string }[];
-  comingUp?: {
-    type: "vaccination" | "delivery";
-    at: string | null;
-    catId: string | null;
-    catName: string | null;
-    label: string | null;
-    /** The due date has passed and no later dose has been recorded. */
-    overdue?: boolean;
-  }[];
+  owner: { firstName: string | null; gender: Gender; noCatYet?: boolean };
 }
 
-export default function OverviewPage() {
+/**
+ * «قططي» — the home is the household's cats, not an account dashboard.
+ *
+ * The cat in focus is the hero (P09): their photo, their name at display size,
+ * their ID band, one door into their profile. Every other cat is a tile that
+ * opens onto its own profile. Care across cats is one tap away in العناية.
+ */
+export default function MyCatsHome() {
   const { authedFetch, user } = useAuth();
   const { locale } = useLocale();
   const isAr = locale === "ar";
-  const {
-    primaryCat, activeCat, activeCats, setPrimaryCat, setActiveCat,
-    isLoading: catsLoading, isError: catsError, isFetching: catsFetching, refetch: refetchCats,
-  } = useCats();
+  const { activeCats, activeCat, primaryCat, isLoading, isError, isFetching, refetch } = useCats();
 
-  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+  const overview = useQuery({
     queryKey: ["overview", user?.id],
     queryFn: () => authedFetch<Overview>("/account/overview"),
     enabled: !!user,
   });
 
-  const fmtDate = (d: string | null) =>
-    d ? formatDate(d, isAr ? "ar" : "en", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const featured = activeCat ?? primaryCat ?? activeCats[0] ?? null;
+  const others = activeCats.filter((c) => c.id !== featured?.id);
 
-  // The warm Saudi greeting — resolved from owner gender + the primary cat (R001).
-  const greeting = buildGreeting({
-    locale: isAr ? "ar" : "en",
-    gender: data?.owner.gender ?? user?.gender,
-    primaryCatName: primaryCat?.name ?? data?.primaryCat?.name,
-    firstName: data?.owner.firstName ?? user?.firstName,
-  });
-
-  // Community Mode: no commercial surfaces on the home screen — belonging leads,
-  // and we never show a "Saved 0 SAR" zero where value should be (R048/R041).
-  const commerce = commerceEnabled();
-  const numLocale = isAr ? "ar" : "en";
-
-  // Value stays visible (R041/R048); no points-scheme framing (Dossier §04).
-  const proofs = commerce
-    ? [
-        { icon: Package, label: isAr ? "الطلبات" : "Orders", num: data?.stats.orders ?? 0 },
-        { icon: CatIcon, label: isAr ? "القطط" : "Cats", num: data?.stats.catCounts.active ?? 0 },
-        { icon: Wallet, label: isAr ? "المحفظة" : "Wallet", num: data?.stats.walletBalance ?? 0, suffix: " SAR" },
-      ]
-    : [
-        // Non-monetary value that actually accrues in a payments-off beta (R049).
-        { icon: CatIcon, label: isAr ? "قطط نشطة" : "Active cats", num: data?.stats.catCounts.active ?? 0 },
-        { icon: IdCard, label: isAr ? "هويات صادرة" : "Cat IDs issued", num: data?.stats.catCounts.total ?? 0 },
-      ];
-
-  // The featured cat = the one currently in focus (defaults to primary).
-  const featured = activeCat ?? primaryCat;
-
-  // The beta value ledger (R048/R041/R049) — the home screen proves what the
-  // membership already holds, it never advertises what's coming. Every counter
-  // is real, and a zero is omitted rather than shown as an empty brag (R115).
-  const memberDays = data?.owner.memberSince
-    ? Math.floor((Date.now() - new Date(data.owner.memberSince).getTime()) / 86_400_000)
-    : 0;
-  // "New" = first two weeks (or tenure unknown): the only window where an
-  // intro link belongs on the value dashboard (R048).
-  const isNewMember = !data?.owner.memberSince || memberDays < 14;
-  const ledger = [
-    { num: data?.stats.healthRecords ?? 0, label: isAr ? "سجل صحي محفوظ" : "health records kept" },
-    { num: data?.stats.photos ?? 0, label: isAr ? "صورة بأمان" : "photos kept safe" },
-    { num: memberDays, label: isAr ? "يوم في العضوية" : "days a member" },
-    { num: data?.stats.communityLikes ?? 0, label: isAr ? "قلب من المجتمع" : "hearts from the community" },
-  ].filter((s) => s.num > 0);
+  if (isError) return <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{greeting.title}</h1>
-        {user?.memberIdNumber && (
-          <p className="mt-1 font-mono text-xs tracking-wider text-muted-foreground/70" dir="ltr">
-            {isAr ? "عضو مرقط" : "Moracat member"} · {user.memberIdNumber}
-            {data?.owner.memberSince && (
-              <span className="text-muted-foreground/60"> · {isAr ? "عضو منذ" : "since"} {fmtDate(data.owner.memberSince)}</span>
-            )}
-          </p>
-        )}
-        <p className="mt-1 text-sm text-muted-foreground">
-          {featured
-            ? isAr
-              ? `عضوية ${localizeName(featured.name, "ar")} بين يديك`
-              : `${localizeName(featured.name, "en")}'s membership, at a glance`
-            : isAr ? "إليك ملخص حسابك" : "Here's your account at a glance"}
-        </p>
-        {/* An intro link is for members who are new — after two weeks the home
-            screen is a value dashboard, not a billboard (R048). */}
-        {isNewMember && (
-          <Link
-            href="/about"
-            className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
-          >
-            <Sparkles className="size-4" /> {isAr ? "تعرّف على مرقط" : "Learn about Moracat"}
-          </Link>
-        )}
-      </div>
+    <div className="mx-auto max-w-5xl space-y-8">
+      {/* The header already greets; the page title is the household itself. */}
+      <h1 className="sr-only">{isAr ? "قططي" : "My cats"}</h1>
 
-      {/* Membership — the bridge from the Cat ID (acquisition) to the subscription
-          (the product). Prominent + persistent for non-subscribers; the status
-          card for subscribers; honest about commerce mode (R004/R005/R040). */}
-      {!isLoading && !catsLoading && !catsError && activeCats.length > 0 && featured && (
-        <MembershipCard
-          isAr={isAr}
-          commerce={commerce}
-          subscription={data?.activeSubscription ?? null}
-          catName={featured.name}
-          membershipStatus={featured.membershipStatus}
-          subscribeHref={`/portal/subscribe?cat=${featured.id}`}
-        />
-      )}
-
-      {/* Featured Cat ID + household rail — the multi-cat hero (P09).
-          A failed roster load must never masquerade as "no cats" (R112): show a
-          blameless retry, not the empty welcome. Only a real empty roster is a
-          welcome (R111). */}
-      {catsLoading ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr]">
-          {/* Match the real Cat ID column (max-w-sm inside minmax(0,20rem)) so the
-              loaded card lands exactly where the skeleton was — no layout shift. */}
-          <Skeleton className="h-56 w-[min(24rem,100%)] rounded-2xl lg:w-full" />
-          <Skeleton className="h-56 w-full rounded-2xl" />
-        </div>
-      ) : catsError ? (
-        <QueryError isAr={isAr} onRetry={() => refetchCats()} retrying={catsFetching} />
-      ) : activeCats.length > 0 && featured ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_1fr]">
-          <div className="space-y-3">
-            <CatIdCard
-              catName={featured.name}
-              catIdNumber={featured.catIdNumber ?? "MRC-••••-••••"}
-              catNumber={featured.catNumber}
-              foundingClass={isAr ? featured.foundingClass?.ar : featured.foundingClass?.en}
-              issuedAt={featured.idIssuedAt}
-              photoUrl={featured.photoUrl}
-              isAr={isAr}
-              membershipActive={featured.membershipStatus === "ACTIVE"}
-              qrToken={featured.qrToken}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              {/* Two actions, two destinations — each carries the featured cat so
-                  the next screen opens on THEIR card/record, not a generic list (R005). */}
-              <Link href={`/portal/cats?cat=${featured.id}`}><Button variant="secondary" size="sm" className="w-full"><IdCard className="size-4" /> {isAr ? "الهوية" : "Cat ID"}</Button></Link>
-              <Link href={`/portal/cats/${featured.id}/health`}><Button variant="secondary" size="sm" className="w-full"><HeartPulse className="size-4" /> {isAr ? "السجل الصحي" : "Health"}</Button></Link>
-            </div>
+      {isLoading ? (
+        <div className="space-y-4" aria-busy>
+          <Skeleton className="aspect-[4/3] w-full rounded-2xl md:aspect-[21/9]" />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <Skeleton className="aspect-square rounded-2xl" />
+            <Skeleton className="aspect-square rounded-2xl" />
           </div>
-
-          <CatRail
-            isAr={isAr}
-            cats={activeCats}
-            activeId={featured.id}
-            onPick={setActiveCat}
-            onPrimary={(id) => { void setPrimaryCat(id).catch(() => {}); }}
-          />
         </div>
-      ) : (
-        data?.owner.noCatYet ? (
-          /* They joined on purpose without a cat (R111). The dashboard is built
-             around a Cat ID, so without one it reads as a cat-shaped hole — and
-             a hole is not a welcome. This is a real home instead, with the
-             register door inside it rather than instead of it. */
-          <ExploreHome isAr={isAr} firstName={data.owner.firstName} />
+      ) : !featured ? (
+        overview.data?.owner.noCatYet ? (
+          // Joined on purpose without a cat (R111): a real home, the register door inside it.
+          <ExploreHome isAr={isAr} firstName={overview.data.owner.firstName} />
         ) : (
-        /* Empty state = a welcome, not a void (R111). */
-        <Card className="relative flex flex-col items-center gap-4 overflow-hidden p-10 text-center">
-          <IlloPaw tone="butter" className="pointer-events-none absolute start-8 top-6 size-8 rotate-[-14deg] opacity-60" />
-          <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
-          <Illo3D name="cat" className="size-32" px={128} />
-          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-            {isAr ? "أضف قطك الأول واحصل على هويته في مرقط فوراً" : "Add your first cat and get their Moracat Cat ID, instantly"}
-          </p>
-          {/* Straight to the add-cat flow — never a hop through another list page (R002). */}
-          <Link href="/portal/cats/new"><Button size="sm"><Plus className="size-4" /> {isAr ? "أضف قط" : "Add a cat"}</Button></Link>
-          {/* Even here the other door exists — someone can reach this screen
-              without ever having been asked (R111). */}
-          <Link href="/adopt" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
-            {isAr ? "أو شوف القطط اللي تدوّر بيتاً" : "Or see the cats looking for a home"}
-          </Link>
-        </Card>
-        )
-      )}
-
-      {/* "Coming up" — the forward glance of a care dashboard (R049/P8): the next
-          vaccination or delivery, computed server-side; the lifecycle engine
-          sends the matching reminder. Max two quiet rows, hidden when empty. */}
-      {!!data?.comingUp?.length && (
-        <Card className="p-4">
-          <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
-            <CalendarClock className="size-4 text-primary" />
-            {data.comingUp.some((e) => e.overdue)
-              ? isAr ? "يحتاج انتباهك" : "Needs your attention"
-              : isAr ? "قادم قريباً" : "Coming up"}
-          </p>
-          <ul className="space-y-1.5">
-            {data.comingUp.map((e, i) => (
-              <li key={i}>
-                {e.type === "vaccination" ? (
-                  <Link
-                    href={`/portal/cats/${e.catId}/health`}
-                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted"
-                  >
-                    <span>
-                      {isAr
-                        ? `تطعيم «${e.label}» لـ${e.catName}`
-                        : `${e.catName}'s ${e.label} vaccination`}
-                      {e.overdue ? (
-                        // Words, not just colour (R093) — and a next step, not a scolding (R084).
-                        <span className="font-medium text-destructive"> — {isAr ? "فات موعده · سجّل الجرعة أو احجز عند عيادتك" : "overdue · log the dose or book your clinic"}</span>
-                      ) : (
-                        <span className="text-muted-foreground"> — {isAr ? "سنذكّرك قبله" : "we'll remind you"}</span>
-                      )}
-                    </span>
-                    <span className={cn("shrink-0 text-xs", e.overdue ? "font-medium text-destructive" : "text-muted-foreground")}>{fmtDate(e.at)}</span>
+          <Card>
+            <EmptyState
+              size="page"
+              art={<Illo3D name="cat" className="size-40" px={160} />}
+              title={isAr ? "هنا يعيش ملف قطك" : "This is where your cat's file lives"}
+              body={
+                isAr
+                  ? "أضف قطك وخذ هويته في مرقط: رقم دائم، سجل صحي يمشي معه، وصفحة يلقاها من يجده لو ضاع."
+                  : "Add your cat and get their Moracat ID: a permanent number, a health record that travels, and a page a finder can reach if they're ever lost."
+              }
+              action={
+                <div className="flex flex-col items-center gap-3">
+                  <Link href="/portal/cats/new" className="inline-flex h-12 items-center gap-2 rounded-md bg-primary px-6 text-base font-medium text-primary-foreground hover:bg-[hsl(var(--primary-hover))]">
+                    <Plus className="size-4" aria-hidden /> {isAr ? "أضف قطك" : "Add your cat"}
                   </Link>
-                ) : (
-                  <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm">
-                    <span>{isAr ? "صندوقك القادم في الطريق" : "Your next box"}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{fmtDate(e.at)}</span>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {/* On a failed load we never fabricate value (R112): a zeroed "Saved 0 SAR"
-          would be a trust breach. Show the blameless retry instead of the tiles. */}
-      {isError ? (
-        <QueryError isAr={isAr} onRetry={() => refetch()} retrying={isFetching} />
-      ) : (
-        <>
-      {/* Value strip. In Community Mode belonging leads — a "Saved 0 SAR" number
-          would put a zero where value should be (R048). The savings hero returns
-          the moment memberships (and real savings) go live. */}
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        {commerce ? (
-          <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-e2 ring-hairline sm:p-7">
-            <IlloFish
-              tone="orange"
-              className="pointer-events-none absolute -end-4 bottom-4 h-14 w-auto rotate-[-8deg] opacity-90"
+                  <Link href="/adopt" className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+                    {isAr ? "أو شوف القطط اللي تدوّر بيتاً" : "Or meet the cats looking for a home"}
+                  </Link>
+                </div>
+              }
             />
-            <IlloPawSticker />
-            <p className="flex items-center gap-2 text-sm font-medium text-primary-foreground/85">
-              <PiggyBank className="size-4" />
-              {isAr ? "وفّرت معنا حتى اليوم" : "Saved with us so far"}
-            </p>
-            {isLoading ? (
-              <Skeleton className="mt-3 h-12 w-40 bg-primary-foreground/10" />
-            ) : (
-              <p className="mt-2 font-display text-5xl font-semibold tabular tracking-tight sm:text-6xl">
-                <AnimatedCounter value={data?.stats.totalSaved ?? 0} locale={numLocale} />
-                <span className="ms-2 text-lg font-medium text-primary-foreground/85">SAR</span>
-              </p>
-            )}
-            <p className="mt-2 text-xs text-primary-foreground/85">
-              {isAr ? "سعر العضو مثبّت لك عند كل طلب — هذا الدليل" : "Your member rate, honoured on every order — this is the proof"}
-            </p>
-            {/* TODO(R043): value-received vs fee-paid once order history totals are exposed on overview */}
-          </div>
-        ) : (
-          <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-e2 ring-hairline sm:p-7">
-            <IlloPawSticker />
-            <p className="flex items-center gap-2 text-sm font-medium text-primary-foreground/85">
-              <Sparkles className="size-4" />
-              {isAr ? "أنت عضو في مرقط" : "You're a Moracat member"}
-            </p>
-            <p className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              {featured
-                ? isAr
-                  ? `${localizeName(featured.name, "ar")} صار له هوية`
-                  : `${localizeName(featured.name, "en")} has an identity`
-                : isAr ? "قطك يستاهل هوية" : "Your cat deserves an identity"}
-            </p>
-            {/* The value ledger — proof of what the membership already holds
-                (R041/R048/R049). Zeros are omitted, never bragged (R115); a
-                brand-new member gets the warm welcome line instead (R111). */}
-            {isLoading ? (
-              <Skeleton className="mt-4 h-10 w-56 bg-primary-foreground/10" />
-            ) : ledger.length > 0 ? (
-              <div className="mt-4 flex flex-wrap gap-x-7 gap-y-3">
-                {ledger.map((s) => (
-                  <div key={s.label} className="min-w-0">
-                    <p className="font-display text-2xl font-semibold tabular leading-tight">
-                      <AnimatedCounter value={s.num} locale={numLocale} />
-                    </p>
-                    <p className="mt-0.5 text-xs text-primary-foreground/75">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-2 max-w-md text-xs leading-relaxed text-primary-foreground/85">
-                {isAr
-                  ? "الانتماء والهوية والسجل الصحي — لك من أول يوم."
-                  : "Belonging, an identity and a health record — yours from day one."}
-              </p>
-            )}
-            {data?.primaryCat?.completion && data.primaryCat.completion.percent < 100 && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-xs text-primary-foreground/85">
-                  <span>{isAr ? `ملف ${localizeName(data.primaryCat.name, "ar")} مكتمل` : `${localizeName(data.primaryCat.name, "en")}'s file`}</span>
-                  <span className="tabular">{data.primaryCat.completion.percent}%</span>
-                </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-primary-foreground/20">
-                  <div className="h-full rounded-full bg-primary-foreground/90 transition-[width] duration-700" style={{ width: `${data.primaryCat.completion.percent}%` }} />
-                </div>
-              </div>
-            )}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/portal/community"><Button variant="secondary" size="sm"><Users className="size-4" /> {isAr ? "استكشف المجتمع" : "Explore community"}</Button></Link>
-              <Link href="/portal/cats"><Button variant="secondary" size="sm"><IdCard className="size-4" /> {isAr ? "أكمل ملف قطك" : "Complete your cat's file"}</Button></Link>
-            </div>
-            {/* One quiet forward-looking line — a footnote, never the headline (R048). */}
-            <p className="mt-4 text-xs text-primary-foreground/60">
-              {isAr
-                ? "أسعار الأعضاء والتوصيل يجون لما تنزل العضويات."
-                : "Member rates and delivery arrive when memberships launch."}
-            </p>
-          </div>
-        )}
-
-        <div className={cn("grid gap-4 lg:grid-cols-1 lg:content-between", proofs.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
-          {proofs.map((s) => (
-            <Card key={s.label} className="flex items-center gap-3 p-4">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                <s.icon className="size-5" />
-              </span>
-              <div className="min-w-0">
-                {isLoading ? (
-                  <Skeleton className="h-6 w-12" />
-                ) : (
-                  <p className="truncate font-display text-xl font-bold tabular leading-tight">
-                    <AnimatedCounter value={s.num} suffix={s.suffix ?? ""} locale={numLocale} />
-                  </p>
-                )}
-                <p className="truncate text-xs text-muted-foreground">{s.label}</p>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Commercial surfaces (subscription + orders) only when payments are live —
-          in beta they'd be permanently empty, so we don't show hollow cards. */}
-      {commerce ? (
-        <>
-          {/* Active-subscription status now lives in the MembershipCard at the top
-              of the dashboard — this section keeps the order history. */}
-          <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold">{isAr ? "أحدث الطلبات" : "Recent orders"}</h2>
-              <Link href="/portal/orders"><Button variant="tertiary" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4 rtl:rotate-180" /></Button></Link>
-            </div>
-            {isLoading ? (
-              <Skeleton className="h-24 w-full" />
-            ) : data && data.recentOrders.length > 0 ? (
-              <div className="divide-y divide-border">
-                {data.recentOrders.map((o) => (
-                  <div key={o.orderNumber} className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="font-medium">{o.orderNumber}</p>
-                      <p className="text-xs text-muted-foreground">{fmtDate(o.placedAt)}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <OrderStatusBadge status={o.status} isAr={isAr} />
-                      <span className="font-display font-semibold">{o.grandTotal} SAR</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="py-6 text-center text-sm text-muted-foreground">{isAr ? "لا توجد طلبات بعد" : "No orders yet"}</p>
-            )}
           </Card>
-        </>
+        )
       ) : (
-        /* Beta: belonging + referral where the commercial cards would be. */
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-            <IlloPaw tone="peach" className="size-8 rotate-[10deg]" />
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {isAr
-                ? "شارك قطك في المجتمع، شوف قطط الأعضاء الآخرين، واجمع الإعجابات — كل هذا مجاناً في مرقط."
-                : "Share your cat, meet other members' cats, and collect love — all free on Moracat."}
-            </p>
-            <Link href="/portal/community"><Button size="sm"><Users className="size-4" /> {isAr ? "افتح المجتمع" : "Open the community"}</Button></Link>
-          </Card>
-          <ReferralCard isAr={isAr} />
-        </div>
-      )}
+        <>
+          <FeaturedCat cat={featured} isAr={isAr} />
+
+          <section aria-labelledby="household" className="space-y-3">
+            <h2 id="household" className="font-display text-2xl">
+              {others.length ? (isAr ? "قطط البيت" : "Your household") : isAr ? "بيتك" : "Your home"}
+            </h2>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {others.map((c) => (
+                <CatTile key={c.id} cat={c} isAr={isAr} />
+              ))}
+              <Link
+                href="/portal/cats/new"
+                className="flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card text-center text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground"
+              >
+                <span className="grid size-11 place-items-center rounded-full bg-muted">
+                  <Plus className="size-5" aria-hidden />
+                </span>
+                {isAr ? "أضف قطاً" : "Add a cat"}
+              </Link>
+            </div>
+          </section>
+
+          <Link
+            href="/portal/care"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5 transition-colors hover:border-foreground/25"
+          >
+            <span className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-md bg-primary/10 text-primary">
+                <CalendarCheck className="size-5" aria-hidden />
+              </span>
+              <span>
+                <span className="block font-medium">{isAr ? "هذا الأسبوع مع قططك" : "This week with your cats"}</span>
+                <span className="block text-sm text-muted-foreground">
+                  {isAr ? "التطعيمات والمواعيد والوزن — لكل قط في مكان واحد" : "Vaccines, appointments and weight — every cat, one place"}
+                </span>
+              </span>
+            </span>
+            <ArrowLeft className="size-5 shrink-0 text-muted-foreground ltr:rotate-180" aria-hidden />
+          </Link>
         </>
       )}
+
+      <ReferralCard isAr={isAr} />
     </div>
   );
 }
 
-/**
- * The household rail — stays clean and scannable at any size (Dashboard req):
- * 1 cat → a single "meet the household" prompt; a few → comfortable cards;
- * many (10+) → a capped, dense grid with a clear "+N more" into the full roster.
- */
-function CatRail({
-  isAr, cats, activeId, onPick, onPrimary,
-}: {
-  isAr: boolean;
-  cats: { id: string; name: string; catIdNumber: string | null; photoUrl: string | null; isPrimary: boolean }[];
-  activeId: string;
-  onPick: (id: string) => void;
-  onPrimary: (id: string) => void;
-}) {
-  const CAP = 9; // keep the grid tidy; the rest live one tap away
-  const visible = cats.slice(0, CAP);
-  const overflow = cats.length - visible.length;
+function FeaturedCat({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
+  const loc = isAr ? "ar" : "en";
+  const name = localizeName(cat.name, loc);
+  const facts = [
+    cat.breed ? (isAr ? cat.breed.nameAr : cat.breed.nameEn) : null,
+    formatAge(ageInMonths(cat.birthDate), loc),
+  ].filter(Boolean) as string[];
 
   return (
-    <Card className="flex flex-col p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-lg font-semibold">
-          {isAr ? "قطط البيت" : "Your household"}
-          <span className="ms-2 text-sm font-normal text-muted-foreground">{cats.length}</span>
-        </h2>
-        <Link href="/portal/cats"><Button variant="tertiary" size="sm">{isAr ? "الكل" : "View all"} <ArrowRight className="size-4 rtl:rotate-180" /></Button></Link>
-      </div>
-
-      <div className="grid flex-1 auto-rows-min grid-cols-2 gap-2 sm:grid-cols-3">
-        {visible.map((c) => {
-          const active = c.id === activeId;
-          return (
-            <div
-              key={c.id}
-              className={cn(
-                "group relative flex items-center gap-2.5 rounded-xl border p-2.5 transition-colors",
-                active ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
-              )}
-            >
-              <button type="button" onClick={() => onPick(c.id)} className="flex min-w-0 flex-1 items-center gap-2.5 text-start">
-                <Avatar size="sm" name={c.name} src={c.photoUrl} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1">
-                    <span className="truncate text-sm font-medium">{localizeName(c.name, isAr ? "ar" : "en")}</span>
-                    {c.isPrimary && <Star className="size-3 shrink-0 fill-accent text-accent" />}
-                  </span>
-                  <span className="block truncate font-mono text-xs text-muted-foreground" dir="ltr">{c.catIdNumber}</span>
-                </span>
-              </button>
-              {/* Visible at rest on touch (no hover exists there, R098); the
-                  hover-reveal remains a desktop-only refinement. */}
-              {!c.isPrimary && (
-                <button
-                  type="button"
-                  title={isAr ? "اجعله الأساسي" : "Make primary"}
-                  aria-label={isAr ? "اجعله الأساسي" : "Make primary"}
-                  onClick={() => onPrimary(c.id)}
-                  className="absolute end-1.5 top-1.5 grid size-6 place-items-center rounded-md text-muted-foreground opacity-60 transition hover:bg-accent/15 hover:text-accent-foreground focus:opacity-100 group-hover:opacity-100 sm:opacity-0"
-                >
-                  <Star className="size-3.5" />
-                </button>
-              )}
-            </div>
-          );
-        })}
-
-        <Link
-          href="/portal/cats"
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border p-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-        >
-          {overflow > 0 ? (
-            <span>+{overflow} {isAr ? "غيرها" : "more"}</span>
-          ) : (
-            <><Plus className="size-4" /> {isAr ? "أضف" : "Add"}</>
-          )}
-        </Link>
-      </div>
-    </Card>
-  );
-}
-
-/** Invite-with-recognition (§High) — a member's shareable code + count invited. */
-function ReferralCard({ isAr }: { isAr: boolean }) {
-  const { authedFetch, user } = useAuth();
-  const { toast } = useToast();
-  const [copied, setCopied] = React.useState(false);
-
-  const { data } = useQuery({
-    queryKey: ["referral", user?.id],
-    queryFn: () => authedFetch<{ code: string; invited: number; link: string }>("/account/referral"),
-    enabled: !!user,
-  });
-
-  const share = async () => {
-    if (!data) return;
-    const text = isAr
-      ? `انضم لي في مرقط — عضوية وهوية لقطك: ${data.link}`
-      : `Join me on Moracat — a membership and identity for your cat: ${data.link}`;
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try { await navigator.share({ title: "Moracat", text, url: data.link }); return; } catch { /* cancelled */ }
-    }
-    try {
-      await navigator.clipboard.writeText(data.link);
-      setCopied(true);
-      toast({ title: isAr ? "تم نسخ الرابط" : "Link copied", variant: "success" });
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast({ title: isAr ? "تعذّر النسخ" : "Couldn’t copy", variant: "error" });
-    }
-  };
-
-  return (
-    <Card className="flex flex-col gap-3 p-6">
-      <div className="flex items-center gap-2">
-        <span className="grid size-9 place-items-center rounded-xl bg-secondary/40 text-secondary-foreground"><Gift className="size-5" /></span>
-        <div>
-          <p className="font-display font-semibold">{isAr ? "ادعُ صديقاً" : "Invite a friend"}</p>
-          <p className="text-xs text-muted-foreground">{isAr ? "شارك مرقط مع محبّي القطط" : "Share Moracat with cat people"}</p>
-        </div>
-      </div>
-      {data ? (
-        <>
-          <div className="flex items-center justify-between rounded-xl border border-dashed border-border px-3 py-2.5">
-            <code className="truncate font-mono text-sm" dir="ltr">{data.code}</code>
-            {data.invited > 0 && (
-              <span className="ms-2 shrink-0 text-xs text-muted-foreground">
-                {isAr ? `دعوت ${formatNumber(data.invited, "ar")}` : `${data.invited} invited`}
-              </span>
-            )}
+    <Link
+      href={`/portal/cats/${cat.id}`}
+      className="group grid overflow-hidden rounded-2xl border border-border bg-card shadow-e1 transition-shadow hover:shadow-e2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+    >
+      <div className="relative aspect-[4/3] bg-[hsl(var(--cream))] md:aspect-auto md:min-h-[22rem]">
+        {cat.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cat.photoUrl} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.02] motion-reduce:transition-none" />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center">
+            <Illo3D name="cat" className="size-44" px={176} />
           </div>
-          <Button size="sm" variant="secondary" onClick={share} className="w-fit">
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            {isAr ? "شارك رابط الدعوة" : "Share invite link"}
-          </Button>
-        </>
-      ) : (
-        <Skeleton className="h-20 w-full" />
-      )}
-    </Card>
+        )}
+        {cat.lostModeAt && (
+          <span className="absolute start-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1 text-sm font-medium text-destructive-foreground">
+            <Siren className="size-4" aria-hidden /> {isAr ? "مفقود" : "Lost"}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-col justify-end gap-4 p-6 sm:p-8">
+        {cat.isPrimary && <StatusTag tone="brand" className="w-fit">{isAr ? "القط الأساسي" : "Primary cat"}</StatusTag>}
+        <div>
+          <p className="font-display text-5xl leading-tight sm:text-6xl">{name}</p>
+          {facts.length > 0 && <p className="mt-2 text-muted-foreground">{facts.join(" · ")}</p>}
+        </div>
+        <div className="overflow-hidden rounded-md">
+          <IdBand kind={isAr ? "هوية مرقط" : "Moracat ID"} serial={cat.catIdNumber ?? undefined} seal={<Seal label={isAr ? "صادرة من مرقط" : "Issued by Moracat"} />} />
+        </div>
+        <span className="inline-flex h-11 w-fit items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground">
+          {isAr ? `افتح ملف ${name}` : `Open ${name}'s profile`}
+          <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
+        </span>
+      </div>
+    </Link>
   );
 }
 
+function CatTile({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
+  const name = localizeName(cat.name, isAr ? "ar" : "en");
+  return (
+    <Link href={`/portal/cats/${cat.id}`} className="group block">
+      <div className={cn("relative aspect-square overflow-hidden rounded-2xl bg-[hsl(var(--cream))]")}>
+        {cat.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cat.photoUrl} alt="" className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none" />
+        ) : (
+          <div className="grid size-full place-items-center">
+            <span className="font-display text-5xl text-muted-foreground/60">{name.slice(0, 1)}</span>
+          </div>
+        )}
+        {cat.lostModeAt && (
+          <span className="absolute start-2 top-2 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-medium text-destructive-foreground">
+            {isAr ? "مفقود" : "Lost"}
+          </span>
+        )}
+      </div>
+      <p className="mt-2 truncate font-medium">{name}</p>
+      {cat.catIdNumber && (
+        <p className="font-mono text-xs text-muted-foreground" dir="ltr">
+          {cat.catIdNumber}
+        </p>
+      )}
+    </Link>
+  );
+}

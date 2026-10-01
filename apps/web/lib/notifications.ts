@@ -55,7 +55,7 @@ export function notificationHref(n: NotificationLike): string | null {
   const explicit = inAppPath(data.link) ?? inAppPath(data.url);
   if (explicit) return explicit;
   if (typeof data.slug === "string" && data.slug) return `/community/${data.slug}`;
-  if (typeof data.catId === "string" && data.catId) return `/portal/cats`;
+  if (typeof data.catId === "string" && data.catId) return `/portal/cats/${encodeURIComponent(data.catId)}`;
   if (typeof data.ticketNumber === "string" && data.ticketNumber) return `/portal/support`;
   if (typeof data.orderNumber === "string" && data.orderNumber) return `/portal/orders`;
   return null;

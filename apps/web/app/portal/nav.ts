@@ -1,58 +1,119 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  LayoutDashboard, Repeat, Cat, Package, MapPin, Settings, Users, LifeBuoy, Bell, ShieldCheck,
-  Heart, Search, ArrowRightLeft,
+  Cat, HeartPulse, Compass, UserRound, CalendarCheck, ShieldCheck, Repeat, Package,
+  Users, Heart, Search, Stethoscope, Bell, ArrowRightLeft, MapPin, LifeBuoy, Settings,
 } from "lucide-react";
 import { commerceEnabled } from "@/lib/features";
 
-export interface PortalNavItem {
+/**
+ * Four destinations — قططي · العناية · اكتشف · حسابي (UX reassessment §3).
+ *
+ * The old portal had fourteen global destinations and the cat lived in a
+ * drawer, so nothing about a cat accumulated anywhere. Now everything that
+ * takes a catId lives INSIDE the cat (its profile at /portal/cats/[id]); the
+ * four tabs are the only global places:
+ *
+ *   قططي    the cats themselves — the home is the household's cats, each
+ *           opening onto its own profile.
+ *   العناية  what needs doing for them: the care agenda across cats, clinic
+ *           access, and the membership/box when commerce is on.
+ *   اكتشف   the cats around them: lost & found, adoption, the community, clinics.
+ *   حسابي   the person: notifications, hand-overs, addresses, settings, help.
+ *
+ * Same tabs on the desktop rail and the phone bar, so the model never changes
+ * with the screen.
+ */
+
+export interface PortalNavChild {
   href: string;
   icon: LucideIcon;
   en: string;
   ar: string;
-  /** Exact-match the pathname (used only for the /portal root). */
-  exact?: boolean;
-  /** Surfaced in the mobile thumb-zone bar; the rest live behind "More". */
-  primary?: boolean;
-  /** A commercial surface — hidden entirely while payments are disabled. */
+  /** A commercial surface — hidden entirely while payments are disabled (R040). */
   commercial?: boolean;
 }
 
-/**
- * The single source of portal navigation truth — consumed by both the desktop
- * rail and the mobile bottom nav so they never drift. Order is the desktop
- * order; `primary` picks the ≤5 mobile thumb-zone tabs (R100).
- */
-export const PORTAL_NAV: PortalNavItem[] = [
-  { href: "/portal", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة", exact: true, primary: true },
-  { href: "/portal/cats", icon: Cat, en: "My Cats", ar: "قططي", primary: true },
-  { href: "/portal/community", icon: Users, en: "Community", ar: "المجتمع", primary: true },
-  // The cat's life beyond this household (2026-09-20). Adoption and Lost &
-  // Found sit beside Community because they are the same idea — this cat, and
-  // the people around them — not a separate marketplace section.
-  { href: "/portal/adoption", icon: Heart, en: "Adoption", ar: "التبني" },
-  // In the thumb zone on a phone: a member whose cat just slipped out of the
-  // door must never have to look under "More" (R100; the emergency outranks
-  // every other destination).
-  { href: "/portal/lost-found", icon: Search, en: "Lost & Found", ar: "مفقود وموجود", primary: true },
-  // Hand-overs in flight. Quiet by design: most members never see one, but a
-  // cat waiting to be accepted must never be invisible.
-  { href: "/portal/transfers", icon: ArrowRightLeft, en: "Hand-overs", ar: "نقل الملكية" },
-  { href: "/portal/notifications", icon: Bell, en: "Notifications", ar: "الإشعارات" },
-  // Who may open your cat's medical record — and a ledger of everyone who has.
-  // Privacy is only real if the member can find it (R106).
-  { href: "/portal/health-access", icon: ShieldCheck, en: "Health access", ar: "الوصول الطبي" },
-  { href: "/portal/subscriptions", icon: Repeat, en: "Subscriptions", ar: "الاشتراكات", commercial: true },
-  { href: "/portal/orders", icon: Package, en: "Orders", ar: "الطلبات", commercial: true },
-  // Delivery addresses exist for orders; with nothing for sale they are a
-  // door onto an empty room, so they follow the commerce switch (R040).
-  { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين", commercial: true },
-  { href: "/portal/support", icon: LifeBuoy, en: "Support", ar: "الدعم" },
-  { href: "/portal/settings", icon: Settings, en: "Settings", ar: "الإعدادات" },
+export interface PortalTab {
+  key: "cats" | "care" | "discover" | "account";
+  href: string;
+  icon: LucideIcon;
+  en: string;
+  ar: string;
+  /** Path prefixes this tab owns (active-state matching). */
+  owns: string[];
+  children: PortalNavChild[];
+}
+
+export const PORTAL_TABS: PortalTab[] = [
+  {
+    key: "cats",
+    href: "/portal",
+    icon: Cat,
+    en: "My cats",
+    ar: "قططي",
+    owns: ["/portal/cats", "/portal/welcome"],
+    children: [],
+  },
+  {
+    key: "care",
+    href: "/portal/care",
+    icon: HeartPulse,
+    en: "Care",
+    ar: "العناية",
+    owns: ["/portal/care", "/portal/health-access", "/portal/subscriptions", "/portal/subscribe", "/portal/checkout", "/portal/orders"],
+    children: [
+      { href: "/portal/care", icon: CalendarCheck, en: "This week", ar: "هذا الأسبوع" },
+      // Who may open your cat's medical record — and everyone who has (R106).
+      { href: "/portal/health-access", icon: ShieldCheck, en: "Clinic access", ar: "وصول العيادات" },
+      { href: "/portal/subscriptions", icon: Repeat, en: "Membership", ar: "العضوية", commercial: true },
+      { href: "/portal/orders", icon: Package, en: "Boxes & orders", ar: "الصناديق والطلبات", commercial: true },
+    ],
+  },
+  {
+    key: "discover",
+    href: "/portal/discover",
+    icon: Compass,
+    en: "Discover",
+    ar: "اكتشف",
+    owns: ["/portal/discover", "/portal/lost-found", "/portal/adoption", "/portal/community"],
+    children: [
+      // First on purpose: a member whose cat just slipped out is one tap from it.
+      { href: "/portal/lost-found", icon: Search, en: "Lost & Found", ar: "مفقود وموجود" },
+      { href: "/portal/adoption", icon: Heart, en: "Adoption", ar: "التبنّي" },
+      { href: "/portal/community", icon: Users, en: "Community", ar: "المجتمع" },
+      { href: "/vet-directory", icon: Stethoscope, en: "Clinics", ar: "العيادات" },
+    ],
+  },
+  {
+    key: "account",
+    href: "/portal/account",
+    icon: UserRound,
+    en: "Account",
+    ar: "حسابي",
+    owns: ["/portal/account", "/portal/notifications", "/portal/transfers", "/portal/addresses", "/portal/settings", "/portal/support"],
+    children: [
+      { href: "/portal/notifications", icon: Bell, en: "Notifications", ar: "الإشعارات" },
+      // Quiet by design — most members never see one, but a cat waiting to be
+      // accepted must never be invisible.
+      { href: "/portal/transfers", icon: ArrowRightLeft, en: "Hand-overs", ar: "نقل الملكية" },
+      { href: "/portal/addresses", icon: MapPin, en: "Addresses", ar: "العناوين", commercial: true },
+      { href: "/portal/settings", icon: Settings, en: "Settings", ar: "الإعدادات" },
+      { href: "/portal/support", icon: LifeBuoy, en: "Help", ar: "المساعدة" },
+    ],
+  },
 ];
 
-/** Nav items visible in the current commerce mode (drops commercial surfaces in beta). */
-export function visiblePortalNav(): PortalNavItem[] {
+/** Tabs with their children filtered for the current commerce mode. */
+export function visiblePortalTabs(): PortalTab[] {
   const commerce = commerceEnabled();
-  return PORTAL_NAV.filter((item) => commerce || !item.commercial);
+  return PORTAL_TABS.map((t) => ({ ...t, children: t.children.filter((c) => commerce || !c.commercial) }));
+}
+
+/** Which tab owns this path. /portal itself (and anything unclaimed) is "cats". */
+export function activeTabKey(pathname: string): PortalTab["key"] {
+  for (const t of PORTAL_TABS) {
+    if (t.key === "cats") continue;
+    if (t.owns.some((p) => pathname === p || pathname.startsWith(p + "/"))) return t.key;
+  }
+  return "cats";
 }

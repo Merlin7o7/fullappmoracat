@@ -32,7 +32,7 @@ describe("notificationHref", () => {
     );
   });
   it("falls back when the link is not ours", () => {
-    expect(notificationHref(n({ catId: "c1", link: "https://evil.example/x" }))).toBe("/portal/cats");
+    expect(notificationHref(n({ catId: "c1", link: "https://evil.example/x" }))).toBe("/portal/cats/c1");
   });
   it("keeps the older fallbacks", () => {
     expect(notificationHref(n({ slug: "luna" }))).toBe("/community/luna");
