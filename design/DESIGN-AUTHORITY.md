@@ -216,6 +216,19 @@ Loading states have purpose: "Issuing your Cat ID…" (R119).
 Placement map, commission list and the photography brief: `design/brand-assets.md`
 and `design/photography.md`.
 
+### Amendment (2026-10-02) — the homepage keeps its glitter (founder decision)
+
+The founder rejected the restrained W8 homepage: "make it more glittery and
+rounded like before, mix both designs to maximise the hook". So, **on public
+marketing surfaces only** (homepage first; `/about`, `/products` may follow):
+the rich mesh glow (`.mesh-bg-rich`), twinkling sparkles (`<Sparkles>`), a
+shine sweep on the primary CTA (`.btn-shine`), pill-shaped inputs and CTAs,
+`rounded-[2rem]` panels, the sticker sheet, the marker underline and the
+benefits marquee are back — and a 3D object may float on every chapter panel.
+The W8 *content* stays: the story chapters, real product artifacts, real
+member cats, honest promises, no fake testimonials, no "official" claims.
+Product UI (portal, vet, documents) stays AD 2.1. Reduced motion stills it all.
+
 ## Motion
 
 Acknowledge taps ≤100ms (R071). Transitions 150–300ms (R072). Richest animation

@@ -4,10 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
-import { Syringe, Scale, Stethoscope, Cake, Sparkles, ShieldCheck, EyeOff, Link2, ArrowLeft, MessageSquareHeart } from "lucide-react";
+import { Syringe, Scale, Stethoscope, Cake, Sparkles as SparklesIcon, ShieldCheck, EyeOff, Link2, ArrowLeft, MessageSquareHeart } from "lucide-react";
 import { IdBand, Ledger, LedgerRow, Seal, StatusTag, cn } from "@moraqat/ui";
 import { api } from "@/lib/api";
 import { Illo3D, type Illo3DName } from "@/components/illo-3d";
+import { IlloHeart, IlloPaw, IlloSprig, Sticker } from "@/components/illustrations";
+import { Sparkles } from "@/components/home/sparkles";
 
 /**
  * The homepage as a story, not a feature list (W8):
@@ -15,10 +17,12 @@ import { Illo3D, type Illo3DName } from "@/components/illo-3d";
  *   your cat → identity → care → health → life → the cats of Moracat
  *   → for clinics → what we promise
  *
- * Each chapter carries ONE of the founder's 3D objects (never two in view —
- * AD 2.1) beside a REAL product artifact rendered from the same components the
- * product uses, so the page shows what members actually get. Motion is a
- * single, short reveal per chapter and is off under reduced motion.
+ * Each chapter pairs a REAL product artifact (drawn with the product's own
+ * components) with one of the founder's 3D objects floating on a tinted,
+ * glittering panel — the story of W8 dressed in the rounded, sticker-sheet
+ * warmth of the earlier homepage (founder, 2026-10-02: "mix both designs to
+ * maximise the hook"). Motion is a short reveal + a gentle float; both stop
+ * under reduced motion.
  */
 export function HomeChapters({ isAr }: { isAr: boolean }) {
   const t = (ar: string, en: string) => (isAr ? ar : en);
@@ -27,6 +31,8 @@ export function HomeChapters({ isAr }: { isAr: boolean }) {
       <Chapter
         n="01"
         illo="cat"
+        tint="bg-cream"
+        chip="bg-butter/80 -rotate-2"
         kicker={t("الهوية", "Identity")}
         title={t("رقم يبقى له، مهما صار", "A number that stays theirs, whatever happens")}
         body={t(
@@ -38,6 +44,8 @@ export function HomeChapters({ isAr }: { isAr: boolean }) {
       <Chapter
         n="02"
         illo="heart"
+        tint="bg-blush/40 dark:bg-blush/15"
+        chip="bg-blush/70 rotate-1"
         flip
         kicker={t("العناية", "Care")}
         title={t("يذكّرك قبل ما تتذكّر", "It remembers before you have to")}
@@ -50,6 +58,8 @@ export function HomeChapters({ isAr }: { isAr: boolean }) {
       <Chapter
         n="03"
         illo="leaf"
+        tint="bg-sage/20 dark:bg-sage/10"
+        chip="bg-sage/30 -rotate-1"
         kicker={t("الصحة", "Health")}
         title={t("سجله يمشي معه لأي عيادة", "Their record walks into any clinic")}
         body={t(
@@ -61,6 +71,8 @@ export function HomeChapters({ isAr }: { isAr: boolean }) {
       <Chapter
         n="04"
         illo="fish"
+        tint="bg-butter/50 dark:bg-butter/15"
+        chip="bg-peach/80 rotate-2"
         flip
         kicker={t("الحياة", "Life")}
         title={t("ألبوم عائلي لقطّك", "A family album for your cat")}
@@ -94,22 +106,27 @@ function Reveal({ children, className }: { children: React.ReactNode; className?
 }
 
 function Chapter({
-  n, illo, kicker, title, body, artifact, flip,
-}: { n: string; illo: Illo3DName; kicker: string; title: string; body: string; artifact: React.ReactNode; flip?: boolean }) {
+  n, illo, kicker, title, body, artifact, flip, tint, chip,
+}: { n: string; illo: Illo3DName; kicker: string; title: string; body: string; artifact: React.ReactNode; flip?: boolean; tint: string; chip: string }) {
   return (
     <section className="container">
-      <div className={cn("grid items-center gap-10 lg:grid-cols-2 lg:gap-16", flip && "lg:[&>*:first-child]:order-2")}>
-        <Reveal className="space-y-5">
-          <div className="flex items-center gap-4">
-            <Illo3D name={illo} className="size-20 shrink-0" px={80} />
-            <p className="text-sm text-muted-foreground">
-              <span dir="ltr" className="font-mono">{n}</span> · {kicker}
-            </p>
-          </div>
-          <h2 className="max-w-xl font-display text-4xl leading-tight sm:text-5xl">{title}</h2>
-          <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">{body}</p>
+      <div className={cn("grid items-stretch gap-6 lg:grid-cols-2 lg:gap-8", flip && "lg:[&>*:first-child]:order-2")}>
+        {/* The copy, on a soft card */}
+        <Reveal className="flex flex-col justify-center rounded-[2rem] border border-border bg-card p-8 shadow-e1 sm:p-12">
+          <span className={cn("inline-flex w-fit items-center gap-2 rounded-full border border-foreground/10 px-4 py-1.5 text-sm font-medium text-foreground/80", chip)}>
+            <span dir="ltr" className="font-mono text-xs opacity-70">{n}</span> {kicker}
+          </span>
+          <h2 className="mt-5 max-w-xl font-display text-4xl leading-tight sm:text-5xl">{title}</h2>
+          <p className="mt-4 max-w-lg text-lg leading-relaxed text-muted-foreground">{body}</p>
         </Reveal>
-        <Reveal>{artifact}</Reveal>
+        {/* The product, floating on a tinted, glittering panel with its 3D object */}
+        <Reveal className={cn("relative overflow-hidden rounded-[2rem] border border-border/60 px-6 pb-8 pt-6 sm:px-10 sm:pb-10", tint)}>
+          <Sparkles preset="panel" />
+          <Sticker rotate={-12} className="start-6 top-8 hidden sm:block"><IlloPaw tone="butter" className="size-9" /></Sticker>
+          {/* The object peeks over the top of the product, like the hero cat. */}
+          <Illo3D name={illo} px={144} className="relative z-10 mx-auto -mb-7 block size-28 motion-safe:animate-float sm:size-36" />
+          <div className="relative">{artifact}</div>
+        </Reveal>
       </div>
     </section>
   );
@@ -118,7 +135,7 @@ function Chapter({
 // ── Artifacts: the product, drawn with the product's own pieces ─────────────
 
 function Frame({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-e2">{children}</div>;
+  return <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-border bg-card shadow-e3">{children}</div>;
 }
 
 function ScanArtifact({ isAr }: { isAr: boolean }) {
@@ -132,7 +149,7 @@ function ScanArtifact({ isAr }: { isAr: boolean }) {
         <div className="flex justify-center">
           <StatusTag tone="positive" icon={<Syringe className="size-3.5" aria-hidden />}>{t("التطعيمات محدّثة", "Vaccinations up to date")}</StatusTag>
         </div>
-        <div className="flex h-11 items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground">
+        <div className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-sm font-medium text-primary-foreground">
           <MessageSquareHeart className="size-4" aria-hidden /> {t("أرسل رسالة للمالك", "Message the owner")}
         </div>
         <p className="text-xs text-muted-foreground">{t("بيانات المالك لا تظهر هنا أبداً", "The owner's details never appear here")}</p>
@@ -192,7 +209,7 @@ function TimelineArtifact({ isAr }: { isAr: boolean }) {
   const items = [
     { icon: Stethoscope, title: t("زيارة عيادة", "Clinic visit"), when: t("سبتمبر 2026", "September 2026") },
     { icon: Syringe, title: t("أول تطعيم", "First vaccine"), when: t("مارس 2024", "March 2024") },
-    { icon: Sparkles, title: t("انضمت إلى سجل مرقط", "Joined the Moracat register"), when: t("يناير 2024", "January 2024") },
+    { icon: SparklesIcon, title: t("انضمت إلى سجل مرقط", "Joined the Moracat register"), when: t("يناير 2024", "January 2024") },
     { icon: Cake, title: t("وُلدت لولو", "Lulu was born"), when: t("ديسمبر 2023", "December 2023") },
   ];
   return (
@@ -232,7 +249,7 @@ function MemberCats({ isAr }: { isAr: boolean }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {cats.map((c) => (
           <Link key={c.slug} href={`/community/${c.slug}`} className="group block">
-            <div className="aspect-square overflow-hidden rounded-2xl bg-[hsl(var(--cream))]">
+            <div className="aspect-square overflow-hidden rounded-[1.75rem] bg-[hsl(var(--cream))] shadow-e1 transition-transform duration-300 group-hover:-rotate-2 motion-reduce:transition-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={c.photoUrl!} alt={c.name} loading="lazy" className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none" />
             </div>
@@ -250,8 +267,9 @@ function ForClinics({ isAr }: { isAr: boolean }) {
   const t = (ar: string, en: string) => (isAr ? ar : en);
   return (
     <section className="container">
-      <Reveal className="grid gap-8 overflow-hidden rounded-2xl bg-primary p-8 text-primary-foreground sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
-        <div className="space-y-4">
+      <Reveal className="relative grid gap-8 overflow-hidden rounded-[2.5rem] bg-primary p-8 text-primary-foreground sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
+        <Sparkles preset="band" />
+        <div className="relative space-y-4">
           <p className="text-sm text-primary-foreground/75">{t("للعيادات البيطرية", "For veterinary clinics")}</p>
           <h2 className="max-w-2xl font-display text-4xl leading-tight sm:text-5xl">{t("القط يدخل عيادتك ومعه تاريخه", "The cat walks in with their history")}</h2>
           <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/85">
@@ -261,7 +279,7 @@ function ForClinics({ isAr }: { isAr: boolean }) {
             )}
           </p>
         </div>
-        <Link href="/vet-directory" className="inline-flex h-12 w-fit items-center rounded-md bg-card px-6 text-base font-medium text-foreground hover:bg-card/90">
+        <Link href="/vet-directory" className="btn-shine relative inline-flex h-12 w-fit items-center rounded-full bg-card px-7 text-base font-medium text-foreground hover:bg-card/90">
           {t("العيادات في مرقط", "Clinics on Moracat")}
         </Link>
       </Reveal>
@@ -272,19 +290,21 @@ function ForClinics({ isAr }: { isAr: boolean }) {
 function Promises({ isAr }: { isAr: boolean }) {
   const t = (ar: string, en: string) => (isAr ? ar : en);
   const items = [
-    { icon: EyeOff, title: t("رقمك لا يظهر لأحد", "Your number is never shown"), body: t("من يلقى قطك يراسلك عبر مرقط — ما يشوف رقمك ولا اسمك الكامل.", "Whoever finds your cat messages you through Moracat — they never see your number or full name.") },
-    { icon: ShieldCheck, title: t("العيادة تقرأ بإذنك", "Clinics read with your permission"), body: t("تختار ماذا تشوف كل عيادة، وتشوف سجلاً بكل من فتح ملف قطك.", "You choose what each clinic sees, and you can see everyone who opened your cat's file.") },
-    { icon: Link2, title: t("كل مشاركة لها نهاية", "Every share has an end"), body: t("روابط الملخص الصحي مؤقتة، وتوقفها بضغطة.", "Health-summary links are temporary, and you end them with one tap.") },
+    { blob: "bg-butter/80", icon: EyeOff, title: t("رقمك لا يظهر لأحد", "Your number is never shown"), body: t("من يلقى قطك يراسلك عبر مرقط — ما يشوف رقمك ولا اسمك الكامل.", "Whoever finds your cat messages you through Moracat — they never see your number or full name.") },
+    { blob: "bg-blush/70", icon: ShieldCheck, title: t("العيادة تقرأ بإذنك", "Clinics read with your permission"), body: t("تختار ماذا تشوف كل عيادة، وتشوف سجلاً بكل من فتح ملف قطك.", "You choose what each clinic sees, and you can see everyone who opened your cat's file.") },
+    { blob: "bg-sage/30", icon: Link2, title: t("كل مشاركة لها نهاية", "Every share has an end"), body: t("روابط الملخص الصحي مؤقتة، وتوقفها بضغطة.", "Health-summary links are temporary, and you end them with one tap.") },
   ];
   return (
     <section className="container space-y-8">
-      <Reveal>
+      <Reveal className="relative">
         <h2 className="max-w-2xl font-display text-4xl leading-tight sm:text-5xl">{t("وعود نقدر نثبتها", "Promises we can show you")}</h2>
+        <Sticker rotate={12} className="end-4 top-0 hidden md:block"><IlloHeart tone="pink" className="size-10" /></Sticker>
+        <Sticker rotate={-10} className="end-20 top-10 hidden md:block"><IlloSprig tone="leaf" className="h-12 w-auto opacity-70" /></Sticker>
       </Reveal>
       <div className="grid gap-4 md:grid-cols-3">
         {items.map((i) => (
-          <Reveal key={i.title} className="space-y-3 rounded-2xl border border-border bg-card p-6">
-            <span className="grid size-10 place-items-center rounded-md bg-primary/10 text-primary"><i.icon className="size-5" aria-hidden /></span>
+          <Reveal key={i.title} className="relative space-y-3 overflow-hidden rounded-[2rem] border border-border bg-card p-7 shadow-e1">
+            <span className={cn("grid size-12 place-items-center rounded-full text-primary", i.blob)}><i.icon className="size-5" aria-hidden /></span>
             <p className="font-medium">{i.title}</p>
             <p className="text-sm leading-relaxed text-muted-foreground">{i.body}</p>
           </Reveal>

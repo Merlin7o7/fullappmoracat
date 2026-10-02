@@ -9,7 +9,8 @@ import { Button } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CatIdCard } from "@/components/cat-id-card";
-import { IlloHeart, IlloPaw, IlloSprig, Sticker } from "@/components/illustrations";
+import { IlloCan, IlloFish, IlloHeart, IlloMouse, IlloPaw, IlloSprig, PawTrail, Sticker } from "@/components/illustrations";
+import { Sparkles } from "@/components/home/sparkles";
 import { Illo3D } from "@/components/illo-3d";
 import { useLocale } from "@/app/providers";
 import { PLANS } from "@/lib/plans";
@@ -69,14 +70,16 @@ export function HomeView() {
       <SiteHeader />
 
       {/* ── Hero · identity first (Dossier Stage 1 + §05) ────────────────── */}
-      <section id="main" tabIndex={-1} className="relative overflow-hidden outline-none">
+      <section id="main" tabIndex={-1} className="mesh-bg-rich relative overflow-hidden outline-none">
+        <Sparkles preset="hero" />
         <div className="container grid items-center gap-14 py-14 md:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
           {/* Left · the promise */}
           <div className="relative text-center lg:text-start">
             <motion.p
               variants={fadeUp} initial="hidden" animate="show"
-              className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm font-medium text-primary"
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/90 px-4 py-1.5 text-sm font-medium text-primary shadow-e1 backdrop-blur"
             >
+              <IlloPaw tone="orange" className="size-4" />
               {t.hero.badge}
             </motion.p>
 
@@ -87,7 +90,7 @@ export function HomeView() {
               {t.hero.title}{" "}
               {/* Wrap is allowed below sm — nowrap on a long Arabic accent
                   overflowed narrow phones (R094-adjacent: survive small widths). */}
-              <span className="text-primary sm:whitespace-nowrap">{t.hero.titleAccent}</span>
+              <span className="underline-marker text-primary sm:whitespace-nowrap">{t.hero.titleAccent}</span>
             </motion.h1>
 
             <motion.p
@@ -107,16 +110,16 @@ export function HomeView() {
               <label htmlFor="hero-cat-name" className="mb-2.5 block text-sm font-medium text-foreground/80">
                 {t.hero.namePrompt}
               </label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-md sm:border sm:border-input sm:bg-card sm:p-1.5 sm:ps-4 sm:shadow-e1 sm:focus-within:ring-2 sm:focus-within:ring-ring">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-full sm:border sm:border-input sm:bg-card sm:p-1.5 sm:ps-5 sm:shadow-e2 sm:focus-within:ring-2 sm:focus-within:ring-ring">
                 <input
                   id="hero-cat-name"
                   value={catName}
                   onChange={(e) => setCatName(e.target.value.slice(0, 24))}
                   placeholder={t.hero.namePlaceholder}
-                  className="h-13 flex-1 rounded-md border border-input bg-card px-4 text-base shadow-e1 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring sm:h-11 sm:border-0 sm:bg-transparent sm:px-0 sm:shadow-none sm:focus-visible:ring-0"
+                  className="h-13 flex-1 rounded-full border border-input bg-card px-5 text-base shadow-e1 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring sm:h-11 sm:border-0 sm:bg-transparent sm:px-0 sm:shadow-none sm:focus-visible:ring-0"
                 />
                 <Link href="/register" onClick={rememberName} className="sm:shrink-0">
-                  <Button size="lg" className="w-full sm:h-11 sm:w-auto sm:px-6">
+                  <Button size="lg" className="btn-shine w-full rounded-full sm:h-11 sm:w-auto sm:px-6">
                     {t.hero.cta} <ArrowRight className="size-4 rtl:rotate-180" />
                   </Button>
                 </Link>
@@ -146,8 +149,21 @@ export function HomeView() {
           {/* Right · the artifact, updating live as they type */}
           <motion.div
             variants={fadeUp} initial="hidden" animate="show" custom={2}
-            className="relative mx-auto w-full max-w-sm"
+            className="relative mx-auto mt-14 w-full max-w-sm lg:mt-0"
           >
+            {/* The sticker sheet around the card (the pre-W8 hero's charm), with
+                the plush cat peeking over it — the hook is the card. */}
+            <Illo3D name="cat" px={144} priority className="absolute -top-24 end-2 z-0 size-32 motion-safe:animate-float sm:-top-28 sm:size-36" />
+            <Sticker rotate={-14} float className="-start-10 -top-8 hidden sm:block" delay={0.4}>
+              <IlloMouse tone="sage" className="h-12 w-auto rtl:-scale-x-100" />
+            </Sticker>
+            <Sticker rotate={16} float className="-bottom-9 -end-9 z-20 hidden sm:block" delay={0.9}>
+              <IlloPaw tone="butter" className="size-14" />
+            </Sticker>
+            <Sticker rotate={-18} className="-bottom-12 -start-7 z-20 hidden sm:block">
+              <IlloSprig tone="leaf" className="h-20 w-auto opacity-70" />
+            </Sticker>
+            <div className="relative z-10">
             <TiltCard>
               <CatIdCard
                 catName={catName.trim() || (isAr ? "قطك" : "Your cat")}
@@ -157,11 +173,16 @@ export function HomeView() {
                 className="shadow-glow"
               />
             </TiltCard>
+            </div>
             <p className="mt-5 text-center text-xs text-muted-foreground">{t.hero.previewNote}</p>
           </motion.div>
         </div>
 
+        <PawTrail steps={6} tone="peach" className="absolute bottom-4 start-1/2 hidden -translate-x-1/2 lg:flex" />
       </section>
+
+      {/* ── Benefits ribbon — the promises, on repeat ─────────────────────── */}
+      <BenefitsRibbon items={[...t.marquee]} />
 
       {/* ── The story: your cat → identity → care → health → life (W8) ──── */}
       <HomeChapters isAr={isAr} />
@@ -198,7 +219,7 @@ export function HomeView() {
           <h2 id="faq-title" className="mb-8 text-center font-display text-4xl">
             {t.faq.title}
           </h2>
-          <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-e1">
+          <div className="divide-y divide-border overflow-hidden rounded-[2rem] border border-border bg-card shadow-e1">
             {/* Commerce questions join the list only when there is commerce —
                 the FAQPage JSON-LD in app/page.tsx gates on the same flag, so
                 markup and page always tell the same story (R040/R006). */}
@@ -217,9 +238,21 @@ export function HomeView() {
 
       {/* ── Closing invitation ────────────────────────────────────────────── */}
       <section id="closing-invite" className="container py-20 sm:py-24">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-e2 sm:py-20">
-          {/* One 3D object for the invitation — never two in view (AD 2.1). */}
-          <Illo3D name="heart" px={112} className="mx-auto mb-6 block size-28" />
+        <div className="mesh-bg-rich relative overflow-hidden rounded-[2.5rem] border border-border bg-card px-6 py-16 text-center shadow-e2 sm:py-20">
+          <Sparkles preset="panel" />
+          <Sticker rotate={-12} className="start-8 top-8 hidden md:block">
+            <IlloHeart tone="orange" className="size-9 opacity-80" />
+          </Sticker>
+          <Sticker rotate={14} className="end-10 top-12 hidden md:block">
+            <IlloPaw tone="sage" className="size-12 opacity-70" />
+          </Sticker>
+          <Sticker rotate={-8} className="bottom-6 start-16 hidden md:block">
+            <IlloCan tone="pink" className="h-16 w-auto opacity-80" />
+          </Sticker>
+          <Sticker rotate={10} className="-bottom-2 end-20 hidden md:block">
+            <IlloMouse tone="peach" className="h-10 w-auto" />
+          </Sticker>
+          <Illo3D name="heart" px={128} className="relative mx-auto mb-6 block size-32 motion-safe:animate-float" />
 
           <p className="mb-3 text-sm text-muted-foreground">{isAr ? "لِحياة قطّك كلّها" : "For your cat's whole life"}</p>
           <h2 className="mx-auto max-w-xl font-display text-4xl sm:text-5xl">
@@ -227,7 +260,7 @@ export function HomeView() {
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-muted-foreground">{t.closing.sub}</p>
           <Link href="/register" className="mt-9 inline-block">
-            <Button size="xl">
+            <Button size="xl" className="btn-shine rounded-full px-9">
               {t.hero.cta} <ArrowRight className="size-4 rtl:rotate-180" />
             </Button>
           </Link>
@@ -274,6 +307,40 @@ function TiltCard({ children }: { children: React.ReactNode }) {
 
 /* ── Benefits ribbon ─────────────────────────────────────────────────────── */
 
+function BenefitsRibbon({ items }: { items: string[] }) {
+  const icons = [
+    <IlloPaw key="p" tone="orange" className="size-5" />,
+    <IlloHeart key="h" tone="pink" className="size-5" />,
+    <IlloFish key="f" tone="orange" className="h-4 w-auto" />,
+    <IlloMouse key="m" tone="sage" className="h-5 w-auto" />,
+    <IlloSprig key="s" tone="leaf" className="h-5 w-auto" />,
+  ];
+  const track = [...items, ...items];
+  return (
+    <>
+      {/* The moving ribbon is decorative; its promises still exist for screen
+          readers (R095) — a static, visually-hidden copy carries them. */}
+      <ul className="sr-only">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+      <div aria-hidden className="marquee-pause overflow-hidden border-y border-border/70 bg-cream py-4" dir="ltr">
+        <div className="animate-marquee flex w-max items-center gap-10">
+          {track.map((item, i) => (
+            <span key={i} className="flex items-center gap-10">
+              <span dir="auto" className="whitespace-nowrap font-display text-lg text-cream-foreground/90">
+                {item}
+              </span>
+              {icons[i % icons.length]}
+            </span>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── Editorial feature rows ─────────────────────────────────────────────── */
 
 /* ── The Census section (Phase 0, MRC-GTM-001 §1) ────────────────────────
@@ -288,8 +355,9 @@ function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr
   const { data } = useCensus();
 
   return (
-    <section id="census" className="border-y border-border/70 bg-cream/60 py-20 sm:py-24">
-      <div className="container">
+    <section id="census" className="mesh-bg-rich relative overflow-hidden border-y border-border/70 bg-cream/60 py-20 sm:py-24">
+      <Sparkles preset="panel" />
+      <div className="container relative">
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
@@ -314,7 +382,7 @@ function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
-          className="relative mx-auto mt-14 max-w-2xl overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-e1 sm:p-10"
+          className="relative mx-auto mt-14 max-w-2xl overflow-hidden rounded-[2rem] border border-border bg-card p-8 shadow-e2 sm:p-10"
         >
           <Sticker rotate={-12} className="start-7 top-7 hidden sm:block">
             <IlloHeart tone="orange" className="size-8 opacity-80" />
@@ -331,7 +399,7 @@ function CensusSection({ t, isAr }: { t: ReturnType<typeof useLocale>["t"]; isAr
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
-          className="mx-auto mt-10 max-w-2xl rounded-2xl border border-dashed border-border bg-transparent p-8 text-center sm:p-10"
+          className="mx-auto mt-10 max-w-2xl rounded-[2rem] border border-dashed border-border bg-transparent p-8 text-center sm:p-10"
         >
           <h3 className="font-display text-xl font-semibold tracking-tight">{t.census.soonTitle}</h3>
           <p className="mx-auto mt-3 max-w-lg text-base leading-relaxed text-muted-foreground">
@@ -350,7 +418,7 @@ function MembershipPanel({ t }: { t: ReturnType<typeof useLocale>["t"] }) {
   const fromPrice = Math.min(...PLANS.map((p) => p.price));
 
   return (
-    <div className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-e2">
+    <div className="relative mx-auto max-w-4xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-e2">
       <div className="grid lg:grid-cols-[1.2fr_1fr]">
         {/* What the membership carries */}
         <div className="p-8 sm:p-10">
@@ -380,7 +448,7 @@ function MembershipPanel({ t }: { t: ReturnType<typeof useLocale>["t"] }) {
             </p>
           </div>
           <Link href="/register" className="w-full max-w-60">
-            <Button size="lg" className="w-full">
+            <Button size="lg" className="btn-shine w-full rounded-full">
               {t.plans.cta} <ArrowRight className="size-4 rtl:rotate-180" />
             </Button>
           </Link>

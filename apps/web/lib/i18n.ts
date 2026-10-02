@@ -97,7 +97,7 @@ export const dict = {
       positionNote: "ترتيبك حسب وقت انضمامك — ما فيه شي يقدّمك أو يأخّرك.",
     },
     voices: { title: "كلام أعضائنا" },
-    marquee: ["هوية لقطك باسمه ورقمه", "سجل صحي يمشي معه", "مجتمع من أهل القطط", "حاسبة أكل قطك", "الانضمام مجاناً"],
+    marquee: ["هوية لقطك باسمه ورقمه", "تذكير بتطعيماته ووزنه", "ملخص صحي لأي عيادة", "ألبوم لحياته كلها", "مجتمع من أهل القطط", "الانضمام مجاناً"],
     faq: {
       title: "أسئلة تسألونها كثير",
       items: [
@@ -199,7 +199,7 @@ export const dict = {
       positionNote: "Your place is simply when you joined — nothing moves you up or down.",
     },
     voices: { title: "From members who mean it" },
-    marquee: ["A Cat ID with their name and number", "A health record that travels", "A community of cat people", "A feeding calculator", "Free to join"],
+    marquee: ["A Cat ID with their name and number", "Reminders for vaccines and weigh-ins", "A health summary for any clinic", "An album for their whole life", "A community of cat people", "Free to join"],
     faq: {
       title: "Questions we hear a lot",
       items: [
