@@ -7,7 +7,8 @@ import { Button, cn, useFocusTrap, useToast } from "@moraqat/ui";
 import { isFoundingMember } from "@moraqat/core";
 import { CatIdCard } from "./cat-id-card";
 import { CatIdStory } from "./cat-id-story";
-import { shareStoryPng, exportSafeSrc } from "@/lib/card-export";
+import { exportSafeSrc } from "@/lib/card-export";
+import { useStoryShare } from "@/components/story-share";
 import { IlloPaw } from "./illustrations";
 import { formatDate as coreFormatDate } from "@moraqat/core";
 
@@ -313,36 +314,24 @@ function RevealAct({
   const [consented, setConsented] = React.useState(false);
   const [shareError, setShareError] = React.useState(false);
   const [sharedDone, setSharedDone] = React.useState(Boolean(initiallyPublic));
-  const [storyBusy, setStoryBusy] = React.useState(false);
 
   const firstName = (ownerFirstName ?? "").trim();
   const hasPhoto = Boolean(cat.photoUrl);
 
-  /** THE peak action — the member walks away holding the story (Wrapped moment). */
-  async function saveStory() {
-    if (!storyRef.current || storyBusy) return;
-    setStoryBusy(true);
-    try {
-      const outcome = await shareStoryPng(
-        storyRef.current,
-        `moracat-${cat.name}`.toLowerCase().replace(/\s+/g, "-"),
-        isAr
-          ? `${cat.name} رسمياً في عائلة مرقط 🐾 سوّ هوية قطك على moracat.co`
-          : `${cat.name} is officially a Moracat 🐾 Create your cat's ID at moracat.co`
-      );
-      if (outcome === "downloaded") {
-        toast({
-          title: isAr ? "جاهزة للستوري ✨" : "Story ready ✨",
-          description: isAr ? "حفظناها لك — ارفعها على انستقرام" : "Saved for you — post it to your Story",
-          variant: "success",
-        });
-      }
-    } catch {
-      toast({ title: isAr ? "تعذّر إنشاء القصة — جرّب مرة ثانية" : "Couldn't create the story — try again", variant: "error" });
-    } finally {
-      setStoryBusy(false);
-    }
-  }
+  /** THE peak action — the member walks away holding the story (Wrapped moment).
+   *  Rendered ahead of time so the tap reaches the share sheet on iPhone. */
+  const story = useStoryShare({
+    nodeRef: storyRef,
+    baseName: `moracat-${cat.name}`.toLowerCase().replace(/\s+/g, "-"),
+    isAr,
+    prerender: true,
+    cacheKey: [cat.name, cat.catIdNumber, cat.photoUrl, cat.idIssuedAt, isAr].join("|"),
+    shareText: isAr
+      ? `${cat.name} صار في عائلة مرقط 🐾 سوّ هوية قطك على moracat.co`
+      : `${cat.name} is now a Moracat 🐾 Create your cat's ID at moracat.co`,
+  });
+  const storyBusy = story.busy;
+  const saveStory = story.share;
 
   /** The single quiet exit (R005): one breathing beat, then the plan.
    *  Deliberately state-neutral — leaving the ceremony never changes
@@ -704,8 +693,12 @@ function RevealAct({
       )}
 
       {/* Hidden 9:16 story node, captured by "Save the story" (kept off-screen). */}
-      <div className="pointer-events-none fixed -left-[9999px] top-0" aria-hidden>
-        <div ref={storyRef}>
+      {story.sheet}
+      {/* Clipped zero box at the origin, LTR, sized to the frame: a twin at
+          -9999px is RTL scroll overflow, and WebKit mis-anchors captures whose
+          container is wider than the frame (blank band on iPhone). */}
+      <div aria-hidden dir="ltr" className="pointer-events-none fixed left-0 top-0 h-0 w-0 overflow-hidden" style={{ zIndex: -1 }}>
+        <div ref={storyRef} style={{ width: 540 }}>
           <CatIdStory
             catName={cat.name}
             catIdNumber={cat.catIdNumber}

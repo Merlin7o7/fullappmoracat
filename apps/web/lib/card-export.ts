@@ -78,38 +78,56 @@ export async function exportCardPdf(node: HTMLElement, baseName: string) {
 }
 
 /**
- * "Share my Moracat ID" — capture the 9:16 story frame at exactly 1080×1920.
- * On devices with the Web Share API (phones — where Instagram lives) this opens
- * the native share sheet with the image attached; elsewhere it downloads the
- * PNG in one click. Returns how it concluded so the caller can toast honestly.
+ * Decode a data: URL in memory. NOT `fetch(dataUrl)`: the site's CSP
+ * (connect-src) forbids fetching data: URLs, which silently broke every
+ * share — the File was never built, so phones never saw the share sheet.
  */
-export async function shareStoryPng(
-  node: HTMLElement,
-  baseName: string,
-  shareText: string
-): Promise<"shared" | "downloaded" | "cancelled"> {
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [head, b64 = ""] = dataUrl.split(",");
+  const mime = /data:([^;]+)/.exec(head ?? "")?.[1] ?? "image/png";
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+/**
+ * Render a 9:16 story frame to a PNG File at exactly 1080×1920. Rendering is
+ * slow on iPhones (WebKit needs warm-up passes), which is why sharing is split
+ * from rendering: Safari only lets `navigator.share` / a download run inside a
+ * fresh tap, and a multi-second render in between spends that tap. Callers
+ * render first (ahead of time, or on the first tap) and hand the File to the
+ * share sheet on a tap of its own — see components/story-share.tsx.
+ */
+export async function renderStoryFile(node: HTMLElement, baseName: string): Promise<File> {
   const dataUrl = await renderPng(node, STORY_WIDTH_PX);
-  const filename = `${baseName}-story.png`;
+  return new File([dataUrlToBlob(dataUrl)], `${baseName}-story.png`, { type: "image/png" });
+}
 
+/** The card itself as a PNG File (for the iPhone preview sheet). */
+export async function renderCardFile(node: HTMLElement, baseName: string): Promise<File> {
+  const dataUrl = await renderPng(node);
+  return new File([dataUrlToBlob(dataUrl)], `${baseName}.png`, { type: "image/png" });
+}
+
+/** True on iPhone / iPad (iPadOS reports itself as a Mac with touch). */
+export const IS_IOS =
+  typeof navigator !== "undefined" &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+export function canShareFile(file: File): boolean {
   try {
-    const blob = await (await fetch(dataUrl)).blob();
-    const file = new File([blob], filename, { type: "image/png" });
-    if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], text: shareText });
-        return "shared";
-      } catch (err) {
-        // The member closed the share sheet — that's a decision, not a failure.
-        if ((err as Error).name === "AbortError") return "cancelled";
-        // Any other share error falls through to a plain download.
-      }
-    }
+    return typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
   } catch {
-    /* blob/File unsupported → download below */
+    return false;
   }
+}
 
-  triggerDownload(dataUrl, filename);
-  return "downloaded";
+/** Download a File — must run inside a tap on Safari. */
+export function downloadFile(file: File) {
+  const url = URL.createObjectURL(file);
+  triggerDownload(url, file.name);
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /** Print-ready: opens the card image in a window and invokes the print dialog. */

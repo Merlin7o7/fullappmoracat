@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Share2, ArrowRight, Sparkles, IdCard, Clock, Check } from "lucide-react";
-import { Button, Badge, useToast, cn } from "@moraqat/ui";
+import { Button, Badge, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { commerceEnabled } from "@/lib/features";
@@ -14,7 +14,8 @@ import { CatIdStory } from "@/components/cat-id-story";
 import { MoracatStory } from "@/components/moracat-story";
 import { MEMBERSHIP_BENEFITS } from "@/components/membership";
 import { LaunchDeliveryNote } from "@/components/launch-note";
-import { shareStoryPng, exportSafeSrc } from "@/lib/card-export";
+import { exportSafeSrc } from "@/lib/card-export";
+import { useStoryShare } from "@/components/story-share";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
 import { Illo3D } from "@/components/illo-3d";
 
@@ -52,7 +53,6 @@ function WelcomeInner() {
   const catId = params.get("cat");
   const { authedFetch, user } = useAuth();
   const { locale } = useLocale();
-  const { toast } = useToast();
   const isAr = locale === "ar";
   const commerce = commerceEnabled();
   const subscribeHref = catId ? `/portal/subscribe?cat=${catId}` : "/portal/subscribe";
@@ -64,35 +64,20 @@ function WelcomeInner() {
   });
 
   const storyRef = React.useRef<HTMLDivElement>(null);
-  const [shareBusy, setShareBusy] = React.useState(false);
 
   const name = cat?.name ?? (isAr ? "قطك" : "your cat");
   const firstName = user?.firstName;
 
-  async function share() {
-    if (!storyRef.current || !cat?.catIdNumber) return;
-    setShareBusy(true);
-    try {
-      const outcome = await shareStoryPng(
-        storyRef.current,
-        `moracat-${cat.name}`.toLowerCase().replace(/\s+/g, "-"),
-        isAr
-          ? `${cat.name} رسمياً في عائلة مرقط 🐾 سوّ هوية قطك على moracat.co`
-          : `${cat.name} is officially a Moracat 🐾 Create your cat's ID at moracat.co`
-      );
-      if (outcome === "downloaded") {
-        toast({
-          title: isAr ? "جاهزة للستوري ✨" : "Story ready ✨",
-          description: isAr ? "حفظناها لك — ارفعها على انستقرام" : "Saved for you — post it to your Story",
-          variant: "success",
-        });
-      }
-    } catch {
-      toast({ title: isAr ? "تعذّر إنشاء الستوري" : "Couldn't create the story", variant: "error" });
-    } finally {
-      setShareBusy(false);
-    }
-  }
+  const story = useStoryShare({
+    nodeRef: storyRef,
+    baseName: `moracat-${cat?.name ?? "cat"}`.toLowerCase().replace(/\s+/g, "-"),
+    isAr,
+    prerender: !!cat?.catIdNumber,
+    cacheKey: [cat?.name, cat?.catIdNumber, cat?.photoUrl, isAr].join("|"),
+    shareText: isAr
+      ? `${name} صار في عائلة مرقط 🐾 سوّ هوية قطك على moracat.co`
+      : `${name} is now a Moracat 🐾 Create your cat's ID at moracat.co`,
+  });
 
   if (isLoading) {
     return <div className="grid place-items-center py-24"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
@@ -121,8 +106,8 @@ function WelcomeInner() {
             </span>
             <h1 className="mt-4 font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
               {isAr
-                ? `مبروك يا ${firstName ?? "صديقنا"} — ${name} انضم رسمياً إلى مرقط 🎉`
-                : `Welcome, ${firstName ?? "friend"} — ${name} has officially joined Moracat 🎉`}
+                ? `مبروك يا ${firstName ?? "صديقنا"} — ${name} صار من عائلة مرقط 🎉`
+                : `Welcome, ${firstName ?? "friend"} — ${name} is now part of Moracat 🎉`}
             </h1>
             <p className="mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
               {isAr
@@ -150,7 +135,7 @@ function WelcomeInner() {
                   <Sparkles className="size-4" /> {isAr ? "أنت عضو مؤسّس — العضويات تُفتح قريباً" : "You're a founding member — memberships open soon"}
                 </span>
               )}
-              <Button onClick={share} loading={shareBusy} disabled={!cat?.catIdNumber} variant="secondary" size="lg">
+              <Button onClick={story.share} loading={story.busy} disabled={!cat?.catIdNumber} variant="secondary" size="lg">
                 <Share2 className="size-4" /> {isAr ? `شارك هوية ${name}` : `Share ${name}'s ID`}
               </Button>
             </div>
@@ -290,10 +275,11 @@ function WelcomeInner() {
         <div className="mt-1">{ContinueButton}</div>
       </section>
 
+      {story.sheet}
       {/* Hidden 9:16 story node, captured on Share (kept off-screen). */}
       {cat?.catIdNumber && (
-        <div className="pointer-events-none fixed -left-[9999px] top-0" aria-hidden>
-          <div ref={storyRef}>
+        <div aria-hidden dir="ltr" className="pointer-events-none fixed left-0 top-0 h-0 w-0 overflow-hidden" style={{ zIndex: -1 }}>
+          <div ref={storyRef} style={{ width: 540 }}>
             <CatIdStory catName={cat.name} catIdNumber={cat.catIdNumber} issuedAt={cat.idIssuedAt} photoUrl={exportSafeSrc(cat.photoUrl)} qrToken={cat.qrToken} isAr={isAr} />
           </div>
         </div>

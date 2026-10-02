@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { Loader2, Share2 } from "lucide-react";
-import { Button, useToast, type ButtonProps } from "@moraqat/ui";
-import { exportSafeSrc, shareStoryPng } from "@/lib/card-export";
+import { Button, type ButtonProps } from "@moraqat/ui";
+import { exportSafeSrc } from "@/lib/card-export";
+import { useStoryShare } from "@/components/story-share";
 import { MomentPoster, type MomentKind } from "./moment-poster";
 
 /**
@@ -41,32 +42,25 @@ export function MomentShare({
   className?: string;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-  const [busy, setBusy] = React.useState(false);
   const [safePhoto, setSafePhoto] = React.useState<string | null>(null);
   React.useEffect(() => setSafePhoto(exportSafeSrc(photoUrl)), [photoUrl]);
-
-  async function share() {
-    if (!ref.current) return;
-    setBusy(true);
-    try {
-      const outcome = await shareStoryPng(ref.current, `Moracat-${kind}-${catName}`, shareText);
-      if (outcome === "downloaded") {
-        toast({ title: isAr ? "حفظنا الصورة لك" : "Image saved", description: isAr ? "شاركها من معرض الصور." : "Share it from your photos.", variant: "success" });
-      }
-    } catch {
-      toast({ title: isAr ? "تعذّر تجهيز الصورة" : "Couldn't prepare the image", variant: "error" });
-    } finally {
-      setBusy(false);
-    }
-  }
+  // Rendered on tap (a timeline can hold many posters); on iPhone the image
+  // then opens in a sheet whose Share button is a fresh tap (story-share).
+  const story = useStoryShare({
+    nodeRef: ref,
+    baseName: `Moracat-${kind}-${catName}`,
+    shareText,
+    isAr,
+    cacheKey: [kind, catName, safePhoto, catIdNumber, qrUrl, ...(lines ?? [])].join("|"),
+  });
 
   return (
     <>
-      <Button variant={variant} size={size} className={className} onClick={share} disabled={busy}>
-        {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Share2 className="size-4" aria-hidden />}
+      <Button variant={variant} size={size} className={className} onClick={story.share} disabled={story.busy}>
+        {story.busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Share2 className="size-4" aria-hidden />}
         {label}
       </Button>
+      {story.sheet}
       {/* Off-screen, clipped to a zero box at the origin (no RTL scroll overflow). */}
       <div aria-hidden dir="ltr" className="pointer-events-none fixed left-0 top-0 h-0 w-0 overflow-hidden" style={{ zIndex: -1 }}>
         <div style={{ width: 540 }}>
