@@ -133,6 +133,8 @@ export class CommunityService {
         bio: true,
         birthDate: true,
         showGallery: true,
+        showCharacter: true,
+        profile: true,
         photos: { orderBy: [{ sortOrder: "asc" }], select: { id: true, url: true } },
         user: {
           select: {
@@ -165,6 +167,12 @@ export class CommunityService {
       // raw date never leaves the API — visitors get a coarse month tally the
       // web renders as "2y 3m" (or the life stage when no date is on file).
       ageMonths: cat.showAge && cat.birthDate ? monthsSince(cat.birthDate) : null,
+      // The card exactly as the owner decorated it (theme, accent, frame,
+      // stickers) — decoration, not data, so it always travels with the card.
+      personalization: publicPersonalization(cat.profile),
+      // Personality, favourites, fun facts — only the allow-listed answers,
+      // and only while the owner keeps "show their character" on.
+      character: cat.showCharacter ? publicCharacter(cat.profile) : null,
     };
   }
 
@@ -306,6 +314,49 @@ export class CommunityService {
       lifeStage: c.showAge ? c.lifeStage : null,
     };
   }
+}
+
+/**
+ * The public slice of the cat's character profile. ALLOW-LIST, never
+ * deny-list: a new private question added to the journey stays private until
+ * someone deliberately lists it here. "Favourite human" is excluded on
+ * purpose — it is where owners type real people's names.
+ */
+const PUBLIC_CHARACTER: Record<string, readonly string[]> = {
+  about: ["nickname", "coatPattern", "eyeColor"],
+  personality: ["friendliness", "lap", "talkative", "curiosity", "bravery", "independence", "cuddles", "hunter", "sleep"],
+  favorites: ["treat", "toy", "spot", "activity"],
+  fun: ["fear", "habit", "talent", "job", "superpower", "emoji", "song", "mood"],
+};
+
+type Answers = Record<string, string | string[]>;
+
+export function publicCharacter(profile: unknown): Record<string, Answers> | null {
+  if (!profile || typeof profile !== "object") return null;
+  const src = profile as Record<string, unknown>;
+  const out: Record<string, Answers> = {};
+  for (const [section, keys] of Object.entries(PUBLIC_CHARACTER)) {
+    const answers = src[section];
+    if (!answers || typeof answers !== "object") continue;
+    const picked: Answers = {};
+    for (const k of keys) {
+      const v = (answers as Record<string, unknown>)[k];
+      if (typeof v === "string" && v.trim()) picked[k] = v.slice(0, 160);
+      else if (Array.isArray(v)) {
+        const arr = v.filter((x): x is string => typeof x === "string" && !!x.trim()).slice(0, 24);
+        if (arr.length) picked[k] = arr;
+      }
+    }
+    if (Object.keys(picked).length) out[section] = picked;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** Theme / accent / frame / stickers — already sanitised on write. */
+export function publicPersonalization(profile: unknown): Record<string, unknown> | null {
+  if (!profile || typeof profile !== "object") return null;
+  const p = (profile as Record<string, unknown>).personalization;
+  return p && typeof p === "object" ? (p as Record<string, unknown>) : null;
 }
 
 /** Whole months elapsed since `date` (floored at zero). */

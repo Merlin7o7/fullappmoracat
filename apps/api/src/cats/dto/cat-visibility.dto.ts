@@ -32,4 +32,5 @@ export class UpdateVisibilityDto {
   @IsOptional() @IsBoolean() showGallery?: boolean;
   @IsOptional() @IsBoolean() showAge?: boolean;
   @IsOptional() @IsBoolean() showBreed?: boolean;
+  @IsOptional() @IsBoolean() showCharacter?: boolean;
 }

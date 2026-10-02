@@ -1164,6 +1164,7 @@ export class CatsService implements OnModuleInit {
     showGallery: true,
     showAge: true,
     showBreed: true,
+    showCharacter: true,
     viewCount: true,
     isFeatured: true,
     sharedAt: true,
@@ -1195,7 +1196,7 @@ export class CatsService implements OnModuleInit {
     });
 
     const data: Record<string, unknown> = {};
-    for (const k of ["showOwnerName", "showCity", "showGallery", "showAge", "showBreed"] as const) {
+    for (const k of ["showOwnerName", "showCity", "showGallery", "showAge", "showBreed", "showCharacter"] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
     if (dto.bio !== undefined) data.bio = dto.bio.trim() || null;

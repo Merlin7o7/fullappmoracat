@@ -887,6 +887,8 @@ model Cat {
   showGallery    Boolean   @default(true)
   showAge        Boolean   @default(true)
   showBreed      Boolean   @default(true)
+  /// The cat's character (personality, favourites, fun facts) on the public page.
+  showCharacter  Boolean   @default(true)
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

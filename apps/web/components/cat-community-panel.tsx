@@ -17,6 +17,8 @@ interface Visibility {
   showGallery: boolean;
   showAge: boolean;
   showBreed: boolean;
+  /** Personality, favourites and fun facts on the public page. */
+  showCharacter: boolean;
   viewCount: number;
   /** PDPL photo-consent attestation (R106); null = never attested. */
   shareConsentAt: string | null;
@@ -236,6 +238,7 @@ export function CatCommunityPanel({
               <FieldToggle label={isAr ? "العمر" : "Age"} on={v.showAge} onChange={(b) => patch.mutate({ showAge: b })} />
               <FieldToggle label={isAr ? "المدينة" : "City"} on={v.showCity} onChange={(b) => patch.mutate({ showCity: b })} />
               <FieldToggle label={isAr ? "المعرض" : "Gallery"} on={v.showGallery} onChange={(b) => patch.mutate({ showGallery: b })} />
+              <FieldToggle label={isAr ? "شخصيته ومفضّلاته" : "Personality & favourites"} on={v.showCharacter ?? true} onChange={(b) => patch.mutate({ showCharacter: b })} />
               <FieldToggle label={isAr ? "اسمك" : "Your name"} on={v.showOwnerName} onChange={(b) => patch.mutate({ showOwnerName: b })} />
               {v.showOwnerName && (
                 <div className="px-1 pb-1 pt-0.5">

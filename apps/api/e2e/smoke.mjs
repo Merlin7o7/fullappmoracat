@@ -962,6 +962,25 @@ ok(lunaAfter.pagination.total >= 1, "cat appears in the feed the moment a photo 
 const shared = (await call(`/cats/${cat.id}/visibility`, "PATCH", { isPublic: true, showBreed: true }, C)).json;
 ok(shared.isPublic === true && shared.publicSlug === cat.publicSlug, "re-publishing keeps the slug minted at creation");
 const slug = shared.publicSlug;
+
+// The public page shows the card as decorated + an allow-listed character.
+await call(`/cats/${cat.id}`, "PATCH", {
+  profile: {
+    personality: { lap: "always", sleep: "champion" },
+    favorites: { treat: "Churu", human: "Sara Al-Otaibi" },
+    fun: { emoji: "😺", talent: "Opens doors" },
+    personalization: { theme: "midnight", frame: "gold", stickers: [{ id: "crown", x: 0.2, y: 0.3 }] },
+  },
+}, C);
+const pub = (await call(`/community/cats/${slug}`)).json;
+ok(pub.personalization?.theme === "midnight" && pub.personalization?.stickers?.length === 1, "public card carries the owner's decoration");
+ok(pub.character?.personality?.lap === "always" && pub.character?.favorites?.treat === "Churu", "public page shows the character");
+ok(!JSON.stringify(pub).includes("Sara Al-Otaibi"), "\"favourite human\" never leaves the API (allow-list)");
+await call(`/cats/${cat.id}/visibility`, "PATCH", { showCharacter: false }, C);
+const pubOff = (await call(`/community/cats/${slug}`)).json;
+ok(pubOff.character === null && !!pubOff.personalization, "owner can hide the character; the decorated card stays");
+await call(`/cats/${cat.id}/visibility`, "PATCH", { showCharacter: true }, C);
+
 const liker = (await call("/auth/register", "POST", { email: `liker-${rnd()}@smoke.test`, password: "Passw0rd!23", fullName: "Liker Smoke", acceptTerms: true })).json;
 const L = liker.accessToken;
 // Liking is an email-verified community write — verify first.

@@ -98,6 +98,15 @@ export interface CommunityProfile extends CommunityCard {
   gallery: { id: string; url: string }[];
   /** Server-computed age in whole months when the owner shows age — never a raw birth date. */
   ageMonths: number | null;
+  /** The owner's card decoration (theme / accent / frame / stickers). */
+  personalization?: import("@/lib/cat-profile").Personalization | null;
+  /** Allow-listed character answers (about / personality / favorites / fun), when shown. */
+  character?: {
+    about?: Record<string, string | string[]>;
+    personality?: Record<string, string | string[]>;
+    favorites?: Record<string, string | string[]>;
+    fun?: Record<string, string | string[]>;
+  } | null;
 }
 
 export interface CommunityFacets {
