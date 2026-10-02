@@ -24,6 +24,15 @@ const INK = "#15211C";
 const COPPER = "#B5532A";
 const ALERT = "#B42318";
 
+// The founder's 3D renders on happy moments only — never on lost/found
+// (AD 2.1: no 3D in distress). Same-origin <img> so the capture embeds it.
+const OBJECT: Partial<Record<MomentKind, string>> = {
+  joined: "/brand/3d/cat-plush.webp",
+  birthday: "/brand/3d/heart-plush.webp",
+  reunion: "/brand/3d/heart-plush.webp",
+  adoption: "/brand/3d/paw-plush.webp",
+};
+
 const COPY: Record<MomentKind, { ar: string; en: string; tone: "alert" | "emerald" }> = {
   lost: { ar: "قطة مفقودة", en: "Lost cat", tone: "alert" },
   found: { ar: "وجدنا هذا القط", en: "Found this cat", tone: "alert" },
@@ -65,6 +74,7 @@ export const MomentPoster = React.forwardRef<HTMLDivElement, MomentPosterProps>(
       </div>
 
       <div style={{ padding: "26px 28px 0", flex: 1, display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ position: "relative" }}>
         <div style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: 18, overflow: "hidden", background: "#F1E6D6" }}>
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -74,6 +84,24 @@ export const MomentPoster = React.forwardRef<HTMLDivElement, MomentPosterProps>(
               {catName.slice(0, 1)}
             </div>
           )}
+        </div>
+        {OBJECT[kind] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={OBJECT[kind]}
+            alt=""
+            style={{
+              position: "absolute",
+              bottom: -34,
+              [isAr ? "left" : "right"]: -14,
+              width: 132,
+              height: 132,
+              objectFit: "contain",
+              transform: "rotate(-8deg)",
+              filter: "drop-shadow(0 10px 12px rgba(21,33,28,0.22))",
+            }}
+          />
+        ) : null}
         </div>
 
         <div>

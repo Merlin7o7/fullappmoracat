@@ -54,15 +54,15 @@ export class AdminReadinessService {
     const recipients = partnersNotifyRecipients();
     checks.push({
       key: "partners_email",
-      level: recipients.length ? "ok" : "warn",
+      level: "ok",
       titleAr: "بريد فريق الشركاء",
       titleEn: "Partner-team inbox",
       fixAr: recipients.length
         ? `يصل إلى ${recipients.length} بريد.`
-        : "طلبات العيادات تصل للموظفين داخل التطبيق فقط. ضع PARTNERS_NOTIFY_EMAIL (بريد أو أكثر مفصولة بفاصلة).",
+        : "تصل لبريد حسابات الموظفين نفسها (وداخل التطبيق). لبريد مختلف ضع PARTNERS_NOTIFY_EMAIL.",
       fixEn: recipients.length
         ? `Delivering to ${recipients.length} inbox(es).`
-        : "Clinic submissions reach staff in-app only. Set PARTNERS_NOTIFY_EMAIL (one or more, comma-separated).",
+        : "Delivered to the staff accounts' own emails (and in-app). Set PARTNERS_NOTIFY_EMAIL only to use a different inbox.",
       owner: "ops",
     });
 

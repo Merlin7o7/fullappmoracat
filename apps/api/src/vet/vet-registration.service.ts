@@ -1573,8 +1573,9 @@ export class VetRegistrationService {
    * "Something is waiting for a human" — a clinic submitted, resubmitted or
    * asked to go live. Two channels so it can never be silent:
    *   1. an in-app notification on every staff account (always), and
-   *   2. an email to PARTNERS_NOTIFY_EMAIL (comma-separated list) when set.
-   * An unset inbox is logged loudly and surfaces on /admin's readiness panel.
+   *   2. an email to PARTNERS_NOTIFY_EMAIL (comma-separated list) when set —
+   *      otherwise to the staff accounts' own verified addresses, so the
+   *      founder's login inbox is the partner inbox by default.
    */
   private async notifyPartnersTeam(
     orgId: string,
@@ -1583,8 +1584,10 @@ export class VetRegistrationService {
   ) {
     const clinic = org?.nameAr || org?.nameEn || orgId;
     const link = `${siteUrl()}/admin/partners/${orgId}`;
+    let staffEmails: string[] = [];
     try {
-      const staff = await this.prisma.user.findMany({ where: { isStaff: true, deletedAt: null }, select: { id: true } });
+      const staff = await this.prisma.user.findMany({ where: { isStaff: true, deletedAt: null }, select: { id: true, email: true } });
+      staffEmails = staff.map((u) => u.email).filter((e): e is string => !!e && EMAIL_RE.test(e));
       await Promise.all(
         staff.map((u) =>
           this.notifications.notify(u.id, {
@@ -1599,9 +1602,10 @@ export class VetRegistrationService {
       this.logger.warn(`Partners-team in-app notice failed: ${(err as Error).message}`);
     }
 
-    const recipients = partnersNotifyRecipients();
+    const configured = partnersNotifyRecipients();
+    const recipients = configured.length ? configured : staffEmails;
     if (!recipients.length) {
-      this.logger.warn(`PARTNERS_NOTIFY_EMAIL is not set — "${what.en}" for ${orgId} reached staff in-app only.`);
+      this.logger.warn(`No partner inbox (PARTNERS_NOTIFY_EMAIL unset, no staff email) — "${what.en}" for ${orgId} reached staff in-app only.`);
       return;
     }
     const built = buildVetNoticeEmail({
@@ -1645,11 +1649,14 @@ export function editableStepsFor(status: ClinicOrgStatus, reopened: Registration
 }
 
 /** PARTNERS_NOTIFY_EMAIL as a list — one inbox or several, comma-separated. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** The explicitly configured partner inbox(es); empty → staff accounts' emails. */
 export function partnersNotifyRecipients(): string[] {
   return (process.env.PARTNERS_NOTIFY_EMAIL ?? "")
     .split(",")
     .map((s) => s.trim())
-    .filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
+    .filter((s) => EMAIL_RE.test(s));
 }
 
 function siteUrl(): string {
