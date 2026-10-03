@@ -62,10 +62,10 @@ function drawablePhoto(raw: string | null | undefined): string | null {
 }
 
 export default async function OpengraphImage({ params }: { params: { slug: string } }) {
-  const [cat, plate] = await Promise.all([
-    fetchCat(params.slug),
-    fetch(new URL("../../../public/brand/og/cat-plate.png", import.meta.url)).then((r) => r.arrayBuffer()),
-  ]);
+  // The plate is fetched by URL, not bundled: an imported PNG lands inside the
+  // edge function and pushes it past Vercel's edge size limit.
+  const cat = await fetchCat(params.slug);
+  const plate = `${SITE.replace(/\/$/, "")}/brand/og/cat-plate.png`;
   const name = latinOrNull(cat?.name);
   const photo = drawablePhoto(cat?.photoUrl);
 
@@ -73,7 +73,7 @@ export default async function OpengraphImage({ params }: { params: { slug: strin
     (
       <div style={{ width: 1200, height: 630, display: "flex", position: "relative", fontFamily: "sans-serif" }}>
         {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
-        <img src={plate as unknown as string} width={1200} height={630} style={{ position: "absolute", left: 0, top: 0 }} />
+        <img src={plate} width={1200} height={630} style={{ position: "absolute", left: 0, top: 0 }} />
 
         {photo && (
           // eslint-disable-next-line @next/next/no-img-element

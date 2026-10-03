@@ -73,12 +73,13 @@ export default async function OpengraphImage({ params }: { params: { id: string 
   // PHOTO 450,176 300² · NAME 300,494 600×64 · LINE 360,566 480×30. No 3D, no
   // phone number. Found and home-again notices keep the card below.
   if (lost && !reunited) {
-    const plate = await fetch(new URL("../../../public/brand/og/lost-plate.png", import.meta.url)).then((r) => r.arrayBuffer());
+    // Fetched by URL, not bundled — a bundled PNG breaks the edge size limit.
+    const plate = `${SITE.replace(/\/$/, "")}/brand/og/lost-plate.png`;
     return new ImageResponse(
       (
         <div style={{ width: 1200, height: 630, display: "flex", position: "relative", fontFamily: "sans-serif" }}>
           {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
-          <img src={plate as unknown as string} width={1200} height={630} style={{ position: "absolute", left: 0, top: 0 }} />
+          <img src={plate} width={1200} height={630} style={{ position: "absolute", left: 0, top: 0 }} />
           {photo && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photo} alt="" width={300} height={300} style={{ position: "absolute", left: 450, top: 176, width: 300, height: 300, objectFit: "cover", borderRadius: 30 }} />
