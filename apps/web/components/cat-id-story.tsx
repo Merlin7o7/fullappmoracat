@@ -33,7 +33,6 @@ const LIGHT_TOKENS: Record<string, string> = {
 };
 
 const EMERALD = "hsl(166 91% 19%)";
-const COPPER = "#B5532A";
 const INK = "hsl(165 45% 8%)";
 
 const GRAIN =
@@ -47,17 +46,6 @@ export interface CatIdStoryProps {
   qrToken?: string | null;
   membershipActive?: boolean;
   isAr: boolean;
-}
-
-/** The copper seal, drawn inline (same mark as `Seal` in @moraqat/ui). */
-function SealMark({ size = 30 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={COPPER} strokeWidth="1.5" aria-hidden>
-      <circle cx="12" cy="12" r="10.5" strokeOpacity="0.45" />
-      <circle cx="12" cy="12" r="8" strokeDasharray="1.5 2" />
-      <path d="M8.5 12.2l2.3 2.3 4.7-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, membershipActive, isAr }: CatIdStoryProps) {
@@ -89,7 +77,7 @@ export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, 
         >
           <span className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/moracat-logo-light.png" alt="" aria-hidden className="h-7 w-auto" />
+            <img src="/brand/logo/stacked-paper.svg" alt="" aria-hidden className="h-7 w-auto" />
             <span className="text-[17px] font-semibold">{isAr ? "هوية مرقط" : "Moracat ID"}</span>
           </span>
           <span dir="ltr" className="font-mono text-[14px] tracking-[0.12em] opacity-85">
@@ -153,7 +141,8 @@ export function CatIdStory({ catName, catIdNumber, issuedAt, photoUrl, qrToken, 
 
         {/* ── The proof line: the seal and the day it was issued ── */}
         <div className="mt-[50px] flex items-center gap-2.5 text-[16px] text-[hsl(165_14%_30%)]">
-          <SealMark />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/seal/copper.svg" alt="" aria-hidden className="size-14" />
           <span>
             {issued
               ? isAr ? `سُجّل في سجل مرقط · ${issued}` : `Entered in the Moracat register · ${issued}`

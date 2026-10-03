@@ -1,0 +1,515 @@
+<title>Moracat Designer Brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a spec document — sticky contents rail on wide screens, one column of
+   deliverable sheets, each with a summary line and a ruled spec table. */
+:root {
+  --paper: #FBF8F4;
+  --sheet: #FFFFFF;
+  --ink: #0B1E19;
+  --muted: #55665F;
+  --rule: #E3DED4;
+  --emerald: #045D48;
+  --emerald-soft: #E3EFEA;
+  --copper: #B6542B;
+  --alert: #B42318;
+  --p0: #045D48;
+  --p1: #7A5A12;
+  --p2: #55665F;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "IBM Plex Sans", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-ar: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0E1714; --sheet: #14201C; --ink: #EAF1EE; --muted: #9FB1AA; --rule: #263631;
+    --emerald: #5FC9A6; --emerald-soft: #183129; --copper: #E08A62; --alert: #F27A6E;
+    --p0: #5FC9A6; --p1: #E3BF6A; --p2: #9FB1AA; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0E1714; --sheet: #14201C; --ink: #EAF1EE; --muted: #9FB1AA; --rule: #263631;
+  --emerald: #5FC9A6; --emerald-soft: #183129; --copper: #E08A62; --alert: #F27A6E;
+  --p0: #5FC9A6; --p1: #E3BF6A; --p2: #9FB1AA; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.6 var(--font-body); margin: 0; padding-inline: 16px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 80px; display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) { .wrap { grid-template-columns: 220px minmax(0, 1fr); } }
+nav.toc { display: none; }
+@media (min-width: 980px) {
+  nav.toc { display: block; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13px; }
+}
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 8px; border-radius: 6px; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); background: var(--emerald-soft); outline: none; }
+nav.toc .n { font-family: var(--font-mono); font-size: 11px; color: var(--copper); margin-inline-end: 6px; }
+main { min-width: 0; display: grid; gap: 28px; }
+header.cover { display: grid; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--copper); }
+h1 { font: 600 clamp(34px, 6vw, 52px)/1.05 var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font: 600 26px/1.2 var(--font-display); margin: 0; text-wrap: balance; }
+h3 { font: 600 15px/1.3 var(--font-body); margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 17px; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 500; }
+section.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 24px; display: grid; gap: 16px; scroll-margin-top: 24px; }
+@media (min-width: 640px) { section.sheet { padding: 32px; } }
+.sheet-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.num { font: 500 13px var(--font-mono); color: var(--copper); }
+.pri { font: 600 11px/1 var(--font-mono); letter-spacing: .06em; padding: 5px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.pri.p0 { color: var(--p0); } .pri.p1 { color: var(--p1); } .pri.p2 { color: var(--p2); }
+.who { font-size: 12px; color: var(--muted); }
+.why { color: var(--muted); }
+ul.rules { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; max-width: 72ch; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 640px; }
+th, td { text-align: start; padding: 10px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 500 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td.mono, .mono { font-family: var(--font-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+td.file { font-family: var(--font-mono); font-size: 12px; color: var(--emerald); white-space: nowrap; }
+.ar { font-family: var(--font-ar); direction: rtl; unicode-bidi: isolate; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sw { border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--sheet); }
+.sw i { display: block; height: 56px; }
+.sw div { padding: 8px 10px; font-size: 12px; display: grid; gap: 2px; }
+.sw b { font-weight: 500; }
+.callout { border-inline-start: 3px solid var(--copper); background: var(--paper); padding: 12px 14px; border-radius: 0 8px 8px 0; font-size: 14px; max-width: 76ch; }
+.callout.alert { border-color: var(--alert); }
+.grid2 { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .grid2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 8px; }
+figcaption { font-size: 12px; color: var(--muted); }
+svg text { font-family: var(--font-mono); }
+.summary td:first-child { font-family: var(--font-mono); color: var(--copper); width: 36px; }
+code { font-family: var(--font-mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+pre { margin: 0; font: 12.5px/1.6 var(--font-mono); background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; overflow-x: auto; }
+a { color: var(--emerald); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <ol>
+      <li><a href="#brand"><span class="n">00</span>Brand basics</a></li>
+      <li><a href="#summary"><span class="n">··</span>All deliverables</a></li>
+      <li><a href="#logo"><span class="n">01</span>Logo system</a></li>
+      <li><a href="#icons"><span class="n">02</span>App icon &amp; favicon</a></li>
+      <li><a href="#threed"><span class="n">03</span>3D objects</a></li>
+      <li><a href="#card"><span class="n">04</span>Cat ID card art</a></li>
+      <li><a href="#stickers"><span class="n">05</span>Card stickers</a></li>
+      <li><a href="#posters"><span class="n">06</span>Share posters</a></li>
+      <li><a href="#wallet"><span class="n">07</span>Wallet passes</a></li>
+      <li><a href="#og"><span class="n">08</span>Link previews</a></li>
+      <li><a href="#cert"><span class="n">09</span>Certificate</a></li>
+      <li><a href="#email"><span class="n">10</span>Email</a></li>
+      <li><a href="#tag"><span class="n">11</span>Collar QR tag</a></li>
+      <li><a href="#photo"><span class="n">12</span>Photography</a></li>
+      <li><a href="#delivery"><span class="n">··</span>Delivery rules</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="cover">
+      <span class="eyebrow">MRC-DES-001 · Design brief · v1 · 2 October 2026</span>
+      <h1>Moracat designer brief</h1>
+      <p class="lede">Moracat gives every cat in Saudi Arabia a lifelong ID: a numbered card with a QR code, a health record that travels to any clinic, and a page in a community of cat families. The product is live and works. These are the visual pieces that a graphic designer, a 3D artist and a photographer will do better than code.</p>
+      <div class="meta">
+        <span>For <b>graphic designer · 3D artist · photographer</b></span>
+        <span>Language <b>Arabic first (RTL), English second</b></span>
+        <span>Site <b>moracat.co</b></span>
+      </div>
+    </header>
+
+    <!-- ── 00 Brand basics ─────────────────────────────────────────────── -->
+    <section class="sheet" id="brand">
+      <div class="sheet-head"><span class="num">00</span><h2>Brand basics</h2></div>
+      <p>The direction is called «السجل» (the register): every artifact Moracat issues looks like a page from the cat's personal archive. An ID band names the document, ruled rows hold the facts, and a small copper seal marks what Moracat vouches for. The public marketing pages are warmer and playful: rounded shapes, sparkles, stickers and soft 3D objects.</p>
+      <div class="callout"><b>Three rules that override everything else.</b> The cat is always the hero of the frame. Moracat is a private company: never use the words official, government, national or census of Saudi Arabia, and never imitate a state ID. Arabic is the main language, so design every piece in Arabic first and mirror it for English.</div>
+
+      <h3>Colour</h3>
+      <div class="swatches">
+        <div class="sw"><i style="background:#045D48"></i><div><b>Emerald</b><span class="mono">#045D48</span><span>Actions, ID band, pass</span></div></div>
+        <div class="sw"><i style="background:#FBF8F4;border-bottom:1px solid var(--rule)"></i><div><b>Paper</b><span class="mono">#FBF8F4</span><span>Background</span></div></div>
+        <div class="sw"><i style="background:#0B1E19"></i><div><b>Ink</b><span class="mono">#0B1E19</span><span>Text</span></div></div>
+        <div class="sw"><i style="background:#B6542B"></i><div><b>Copper seal</b><span class="mono">#B6542B</span><span>Seal and serials only</span></div></div>
+        <div class="sw"><i style="background:#F86C30"></i><div><b>Signature orange</b><span class="mono">#F86C30</span><span>Highlights, never body text</span></div></div>
+        <div class="sw"><i style="background:#B42318"></i><div><b>Alert red</b><span class="mono">#B42318</span><span>Lost and found only</span></div></div>
+        <div class="sw"><i style="background:#F7E6D4"></i><div><b>Cream</b><span class="mono">#F7E6D4</span><span>Ground behind photos and 3D</span></div></div>
+        <div class="sw"><i style="background:#FBEABC"></i><div><b>Butter</b><span class="mono">#FBEABC</span><span>Ground</span></div></div>
+        <div class="sw"><i style="background:#FFB8B9"></i><div><b>Blush</b><span class="mono">#FFB8B9</span><span>Ground</span></div></div>
+        <div class="sw"><i style="background:#7E9EA9"></i><div><b>Sage</b><span class="mono">#7E9EA9</span><span>Ground</span></div></div>
+      </div>
+
+      <h3>Type</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Role</th><th>Face</th><th>How to use it</th></tr></thead>
+        <tbody>
+          <tr><td>Arabic display</td><td>Lyon Arabic Display (licensed by Moracat)</td><td>Headlines only, at 28 px or larger, regular weight. Size makes the hierarchy, never fake bold.</td></tr>
+          <tr><td>Arabic text and UI</td><td>IBM Plex Sans Arabic 400–700 (free, Google Fonts)</td><td>Everything else in Arabic.</td></tr>
+          <tr><td>Latin display</td><td>Fraunces</td><td>English headlines.</td></tr>
+          <tr><td>Latin text</td><td>Inter</td><td>English body and UI.</td></tr>
+          <tr><td>Serials</td><td>IBM Plex Mono</td><td>Cat ID numbers such as <span class="mono">MRC-2K9F-7YQ3</span>, always left-to-right.</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="rules">
+        <li>Zero letter-spacing on Arabic. Tracking breaks the joins between letters.</li>
+        <li>Western digits (0–9) in both languages.</li>
+        <li>Body text contrast at least 4.5:1 against its background.</li>
+        <li>Mirror anything directional (arrows, a mouse facing a direction) for RTL.</li>
+      </ul>
+      <p class="why">We will send the current files with this brief: the logo PNG, the 12 existing 3D renders, an exported Cat ID card, the current share posters and screenshots of the site.</p>
+    </section>
+
+    <!-- ── Summary ─────────────────────────────────────────────────────── -->
+    <section class="sheet" id="summary">
+      <div class="sheet-head"><span class="num">··</span><h2>All deliverables</h2></div>
+      <p>P0 is needed first; P1 next; P2 after that. Each line links to its full spec below.</p>
+      <div class="table-wrap"><table class="summary">
+        <thead><tr><th>#</th><th>Deliverable</th><th>Who</th><th>Priority</th><th>Files</th><th>Count</th></tr></thead>
+        <tbody>
+          <tr><td>01</td><td><a href="#logo">Logo system</a></td><td>Graphic</td><td><span class="pri p0">P0</span></td><td class="mono">SVG, PDF, PNG</td><td class="mono">4 lockups × 4 colourways</td></tr>
+          <tr><td>02</td><td><a href="#icons">App icon &amp; favicon set</a></td><td>Graphic</td><td><span class="pri p0">P0</span></td><td class="mono">PNG, ICO, SVG</td><td class="mono">8 files</td></tr>
+          <tr><td>03</td><td><a href="#threed">3D objects</a></td><td>3D artist</td><td><span class="pri p0">P0</span></td><td class="mono">PNG 2000², source</td><td class="mono">7 objects × 2 finishes</td></tr>
+          <tr><td>04</td><td><a href="#card">Cat ID card art</a></td><td>Graphic</td><td><span class="pri p1">P1</span></td><td class="mono">SVG, PNG, PDF</td><td class="mono">8 themes + 5 frames + print</td></tr>
+          <tr><td>05</td><td><a href="#stickers">Card stickers</a></td><td>Graphic</td><td><span class="pri p1">P1</span></td><td class="mono">SVG, PNG</td><td class="mono">16</td></tr>
+          <tr><td>06</td><td><a href="#posters">Share posters</a></td><td>Graphic</td><td><span class="pri p1">P1</span></td><td class="mono">Figma, PNG, PDF</td><td class="mono">7 × AR/EN + A4 print</td></tr>
+          <tr><td>07</td><td><a href="#wallet">Apple &amp; Google Wallet</a></td><td>Graphic</td><td><span class="pri p1">P1</span></td><td class="mono">PNG</td><td class="mono">14 files</td></tr>
+          <tr><td>08</td><td><a href="#og">Link previews</a></td><td>Graphic</td><td><span class="pri p2">P2</span></td><td class="mono">PNG</td><td class="mono">3 templates</td></tr>
+          <tr><td>09</td><td><a href="#cert">Registration certificate</a></td><td>Graphic</td><td><span class="pri p2">P2</span></td><td class="mono">PDF, SVG</td><td class="mono">1 (AR/EN)</td></tr>
+          <tr><td>10</td><td><a href="#email">Email header &amp; footer</a></td><td>Graphic</td><td><span class="pri p2">P2</span></td><td class="mono">PNG</td><td class="mono">4 files</td></tr>
+          <tr><td>11</td><td><a href="#tag">Collar QR tag</a></td><td>Graphic / product</td><td><span class="pri p2">P2</span></td><td class="mono">PDF dieline</td><td class="mono">2 versions</td></tr>
+          <tr><td>12</td><td><a href="#photo">Photography</a></td><td>Photographer</td><td><span class="pri p1">P1</span></td><td class="mono">JPEG, RAW</td><td class="mono">≈ 20 selects</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 01 Logo ─────────────────────────────────────────────────────── -->
+    <section class="sheet" id="logo">
+      <div class="sheet-head"><span class="num">01</span><h2>Logo system</h2><span class="pri p0">P0</span><span class="who">Graphic designer</span></div>
+      <p class="why">The only logo file today is a 409 × 258 px PNG. It blurs on retina screens, can't be printed, and has no small-size version. This job is a careful vector redraw and refinement of the existing mark («مرقط» over «Moracat»), not a rebrand.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Item</th><th>Specification</th></tr></thead>
+        <tbody>
+          <tr><td>Lockups</td><td>(a) stacked Arabic over Latin, the current one · (b) horizontal, side by side · (c) Arabic wordmark alone · (d) a symbol that reads at 16 px (favicon, Wallet icon, app icon)</td></tr>
+          <tr><td>Colourways</td><td>Emerald on paper · Paper on emerald (reversed) · Ink, one colour · White, one colour</td></tr>
+          <tr><td>Clear space and minimum size</td><td>Define the clear space, plus a minimum size for screen (in px) and print (in mm), on one guideline page</td></tr>
+          <tr><td>Text</td><td>Converted to outlines in every export</td></tr>
+        </tbody>
+      </table></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">moracat-logo-{lockup}-{colour}.svg</td><td class="mono">vector</td><td class="mono">SVG</td><td>Optimised, no embedded raster, viewBox cropped tight to the artwork</td></tr>
+          <tr><td class="file">moracat-logo-{lockup}-{colour}.pdf</td><td class="mono">vector</td><td class="mono">PDF</td><td>RGB for screen, plus a CMYK set for print</td></tr>
+          <tr><td class="file">moracat-logo-{lockup}-{colour}-{w}.png</td><td class="mono">512, 1024, 2048 px wide</td><td class="mono">PNG-24</td><td>Transparent background, sRGB</td></tr>
+          <tr><td class="file">moracat-logo-master.ai / .fig</td><td class="mono">—</td><td class="mono">AI or Figma</td><td>Editable master</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 02 Icons ────────────────────────────────────────────────────── -->
+    <section class="sheet" id="icons">
+      <div class="sheet-head"><span class="num">02</span><h2>App icon &amp; favicon set</h2><span class="pri p0">P0</span><span class="who">Graphic designer</span></div>
+      <p class="why">Today a single 256 × 256 px file is stretched to 512 px for phones' home screens. Build the set from the new symbol in 01.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size (px)</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">app-icon-master.png</td><td class="mono">1024 × 1024</td><td class="mono">PNG</td><td>No transparency, square corners (each platform rounds them)</td></tr>
+          <tr><td class="file">favicon.ico</td><td class="mono">16, 32, 48</td><td class="mono">ICO</td><td>Three sizes in one file, hand-tuned at 16 px</td></tr>
+          <tr><td class="file">icon.svg</td><td class="mono">vector</td><td class="mono">SVG</td><td>Browser-tab icon; must read on both light and dark tabs</td></tr>
+          <tr><td class="file">apple-touch-icon.png</td><td class="mono">180 × 180</td><td class="mono">PNG</td><td>iPhone home screen, no transparency</td></tr>
+          <tr><td class="file">icon-192.png</td><td class="mono">192 × 192</td><td class="mono">PNG</td><td>Android / web app</td></tr>
+          <tr><td class="file">icon-512.png</td><td class="mono">512 × 512</td><td class="mono">PNG</td><td>Android / web app</td></tr>
+          <tr><td class="file">icon-maskable-512.png</td><td class="mono">512 × 512</td><td class="mono">PNG</td><td>Full-bleed emerald background; all key art inside the central circle of 409 px diameter (80% safe zone)</td></tr>
+          <tr><td class="file">og-fallback-logo.png</td><td class="mono">1200 × 630</td><td class="mono">PNG</td><td>Logo on paper, used when a page has no image of its own</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 03 3D ───────────────────────────────────────────────────────── -->
+    <section class="sheet" id="threed">
+      <div class="sheet-head"><span class="num">03</span><h2>3D objects</h2><span class="pri p0">P0</span><span class="who">3D artist</span></div>
+      <p class="why">We have 12 renders: cat, mouse, can, heart, fish, paw and leaf, in a <b>plush</b> finish (stitched fabric, used on light screens) and a <b>metal</b> finish (satin green and copper, used on dark screens). New objects must look like the same set: same artist hand, camera, lighting and materials. The renders we have are attached.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Object</th><th>Where it will be used</th></tr></thead>
+        <tbody>
+          <tr><td>1 · Collar with tag</td><td>Homepage identity chapter, Wallet preview, scan page. The most important one.</td></tr>
+          <tr><td>2 · QR tag on its own</td><td>Scan page, "how finders reach you"</td></tr>
+          <tr><td>3 · Food bowl</td><td>Care chapter and feeding reminders</td></tr>
+          <tr><td>4 · Cat carrier</td><td>Vet visits, clinic directory, hand-over and adoption</td></tr>
+          <tr><td>5 · Rosette or ribbon</td><td>Birthdays and the yearly keepsake cover</td></tr>
+          <tr><td>6 · Kitten</td><td>A smaller sibling of the cat, for kitten onboarding</td></tr>
+          <tr><td>7 · Open archive book</td><td>The cat's life album and keepsake</td></tr>
+        </tbody>
+      </table></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size (px)</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">{object}-plush.png</td><td class="mono">2000 × 2000</td><td class="mono">PNG-32 (RGBA)</td><td>Transparent background, sRGB, object about 80% of the frame and centred</td></tr>
+          <tr><td class="file">{object}-metal.png</td><td class="mono">2000 × 2000</td><td class="mono">PNG-32 (RGBA)</td><td>Same pose and camera as the plush version</td></tr>
+          <tr><td class="file">{object}.blend (or .c4d)</td><td class="mono">—</td><td class="mono">Scene source</td><td>Packed textures, so we can re-render later</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="rules">
+        <li>Use the same three-quarter camera and soft key light as <code>cat-plush</code>.</li>
+        <li>No baked ground shadow: the site adds its own contact shadow.</li>
+        <li>No text, logos or QR patterns that could be scanned.</li>
+        <li>Never recolour the existing palette. Plush colours stay pastel; metal stays satin green and copper.</li>
+        <li>We convert the renders to 1024 px WebP for the web ourselves.</li>
+      </ul>
+    </section>
+
+    <!-- ── 04 Card ─────────────────────────────────────────────────────── -->
+    <section class="sheet" id="card">
+      <div class="sheet-head"><span class="num">04</span><h2>Cat ID card art</h2><span class="pri p1">P1</span><span class="who">Graphic designer</span></div>
+      <p class="why">The card is drawn by code: name, photo, serial and QR are live data. Owners decorate it by choosing a theme, an accent colour, a frame and stickers. Today the themes are flat CSS gradients and the frames are simple outlines. We need real artwork layers that code places behind and around the live data.</p>
+      <div class="grid2">
+        <figure>
+          <svg viewBox="0 0 420 300" role="img" aria-label="Card measurements: 85.6 by 54 millimetres, digital canvas 1712 by 1080 pixels">
+            <rect x="40" y="30" width="342.4" height="216" rx="12.7" fill="#045D48"/>
+            <rect x="40" y="186" width="342.4" height="60" fill="#FBF8F4"/>
+            <rect x="40" y="30" width="342.4" height="216" rx="12.7" fill="none" stroke="#B6542B" stroke-width="1.5"/>
+            <rect x="60.5" y="43" width="301.4" height="190" rx="6" fill="none" stroke="#FBF8F4" stroke-dasharray="4 4" stroke-opacity=".7"/>
+            <line x1="40" y1="270" x2="382.4" y2="270" stroke="currentColor" stroke-width="1"/>
+            <text x="211" y="290" text-anchor="middle" font-size="12" fill="currentColor">85.6 mm · 1712 px</text>
+            <line x1="20" y1="30" x2="20" y2="246" stroke="currentColor" stroke-width="1"/>
+            <text x="14" y="140" font-size="12" fill="currentColor" transform="rotate(-90 14 140)" text-anchor="middle">54 mm · 1080 px</text>
+            <text x="211" y="120" text-anchor="middle" font-size="11" fill="#FBF8F4">theme art (behind live data)</text>
+            <text x="211" y="220" text-anchor="middle" font-size="11" fill="#0B1E19">paper strip: serial + QR (code)</text>
+          </svg>
+          <figcaption>ID-1 card size (the same as a bank card), corner radius 3.18 mm, digital canvas 1712 × 1080 px (≈ 508 dpi). The dashed line is a 6% inset safe area: frames and stickers stay outside the text and QR.</figcaption>
+        </figure>
+        <div class="table-wrap"><table style="min-width:0">
+          <thead><tr><th>Theme</th><th>Current colours (from → to)</th></tr></thead>
+          <tbody>
+            <tr><td>Classic</td><td class="mono">#0E5345 → #031C19</td></tr>
+            <tr><td>Royal</td><td class="mono">#3F2D76 → #120925</td></tr>
+            <tr><td>Midnight</td><td class="mono">#1E3748 → #040C15</td></tr>
+            <tr><td>Sakura</td><td class="mono">#793457 → #300D19</td></tr>
+            <tr><td>Desert</td><td class="mono">#704829 → #24110A</td></tr>
+            <tr><td>Galaxy</td><td class="mono">#27206F → #090619</td></tr>
+            <tr><td>Forest</td><td class="mono">#255635 → #071D15</td></tr>
+            <tr><td>Gold</td><td class="mono">#6B5B2E → #201809</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">card-theme-{classic…gold}.svg</td><td class="mono">1712 × 1080 px</td><td class="mono">SVG (or WebP)</td><td>8 backgrounds. A subtle texture or pattern is welcome. White text on top must keep 4.5:1 contrast. SVG under 40 KB; WebP under 120 KB if you use a raster.</td></tr>
+          <tr><td class="file">card-frame-{minimal,gold,neon,floral,birthday}.png</td><td class="mono">1712 × 1080 px</td><td class="mono">PNG-32 or SVG</td><td>5 transparent overlays around the edge, outside the safe area. "None" needs no file.</td></tr>
+          <tr><td class="file">card-redline.pdf</td><td class="mono">A4</td><td class="mono">PDF</td><td>Your refinements to the live layout, with sizes in px on the 1712 canvas</td></tr>
+          <tr><td class="file">card-print-front.pdf / -back.pdf</td><td class="mono">89.6 × 58 mm</td><td class="mono">PDF/X-4, CMYK</td><td>Optional printed PVC card: 85.6 × 54 mm trim plus 2 mm bleed, 300 dpi. Keep the QR area white, at least 18 × 18 mm with a 2 mm quiet zone.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="why">The six accent colours stay as they are: <span class="mono">#F87A44 #F88191 #5FBCF2 #B68DEC #EEC14F #59CF8A</span>. Make sure every theme works with all six.</p>
+    </section>
+
+    <!-- ── 05 Stickers ─────────────────────────────────────────────────── -->
+    <section class="sheet" id="stickers">
+      <div class="sheet-head"><span class="num">05</span><h2>Card stickers</h2><span class="pri p1">P1</span><span class="who">Graphic designer</span></div>
+      <p class="why">Owners drag stickers onto their cat's card. Today they are emoji, which look different on every phone and can't be shared consistently. Draw a set in the style of our existing flat stickers (paw, heart, mouse, cat, can, sprig, fish): chunky, friendly shapes with a white die-cut outline, so they read on dark card themes.</p>
+      <p class="mono">fish · yarn · paws · heart · crown · star · sparkle · cool (sunglasses) · chef · gamer · wizard · pirate · flower · balloon · moon · bow</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">sticker-{name}.svg</td><td class="mono">viewBox 0 0 256 256</td><td class="mono">SVG</td><td>16 files, flat fills only, under 15 KB each, no embedded raster, white outline about 10 units</td></tr>
+          <tr><td class="file">sticker-{name}.png</td><td class="mono">512 × 512 px</td><td class="mono">PNG-32</td><td>Transparent, for share images and email</td></tr>
+          <tr><td class="file">stickers-sheet.png</td><td class="mono">2048 × 2048 px</td><td class="mono">PNG</td><td>All 16 on one sheet for review</td></tr>
+        </tbody>
+      </table></div>
+      <p class="why">Optional: redraw the 7 existing flat stickers as one master SVG set in the same file, and add flat versions of the new 3D objects (collar, tag, bowl).</p>
+    </section>
+
+    <!-- ── 06 Posters ──────────────────────────────────────────────────── -->
+    <section class="sheet" id="posters">
+      <div class="sheet-head"><span class="num">06</span><h2>Share posters</h2><span class="pri p1">P1</span><span class="who">Graphic designer</span></div>
+      <p class="why">Members share these to Instagram Stories and WhatsApp. They are our main growth loop. The app builds them live (photo, name, serial and QR change per cat), so we need layout designs plus any art layers. We then rebuild them in code exactly.</p>
+      <div class="grid2">
+        <figure>
+          <svg viewBox="0 0 240 400" role="img" aria-label="Story frame 1080 by 1920 pixels with 220 pixel top and 260 pixel bottom safe margins">
+            <rect x="60" y="10" width="120" height="213.3" rx="6" fill="none" stroke="currentColor"/>
+            <rect x="60" y="10" width="120" height="24.4" fill="#B42318" fill-opacity=".18"/>
+            <rect x="60" y="194.4" width="120" height="28.9" fill="#B42318" fill-opacity=".18"/>
+            <text x="120" y="26" text-anchor="middle" font-size="8" fill="currentColor">220 px clear</text>
+            <text x="120" y="212" text-anchor="middle" font-size="8" fill="currentColor">260 px clear</text>
+            <text x="120" y="118" text-anchor="middle" font-size="9" fill="currentColor">1080 × 1920</text>
+            <rect x="60" y="250" width="120" height="120" rx="4" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>
+            <text x="120" y="313" text-anchor="middle" font-size="9" fill="currentColor">photo slot 1:1</text>
+          </svg>
+          <figcaption>9:16 at 1080 × 1920 px. Keep text and key art out of the top 220 px and bottom 260 px, where Instagram's interface sits. The cat photo slot is square.</figcaption>
+        </figure>
+        <div class="table-wrap"><table style="min-width:0">
+          <thead><tr><th>Template</th><th>Arabic headline</th></tr></thead>
+          <tbody>
+            <tr><td>Cat ID Story</td><td class="ar">{الاسم} صار له هوية تخصّه</td></tr>
+            <tr><td>Lost</td><td class="ar">قطة مفقودة</td></tr>
+            <tr><td>Found</td><td class="ar">وجدنا هذا القط</td></tr>
+            <tr><td>Home again</td><td class="ar">رجع للبيت</td></tr>
+            <tr><td>New home (adoption)</td><td class="ar">بيت جديد</td></tr>
+            <tr><td>Joined</td><td class="ar">انضم إلى سجل مرقط</td></tr>
+            <tr><td>Birthday</td><td class="ar">عيد ميلاد سعيد</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <h3>Live content in every template</h3>
+      <ul class="rules">
+        <li>Cat photo: square, shown at about 900 × 900 px.</li>
+        <li>Cat name: 2–24 characters, Arabic or Latin.</li>
+        <li>One or two short lines: district, date, or "missing since…".</li>
+        <li>Serial in mono: <span class="mono">MRC-XXXX-XXXX</span>.</li>
+        <li>QR code: at least 240 × 240 px, on white, with a quiet zone.</li>
+        <li>The address <span class="mono">moracat.co</span>.</li>
+      </ul>
+      <div class="callout alert"><b>Lost and Found are distress posters.</b> Use alert red, no 3D objects, no cute stickers and no jokes. They must be readable as a small WhatsApp thumbnail: the photo, the word "lost" and the QR come first. The owner's phone number never appears; the QR leads finders to a private message form.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">posters.fig</td><td class="mono">1080 × 1920 frames</td><td class="mono">Figma</td><td>7 templates × Arabic and English, built with auto-layout components. Show a long name and a short name.</td></tr>
+          <tr><td class="file">poster-{kind}-{ar|en}.png</td><td class="mono">1080 × 1920 px</td><td class="mono">PNG</td><td>Mock-ups with sample cats, for review</td></tr>
+          <tr><td class="file">poster-{kind}-layer-{n}.svg/.png</td><td class="mono">2160 × 3840 px</td><td class="mono">SVG or PNG-32</td><td>Any background texture or ornament as separate layers (at 2× for crisp output)</td></tr>
+          <tr><td class="file">lost-poster-a4-{ar|en}.pdf</td><td class="mono">210 × 297 mm + 3 mm bleed</td><td class="mono">PDF/X-4, CMYK</td><td>Printable version for walls and shop windows. Large photo and QR, 300 dpi. Also an A5 (148 × 210 mm) version.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 07 Wallet ───────────────────────────────────────────────────── -->
+    <section class="sheet" id="wallet">
+      <div class="sheet-head"><span class="num">07</span><h2>Apple &amp; Google Wallet passes</h2><span class="pri p1">P1</span><span class="who">Graphic designer</span></div>
+      <p class="why">The Cat ID can be added to Apple Wallet (a generic pass) and Google Wallet. The pass layout is fixed by Apple and Google; we supply the images. Today's logo is 79 × 50 px with no @3x version, so it looks soft on new iPhones. Pass colours are fixed: background <span class="mono">rgb(4, 91, 70)</span>, text <span class="mono">rgb(250, 247, 242)</span>, labels <span class="mono">rgb(201, 230, 214)</span>.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size (px)</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">icon.png · @2x · @3x</td><td class="mono">29² · 58² · 87²</td><td class="mono">PNG</td><td>Apple: shown on the lock screen and in notifications. The symbol from 01.</td></tr>
+          <tr><td class="file">logo.png · @2x · @3x</td><td class="mono">160×50 · 320×100 · 480×150</td><td class="mono">PNG-32</td><td>Apple: those are maximum sizes. Light logo on transparent, sitting on emerald.</td></tr>
+          <tr><td class="file">thumbnail.png · @2x · @3x</td><td class="mono">90² · 180² · 270²</td><td class="mono">PNG</td><td>Apple: shown only when a cat has no photo. A friendly cat placeholder.</td></tr>
+          <tr><td class="file">google-logo.png</td><td class="mono">660 × 660</td><td class="mono">PNG</td><td>Google crops it to a circle, so keep the art inside the central circle</td></tr>
+          <tr><td class="file">google-hero.png</td><td class="mono">1032 × 336</td><td class="mono">PNG</td><td>Google: wide banner across the pass. No important art near the edges.</td></tr>
+          <tr><td class="file">wallet-mockups.png</td><td class="mono">any</td><td class="mono">PNG</td><td>How both passes look, for review</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 08 OG ───────────────────────────────────────────────────────── -->
+    <section class="sheet" id="og">
+      <div class="sheet-head"><span class="num">08</span><h2>Link previews</h2><span class="pri p2">P2</span><span class="who">Graphic designer</span></div>
+      <p class="why">This is the image that appears when someone pastes a moracat.co link into WhatsApp, X or iMessage. It is generated by code, and the generator can't shape long Arabic text well. So supply background plates with any fixed Arabic text already in the art, and leave clear areas where code drops the cat's photo and name.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size (px)</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">og-home.png</td><td class="mono">1200 × 630</td><td class="mono">PNG or JPG, under 300 KB</td><td>Homepage. Complete image.</td></tr>
+          <tr><td class="file">og-cat-plate.png</td><td class="mono">1200 × 630</td><td class="mono">PNG</td><td>Community cat page: plate plus a redline for the photo, name and serial</td></tr>
+          <tr><td class="file">og-lost-plate.png</td><td class="mono">1200 × 630</td><td class="mono">PNG</td><td>Lost-and-found post: alert red, no 3D</td></tr>
+        </tbody>
+      </table></div>
+      <p class="why">Keep key content inside the central 630 × 630 square as well: WhatsApp on phones often shows a square crop.</p>
+    </section>
+
+    <!-- ── 09 Certificate ──────────────────────────────────────────────── -->
+    <section class="sheet" id="cert">
+      <div class="sheet-head"><span class="num">09</span><h2>Registration certificate</h2><span class="pri p2">P2</span><span class="who">Graphic designer</span></div>
+      <p class="why">A PDF the owner downloads to keep, frame or show. Code fills in the cat's name, Cat ID, issue date and a verification QR code (84 pt).</p>
+      <div class="callout">The heading is «شهادة تسجيل في سجل مرقط» / "Certificate of registration in the Moracat register". It must never resemble a government document: no national emblems and no "official" wording.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">certificate-frame.pdf / .svg</td><td class="mono">A4 portrait, 210 × 297 mm</td><td class="mono">Vector PDF + SVG</td><td>Border, header art and copper seal, with fields left empty</td></tr>
+          <tr><td class="file">certificate-redline.pdf</td><td class="mono">A4</td><td class="mono">PDF</td><td>Field positions in mm and type sizes in pt, Arabic and English</td></tr>
+          <tr><td class="file">certificate-print.pdf</td><td class="mono">A4 + 3 mm bleed</td><td class="mono">PDF/X-4, CMYK</td><td>For a print shop, with a sample cat</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 10 Email ────────────────────────────────────────────────────── -->
+    <section class="sheet" id="email">
+      <div class="sheet-head"><span class="num">10</span><h2>Email header &amp; footer</h2><span class="pri p2">P2</span><span class="who">Graphic designer</span></div>
+      <p class="why">This covers sign-in codes, care reminders, the weekly digest and receipts. The emails are 600 px wide and must look right in Gmail and Apple Mail, in light and dark mode.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Size (px)</th><th>Format</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="file">email-logo@2x.png</td><td class="mono">240 × 80 (shown at 120 × 40)</td><td class="mono">PNG-32</td><td>Must read on white and on dark: add a subtle light edge, or supply a second dark-mode file</td></tr>
+          <tr><td class="file">email-logo-dark@2x.png</td><td class="mono">240 × 80</td><td class="mono">PNG-32</td><td>For dark mode</td></tr>
+          <tr><td class="file">email-banner@2x.png</td><td class="mono">1200 × 400 (shown at 600 × 200)</td><td class="mono">PNG or JPG, under 100 KB</td><td>Optional header for the weekly digest</td></tr>
+          <tr><td class="file">email-seal@2x.png</td><td class="mono">96 × 96</td><td class="mono">PNG-32</td><td>Small copper seal for the footer</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 11 Tag ──────────────────────────────────────────────────────── -->
+    <section class="sheet" id="tag">
+      <div class="sheet-head"><span class="num">11</span><h2>Collar QR tag</h2><span class="pri p2">P2</span><span class="who">Graphic designer + manufacturer</span></div>
+      <p class="why">This is the physical object that makes the Cat ID useful when a cat is lost. A stranger scans it and reaches the owner without seeing their number. We generate a unique QR code for each cat, so leave it as a placeholder layer.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Item</th><th>Specification</th></tr></thead>
+        <tbody>
+          <tr><td>Shape and size</td><td>Round, 30 mm diameter (and a 25 mm version for kittens), with a 4 mm ring hole</td></tr>
+          <tr><td>Front</td><td>QR code at least 18 × 18 mm (16 × 16 mm on the 25 mm tag), error correction M, 2 mm quiet zone, plus a small "Moracat"</td></tr>
+          <tr><td>Back</td><td><span class="ar">لو لقيتني امسح الرمز</span> / "If you found me, scan the code", plus a placeholder for the serial (<span class="mono">MRC-XXXX-XXXX</span>)</td></tr>
+          <tr><td>Version A</td><td>Anodised aluminium, laser engraved, one colour</td></tr>
+          <tr><td>Version B</td><td>Printed and domed with epoxy, full colour</td></tr>
+          <tr><td>Files</td><td><span class="mono">tag-{30|25}-{engraved|printed}.pdf</span>: vector dieline with separate layers for cut, engrave/print and the QR placeholder, CMYK for the printed version, text outlined</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── 12 Photo ────────────────────────────────────────────────────── -->
+    <section class="sheet" id="photo">
+      <div class="sheet-head"><span class="num">12</span><h2>Photography</h2><span class="pri p1">P1</span><span class="who">Photographer</span></div>
+      <p class="why">Real cats in real Saudi homes, replacing stock imagery. The full creative direction and the shot list (about 12 cats in one day) are in <code>design/photography.md</code>, which we will send. There are two looks:</p>
+      <ul class="rules">
+        <li><b>Official Portrait:</b> eye level, square, plain warm background, window light. This is the photo that sits on a Cat ID.</li>
+        <li><b>Majlis Level:</b> floor-height editorial shots in lived-in homes, with people shown only as hands and laps.</li>
+      </ul>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Deliverable</th><th>Specification</th></tr></thead>
+        <tbody>
+          <tr><td>Selects</td><td>About 20 edited images, JPEG, sRGB, at least 4000 px on the long edge, quality 90+</td></tr>
+          <tr><td>Crops</td><td>Each select also exported as 1:1, 4:5 and 16:9, with the cat's eyes kept in frame</td></tr>
+          <tr><td>Originals</td><td>RAW files for all selects</td></tr>
+          <tr><td>Releases</td><td>A signed property and owner release for every home and cat. No people's faces without a model release.</td></tr>
+          <tr><td>Never</td><td>Retouching a cat's markings, sick or distressed animals, or AI-generated cats</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ── Delivery ────────────────────────────────────────────────────── -->
+    <section class="sheet" id="delivery">
+      <div class="sheet-head"><span class="num">··</span><h2>Delivery rules</h2></div>
+      <h3>Folder structure</h3>
+<pre>moracat-design-delivery/
+  01-logo/          02-icons/        03-3d/
+  04-card/          05-stickers/     06-posters/
+  07-wallet/        08-link-previews/ 09-certificate/
+  10-email/         11-tag/          12-photography/
+  source/           (Figma links, .ai, .blend, fonts list)</pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Rule</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td>File names</td><td>Lowercase with hyphens: <span class="mono">moracat-{asset}-{variant}[-ar|-en][@2x].{ext}</span></td></tr>
+          <tr><td>Screen colour</td><td>sRGB IEC 61966-2.1, embedded in every PNG and JPEG</td></tr>
+          <tr><td>Print colour</td><td>CMYK (FOGRA39 unless the print shop asks otherwise), 3 mm bleed (2 mm for the card), 300 dpi images, text outlined, PDF/X-4</td></tr>
+          <tr><td>Vectors</td><td>SVG optimised and editable: real paths, no embedded raster, no hidden layers</td></tr>
+          <tr><td>Sources</td><td>Figma (preferred) with named components; editable .ai for print; Blender scenes for 3D</td></tr>
+          <tr><td>Fonts</td><td>Use the faces in Brand basics. Lyon Arabic Display is licensed to Moracat: ask us for a working copy, check the license covers your use in comps, and outline it in all exports.</td></tr>
+          <tr><td>Rights</td><td>Full transfer of copyright, or an exclusive, perpetual, worldwide licence including the right to modify. List any third-party element (texture, font, stock) and its licence.</td></tr>
+          <tr><td>Review rounds</td><td>Concepts first (one or two directions per P0 item), then one refinement round, then final files</td></tr>
+          <tr><td>Order of work</td><td>P0 (logo, icons, 3D) first; P1 (card, stickers, posters, wallet, photos) next; P2 (link previews, certificate, email, tag) last</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Before you send anything, check</h3>
+      <ul class="rules">
+        <li>Designed in Arabic first and mirrored for English, with no letter-spacing on Arabic.</li>
+        <li>No "official", "government" or "national" wording and no state-like emblems.</li>
+        <li>No 3D objects or cute stickers on lost or found pieces.</li>
+        <li>Every size and format in this brief matches the file you are sending.</li>
+        <li>Text is at least 4.5:1 against its background, and QR codes sit on white with a quiet zone.</li>
+      </ul>
+    </section>
+  </main>
+</div>

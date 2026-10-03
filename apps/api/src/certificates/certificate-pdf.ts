@@ -1,4 +1,5 @@
 import { createElement as h, type ReactElement } from "react";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import QRCode from "qrcode";
 import fontkit, { type Font as ShapingFont } from "fontkit";
@@ -11,6 +12,11 @@ import { formatDate } from "@moraqat/core";
  *
  * Rendered server-side with @react-pdf/renderer + bundled Noto fonts (D8): the
  * API image is alpine, so no Chromium.
+ *
+ * Page 1 is the designer's registration certificate (delivery 2026-10-03,
+ * 09-certificate): their framed A4 page as the background art, with the cat's
+ * photo, name, Cat ID, issue date and verification QR placed exactly on their
+ * redline (in mm). Page 2 keeps the full record — details and vaccinations.
  *
  * Arabic is NOT laid out by react-pdf's text engine — textkit drops the last
  * glyphs of every Arabic run (verified on 3.4 and 4.9). Instead every Arabic
@@ -39,6 +45,8 @@ export interface CertificateSnapshot {
   coatColor: string | null;
   vaccinations: CertificateVaccination[];
   issuedBy: { ar: string; en: string } | null;
+  /** The cat's photo at issue time (absent on certificates issued before 2026-10). */
+  photoUrl?: string | null;
 }
 
 export interface CertificateRenderInput extends CertificateSnapshot {
@@ -48,6 +56,12 @@ export interface CertificateRenderInput extends CertificateSnapshot {
 }
 
 const FONT_DIR = join(__dirname, "..", "..", "assets", "fonts");
+const FRAME_PATH = join(__dirname, "..", "..", "assets", "certificate", "frame.png");
+let frameBuf: Buffer | null = null;
+/** The page art as bytes — react-pdf treats a bare file path as a URL. */
+function frame(): Buffer {
+  return (frameBuf ??= readFileSync(FRAME_PATH));
+}
 let fontsRegistered = false;
 function registerFonts() {
   if (fontsRegistered) return;
@@ -58,6 +72,13 @@ function registerFonts() {
       { src: join(FONT_DIR, "NotoSans-Bold.ttf"), fontWeight: 700 },
     ],
   });
+  // The designer's faces for the certificate page (OFL): Fraunces for a Latin
+  // name, Plex Mono for the serial and date.
+  // One cut each, registered for both weights so any style resolves to it.
+  const fr = join(FONT_DIR, "Fraunces-600.ttf");
+  const mo = join(FONT_DIR, "IBMPlexMono-500.ttf");
+  Font.register({ family: "Fraunces", fonts: [{ src: fr, fontWeight: 400 }, { src: fr, fontWeight: 600 }] });
+  Font.register({ family: "Mono", fonts: [{ src: mo, fontWeight: 400 }, { src: mo, fontWeight: 500 }] });
   // No hyphenation — names and ID numbers must never be split.
   Font.registerHyphenationCallback((word) => [word]);
   fontsRegistered = true;
@@ -174,9 +195,65 @@ function cell(labelEn: string, labelAr: string, value: string) {
   );
 }
 
+/** mm → pt (react-pdf works in points; the redline is in millimetres). */
+const mm = (v: number) => v * 2.834645669;
+const CERT_GREEN = "#045D48";
+
+/** Fetch the cat's photo for the certificate — JPEG/PNG only, ≤ 8 MB, 5 s. */
+async function photoBuffer(url: string | null | undefined): Promise<Buffer | null> {
+  if (!url || !/^https?:\/\//.test(url)) return null;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    const type = res.headers.get("content-type") ?? "";
+    if (!res.ok || !/image\/(jpeg|png)/.test(type)) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    return buf.length <= 8 * 1024 * 1024 ? buf : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A value centred in a redline box; Arabic is shaped, Latin is set as text. */
+function boxValue(value: string, box: { x: number; y: number; w: number; h: number }, opts: { latin: Record<string, unknown>; arSize: number; color?: string; bold?: boolean }) {
+  return h(
+    View,
+    { style: { position: "absolute", left: mm(box.x), top: mm(box.y), width: mm(box.w), height: mm(box.h), alignItems: "center", justifyContent: "center" } },
+    hasArabic(value)
+      ? h(ArabicText, { text: value, size: opts.arSize, color: opts.color ?? INK, bold: opts.bold, maxWidth: mm(box.w) - 8 })
+      : h(Text, { style: { ...opts.latin, textAlign: "center", maxLines: 1 } as never }, value)
+  );
+}
+
+/** Page 1 — the designer's certificate, fields on their redline. */
+function registrationPage(input: CertificateRenderInput, qr: string, photo: Buffer | null) {
+  return h(
+    Page,
+    { size: "A4", style: { backgroundColor: PAPER, fontFamily: "Sans", color: INK } },
+    h(Image, { src: frame(), style: { position: "absolute", left: 0, top: 0, width: mm(210), height: mm(297) } }),
+    // PHOTO · x73 y94 · 64 × 64 mm (inside the frame's rounded window)
+    photo
+      ? h(Image, { src: photo, style: { position: "absolute", left: mm(73), top: mm(94), width: mm(64), height: mm(64), objectFit: "cover", borderRadius: mm(6) } })
+      : null,
+    // NAME · x20 y166 · 170 × 22 mm — Arabic 36 pt (Naskh, standing in for Lyon), Latin Fraunces 600 32 pt
+    boxValue(input.catName, { x: 20, y: 166, w: 170, h: 22 }, { latin: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 32, color: INK }, arSize: 36, bold: true }),
+    // CAT ID · x20 y200 · 170 × 10 mm — Plex Mono 12 pt, LTR
+    boxValue(input.catIdNumber, { x: 20, y: 200, w: 170, h: 10 }, { latin: { fontFamily: "Mono", fontWeight: 500, fontSize: 12, letterSpacing: 2, color: CERT_GREEN }, arSize: 12 }),
+    // DATE · x20 y220 · 170 × 10 mm — Plex Mono 10 pt
+    boxValue(fmt(input.issuedAt, "en"), { x: 20, y: 220, w: 170, h: 10 }, { latin: { fontFamily: "Mono", fontWeight: 500, fontSize: 10, color: INK }, arSize: 10 }),
+    // QR · x160 y240 · 29.63 mm square
+    h(Image, { src: qr, style: { position: "absolute", left: mm(160), top: mm(240), width: mm(29.63), height: mm(29.63) } }),
+    // The certificate number, quietly, so a printed copy can be checked by hand.
+    h(Text, { style: { position: "absolute", left: mm(150), top: mm(271), width: mm(49.6), textAlign: "center", fontFamily: "Mono", fontSize: 6.5, color: MUTED } }, `No. ${input.number}`)
+  );
+}
+
 export async function renderCertificatePdf(input: CertificateRenderInput): Promise<Buffer> {
   registerFonts();
-  const qr = await QRCode.toDataURL(input.verifyUrl, { margin: 0, width: 256, color: { dark: INK, light: "#FFFFFF" } });
+  const qr = await QRCode.toDataURL(input.verifyUrl, { margin: 0, width: 512, color: { dark: INK, light: "#FFFFFF" } });
+  const photo = await photoBuffer(input.photoUrl);
   const gender = input.gender ? GENDER[input.gender] : null;
   const vaccinations = input.vaccinations.slice(0, 12);
   const verifiedCount = input.vaccinations.filter((v) => v.verified).length;
@@ -184,6 +261,7 @@ export async function renderCertificatePdf(input: CertificateRenderInput): Promi
   const doc = h(
     Document,
     { title: `Moracat Cat ID Certificate ${input.number}`, author: "Moracat", creator: "Moracat" },
+    registrationPage(input, qr, photo),
     h(
       Page,
       { size: "A4", style: s.page },

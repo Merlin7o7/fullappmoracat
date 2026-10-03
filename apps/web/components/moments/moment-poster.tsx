@@ -28,9 +28,9 @@ const ALERT = "#B42318";
 // (AD 2.1: no 3D in distress). Same-origin <img> so the capture embeds it.
 const OBJECT: Partial<Record<MomentKind, string>> = {
   joined: "/brand/3d/cat-plush.webp",
-  birthday: "/brand/3d/heart-plush.webp",
+  birthday: "/brand/3d/rosette.webp",
   reunion: "/brand/3d/heart-plush.webp",
-  adoption: "/brand/3d/paw-plush.webp",
+  adoption: "/brand/3d/carrier.webp",
 };
 
 const COPY: Record<MomentKind, { ar: string; en: string; tone: "alert" | "emerald" }> = {
@@ -134,6 +134,12 @@ export const MomentPoster = React.forwardRef<HTMLDivElement, MomentPosterProps>(
           ) : null}
           <div dir="ltr" style={{ fontSize: 14, color: "rgba(21,33,28,0.6)", marginTop: 2 }}>moracat.co</div>
         </div>
+        {/* The register's seal — on happy moments only; distress posters stay
+            stripped back to red, type, photo and QR (art direction, p.1). */}
+        {copy.tone === "emerald" ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/brand/seal/copper.svg" alt="" style={{ width: 76, height: 76, flexShrink: 0 }} />
+        ) : null}
       </div>
     </div>
   );

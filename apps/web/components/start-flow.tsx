@@ -7,6 +7,7 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { Button, IdBand, Seal, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { Field } from "@/components/field";
+import { Illo3D } from "@/components/illo-3d";
 import { OtpBoxes } from "@/components/otp-boxes";
 import { GoogleButton, googleEnabled } from "@/components/google-button";
 import { useCaptureSource } from "@/lib/source";
@@ -217,6 +218,13 @@ export function StartFlow({ isAr }: { isAr: boolean }) {
                 </button>
               ))}
             </div>
+            {/* A kitten gets a kitten — the first year is the one Moracat cares most about. */}
+            {age === "kitten" && (
+              <p className="mt-3 flex items-center gap-3 rounded-2xl bg-butter/50 p-3 text-sm">
+                <Illo3D name="kitten" className="size-14 shrink-0" px={56} />
+                {t("سنته الأولى أهم سنة — وسجله يبدأ من اليوم.", "The first year matters most — and their record starts today.")}
+              </p>
+            )}
           </fieldset>
 
           <Button type="submit" size="lg" className="w-full" disabled={!catReady || !ready}>

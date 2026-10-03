@@ -19,7 +19,7 @@ import { CatIdCard } from "@/components/cat-id-card";
 import { IlloPaw } from "@/components/illustrations";
 import {
   ABOUT_Q, EMOJI_CHOICES,
-  CARD_THEMES, ACCENTS, FRAMES, STICKERS,
+  CARD_THEMES, ACCENTS, FRAMES, STICKERS, themeArt, frameArt,
   themeById, accentById, resolvePersonalization, profileCompleteness, earnedBadges,
   type Question, type AnswerMap, type CatProfile, type Personalization, type StickerPlacement,
   type CatForDerivation,
@@ -224,6 +224,7 @@ export function CatOnboardingJourney({ catId }: { catId: string }) {
               isAr={isAr}
               hideStatus
               themeField={themeById(personalization.theme).field}
+              themeArt={themeArt(themeById(personalization.theme).id)}
               accentHsl={accentById(personalization.accent).hsl}
               frame={personalization.frame}
               // On the Personalize step the editor draws its own interactive
@@ -580,7 +581,10 @@ function ThemePicker({ value, onChange, isAr }: { value: string; onChange: (id: 
             key={t.id} type="button" onClick={() => onChange(t.id)} aria-pressed={value === t.id}
             className={cn("group flex flex-col items-center gap-1.5 rounded-2xl border p-2 transition-all", value === t.id ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40")}
           >
-            <span className="h-10 w-full rounded-lg" style={{ backgroundImage: `linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]})` }} />
+            <span
+              className="aspect-[85.6/54] w-full rounded-lg bg-cover bg-top"
+              style={{ backgroundImage: `url("${themeArt(t.id)}"), linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]})` }}
+            />
             <span className="text-xs font-medium">{isAr ? t.ar : t.en}</span>
           </button>
         ))}
@@ -617,8 +621,14 @@ function FramePicker({ value, onChange, isAr }: { value: string; onChange: (id: 
         {FRAMES.map((f) => (
           <button
             key={f.id} type="button" onClick={() => onChange(f.id)} aria-pressed={value === f.id}
-            className={cn("rounded-full border px-3 py-2 text-sm font-medium transition-all min-h-[44px]", value === f.id ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground")}
+            className={cn("flex min-h-[44px] items-center gap-2 rounded-full border py-1.5 pe-3 ps-1.5 text-sm font-medium transition-all", value === f.id ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground")}
           >
+            <span aria-hidden className="relative h-7 w-11 overflow-hidden rounded-md bg-[hsl(170_60%_12%)]">
+              {frameArt(f.id) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={frameArt(f.id)!} alt="" className="absolute inset-0 size-full" />
+              )}
+            </span>
             {isAr ? f.ar : f.en}
           </button>
         ))}
@@ -689,6 +699,7 @@ function StickerEditor({ cat, draft, isAr, onChange }: {
           isAr={isAr}
           hideStatus
           themeField={themeById(draft.personalization.theme).field}
+          themeArt={themeArt(themeById(draft.personalization.theme).id)}
           accentHsl={accentById(draft.personalization.accent).hsl}
           frame={draft.personalization.frame}
           stickers={[]}
@@ -696,7 +707,7 @@ function StickerEditor({ cat, draft, isAr, onChange }: {
         {/* Interactive sticker layer (mirrors the card's static layer, but movable) */}
         <div className="pointer-events-none absolute inset-0">
           {stickers.map((s, i) => {
-            const glyph = STICKERS.find((d) => d.id === s.id)?.glyph ?? "⭐";
+            const def = STICKERS.find((d) => d.id === s.id);
             const on = selected === i;
             return (
               <button
@@ -710,7 +721,10 @@ function StickerEditor({ cat, draft, isAr, onChange }: {
                   transform: `translate(-50%,-50%) rotate(${s.rotate}deg) scaleX(${s.flip ? -1 : 1})`, lineHeight: 1,
                 }}
               >
-                {glyph}
+                {def ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={def.art} alt="" draggable={false} className="block" style={{ width: `${34 * s.scale}px`, height: `${34 * s.scale}px` }} />
+                ) : "⭐"}
               </button>
             );
           })}
@@ -723,9 +737,10 @@ function StickerEditor({ cat, draft, isAr, onChange }: {
           <button
             key={d.id} type="button" onClick={() => add(d.id)} aria-label={isAr ? d.ar : d.en}
             disabled={stickers.length >= 14}
-            className="grid size-10 place-items-center rounded-xl bg-muted text-xl transition-colors hover:bg-accent/10 disabled:opacity-40"
+            className="grid size-11 place-items-center rounded-xl bg-[hsl(170_60%_12%)] p-1 transition-transform hover:scale-105 disabled:opacity-40"
           >
-            {d.glyph}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={d.art} alt="" className="size-full" />
           </button>
         ))}
       </div>
@@ -885,6 +900,7 @@ function Celebration({ cat, draft, badges, completeness, isAr, dispName, reduced
             hideStatus
             className="mx-auto shadow-glow"
             themeField={themeById(draft.personalization.theme).field}
+            themeArt={themeArt(themeById(draft.personalization.theme).id)}
             accentHsl={accentById(draft.personalization.accent).hsl}
             frame={draft.personalization.frame}
             stickers={resolved.stickers}

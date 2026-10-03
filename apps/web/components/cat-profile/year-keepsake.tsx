@@ -102,7 +102,7 @@ export function YearKeepsake({ cat, year, isAr }: { cat: PortalCat; year: number
             // eslint-disable-next-line @next/next/no-img-element
             <img src={d.cat.photoUrl} alt={name} className="aspect-square w-40 rounded-2xl object-cover sm:w-48" />
           ) : (
-            <Illo3D name="cat" px={160} className="relative size-40" />
+            <Illo3D name="book" px={160} className="relative size-40" />
           )}
         </div>
       </Card>

@@ -75,6 +75,7 @@ export class CertificatesService {
       select: {
         id: true,
         name: true,
+        photoUrl: true,
         catIdNumber: true,
         gender: true,
         birthDate: true,
@@ -99,6 +100,7 @@ export class CertificatesService {
 
     const snapshot: CertificateSnapshot = {
       catName: cat.name,
+      photoUrl: cat.photoUrl ?? null,
       catIdNumber: cat.catIdNumber ?? "",
       breed: cat.breed ? { ar: cat.breed.nameAr, en: cat.breed.nameEn } : null,
       gender: cat.gender ?? null,
@@ -186,7 +188,8 @@ export class CertificatesService {
     });
     if (!cert || cert.revokedAt) throw new NotFoundException("Certificate not found");
     const fileName = `moracat-certificate-${cert.number}.pdf`;
-    if (cert.pdfKey) {
+    // "/v2/" = the designed certificate (2026-10-03); older cached PDFs re-render.
+    if (cert.pdfKey && cert.pdfKey.includes("/v2/")) {
       try {
         return { buffer: await this.storage.getPrivate(cert.pdfKey), fileName };
       } catch {
@@ -201,7 +204,7 @@ export class CertificatesService {
       verifyUrl: `${SITE()}/certificates/verify/${token}`,
     });
     try {
-      const key = this.storage.buildPrivateKey(`certificates/${cert.id}`, "pdf");
+      const key = this.storage.buildPrivateKey(`certificates/v2/${cert.id}`, "pdf");
       await this.storage.putPrivate(key, buffer, "application/pdf");
       await this.prisma.certificate.update({ where: { id: cert.id }, data: { pdfKey: key } });
     } catch (e) {

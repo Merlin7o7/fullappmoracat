@@ -189,6 +189,15 @@ export interface CardTheme {
   swatch: [string, string];
 }
 
+/** The designer's full-card art for a theme (1712 × 1080, delivery 2026-10-03). */
+export function themeArt(id: string): string {
+  return `/brand/card/themes/${id}.svg`;
+}
+/** The designer's frame overlay (transparent, full card). "none" has none. */
+export function frameArt(id: string): string | null {
+  return id && id !== "none" ? `/brand/card/frames/${id}.svg` : null;
+}
+
 /** The default is the brand's own deep-green civic field — never removed. */
 export const CARD_THEMES: CardTheme[] = [
   { id: "classic", en: "Classic", ar: "كلاسيكي", field: "radial-gradient(130% 130% at 0% 0%,hsl(168 72% 19%),hsl(169 82% 11%) 52%,hsl(174 82% 6%))", swatch: ["hsl(168 72% 19%)", "hsl(174 82% 6%)"] },
@@ -236,29 +245,34 @@ export const FRAMES: FrameOption[] = [
 
 export interface StickerDef {
   id: string;
+  /** Emoji fallback — only used if the art can't load. */
   glyph: string;
   en: string;
   ar: string;
+  /** The designer's flat sticker (SVG, viewBox 256) — what the card renders. */
+  art: string;
 }
 
-/** The sticker sheet — emoji so it's instantly legible, RTL-neutral, and free. */
+/** The sticker sheet — the designer's flat set (delivery 2026-10-03), so a card
+ *  looks identical on every phone and in every share image. Ids are stored in
+ *  members' profiles, so they never change; only the art does. */
 export const STICKERS: StickerDef[] = [
-  { id: "fish", glyph: "🐟", en: "Fish", ar: "سمكة" },
-  { id: "yarn", glyph: "🧶", en: "Yarn", ar: "خيط" },
-  { id: "paw", glyph: "🐾", en: "Paws", ar: "آثار أقدام" },
-  { id: "heart", glyph: "💛", en: "Heart", ar: "قلب" },
-  { id: "crown", glyph: "👑", en: "Crown", ar: "تاج" },
-  { id: "star", glyph: "⭐", en: "Star", ar: "نجمة" },
-  { id: "sparkle", glyph: "✨", en: "Sparkle", ar: "بريق" },
-  { id: "sunglasses", glyph: "😎", en: "Cool", ar: "نظارات" },
-  { id: "chef", glyph: "🧑‍🍳", en: "Chef", ar: "طاهٍ" },
-  { id: "gamer", glyph: "🎮", en: "Gamer", ar: "لاعب" },
-  { id: "wizard", glyph: "🧙", en: "Wizard", ar: "ساحر" },
-  { id: "pirate", glyph: "🏴‍☠️", en: "Pirate", ar: "قرصان" },
-  { id: "flower", glyph: "🌸", en: "Flower", ar: "زهرة" },
-  { id: "balloon", glyph: "🎈", en: "Balloon", ar: "بالون" },
-  { id: "moon", glyph: "🌙", en: "Moon", ar: "قمر" },
-  { id: "bow", glyph: "🎀", en: "Bow", ar: "فيونكة" },
+  { id: "fish", glyph: "🐟", en: "Fish", ar: "سمكة", art: "/brand/stickers/fish.svg" },
+  { id: "yarn", glyph: "🧶", en: "Yarn", ar: "خيط", art: "/brand/stickers/yarn.svg" },
+  { id: "paw", glyph: "🐾", en: "Paws", ar: "آثار أقدام", art: "/brand/stickers/paws.svg" },
+  { id: "heart", glyph: "💛", en: "Heart", ar: "قلب", art: "/brand/stickers/heart.svg" },
+  { id: "crown", glyph: "👑", en: "Crown", ar: "تاج", art: "/brand/stickers/crown.svg" },
+  { id: "star", glyph: "⭐", en: "Star", ar: "نجمة", art: "/brand/stickers/star.svg" },
+  { id: "sparkle", glyph: "✨", en: "Sparkle", ar: "بريق", art: "/brand/stickers/sparkle.svg" },
+  { id: "sunglasses", glyph: "😎", en: "Cool", ar: "نظارات", art: "/brand/stickers/cool.svg" },
+  { id: "chef", glyph: "🧑‍🍳", en: "Chef", ar: "طاهٍ", art: "/brand/stickers/chef.svg" },
+  { id: "gamer", glyph: "🎮", en: "Gamer", ar: "لاعب", art: "/brand/stickers/gamer.svg" },
+  { id: "wizard", glyph: "🧙", en: "Wizard", ar: "ساحر", art: "/brand/stickers/wizard.svg" },
+  { id: "pirate", glyph: "🏴‍☠️", en: "Pirate", ar: "قرصان", art: "/brand/stickers/pirate.svg" },
+  { id: "flower", glyph: "🌸", en: "Flower", ar: "زهرة", art: "/brand/stickers/flower.svg" },
+  { id: "balloon", glyph: "🎈", en: "Balloon", ar: "بالون", art: "/brand/stickers/balloon.svg" },
+  { id: "moon", glyph: "🌙", en: "Moon", ar: "قمر", art: "/brand/stickers/moon.svg" },
+  { id: "bow", glyph: "🎀", en: "Bow", ar: "فيونكة", art: "/brand/stickers/bow.svg" },
 ];
 
 /* ══ Resolution helpers (catalog id → renderable primitives) ═════════════════ */
@@ -275,9 +289,11 @@ export function stickerById(id: string): StickerDef | undefined {
 
 export interface ResolvedPersonalization {
   themeField: string;
+  /** The theme's designed art (falls back to themeField if it can't load). */
+  themeArt: string;
   accentHsl: string;
   frame: string;
-  stickers: (StickerPlacement & { glyph: string })[];
+  stickers: (StickerPlacement & { glyph: string; art?: string })[];
   isCustomised: boolean;
 }
 
@@ -289,13 +305,13 @@ export function resolvePersonalization(p?: Personalization | null): ResolvedPers
   const stickers = (p?.stickers ?? [])
     .map((s) => {
       const def = stickerById(s.id);
-      return def ? { ...s, glyph: def.glyph } : null;
+      return def ? { ...s, glyph: def.glyph, art: def.art } : null;
     })
-    .filter(Boolean) as (StickerPlacement & { glyph: string })[];
+    .filter(Boolean) as (StickerPlacement & { glyph: string; art?: string })[];
   const isCustomised = Boolean(
     (p?.theme && p.theme !== "classic") || (p?.accent && p.accent !== "signature") || frame !== "none" || stickers.length
   );
-  return { themeField: theme.field, accentHsl: accent.hsl, frame, stickers, isCustomised };
+  return { themeField: theme.field, themeArt: themeArt(theme.id), accentHsl: accent.hsl, frame, stickers, isCustomised };
 }
 
 /* ══ Completeness ═══════════════════════════════════════════════════════════ */

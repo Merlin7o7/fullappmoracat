@@ -206,6 +206,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
                 hideStatus
                 animated
                 themeField={rp.themeField}
+                themeArt={rp.themeArt}
                 accentHsl={rp.accentHsl}
                 frame={rp.frame}
                 stickers={rp.stickers}

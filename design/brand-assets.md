@@ -18,8 +18,16 @@ through `Illo3D` (`apps/web/components/illo-3d.tsx`) or `IlloPanel`.
   and footers do not animate (fixed 2026-10-01).
 
 ## Inventory
+_Updated 2026-10-03 with the designer delivery (`design/delivery-2026-10-03/`)._
+
 | File | Object | Finish |
 |---|---|---|
+| collar | collar with copper tag | one finish (both themes) — NEW |
+| bowl | food bowl | one finish — NEW |
+| rosette | rosette / ribbon | one finish — NEW |
+| kitten | kitten | one finish — NEW |
+| carrier | cat carrier | one finish — NEW |
+| book | open archive book | one finish — NEW |
 | cat-plush / cat-metal | cat | plush · metal |
 | mouse-plush-pink / mouse-plush-green / mouse-metal | mouse | plush ×2 · metal |
 | can-plush / can-metal | can | plush · metal |
@@ -42,7 +50,21 @@ through `Illo3D` (`apps/web/components/illo-3d.tsx`) or `IlloPanel`.
 mode, lost/found post photos, vet clinical screens (the vet portal stays dense
 and has no decoration), invoices, the health summary `/h/[token]`.
 
-## Commission list (for the founder: same artist, same lighting, both finishes)
+## Placement of the new objects (2026-10-03)
+| Object | Where |
+|---|---|
+| collar | homepage chapter 01 (identity), scan page explainer (never when lost) |
+| bowl | homepage chapter 02 (care), `/portal/care` empty states |
+| book | homepage chapter 04 (life), yearly keepsake without a photo |
+| carrier | `/vet-directory` hero, adoption ("new home") poster |
+| rosette | birthday poster |
+| kitten | sign-up, when the cat is under a year |
+
+## Still to commission
+- **QR tag on its own** (brief item 2) — not in the 2026-10-03 delivery.
+- **Metal finish** of the six new objects — delivered in one finish only.
+
+## Original commission list (for the founder: same artist, same lighting, both finishes)
 In priority order. Each one replaces a real gap where a flat sticker or an
 icon is doing a 3D job today:
 1. **Collar with tag:** the Cat ID's physical object. Needed for the homepage

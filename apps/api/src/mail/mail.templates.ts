@@ -59,7 +59,9 @@ function darkStyles(): string {
       ${prefix} .em-ink { color:${DARK.ink} !important; }
       ${prefix} .em-muted, ${prefix} .em-muted a { color:${DARK.muted} !important; }
       ${prefix} .em-code { color:${DARK.code} !important; }
-      ${prefix} .em-line { border-color:${DARK.hairline} !important; }`;
+      ${prefix} .em-line { border-color:${DARK.hairline} !important; }
+      ${prefix} .em-logo-light { display:none !important; max-height:0 !important; }
+      ${prefix} .em-logo-dark { display:inline-block !important; max-height:none !important; width:120px !important; }`;
   return `<style>
     @media (prefers-color-scheme: dark) {${rules("")}
     }
@@ -83,9 +85,20 @@ const CONTACT = {
 function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
 }
+// The designer's email set (delivery 2026-10-03, 10-email): a 240×80 @2x
+// logo shown at 120×40, its dark-mode twin, a 1200×400 digest banner shown at
+// 600 wide, and the copper seal for the footer. Absolute URLs from /public.
 function logoUrl(): string {
-  // Green wordmark served from the web app's /public — absolute URL for email.
-  return `${siteUrl()}/brand/moracat-logo.png`;
+  return `${siteUrl()}/brand/email/logo@2x.png`;
+}
+function logoDarkUrl(): string {
+  return `${siteUrl()}/brand/email/logo-dark@2x.png`;
+}
+function sealUrl(): string {
+  return `${siteUrl()}/brand/email/seal@2x.png`;
+}
+function bannerUrl(): string {
+  return `${siteUrl()}/brand/email/banner@2x.jpg`;
 }
 function supportUrl(): string {
   return `${siteUrl()}/portal/support`;
@@ -97,6 +110,8 @@ interface LayoutInput {
   heading: string;
   body: string[]; // paragraphs
   extra?: string; // raw HTML block rendered after the paragraphs (e.g. an OTP / chip)
+  /** Optional full-width header art above the card (the weekly digest). */
+  banner?: { src: string; alt: string };
   cta?: { label: string; url: string };
   footnote?: string;
 }
@@ -143,8 +158,10 @@ function layout(i: LayoutInput): string {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:524px;">
         <!-- Logo -->
         <tr><td style="padding:0 4px 20px;text-align:center;">
-          <img src="${logoUrl()}" width="132" alt="Moracat" style="display:inline-block;height:auto;width:132px;border:0;outline:none;text-decoration:none;">
+          <img class="em-logo-light" src="${logoUrl()}" width="120" height="40" alt="Moracat · مرقط" style="display:inline-block;height:auto;width:120px;border:0;outline:none;text-decoration:none;">
+          <!--[if !mso]><!--><img class="em-logo-dark" src="${logoDarkUrl()}" width="120" height="40" alt="" style="display:none;max-height:0;height:auto;width:120px;border:0;outline:none;text-decoration:none;"><!--<![endif]-->
         </td></tr>
+        ${i.banner ? `<tr><td style="padding:0 0 16px;"><img src="${i.banner.src}" width="524" alt="${i.banner.alt}" style="display:block;width:100%;max-width:524px;height:auto;border:0;border-radius:18px;"></td></tr>` : ""}
         <!-- Card with a green brand accent bar on top -->
         <tr><td style="height:4px;background:${BRAND.green};border-radius:20px 20px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
         <tr><td class="em-card" style="background:${BRAND.card};border:1px solid ${BRAND.hairline};border-top:0;border-radius:0 0 20px 20px;padding:34px 30px;">
@@ -156,6 +173,7 @@ function layout(i: LayoutInput): string {
         </td></tr>
         <!-- Footer -->
         <tr><td style="padding:22px 10px 0;text-align:center;">
+          <img src="${sealUrl()}" width="48" height="48" alt="" style="display:inline-block;width:48px;height:48px;border:0;margin:0 0 10px;">
           <p style="margin:0 0 6px;font-size:12px;color:${BRAND.muted};">${help} <a href="${supportUrl()}" style="color:${BRAND.green};text-decoration:none;font-weight:600;">${helpLink}</a></p>
           <p style="margin:0;font-size:12px;color:${BRAND.muted};">${promise}</p>
           ${legalFoot}
@@ -993,7 +1011,7 @@ export function weeklyDigestTemplate(
   const cta = { label: ar ? "افتح العناية" : "Open Care", url };
   return {
     subject: ar ? "هذا الأسبوع مع قططك — مرقط" : "This week with your cats — Moracat",
-    html: layout({ locale, preheader: heading, heading, body, extra: summary(rows, ar), cta }),
+    html: layout({ locale, preheader: heading, heading, body, extra: summary(rows, ar), cta, banner: { src: bannerUrl(), alt: ar ? "أسبوع قطك في السجل" : "Your cat's week in the register" } }),
     text: toText(heading, body, cta, cats.flatMap((c) => [c.name, ...c.lines.map((l) => `• ${l}`)])),
   };
 }

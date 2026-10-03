@@ -113,8 +113,11 @@ export class WalletService {
       subheader: ar("هوية القط", "Cat ID"),
       header: ar(cat.name, cat.name),
       // The brand's deep-green field — same material as the physical card.
-      hexBackgroundColor: "#0b4a3b",
-      logo: { sourceUri: { uri: `${siteUrl}/brand/moracat-logo-light.png` } },
+      hexBackgroundColor: "#045B46",
+      // Designer art (delivery 2026-10-03): symbol inside the circle crop, and
+      // the metal cat on guilloché as the wide hero banner.
+      logo: { sourceUri: { uri: `${siteUrl}/brand/wallet/google-logo.png` } },
+      heroImage: { sourceUri: { uri: `${siteUrl}/brand/wallet/google-hero.png` } },
       // The same secure in-ecosystem token as the card — never a public URL.
       barcode: {
         type: "QR_CODE",

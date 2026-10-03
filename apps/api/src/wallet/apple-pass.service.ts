@@ -49,12 +49,17 @@ export class ApplePassService {
     return { passTypeIdentifier, teamIdentifier, signerCert, signerKey, wwdr, signerKeyPassphrase: process.env.APPLE_PASS_KEY_PASSPHRASE || undefined };
   }
 
-  private assets(): Record<string, Buffer> {
+  /** Pass art (delivery 2026-10-03, 07-wallet). The plush-cat thumbnail is a
+   *  placeholder the designer drew for cats without a photo — never shown
+   *  beside a real photo. */
+  private assets(withThumbnail: boolean): Record<string, Buffer> {
     const dirs = [join(__dirname, "..", "..", "assets", "pass"), join(process.cwd(), "assets", "pass")];
     const dir = dirs.find((d) => existsSync(join(d, "icon.png")));
     if (!dir) throw new ServiceUnavailableException({ code: "WALLET_ASSETS_MISSING", message: "Pass images are missing from this build" });
     const out: Record<string, Buffer> = {};
-    for (const f of ["icon.png", "icon@2x.png", "icon@3x.png", "logo.png", "logo@2x.png"]) {
+    const files = ["icon.png", "icon@2x.png", "icon@3x.png", "logo.png", "logo@2x.png", "logo@3x.png"];
+    if (withThumbnail) files.push("thumbnail.png", "thumbnail@2x.png", "thumbnail@3x.png");
+    for (const f of files) {
       if (existsSync(join(dir, f))) out[f] = readFileSync(join(dir, f));
     }
     return out;
@@ -68,7 +73,7 @@ export class ApplePassService {
     const cat = await this.prisma.cat.findFirst({
       where: { id: catId, userId, deletedAt: null },
       select: {
-        name: true, catIdNumber: true, qrToken: true, idIssuedAt: true, vaccinationStatus: true,
+        name: true, catIdNumber: true, qrToken: true, idIssuedAt: true, vaccinationStatus: true, photoUrl: true,
         emergencyContacts: { orderBy: { isPrimary: "desc" }, take: 1, select: { name: true, phone: true } },
         user: { select: { locale: true } },
       },
@@ -81,7 +86,7 @@ export class ApplePassService {
     const standing = vaccinationStandingLabel((cat.vaccinationStatus ?? "UNKNOWN") as VaccinationStanding);
 
     const pass = new PKPass(
-      this.assets(),
+      this.assets(!cat.photoUrl),
       { wwdr: creds.wwdr, signerCert: creds.signerCert, signerKey: creds.signerKey, signerKeyPassphrase: creds.signerKeyPassphrase },
       {
         formatVersion: 1,
@@ -90,7 +95,7 @@ export class ApplePassService {
         serialNumber: cat.catIdNumber,
         organizationName: "Moracat · مرقط",
         description: loc === "ar" ? `هوية ${cat.name} في مرقط` : `${cat.name}'s Moracat ID`,
-        logoText: loc === "ar" ? "مرقط" : "Moracat",
+        // No logoText: the logo art is the full Moracat · مرقط lockup.
         // AD 2.1: emerald ground, paper ink.
         backgroundColor: "rgb(4, 91, 70)",
         foregroundColor: "rgb(250, 247, 242)",

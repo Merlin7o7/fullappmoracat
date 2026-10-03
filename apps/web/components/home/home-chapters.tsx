@@ -30,7 +30,7 @@ export function HomeChapters({ isAr }: { isAr: boolean }) {
     <div className="space-y-24 py-20 sm:space-y-32 sm:py-28">
       <Chapter
         n="01"
-        illo="cat"
+        illo="collar"
         tint="bg-cream"
         chip="bg-butter/80 -rotate-2"
         kicker={t("الهوية", "Identity")}
@@ -43,7 +43,7 @@ export function HomeChapters({ isAr }: { isAr: boolean }) {
       />
       <Chapter
         n="02"
-        illo="heart"
+        illo="bowl"
         tint="bg-blush/40 dark:bg-blush/15"
         chip="bg-blush/70 rotate-1"
         flip
@@ -70,7 +70,7 @@ export function HomeChapters({ isAr }: { isAr: boolean }) {
       />
       <Chapter
         n="04"
-        illo="fish"
+        illo="book"
         tint="bg-butter/50 dark:bg-butter/15"
         chip="bg-peach/80 rotate-2"
         flip

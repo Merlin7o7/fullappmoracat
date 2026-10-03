@@ -229,6 +229,19 @@ The W8 *content* stays: the story chapters, real product artifacts, real
 member cats, honest promises, no fake testimonials, no "official" claims.
 Product UI (portal, vet, documents) stays AD 2.1. Reduced motion stills it all.
 
+### Amendment (2026-10-03) — the designer delivery is the brand's source of truth
+
+The commissioned delivery (`design/delivery-2026-10-03/`, brief MRC-DES-001,
+art direction in "Moracat Social Art Direction.pdf") is now live: the vector
+logo system (stacked / horizontal / arabic / symbol — `components/logo.tsx`),
+the icon set, eight card themes + five frames as artwork, sixteen flat
+stickers replacing emoji, the copper seal on share posters, Wallet art,
+link-preview plates (cat + lost), the framed registration certificate
+(page 1 of the PDF) and the email set, plus six new 3D objects. Rules from
+their deck that bind: clear space = one ق dot; minimum sizes stacked 72 px,
+horizontal 96 px, arabic 48 px, else the symbol; distress pieces strip back to
+red, type, photo and QR (no seal, no 3D).
+
 ## Motion
 
 Acknowledge taps ≤100ms (R071). Transitions 150–300ms (R072). Richest animation

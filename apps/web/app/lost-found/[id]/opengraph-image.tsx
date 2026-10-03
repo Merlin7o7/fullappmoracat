@@ -67,6 +67,36 @@ export default async function OpengraphImage({ params }: { params: { id: string 
   const place = [latinOrNull(notice?.district), latinOrNull(notice?.city?.en)].filter(Boolean).join(", ");
   const photo = drawablePhoto(notice?.photoUrl);
 
+  // A lost cat unfurls on the designer's red plate (delivery 2026-10-03,
+  // 08-link-previews/og-lost-plate + redline): «قطة مفقودة» / LOST CAT is
+  // already in the art (no shaping needed), and code fills three slots —
+  // PHOTO 450,176 300² · NAME 300,494 600×64 · LINE 360,566 480×30. No 3D, no
+  // phone number. Found and home-again notices keep the card below.
+  if (lost && !reunited) {
+    const plate = await fetch(new URL("../../../public/brand/og/lost-plate.png", import.meta.url)).then((r) => r.arrayBuffer());
+    return new ImageResponse(
+      (
+        <div style={{ width: 1200, height: 630, display: "flex", position: "relative", fontFamily: "sans-serif" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
+          <img src={plate as unknown as string} width={1200} height={630} style={{ position: "absolute", left: 0, top: 0 }} />
+          {photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo} alt="" width={300} height={300} style={{ position: "absolute", left: 450, top: 176, width: 300, height: 300, objectFit: "cover", borderRadius: 30 }} />
+          )}
+          {name && (
+            <div style={{ position: "absolute", left: 300, top: 494, width: 600, height: 64, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 52, fontWeight: 800, color: "#FFFFFF", overflow: "hidden", whiteSpace: "nowrap" }}>
+              {name.length > 18 ? `${name.slice(0, 17)}…` : name}
+            </div>
+          )}
+          <div style={{ position: "absolute", left: 360, top: name ? 566 : 510, width: 480, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "rgba(255,255,255,0.88)", whiteSpace: "nowrap", overflow: "hidden" }}>
+            {place || "Seen them? Open the link to message the owner."}
+          </div>
+        </div>
+      ),
+      { ...size }
+    );
+  }
+
   return new ImageResponse(
     (
       <div

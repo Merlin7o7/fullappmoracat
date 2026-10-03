@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
@@ -65,12 +64,14 @@ interface CatIdCardProps {
   //    default (no props) renders the untouched classic green civic card. ──
   /** CSS background-image for the field; defaults to the classic deep green. */
   themeField?: string;
+  /** The designer's theme art (full-card SVG); drawn over themeField. */
+  themeArt?: string;
   /** Accent colour as raw "H S% L%" — a quiet signature hairline under the name. */
   accentHsl?: string;
   /** Frame treatment id (minimal / gold / neon / floral / birthday). */
   frame?: string;
   /** Owner-placed stickers, positioned as fractions of the card (LTR origin). */
-  stickers?: { glyph: string; x: number; y: number; scale: number; rotate: number; flip?: boolean }[];
+  stickers?: { glyph: string; art?: string; x: number; y: number; scale: number; rotate: number; flip?: boolean }[];
   className?: string;
 }
 
@@ -78,27 +79,10 @@ interface CatIdCardProps {
 const CLASSIC_FIELD =
   "radial-gradient(130% 130% at 0% 0%,hsl(168 72% 19%),hsl(169 82% 11%) 52%,hsl(174 82% 6%))";
 
-/** Frame → inset ring + optional corner glyphs. Insets (not outer glows) so the
- *  captured PNG never clips a halo (R034); neon reads as a bright inner ring. */
-function frameStyle(frame: string | undefined, accentHsl: string): {
-  boxShadow?: string;
-  corners?: string[];
-} {
-  switch (frame) {
-    case "minimal":
-      return { boxShadow: "inset 0 0 0 0.5cqw hsl(0 0% 100% / 0.35)" };
-    case "gold":
-      return { boxShadow: "inset 0 0 0 1cqw hsl(43 74% 58%), inset 0 0 0 1.5cqw hsl(43 40% 28%)" };
-    case "neon":
-      return { boxShadow: `inset 0 0 0 0.8cqw hsl(${accentHsl}), inset 0 0 6cqw hsl(${accentHsl} / 0.55)` };
-    case "floral":
-      return { boxShadow: "inset 0 0 0 0.7cqw hsl(352 80% 80% / 0.7)", corners: ["🌸", "🌷", "🌿", "🌸"] };
-    case "birthday":
-      return { boxShadow: "inset 0 0 0 0.7cqw hsl(43 82% 62% / 0.8)", corners: ["🎈", "🎉", "🎂", "🎈"] };
-    default:
-      return {};
-  }
-}
+/** The classic theme's designed art — the default card. */
+const CLASSIC_ART = "/brand/card/themes/classic.svg";
+/** Frame id → the designer's transparent overlay (delivery 2026-10-03). */
+const FRAME_IDS = new Set(["minimal", "gold", "neon", "floral", "birthday"]);
 
 /**
  * The Cat ID — the membership made tangible (Dossier §05). A civic credential
@@ -117,10 +101,14 @@ export function CatIdCard({
   catName, catIdNumber, catNumber, foundingClass, issuedAt, photoUrl, coverUrl, isAr, preview, hideStatus,
   membershipActive, animated, detailed, ownerName, ownerPhone, breed, favoriteFood,
   gender, birthDate, vaccinationStatus, qrToken, exportMode,
-  themeField, accentHsl, frame, stickers, className,
+  themeField, themeArt, accentHsl, frame, stickers, className,
 }: CatIdCardProps) {
-  const fieldBg = themeField || CLASSIC_FIELD;
-  const frameFx = frameStyle(frame, accentHsl || "18 93% 62%");
+  // The designer's art sits over the gradient (which stays as the fallback and
+  // as the colour the field shows while the SVG loads). The art is the full
+  // 85.6:54 card, so 100% width anchored top lines up with the card exactly.
+  const art = themeArt || (themeField ? undefined : CLASSIC_ART);
+  const fieldBg = art ? `url("${art}"), ${themeField || CLASSIC_FIELD}` : themeField || CLASSIC_FIELD;
+  const frameArtSrc = frame && FRAME_IDS.has(frame) ? `/brand/card/frames/${frame}.svg` : null;
   const since = issuedAt
     ? formatDate(issuedAt, isAr ? "ar" : "en", { month: "short", year: "numeric" })
     : null;
@@ -159,7 +147,7 @@ export function CatIdCard({
         {/* ── The field — the brand's chrome, deep and calm (themeable) ── */}
         <div
           className="relative flex min-h-0 flex-1 flex-col justify-between px-[5.5cqw] pb-[3cqw] pt-[3.4cqw] text-white"
-          style={{ backgroundImage: fieldBg }}
+          style={{ backgroundImage: fieldBg, backgroundSize: art ? "100% auto, cover" : undefined, backgroundPosition: art ? "top center, center" : undefined, backgroundRepeat: "no-repeat" }}
         >
           {/* Optional cover wash — the cat's world, barely there. */}
           {coverUrl && (
@@ -170,15 +158,16 @@ export function CatIdCard({
               fallback={<></>}
             />
           )}
-          {/* Guilloché engraving — banknote craft, scaled with the card. */}
-          <span
+          {/* Guilloché engraving — banknote craft, only on the plain gradient (the
+              designed themes carry their own texture). */}
+          {!art && <span
             aria-hidden
             className="pointer-events-none absolute inset-0 -z-10 opacity-50"
             style={{
               backgroundImage:
                 "repeating-linear-gradient(115deg,rgba(255,255,255,0.045) 0 0.25cqw,transparent 0.25cqw 1.7cqw),repeating-linear-gradient(65deg,rgba(255,255,255,0.03) 0 0.25cqw,transparent 0.25cqw 2.1cqw)",
             }}
-          />
+          />}
           {/* Soft light sweep — shifts gently on hover when animated. */}
           <span
             aria-hidden
@@ -193,17 +182,19 @@ export function CatIdCard({
           />
           {/* Top light + quiet brand-paw watermark (the illustration set, not a stock glyph). */}
           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-1/2 bg-gradient-to-b from-white/[0.08] to-transparent" />
-          <IlloPaw
-            tone="butter"
-            aria-hidden
-            className="pointer-events-none absolute -end-[5cqw] top-[6cqw] -z-10 size-[32cqw] rotate-[14deg] opacity-[0.06]"
-          />
+          {!art && (
+            <IlloPaw
+              tone="butter"
+              aria-hidden
+              className="pointer-events-none absolute -end-[5cqw] top-[6cqw] -z-10 size-[32cqw] rotate-[14deg] opacity-[0.06]"
+            />
+          )}
 
           {/* Header: the brand lockup (مرقط / Moracat) + standing. The document
               type ("Cat ID") lives on the paper band — no duplicate eyebrow. */}
           <div className="flex items-start justify-between gap-[3cqw]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/moracat-logo-light.png" alt="" aria-hidden className="h-[7.5cqw] w-auto" />
+            <img src="/brand/logo/stacked-paper.svg" alt="" aria-hidden className="h-[7.5cqw] w-auto" />
 
             {preview ? (
               <span className="font-mono text-[2.1cqw] uppercase tracking-[0.24em] text-[hsl(30_70%_82%)]">
@@ -325,11 +316,12 @@ export function CatIdCard({
         {/* ── The keepsake layer — owner frame + placed stickers, over everything
               but never interactive; positions are LTR fractions so they read
               identically in AR/RTL and in the exported PNG. ── */}
-        {(frameFx.boxShadow || frameFx.corners || (stickers && stickers.length > 0)) && (
-          <span aria-hidden className="pointer-events-none absolute inset-0 z-10 rounded-[5cqw]" style={{ boxShadow: frameFx.boxShadow }}>
-            {frameFx.corners?.map((g, i) => (
-              <span key={`corner-${i}`} className="absolute text-[5cqw] leading-none" style={CORNER_POS[i]}>{g}</span>
-            ))}
+        {(frameArtSrc || (stickers && stickers.length > 0)) && (
+          <span aria-hidden className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-[5cqw]">
+            {frameArtSrc && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={frameArtSrc} alt="" className="absolute inset-0 size-full" />
+            )}
             {stickers?.map((s, i) => (
               <span
                 key={`sticker-${i}`}
@@ -341,7 +333,12 @@ export function CatIdCard({
                   transform: `translate(-50%,-50%) rotate(${s.rotate}deg) scaleX(${s.flip ? -1 : 1})`,
                 }}
               >
-                {s.glyph}
+                {s.art ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={s.art} alt="" className="block" style={{ width: `${10 * s.scale}cqw`, height: `${10 * s.scale}cqw` }} />
+                ) : (
+                  s.glyph
+                )}
               </span>
             ))}
           </span>
@@ -351,13 +348,6 @@ export function CatIdCard({
   );
 }
 
-/** Four-corner slots for framed motifs, kept clear of the paper band (~19cqw). */
-const CORNER_POS: CSSProperties[] = [
-  { top: "2.5cqw", left: "2.5cqw" },
-  { top: "2.5cqw", right: "2.5cqw" },
-  { bottom: "21cqw", left: "2.5cqw" },
-  { bottom: "21cqw", right: "2.5cqw" },
-];
 
 /** White QR tile on the paper band — maximum contrast, honest quiet zone. */
 function QrTile({ value, isAr }: { value: string; isAr: boolean }) {

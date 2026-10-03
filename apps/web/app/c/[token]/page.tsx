@@ -118,6 +118,8 @@ export default async function PublicCatPage({ params }: { params: { token: strin
 
         {/* What this tag is, in one line — then one quiet invitation. */}
         <section className="mt-6 space-y-3 rounded-2xl border border-border bg-card p-5 text-center">
+          {/* The physical object behind the scan — never on a lost cat's page. */}
+          {!card.isLost && <Illo3D name="collar" className="mx-auto size-24" px={96} />}
           <p className="text-sm text-muted-foreground">
             {isAr
               ? "هوية مرقط رقم دائم للقط: يوصل من يجده بأهله، ويحمل سجله الصحي لأي عيادة."

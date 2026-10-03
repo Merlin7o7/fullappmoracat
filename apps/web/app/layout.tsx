@@ -148,7 +148,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     legalName: LEGAL_ENTITY.en,
     alternateName: [BRAND.ar, LEGAL_ENTITY.ar],
     url: siteUrl,
-    logo: `${siteUrl}/opengraph-image`,
+    logo: `${siteUrl}/brand/moracat-logo.png`,
     email: CONTACT.supportEmail,
     telephone: CONTACT.phone,
     sameAs: [CONTACT.instagramUrl],

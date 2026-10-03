@@ -11,9 +11,12 @@ export default function manifest(): MetadataRoute.Manifest {
     // installed app's splash/title chrome agrees with the in-browser chrome.
     background_color: "#faf7f1",
     theme_color: "#faf7f1",
+    // The designer's icon set (delivery 2026-10-03): real 192/512 renders,
+    // plus a maskable one whose art sits inside the 409 px safe circle.
     icons: [
-      { src: "/icon.png", sizes: "512x512", type: "image/png" },
-      { src: "/icon.png", sizes: "192x192", type: "image/png" },
+      { src: "/brand/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/brand/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/brand/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

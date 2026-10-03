@@ -27,7 +27,10 @@ import { cn } from "@moraqat/ui";
  * size each placement needs.
  */
 
-export type Illo3DName = "cat" | "mouse" | "can" | "heart" | "fish" | "paw" | "leaf";
+export type Illo3DName =
+  | "cat" | "mouse" | "can" | "heart" | "fish" | "paw" | "leaf"
+  // Delivery 2026-10-03 — one finish each, used on both themes.
+  | "collar" | "bowl" | "rosette" | "kitten" | "carrier" | "book";
 export type Illo3DFinish = "auto" | "plush" | "metal";
 
 const FILES: Record<Illo3DName, { plush?: string; metal?: string }> = {
@@ -38,6 +41,12 @@ const FILES: Record<Illo3DName, { plush?: string; metal?: string }> = {
   fish: { plush: "fish-plush" },
   paw: { plush: "paw-plush" },
   leaf: { metal: "leaf-metal" },
+  collar: { plush: "collar" },
+  bowl: { plush: "bowl" },
+  rosette: { plush: "rosette" },
+  kitten: { plush: "kitten" },
+  carrier: { plush: "carrier" },
+  book: { plush: "book" },
 };
 
 /** Alternate plush colourways (same object, different cloth). */

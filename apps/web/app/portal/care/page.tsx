@@ -56,7 +56,7 @@ export default function CarePage() {
         ) : activeCats.length === 0 ? (
           <Card>
             <EmptyState
-              art={<Illo3D name="heart" className="size-28" px={112} />}
+              art={<Illo3D name="bowl" className="size-28" px={112} />}
               title={isAr ? "أضف قطك لتبدأ عنايته" : "Add your cat to start their care"}
               action={
                 <Link href="/portal/cats/new" className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground">
@@ -68,7 +68,7 @@ export default function CarePage() {
         ) : now.length === 0 ? (
           <Card>
             <EmptyState
-              art={<Illo3D name="heart" className="size-28" px={112} />}
+              art={<Illo3D name="bowl" className="size-28" px={112} />}
               title={isAr ? "ما فيه شيء مستحق هالأسبوع" : "Nothing is due this week"}
               body={isAr ? "نذكّرك قبل أي موعد قادم." : "We'll remind you before anything that's coming up."}
             />

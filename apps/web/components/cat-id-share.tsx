@@ -123,6 +123,7 @@ export function CatIdShare({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
     vaccinationStatus: cat.vaccinationStatus ?? null,
     qrToken: cat.qrToken,
     themeField: rp.themeField,
+    themeArt: rp.themeArt,
     accentHsl: rp.accentHsl,
     frame: rp.frame,
     stickers: rp.stickers,
