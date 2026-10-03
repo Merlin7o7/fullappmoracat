@@ -237,11 +237,14 @@
   }
   [dir="rtl"] body,
   [dir="rtl"] .font-sans,
-  [dir="rtl"] .font-arabic,
-  [dir="rtl"] .font-display {
+  [dir="rtl"] .font-arabic {
     font-family: var(--font-arabic-text), var(--font-sans);
   }
-  [dir="rtl"] .font-display:is([class*="text-3xl"], [class*="text-4xl"], [class*="text-5xl"], [class*="text-6xl"], [class*="text-7xl"]),
+  /* Every Arabic display heading wears the brand face (Lyon Arabic Display),
+     at any size — the dashboard's 20–24 px titles included (founder,
+     2026-10-03). Lyon has one weight, so it is pinned to 400: size carries
+     the hierarchy, never a synthesised bold. */
+  [dir="rtl"] .font-display,
   [dir="rtl"] .font-arabic-display {
     font-family: var(--font-arabic-display), var(--font-arabic-text), var(--font-sans);
     font-weight: 400;

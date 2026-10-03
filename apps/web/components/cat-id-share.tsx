@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Copy, Check, FileDown, ImageDown, Printer, Wallet, Share2 } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Copy, Check, FileDown, ImageDown, Printer, Wallet, Share2, Palette } from "lucide-react";
 import { Button, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import type { PortalCat } from "@/lib/cat-context";
@@ -134,6 +135,12 @@ export function CatIdShare({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
       <div className="w-full max-w-sm">
         <CatIdCard {...cardProps} photoUrl={cat.photoUrl} />
       </div>
+      <Link
+        href={`/portal/cats/new?cat=${cat.id}&step=design`}
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 text-sm font-medium hover:bg-muted"
+      >
+        <Palette className="size-4" aria-hidden /> {isAr ? "صمّم البطاقة — خلفية، إطار، ملصقات" : "Design the card — theme, frame, stickers"}
+      </Link>
 
       {/* Hidden fixed-width twin for export — identical composition (cqw units),
           photo routed same-origin so the capture can embed it. The captured node

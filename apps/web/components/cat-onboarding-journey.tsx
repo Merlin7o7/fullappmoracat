@@ -46,7 +46,7 @@ interface CatDetail {
  * and recognition (badges + a gentle completeness ring) replaces any points
  * economy (§04). One restrained celebration crowns it (R073/R080).
  */
-export function CatOnboardingJourney({ catId }: { catId: string }) {
+export function CatOnboardingJourney({ catId, startOnDesign = false }: { catId: string; startOnDesign?: boolean }) {
   const { authedFetch, user } = useAuth();
   const { locale } = useLocale();
   const { toast } = useToast();
@@ -68,7 +68,7 @@ export function CatOnboardingJourney({ catId }: { catId: string }) {
   });
 
   const [draft, setDraft] = React.useState<Draft>(() => emptyDraft());
-  const [step, setStep] = React.useState(0);
+  const [step, setStep] = React.useState<number>(startOnDesign ? STEP.personalize : 0);
   const [dir, setDir] = React.useState<1 | -1>(1);
   const [celebrating, setCelebrating] = React.useState(false);
   const filled = React.useRef(false);
@@ -192,12 +192,13 @@ export function CatOnboardingJourney({ catId }: { catId: string }) {
 
           {/* Nav — one clear action, always (R005). */}
           <div className="mt-6 flex items-center justify-between gap-3">
-            {step > 0 ? (
+            {/* Arriving straight on the designer, "later" goes home to the profile. */}
+            {step > 0 && !(startOnDesign && step === STEP.personalize) ? (
               <Button variant="tertiary" size="sm" onClick={() => go(step - 1)} disabled={persist.isPending}>
                 <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "رجوع" : "Back"}
               </Button>
             ) : (
-              <Button variant="tertiary" size="sm" onClick={() => router.push("/portal/cats")} disabled={persist.isPending}>
+              <Button variant="tertiary" size="sm" onClick={() => router.push(`/portal/cats/${catId}`)} disabled={persist.isPending}>
                 {isAr ? "لاحقاً" : "Later"}
               </Button>
             )}
@@ -246,7 +247,7 @@ export function CatOnboardingJourney({ catId }: { catId: string }) {
           isAr={isAr}
           dispName={dispName}
           reduced={!!reduced}
-          onClose={() => router.push("/portal/cats")}
+          onClose={() => router.push(`/portal/cats/${catId}`)}
         />
       )}
     </div>

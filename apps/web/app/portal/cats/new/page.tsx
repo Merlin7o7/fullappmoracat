@@ -39,7 +39,10 @@ export default function NewCatPage() {
 function NewCatInner() {
   const params = useSearchParams();
   const completeCatId = params.get("cat");
-  return completeCatId ? <CompleteFileForm catId={completeCatId} /> : <IssueIdFlow />;
+  // `?step=design` opens straight on the card designer (after the ceremony,
+  // and from every "design the card" button on the profile).
+  const design = params.get("step") === "design";
+  return completeCatId ? <CompleteFileForm catId={completeCatId} design={design} /> : <IssueIdFlow />;
 }
 
 /* ══ The cat's age ════════════════════════════════════════════════════════
@@ -943,7 +946,7 @@ function IssueIdFlow() {
             // is no longer the forced post-issue stop.)
             // W8: the reveal lands on the cat's own profile — the home of
             // everything that follows — never on a sales page (R004).
-            router.push(`/portal/cats/${ceremonyCat.id}`)
+            router.push(`/portal/cats/new?cat=${ceremonyCat.id}&step=design`)
           }
         />
       )}
@@ -961,8 +964,8 @@ function IssueIdFlow() {
  * All of it lives in `CatOnboardingJourney`; this stays a thin route wrapper so
  * the page file exports only its default component (engineering convention).
  */
-function CompleteFileForm({ catId }: { catId: string }) {
-  return <CatOnboardingJourney catId={catId} />;
+function CompleteFileForm({ catId, design }: { catId: string; design?: boolean }) {
+  return <CatOnboardingJourney catId={catId} startOnDesign={design} />;
 }
 
 /**

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, Camera, Pencil, Share2, Syringe, Stethoscope, Cake, Sparkles, Siren, FileText,
+  ArrowLeft, Camera, Pencil, Share2, Syringe, Stethoscope, Cake, Sparkles, Siren, FileText, Palette,
 } from "lucide-react";
 import {
   Button, Card, EmptyState, IdBand, Ledger, LedgerRow, Seal, Skeleton, StatusTag, cn, type StatusTone,
@@ -13,6 +13,7 @@ import { ageInMonths, formatAge, formatDate, formatRelative, formatWeight, qrVal
 import { useAuth } from "@/lib/auth";
 import type { PortalCat } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
+import { resolvePersonalization } from "@/lib/cat-profile";
 import type { HealthRecord } from "@/components/cat-health-record";
 import { Illo3D } from "@/components/illo-3d";
 import { QueryError } from "@/components/query-error";
@@ -156,6 +157,14 @@ export function CatProfile({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
             )}
 
             <div className="flex flex-wrap gap-2">
+              {cat.catIdNumber && (
+                <Link
+                  href={`/portal/cats/new?cat=${cat.id}&step=design`}
+                  className="btn-shine inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  <Palette className="size-4" aria-hidden /> {isAr ? `صمّم بطاقة ${name}` : `Design ${name}'s card`}
+                </Link>
+              )}
               <Button variant="contextual" onClick={() => document.getElementById("share")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
                 <Share2 className="size-4" aria-hidden /> {isAr ? "الهوية والمشاركة" : "ID & sharing"}
               </Button>
@@ -169,6 +178,10 @@ export function CatProfile({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
           </div>
         </div>
       </section>
+
+      {cat.catIdNumber && !resolvePersonalization(cat.profile?.personalization).isCustomised && (
+        <DesignNudge catId={cat.id} name={name} isAr={isAr} />
+      )}
 
       <CatSectionTabs catId={cat.id} isAr={isAr} />
 
@@ -446,5 +459,31 @@ function CatCare({ catId, isAr, name }: { catId: string; isAr: boolean; name: st
     <Card className="overflow-hidden">
       <CareList tasks={[...open, ...closed]} isAr={isAr} invalidate={[["cat-care", catId], ["care-agenda"]]} />
     </Card>
+  );
+}
+
+/** Shown until the owner decorates the card: the card is theirs to make. */
+function DesignNudge({ catId, name, isAr }: { catId: string; name: string; isAr: boolean }) {
+  return (
+    <Link
+      href={`/portal/cats/new?cat=${catId}&step=design`}
+      className="mesh-bg-rich group relative flex items-center gap-4 overflow-hidden rounded-[1.75rem] border border-border bg-card p-4 shadow-e1 transition-shadow hover:shadow-e2 sm:p-5"
+    >
+      <span aria-hidden className="flex shrink-0 -space-x-3 rtl:space-x-reverse">
+        {["crown", "heart", "star"].map((id, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={id} src={`/brand/stickers/${id}.svg`} alt="" className="size-11 drop-shadow transition-transform group-hover:-translate-y-0.5" style={{ transform: `rotate(${(i - 1) * 12}deg)` }} />
+        ))}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium">{isAr ? `بطاقة ${name} تنتظر لمستك` : `${name}'s card is waiting for your touch`}</span>
+        <span className="block text-sm text-muted-foreground">
+          {isAr ? "اختر الخلفية والإطار والملصقات — تظهر في المجتمع وفي كل مشاركة." : "Pick the theme, frame and stickers — it shows in the community and every share."}
+        </span>
+      </span>
+      <span className="hidden shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground sm:inline-flex">
+        {isAr ? "صمّمها" : "Design it"}
+      </span>
+    </Link>
   );
 }
