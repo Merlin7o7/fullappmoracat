@@ -946,7 +946,7 @@ function IssueIdFlow() {
             // is no longer the forced post-issue stop.)
             // W8: the reveal lands on the cat's own profile — the home of
             // everything that follows — never on a sales page (R004).
-            router.push(`/portal/cats/new?cat=${ceremonyCat.id}&step=design`)
+            router.push(`/portal/welcome?cat=${ceremonyCat.id}`)
           }
         />
       )}
