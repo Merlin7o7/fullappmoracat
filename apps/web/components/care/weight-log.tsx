@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { Field } from "@/components/field";
 import { WeightChart } from "@/components/cat-profile/weight-chart";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 interface WeightRow {
   id: string;
@@ -63,9 +64,13 @@ export function WeightLog({ catId, isAr }: { catId: string; isAr: boolean }) {
     },
     onError: fail,
   });
+  const [confirmId, setConfirmId] = React.useState<string | null>(null);
   const remove = useMutation({
     mutationFn: (id: string) => authedFetch(`/cats/${catId}/weights/${id}`, { method: "DELETE" }),
-    onSuccess: refresh,
+    onSuccess: () => {
+      setConfirmId(null);
+      refresh();
+    },
     onError: fail,
   });
 
@@ -144,9 +149,7 @@ export function WeightLog({ catId, isAr }: { catId: string; isAr: boolean }) {
                     variant="tertiary"
                     className="text-destructive"
                     aria-label={isAr ? "حذف" : "Delete"}
-                    onClick={() => {
-                      if (window.confirm(isAr ? "حذف هذا القياس؟" : "Remove this weigh-in?")) remove.mutate(r.id);
-                    }}
+                    onClick={() => setConfirmId(r.id)}
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </Button>
@@ -160,6 +163,16 @@ export function WeightLog({ catId, isAr }: { catId: string; isAr: boolean }) {
           ))}
         </ul>
       )}
+      <ConfirmDialog
+        open={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={() => confirmId && remove.mutate(confirmId)}
+        busy={remove.isPending}
+        isAr={isAr}
+        title={isAr ? "تحذف هذا القياس؟" : "Remove this weigh-in?"}
+        description={isAr ? "يختفي من السجل ومن منحنى الوزن." : "It leaves the record and the weight chart."}
+        confirmLabel={isAr ? "احذف القياس" : "Remove the weigh-in"}
+      />
     </div>
   );
 }

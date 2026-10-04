@@ -1,5 +1,6 @@
 "use client";
 
+import type * as React from "react";
 import { ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@moraqat/ui";
@@ -48,8 +49,16 @@ interface CatIdCardProps {
   // ── Detailed membership-card fields ──
   detailed?: boolean;
   ownerName?: string | null;
-  /** Shown as the emergency contact — the card's "bring my cat home" job (§05 job 1). */
+  /**
+   * The owner's own number — printed ONLY when the owner explicitly opts in
+   * («رقمك يظهر على هذه النسخة»). Absent (the default), the detailed card is
+   * the phone-free collar edition: a finder scans the QR and reaches the
+   * owner through Moracat's relay, never a printed number (audit 2026-10-04
+   * Problem 3 — signup promises «رقمك ما يظهر لأحد»).
+   */
   ownerPhone?: string | null;
+  /** Safety facts for a finder or a clinic — printed on the collar edition. */
+  allergies?: string[] | null;
   breed?: string | null;
   favoriteFood?: string | null;
   gender?: string | null;
@@ -100,7 +109,7 @@ const FRAME_IDS = new Set(["minimal", "gold", "neon", "floral", "birthday"]);
 export function CatIdCard({
   catName, catIdNumber, catNumber, foundingClass, issuedAt, photoUrl, coverUrl, isAr, preview, hideStatus,
   membershipActive, animated, detailed, ownerName, ownerPhone, breed, favoriteFood,
-  gender, birthDate, vaccinationStatus, qrToken, exportMode,
+  gender, birthDate, vaccinationStatus, qrToken, exportMode, allergies,
   themeField, themeArt, accentHsl, frame, stickers, className,
 }: CatIdCardProps) {
   // The designer's art sits over the gradient (which stays as the fallback and
@@ -125,6 +134,15 @@ export function CatIdCard({
   const age = birthDate ? ageLabel(birthDate, isAr) : null;
   const sex = genderLabel(gender, isAr);
   const meta = [sex, age, breed].filter(Boolean).join(" · ");
+  // Microtype: on screen, card labels never drop below 11px (they were 5–8px
+  // at phone widths). Captures keep the pure cqw size so an exported PNG/PDF
+  // stays pixel-identical at its fixed 856px width.
+  const fs = (cqw: number): React.CSSProperties => ({ fontSize: exportMode ? `${cqw}cqw` : `max(${cqw}cqw, 11px)` });
+  // Arabic is never letter-spaced, uppercased or set in the Latin mono (R103):
+  // the tracked-mono label treatment is for Latin only.
+  const latinLabel = (tracking: string) => (isAr ? "font-medium" : cn("font-mono uppercase", tracking));
+  // The phone-free collar edition is the default; a printed number is opt-in.
+  const withPhone = !!ownerPhone;
 
   return (
     <div
@@ -197,11 +215,12 @@ export function CatIdCard({
             <img src="/brand/logo/stacked-paper.svg" alt="" aria-hidden className="h-[7.5cqw] w-auto" />
 
             {preview ? (
-              <span className="font-mono text-[2.1cqw] uppercase tracking-[0.24em] text-[hsl(30_70%_82%)]">
+              <span className={cn(latinLabel("tracking-[0.24em]"), "text-[hsl(30_70%_82%)]")} style={fs(2.1)}>
                 {isAr ? "معاينة" : "Preview"}
               </span>
             ) : (
-              !hideStatus && <StatusPill active={!!membershipActive} comingSoon={comingSoon} isAr={isAr} />
+              // No plan → nothing to be "inactive" about: the ID itself is always issued.
+              !hideStatus && (comingSoon || membershipActive) && <StatusPill active={!!membershipActive} comingSoon={comingSoon} isAr={isAr} style={fs(2)} />
             )}
           </div>
 
@@ -227,7 +246,8 @@ export function CatIdCard({
             <div className="min-w-0">
               <p
                 className={cn(
-                  "truncate font-display font-semibold leading-[1.08] tracking-tight",
+                  "truncate font-display font-semibold leading-[1.08]",
+                  !isAr && "tracking-tight",
                   detailed ? "text-[5.2cqw]" : "text-[7.2cqw]"
                 )}
               >
@@ -242,14 +262,14 @@ export function CatIdCard({
                 />
               )}
               {detailed && meta && (
-                <p className="mt-[1cqw] truncate text-[2.6cqw] leading-snug text-white/75">{meta}</p>
+                <p className="mt-[1cqw] truncate leading-snug text-white/75" style={fs(2.6)}>{meta}</p>
               )}
               {/* Founding standing outranks tenure in the one line there is room
                   for: "I was here first" is the prouder, rarer fact, and it
                   carries its own proof (the ordinal) right beside it. Everyone
                   else keeps the tenure line unchanged. */}
               {!detailed && founding ? (
-                <p className="mt-[1.2cqw] font-mono text-[2.2cqw] uppercase tracking-[0.16em] text-[hsl(30_80%_78%)]">
+                <p className={cn("mt-[1.2cqw]", latinLabel("tracking-[0.16em]"), "text-[hsl(30_80%_78%)]")} style={fs(2.2)}>
                   {/* Only the DIGITS are isolated, never the Arabic label. An
                       earlier version wrapped "رقم 57" in dir="ltr" and bidi
                       reordering collapsed it to "عضو مؤسِّسرقم · 57". The label
@@ -260,7 +280,7 @@ export function CatIdCard({
                 </p>
               ) : (
                 !detailed && since && (
-                  <p className="mt-[1.2cqw] font-mono text-[2.2cqw] uppercase tracking-[0.16em] text-white/55">
+                  <p className={cn("mt-[1.2cqw]", latinLabel("tracking-[0.16em]"), "text-white/55")} style={fs(2.2)}>
                     {isAr ? `عضو منذ ${since}` : `Member since ${since}`}
                   </p>
                 )
@@ -271,10 +291,33 @@ export function CatIdCard({
           {/* The record: who to call, what's protected — the card's real jobs (§05). */}
           {detailed && (
             <dl className="grid grid-cols-2 gap-x-[3.5cqw] gap-y-[1.4cqw]">
-              <Detail label={isAr ? "المالك" : "Owner"} value={dispOwner} isAr={isAr} />
-              <Detail label={isAr ? "للطوارئ" : "Emergency"} value={ownerPhone} isAr={isAr} mono />
-              <Detail label={isAr ? "التطعيمات" : "Vaccines"} value={vaccinationLabel(vaccinationStatus, isAr)} isAr={isAr} />
-              <Detail label={isAr ? "طعامه المفضّل" : "Favourite food"} value={favoriteFood} isAr={isAr} />
+              {withPhone ? (
+                <>
+                  <Detail label={isAr ? "المالك" : "Owner"} value={dispOwner} isAr={isAr} fs={fs} />
+                  <Detail label={isAr ? "للطوارئ" : "Emergency"} value={ownerPhone} isAr={isAr} fs={fs} mono />
+                </>
+              ) : (
+                // The collar edition: no name, no number — the QR is the way
+                // home, relayed through Moracat (the finder page's privacy model).
+                <Detail
+                  className="col-span-2"
+                  label={isAr ? "إن وجدته" : "If found"}
+                  value={isAr ? "امسح الرمز — نوصل رسالتك لأهله عبر مرقط" : "Scan the code — Moracat relays your message to the family"}
+                  isAr={isAr}
+                  fs={fs}
+                />
+              )}
+              <Detail label={isAr ? "التطعيمات" : "Vaccines"} value={vaccinationLabel(vaccinationStatus, isAr)} isAr={isAr} fs={fs} />
+              {withPhone || allergies === undefined ? (
+                <Detail label={isAr ? "طعامه المفضّل" : "Favourite food"} value={favoriteFood} isAr={isAr} fs={fs} />
+              ) : (
+                <Detail
+                  label={isAr ? "الحساسية" : "Allergies"}
+                  value={allergies?.length ? allergies.join(isAr ? "، " : ", ") : isAr ? "لا شيء مسجّل" : "None recorded"}
+                  isAr={isAr}
+                  fs={fs}
+                />
+              )}
             </dl>
           )}
         </div>
@@ -282,7 +325,7 @@ export function CatIdCard({
         {/* ── The paper band — warm ground, human-readable number, scannable QR ── */}
         <div className="flex h-[19cqw] shrink-0 items-center justify-between gap-[3cqw] border-t border-dashed border-[hsl(168_35%_25%/0.3)] bg-[hsl(40_45%_96%)] px-[5.5cqw] text-[hsl(168_60%_10%)]">
           <div className="min-w-0 leading-none">
-            <p className="truncate font-mono text-[1.9cqw] uppercase tracking-[0.26em] text-[hsl(168_30%_34%)]">
+            <p className={cn("truncate", latinLabel("tracking-[0.26em]"), "text-[hsl(168_30%_34%)]")} style={fs(1.9)}>
               {isAr ? "رقم الهوية" : "Cat ID"}
               {/* Tenure shows under the name in simple mode — only the detailed
                   card (no room up top) carries it here. Never both. Founding
@@ -304,9 +347,9 @@ export function CatIdCard({
           </div>
 
           {!preview && qrValue ? (
-            <QrTile value={qrValue} isAr={isAr} />
+            <QrTile value={qrValue} isAr={isAr} labelClass={latinLabel("tracking-[0.18em]")} labelStyle={fs(1.5)} />
           ) : (
-            <span className="inline-flex shrink-0 items-center gap-[1.2cqw] font-mono text-[2cqw] uppercase tracking-[0.22em] text-[hsl(168_30%_34%)]">
+            <span className={cn("inline-flex shrink-0 items-center gap-[1.2cqw]", latinLabel("tracking-[0.22em]"), "text-[hsl(168_30%_34%)]")} style={fs(2)}>
               <ShieldCheck className="size-[3.2cqw]" />
               {isAr ? "هوية مرقط" : "Moracat ID"}
             </span>
@@ -350,7 +393,7 @@ export function CatIdCard({
 
 
 /** White QR tile on the paper band — maximum contrast, honest quiet zone. */
-function QrTile({ value, isAr }: { value: string; isAr: boolean }) {
+function QrTile({ value, isAr, labelClass, labelStyle }: { value: string; isAr: boolean; labelClass: string; labelStyle: React.CSSProperties }) {
   return (
     <div className="shrink-0 rounded-[2cqw] bg-white p-[1.3cqw] shadow-[0_1px_2px_hsl(168_40%_20%/0.14)] ring-1 ring-[hsl(168_20%_78%)]">
       <QRCodeSVG
@@ -362,21 +405,22 @@ function QrTile({ value, isAr }: { value: string; isAr: boolean }) {
         title={isAr ? "رمز التحقق من الهوية" : "ID verification code"}
         style={{ width: "11.5cqw", height: "11.5cqw" }}
       />
-      <p className="mt-[0.6cqw] text-center font-mono text-[1.5cqw] uppercase tracking-[0.18em] text-[hsl(168_30%_36%)]">
+      <p className={cn("mt-[0.6cqw] text-center text-[hsl(168_30%_36%)]", labelClass)} style={labelStyle}>
         {isAr ? "تحقّق" : "Verify"}
       </p>
     </div>
   );
 }
 
-function StatusPill({ active, comingSoon, isAr }: { active: boolean; comingSoon: boolean; isAr: boolean }) {
-  // Before paid membership exists, the card is still a real, issued credential —
-  // present it as a verified official identity, never a "coming soon" placeholder.
+function StatusPill({ active, comingSoon, isAr, style }: { active: boolean; comingSoon: boolean; isAr: boolean; style: React.CSSProperties }) {
+  const label = isAr ? "font-semibold" : "font-semibold uppercase tracking-[0.16em]";
+  // Before care plans exist, the card is still a real, issued Moracat ID —
+  // present it as issued (never "official", never "coming soon").
   if (comingSoon) {
     return (
-      <span className="inline-flex shrink-0 items-center gap-[1.3cqw] rounded-full bg-[hsl(150_60%_45%/0.15)] px-[2.2cqw] py-[0.9cqw] text-[2cqw] font-semibold uppercase tracking-[0.16em] text-[hsl(150_55%_82%)] ring-1 ring-[hsl(150_55%_60%/0.32)]">
+      <span className={cn("inline-flex shrink-0 items-center gap-[1.3cqw] rounded-full bg-[hsl(150_60%_45%/0.15)] px-[2.2cqw] py-[0.9cqw] text-[hsl(150_55%_82%)] ring-1 ring-[hsl(150_55%_60%/0.32)]", label)} style={style}>
         <ShieldCheck className="size-[2.6cqw]" />
-        {isAr ? "موثّقة" : "Verified"}
+        {isAr ? "صادرة" : "Issued"}
       </span>
     );
   }
@@ -387,23 +431,32 @@ function StatusPill({ active, comingSoon, isAr }: { active: boolean; comingSoon:
     ? "bg-[hsl(150_60%_45%/0.16)] text-[hsl(150_60%_82%)] ring-[hsl(150_60%_60%/0.35)]"
     : "bg-white/10 text-white/90 ring-white/20";
   const dot = active ? "bg-[hsl(150_60%_60%)]" : "bg-amber-300";
-  const label = active ? (isAr ? "فعّالة" : "Active") : isAr ? "غير مفعّلة" : "Inactive";
+  const text = active ? (isAr ? "فعّالة" : "Active") : isAr ? "غير مفعّلة" : "Inactive";
   return (
-    <span className={cn("inline-flex shrink-0 items-center gap-[1.3cqw] rounded-full px-[2.2cqw] py-[0.9cqw] text-[2cqw] font-semibold uppercase tracking-[0.16em] ring-1", tone)}>
+    <span className={cn("inline-flex shrink-0 items-center gap-[1.3cqw] rounded-full px-[2.2cqw] py-[0.9cqw] ring-1", label, tone)} style={style}>
       <span className={cn("size-[1.4cqw] rounded-full", dot)} />
-      {label}
+      {text}
     </span>
   );
 }
 
-function Detail({ label, value, isAr, mono }: { label: string; value?: string | null; isAr: boolean; mono?: boolean }) {
+function Detail({
+  label, value, isAr, mono, fs, className,
+}: {
+  label: string;
+  value?: string | null;
+  isAr: boolean;
+  mono?: boolean;
+  fs: (cqw: number) => React.CSSProperties;
+  className?: string;
+}) {
   return (
-    <div className="min-w-0 leading-none">
-      <dt className="font-mono text-[1.9cqw] uppercase tracking-[0.2em] text-[hsl(40_45%_85%)]/70">{label}</dt>
+    <div className={cn("min-w-0 leading-none", className)}>
+      <dt className={cn("text-[hsl(40_45%_85%)]/70", isAr ? "font-medium" : "font-mono uppercase tracking-[0.2em]")} style={fs(1.9)}>{label}</dt>
       <dd
-        className={cn("mt-[1cqw] truncate text-[2.9cqw] leading-snug text-white/90", mono && "font-mono tracking-[0.06em] tabular")}
+        className={cn("mt-[1cqw] truncate leading-snug text-white/90", mono && "font-mono tracking-[0.06em] tabular")}
         dir={mono ? "ltr" : undefined}
-        style={mono ? { textAlign: isAr ? "right" : "left" } : undefined}
+        style={{ ...fs(2.9), ...(mono ? { textAlign: isAr ? "right" : "left" } : {}) }}
       >
         {value || "—"}
       </dd>

@@ -90,7 +90,7 @@ export function CareList({
             </Link>
           ) : t.kind === "WEIGH_IN" && !closed ? (
             <Link
-              href={`/portal/cats/${t.catId}#weight`}
+              href={`/portal/cats/${t.catId}/health#weight`}
               className="inline-flex h-10 items-center rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted"
             >
               {isAr ? "سجّل الوزن" : "Log weight"}
@@ -106,12 +106,14 @@ export function CareList({
           );
 
         return (
-          <li key={t.id} className="flex flex-wrap items-center gap-3 px-5 py-4 sm:flex-nowrap">
+          // Below sm the row stacks: the title gets the full line (it used to
+          // truncate to «الفح…» beside the actions) and the actions sit under it.
+          <li key={t.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-5 py-4 sm:flex-nowrap sm:items-center">
             <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
               <Icon className="size-4" aria-hidden />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className={closed ? "truncate font-medium text-muted-foreground line-through decoration-1" : "truncate font-medium"}>
+            <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-0">
+              <p className={closed ? "break-words font-medium text-muted-foreground line-through decoration-1 sm:truncate" : "break-words font-medium sm:truncate"}>
                 {title}
                 {showCat && catName ? <span className="font-normal text-muted-foreground"> · {catName}</span> : null}
               </p>
@@ -126,7 +128,7 @@ export function CareList({
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="ms-[3.25rem] flex flex-wrap items-center gap-2 sm:ms-0 sm:flex-nowrap">
               <StatusTag tone={TONE[t.state]}>{CARE_STATE_LABELS[t.state][loc]}</StatusTag>
               {next}
               {!closed && t.kind !== "VACCINE" && t.kind !== "WEIGH_IN" && (

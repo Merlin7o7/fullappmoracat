@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, AlertTriangle, OctagonAlert, ChevronDown } from "lucide-react";
 import { Card, Skeleton } from "@moraqat/ui";
@@ -59,7 +60,10 @@ export function ReadinessCard() {
         <div>
           <h2 className="font-display text-lg">{isAr ? "جاهزية الإطلاق" : "Launch readiness"}</h2>
           <p className="text-sm text-muted-foreground">
-            {isAr ? "ما يحتاج قراراً أو إعداداً قبل أن نعتمد عليه." : "What still needs a setting or a decision before we rely on it."}
+            {isAr ? "ما يحتاج قراراً أو إعداداً قبل أن نعتمد عليه." : "What still needs a setting or a decision before we rely on it."}{" "}
+            <Link href="/admin/readiness" className="font-medium text-primary underline-offset-4 hover:underline">
+              {isAr ? "صحة المهام المجدولة" : "Scheduled-job health"}
+            </Link>
           </p>
         </div>
         {q.data && (

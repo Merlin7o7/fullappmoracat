@@ -52,6 +52,8 @@ export function MomentShare({
     shareText,
     isAr,
     cacheKey: [kind, catName, safePhoto, catIdNumber, qrUrl, ...(lines ?? [])].join("|"),
+    // Distress posters and happy moments are separate channels (src=poster|moment).
+    attribution: { src: kind === "lost" || kind === "found" ? "poster" : "moment", kind },
   });
 
   return (

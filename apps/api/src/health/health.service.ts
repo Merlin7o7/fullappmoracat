@@ -13,11 +13,14 @@ export interface HealthReport {
   /** Bundled migrations that the database has not applied (drift evidence). */
   pendingMigrations?: string[];
   /**
-   * Scheduled-job trail (MRC-PROD-001 T1): when each job last finished and
-   * whether it failed. A job that has not finished within its cadence is the
-   * sleeping-dyno failure mode an uptime monitor can now see.
+   * Scheduled-job freshness (MRC-PROD-001 T1), coarse on purpose: "stale"
+   * when an hourly job has not finished cleanly in two hours — the
+   * sleeping-dyno failure an uptime monitor can alert on. Timestamps and
+   * error text are operational detail and live behind staff auth on
+   * GET /admin/readiness (MRC-UX-AUDIT-2026-10-04), never on this public URL.
+   * Informational only: it never turns the report "degraded".
    */
-  jobs?: Record<string, { lastStartedAt: string | null; lastFinishedAt: string | null; lastError: string | null }>;
+  jobs?: "ok" | "stale";
   timestamp: string;
 }
 
@@ -112,23 +115,17 @@ export class HealthService implements OnModuleInit {
     };
   }
 
-  /** Read-only view of the job leases; never fails the health check. */
+  /** Read-only, coarse job freshness; never fails the health check. */
   private async jobTrail(): Promise<HealthReport["jobs"] | undefined> {
     try {
       const rows = await this.prisma.jobLease.findMany({
-        select: { name: true, lastStartedAt: true, lastFinishedAt: true, lastError: true },
+        where: { name: { in: ["care", "lifecycle"] } },
+        select: { lastFinishedAt: true, lastError: true },
       });
       if (!rows.length) return undefined;
-      return Object.fromEntries(
-        rows.map((r) => [
-          r.name,
-          {
-            lastStartedAt: r.lastStartedAt?.toISOString() ?? null,
-            lastFinishedAt: r.lastFinishedAt?.toISOString() ?? null,
-            lastError: r.lastError,
-          },
-        ])
-      );
+      const cutoff = Date.now() - 2 * 3_600_000;
+      const stale = rows.some((r) => !!r.lastError || !r.lastFinishedAt || r.lastFinishedAt.getTime() < cutoff);
+      return stale ? "stale" : "ok";
     } catch {
       return undefined;
     }

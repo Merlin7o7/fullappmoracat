@@ -3,8 +3,11 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2, Images, PawPrint } from "lucide-react";
-import { useToast, cn } from "@moraqat/ui";
+import { useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { friendlyError } from "@/lib/errors";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { QueryError } from "@/components/query-error";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 
@@ -48,27 +51,22 @@ export function CatPhotosPanel({
     onChanged?.();
   }
 
-  // Two-tap delete (R116): first tap arms this photo, second tap confirms.
-  // Tapping elsewhere or waiting disarms — destructive, so never one accidental
-  // touch on a "photos kept safe" promise.
-  const [armedId, setArmedId] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    if (!armedId) return;
-    const t = setTimeout(() => setArmedId(null), 4000);
-    return () => clearTimeout(t);
-  }, [armedId]);
+  // One delete confirmation everywhere (audit 2026-10-04): the ui Dialog,
+  // with the action named — never a timed double-tap (R116).
+  const [confirmId, setConfirmId] = React.useState<string | null>(null);
+  const [removing, setRemoving] = React.useState(false);
 
   async function removePhoto(id: string) {
-    if (armedId !== id) {
-      setArmedId(id);
-      return;
-    }
-    setArmedId(null);
+    setRemoving(true);
     try {
       await authedFetch(`/cats/${catId}/gallery/${id}`, { method: "DELETE" });
       await qc.invalidateQueries({ queryKey: ["gallery", catId] });
+      setConfirmId(null);
     } catch (e) {
-      toast({ title: e instanceof Error ? e.message : "Failed", variant: "error" });
+      const f = friendlyError(e, isAr);
+      toast({ title: isAr ? "ما انحذفت الصورة" : "The photo wasn't removed", description: f.message, variant: "error" });
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -102,6 +100,7 @@ export function CatPhotosPanel({
           <span className="text-xs font-normal text-muted-foreground">{photos.length}/12</span>
         </p>
 
+        {gallery.isError && <QueryError isAr={isAr} onRetry={() => gallery.refetch()} retrying={gallery.isFetching} />}
         <div className="grid grid-cols-3 gap-2">
           {photos.map((p) => (
             <div key={p.id} className="group relative aspect-square overflow-hidden rounded-xl bg-muted ring-hairline">
@@ -116,28 +115,32 @@ export function CatPhotosPanel({
                   </span>
                 }
               />
-              {/* Visible at rest on touch (R098); armed state asks for the second,
-                  confirming tap (R116). */}
+              {/* Visible at rest on touch (R098); a 44px target (R092); the
+                  Dialog confirms (R116). */}
               <button
-                onClick={() => removePhoto(p.id)}
-                aria-label={
-                  armedId === p.id
-                    ? isAr ? "اضغط مرة أخرى لتأكيد الحذف" : "Tap again to confirm delete"
-                    : isAr ? "حذف" : "Delete"
-                }
-                className={cn(
-                  "absolute end-1 top-1 grid place-items-center rounded-full text-white transition-all focus:opacity-100",
-                  armedId === p.id
-                    ? "h-6 min-w-6 gap-1 bg-destructive px-2 text-xs font-semibold opacity-100"
-                    : "size-6 bg-black/55 opacity-60 group-hover:opacity-100 sm:opacity-0"
-                )}
+                type="button"
+                onClick={() => setConfirmId(p.id)}
+                aria-label={isAr ? "احذف الصورة" : "Remove the photo"}
+                className="absolute end-0 top-0 grid size-11 place-items-center focus-visible:outline-none"
               >
-                <Trash2 className="size-3.5" />
-                {armedId === p.id && <span>{isAr ? "تأكيد؟" : "Sure?"}</span>}
+                <span className="grid size-7 place-items-center rounded-full bg-black/55 text-white transition-opacity group-hover:opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100">
+                  <Trash2 className="size-3.5" aria-hidden />
+                </span>
               </button>
             </div>
           ))}
         </div>
+
+        <ConfirmDialog
+          open={!!confirmId}
+          onClose={() => setConfirmId(null)}
+          onConfirm={() => confirmId && removePhoto(confirmId)}
+          busy={removing}
+          isAr={isAr}
+          title={isAr ? "تحذف هذه الصورة من المعرض؟" : "Remove this photo from the gallery?"}
+          description={isAr ? "تختفي من المعرض ومن ملفه في المجتمع، وما نقدر نرجعها بعد الحذف." : "It leaves the gallery and the community profile, and can't be brought back."}
+          confirmLabel={isAr ? "احذف الصورة" : "Remove the photo"}
+        />
 
         {photos.length < 12 && (
           <div className="mt-2">

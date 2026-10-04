@@ -75,7 +75,7 @@ export function WeightChart({ points, isAr }: { points: WeightPoint[]; isAr: boo
               x={isAr ? W - pad.right + 6 : pad.left - 6}
               y={yOf(t) + 4}
               textAnchor={isAr ? "start" : "end"}
-              className="fill-muted-foreground text-[12px]"
+              className="fill-muted-foreground text-[13px]"
             >
               {t.toFixed(1)}
             </text>
@@ -107,10 +107,10 @@ export function WeightChart({ points, isAr }: { points: WeightPoint[]; isAr: boo
         ))}
         {first && last && data.length > 1 && (
           <>
-            <text x={xOf(t0)} y={H - 8} textAnchor="middle" className="fill-muted-foreground text-[12px]">
+            <text x={xOf(t0)} y={H - 8} textAnchor="middle" className="fill-muted-foreground text-[13px]">
               {formatDate(first.measuredAt, loc, "monthYear")}
             </text>
-            <text x={xOf(t1)} y={H - 8} textAnchor="middle" className="fill-muted-foreground text-[12px]">
+            <text x={xOf(t1)} y={H - 8} textAnchor="middle" className="fill-muted-foreground text-[13px]">
               {formatDate(last.measuredAt, loc, "monthYear")}
             </text>
           </>

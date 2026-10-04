@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, MapPin, Phone, Cpu, HeartHandshake, ChevronLeft } from "lucide-react";
+import { MapPin, Phone, Cpu, HeartHandshake, ChevronLeft } from "lucide-react";
 import { Card } from "@moraqat/ui";
+import { catPossessive } from "@moraqat/core";
+import { localizeName } from "@/lib/translit";
 import { useAuth } from "@/lib/auth";
 import type { PortalCat } from "@/lib/cat-context";
 import type { HealthRecord } from "@/components/cat-health-record";
@@ -17,13 +19,7 @@ export function CompleteFile({ cat, record, isAr }: { cat: PortalCat; record: He
   const { user } = useAuth();
   const t = (ar: string, en: string) => (isAr ? ar : en);
   const items = [
-    !cat.photoUrl && {
-      key: "photo",
-      icon: Camera,
-      title: t("صورة له", "A photo"),
-      why: t("هي أول ما يشوفه من يلقاه لو ضاع.", "It's the first thing a finder sees if they're ever lost."),
-      href: `/portal/cats/${cat.id}/edit#photos`,
-    },
+    // The photo is asked for at the card itself (CardHero), not twice.
     !user?.phone && {
       key: "phone",
       icon: Phone,
@@ -58,7 +54,9 @@ export function CompleteFile({ cat, record, isAr }: { cat: PortalCat; record: He
 
   return (
     <section aria-labelledby="complete-file" className="space-y-3">
-      <h2 id="complete-file" className="font-display text-2xl">{t("كمّل ملفه", "Complete the file")}</h2>
+      <h2 id="complete-file" className="font-display text-2xl">
+        {isAr ? `كمّل ${catPossessive("ملف", cat.gender, localizeName(cat.name, "ar"))}` : "Complete the file"}
+      </h2>
       <Card className="divide-y divide-border overflow-hidden">
         {items.slice(0, 3).map((i) => (
           <Link key={i.key} href={i.href} className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-muted/50">

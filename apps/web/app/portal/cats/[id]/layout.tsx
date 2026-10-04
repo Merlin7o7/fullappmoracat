@@ -23,6 +23,7 @@ import { useCats } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
 import { QueryError } from "@/components/query-error";
 import { CatSectionTabs } from "@/components/cat-profile/section-tabs";
+import { CatPhotoPlaceholder } from "@/components/cat-photo-placeholder";
 
 export default function CatLayout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ id: string }>();
@@ -68,7 +69,12 @@ export default function CatLayout({ children }: { children: React.ReactNode }) {
             <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden /> {isAr ? `ملف ${name}` : `${name}'s profile`}
           </Link>
           <header className="flex items-center gap-4">
-            <Avatar name={cat.name} src={cat.photoUrl} size="lg" className="rounded-2xl" />
+            {cat.photoUrl ? (
+              <Avatar name={cat.name} src={cat.photoUrl} size="lg" className="rounded-2xl" />
+            ) : (
+              // One placeholder system for a photo-less cat, at every size (audit Part 05).
+              <CatPhotoPlaceholder name={name} isAr={isAr} label={null} className="size-14 shrink-0 gap-0 border-solid" />
+            )}
             <div className="min-w-0">
               <p className="truncate font-display text-2xl font-semibold sm:text-3xl">{name}</p>
               {cat.catIdNumber && (

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Globe, Lock, Copy, ExternalLink, Check, Users, Eye } from "lucide-react";
 import { Button, Dialog, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { friendlyError } from "@/lib/errors";
 
 interface Visibility {
   isPublic: boolean;
@@ -58,7 +59,7 @@ export function CatCommunityPanel({
     mutationFn: (body: Partial<Visibility> & { consent?: boolean }) =>
       authedFetch<Visibility>(`/cats/${catId}/visibility`, { method: "PATCH", body: JSON.stringify(body) }),
     onSuccess: (next) => qc.setQueryData(["visibility", catId], next),
-    onError: (e: Error) => toast({ title: e.message, variant: "error" }),
+    onError: (e: unknown) => { const f = friendlyError(e, isAr); toast({ title: f.title, description: f.message, variant: "error" }); },
   });
 
   // PDPL photo-consent attestation (R106): asked exactly once, the first time

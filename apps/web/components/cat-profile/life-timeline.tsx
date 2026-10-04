@@ -6,12 +6,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Cake, Sparkles, Syringe, Stethoscope, FileText, Scale, Home, Search, HeartHandshake, Camera, Plus, Trash2, BookOpen,
 } from "lucide-react";
-import { Button, Card, EmptyState, Skeleton, useToast } from "@moraqat/ui";
-import { formatDate, qrValueFor } from "@moraqat/core";
+import { Button, Card, EmptyState, ErrorState, Skeleton, useToast } from "@moraqat/ui";
+import { formatDate } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import type { PortalCat } from "@/lib/cat-context";
 import { localizeName } from "@/lib/translit";
+import { useShareLink } from "@/lib/share-link";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Field } from "@/components/field";
 import { MomentShare } from "@/components/moments/moment-share";
 import type { MomentKind } from "@/components/moments/moment-poster";
@@ -33,7 +35,6 @@ const ICON: Record<Event["kind"], React.ElementType> = {
 };
 // Which life events can become a shareable poster.
 const SHARE: Partial<Record<Event["kind"], MomentKind>> = { joined: "joined", reunion: "reunion", handover: "adoption", birthday: "birthday" };
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
 
 /**
  * The cat's life, as an album (W9). Grouped by year, newest first; every
@@ -74,13 +75,36 @@ export function LifeTimeline({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
     },
     onError: fail,
   });
+  const [confirmId, setConfirmId] = React.useState<string | null>(null);
   const remove = useMutation({
     mutationFn: (id: string) => authedFetch(`/cats/${cat.id}/moments/${id}`, { method: "DELETE" }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: key }),
+    onSuccess: () => {
+      setConfirmId(null);
+      void qc.invalidateQueries({ queryKey: key });
+    },
     onError: fail,
   });
+  // A shared moment lands on /i/{slug} naming this cat; its QR goes there too
+  // (the finder page /c/… stays for the collar and lost posters only).
+  const momentLink = useShareLink(cat.isPublic ? cat.publicSlug : null, "moment");
 
   if (q.isLoading) return <Skeleton className="h-64 w-full rounded-2xl" />;
+  // A failed load is NOT an empty album — that reads as lost memories (audit
+  // 2026-10-04, "Edge states that fail today"). Say so, and offer the retry.
+  if (q.isError) {
+    const f = friendlyError(q.error, isAr);
+    return (
+      <Card>
+        <ErrorState
+          title={isAr ? `ما قدرنا نفتح ألبوم ${name} الآن` : `We couldn't open ${name}'s album just now`}
+          body={isAr ? `لحظاتك محفوظة — ${f.message}` : `Your moments are safe — ${f.message}`}
+          onRetry={() => q.refetch()}
+          retrying={q.isFetching}
+          retryLabel={isAr ? "حاول مرة ثانية" : "Try again"}
+        />
+      </Card>
+    );
+  }
   const events = q.data ?? [];
   const byYear = new Map<number, Event[]>();
   for (const e of events) {
@@ -172,14 +196,14 @@ export function LifeTimeline({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
                             photoUrl={cat.photoUrl}
                             catIdNumber={cat.catIdNumber}
                             lines={[formatDate(e.at, loc, "medium")]}
-                            qrUrl={cat.qrToken ? qrValueFor(SITE, cat.qrToken) : null}
-                            shareText={isAr ? `${name} — ${e.title.ar} 🐾 moracat.co` : `${name} — ${e.title.en} 🐾 moracat.co`}
+                            qrUrl={momentLink}
+                            shareText={isAr ? `${name} — ${e.title.ar} 🐾 ${momentLink}` : `${name} — ${e.title.en} 🐾 ${momentLink}`}
                             label={isAr ? "شارك" : "Share"}
                             variant="tertiary"
                           />
                         )}
                         {e.momentId && (
-                          <Button size="sm" variant="tertiary" className="text-destructive" onClick={() => { if (window.confirm(isAr ? "حذف هذه اللحظة؟" : "Remove this moment?")) remove.mutate(e.momentId!); }}>
+                          <Button size="sm" variant="tertiary" className="text-destructive" onClick={() => setConfirmId(e.momentId!)}>
                             <Trash2 className="size-4" aria-hidden /> {isAr ? "حذف" : "Remove"}
                           </Button>
                         )}
@@ -192,6 +216,17 @@ export function LifeTimeline({ cat, isAr }: { cat: PortalCat; isAr: boolean }) {
           </section>
         ))
       )}
+
+      <ConfirmDialog
+        open={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={() => confirmId && remove.mutate(confirmId)}
+        busy={remove.isPending}
+        isAr={isAr}
+        title={isAr ? "تحذف هذه اللحظة من الألبوم؟" : "Remove this moment from the album?"}
+        description={isAr ? "تختفي اللحظة وصورتها من الألبوم. سجلات العيادة لا تتأثر." : "The moment and its photo leave the album. Clinic records are not affected."}
+        confirmLabel={isAr ? "احذف اللحظة" : "Remove the moment"}
+      />
     </div>
   );
 }

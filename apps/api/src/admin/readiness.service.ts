@@ -32,7 +32,7 @@ export interface ReadinessCheck {
 export class AdminReadinessService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async checks(): Promise<{ checks: ReadinessCheck[]; summary: Record<ReadinessLevel, number> }> {
+  async checks(): Promise<{ checks: ReadinessCheck[]; summary: Record<ReadinessLevel, number>; jobs: JobHealth[] }> {
     const checks: ReadinessCheck[] = [];
     const env = process.env;
     const prod = env.NODE_ENV === "production";
@@ -108,6 +108,26 @@ export class AdminReadinessService {
       titleEn: "Commercial registration (CR)",
       fixAr: "ضع CR_NUMBER على الخادم و NEXT_PUBLIC_CR_NUMBER على الموقع (10 أرقام). لا نخترع أرقاماً.",
       fixEn: "Set CR_NUMBER on the API and NEXT_PUBLIC_CR_NUMBER on the web (10 digits). We never invent numbers.",
+      owner: "ops",
+    });
+
+    // Did the scheduled jobs actually RUN? The secret below only says the
+    // wake-up *can* work; this reads the lease trail and goes red when the
+    // last clean finish is older than the cadence allows — the silent
+    // sleeping-dyno failure (MRC-UX-AUDIT-2026-10-04 §Problems 7).
+    const jobs = await this.jobHealth();
+    const staleJobs = jobs.filter((j) => j.status !== "ok");
+    checks.push({
+      key: "scheduled_jobs",
+      level: staleJobs.length ? "block" : "ok",
+      titleAr: "المهام المجدولة تعمل",
+      titleEn: "Scheduled jobs are running",
+      fixAr: staleJobs.length
+        ? `${staleJobs.map((j) => j.name).join("، ")}: آخر تشغيل ناجح أقدم من المسموح أو فشل. التذكيرات لا تصل. تأكد من CRON_SECRET و MORACAT_API_URL في أسرار GitHub، ثم شغّل workflow «cron» يدوياً. التفاصيل في /admin/readiness.`
+        : "كل المهام أنهت تشغيلاً ناجحاً ضمن موعدها.",
+      fixEn: staleJobs.length
+        ? `${staleJobs.map((j) => j.name).join(", ")}: last clean run is older than its cadence, or it failed. Reminders are not going out. Check CRON_SECRET and MORACAT_API_URL in GitHub secrets, then run the "cron" workflow by hand. Details on /admin/readiness.`
+        : "Every job finished cleanly within its cadence.",
       owner: "ops",
     });
 
@@ -208,6 +228,64 @@ export class AdminReadinessService {
 
     const summary = { ok: 0, warn: 0, block: 0 } as Record<ReadinessLevel, number>;
     for (const c of checks) summary[c.level]++;
-    return { checks, summary };
+    return { checks, summary, jobs };
+  }
+
+  /**
+   * Per-job health from the JobLease trail. "Successful" means finished with
+   * no recorded error — withJobLock stamps lastFinishedAt on failures too, so
+   * a failing job is never mistaken for a healthy one. Staff-only: this is
+   * where timestamps and error text live now, not on the public /health.
+   */
+  async jobHealth(now = new Date()): Promise<JobHealth[]> {
+    const rows = await this.prisma.jobLease
+      .findMany({ select: { name: true, lastStartedAt: true, lastFinishedAt: true, lastError: true, lastDurationMs: true } })
+      .catch(() => []);
+    const byName = new Map(rows.map((r) => [r.name, r]));
+    return SCHEDULED_JOBS.filter((j) => j.required()).map((j) => {
+      const r = byName.get(j.name);
+      const finished = r?.lastFinishedAt ?? null;
+      const ageMs = finished ? now.getTime() - finished.getTime() : null;
+      const status: JobHealth["status"] = r?.lastError
+        ? "failed"
+        : ageMs == null
+          ? "never"
+          : ageMs > j.maxAgeMs
+            ? "stale"
+            : "ok";
+      return {
+        name: j.name,
+        status,
+        maxAgeHours: Math.round(j.maxAgeMs / 3_600_000),
+        lastStartedAt: r?.lastStartedAt?.toISOString() ?? null,
+        lastFinishedAt: finished?.toISOString() ?? null,
+        lastDurationMs: r?.lastDurationMs ?? null,
+        lastError: r?.lastError ?? null,
+      };
+    });
   }
 }
+
+export interface JobHealth {
+  name: string;
+  /** ok · stale (older than its cadence) · failed (last run errored) · never (no trail). */
+  status: "ok" | "stale" | "failed" | "never";
+  maxAgeHours: number;
+  lastStartedAt: string | null;
+  lastFinishedAt: string | null;
+  lastDurationMs: number | null;
+  lastError: string | null;
+}
+
+/**
+ * The jobs /jobs/tick drives and how stale each may get. Hourly jobs run on a
+ * 30-minute wake-up with a 55-minute "due" window, so two hours means at
+ * least one full cycle was missed. The digest is weekly (Thursday evening).
+ * Fulfilment only matters while commerce is on.
+ */
+const SCHEDULED_JOBS: { name: string; maxAgeMs: number; required: () => boolean }[] = [
+  { name: "care", maxAgeMs: 2 * 3_600_000, required: () => true },
+  { name: "lifecycle", maxAgeMs: 2 * 3_600_000, required: () => true },
+  { name: "fulfilment", maxAgeMs: 2 * 3_600_000, required: () => commerceEnabled() },
+  { name: "digest", maxAgeMs: 8 * 24 * 3_600_000, required: () => true },
+];

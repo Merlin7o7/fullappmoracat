@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Download, Share2, X } from "lucide-react";
 import { Button, useToast } from "@moraqat/ui";
 import { IS_IOS, canShareFile, downloadFile, renderStoryFile } from "@/lib/card-export";
+import { trackCardShared } from "@/lib/track-once";
 
 /**
  * Sharing a story image that actually works on iPhone.
@@ -30,6 +31,7 @@ export function useStoryShare({
   isAr,
   prerender = false,
   cacheKey,
+  attribution,
 }: {
   nodeRef: React.RefObject<HTMLElement>;
   baseName: string;
@@ -39,6 +41,8 @@ export function useStoryShare({
   prerender?: boolean;
   /** Anything that changes the artwork (name, photo…) — a new key drops the cached image. */
   cacheKey: string;
+  /** `card_shared` dimensions, sent once the image actually leaves (share or save). */
+  attribution?: { src: string; kind: string };
 }) {
   const { toast } = useToast();
   const cache = React.useRef<{ key: string; file: File; url: string } | null>(null);
@@ -83,11 +87,18 @@ export function useStoryShare({
     toast({ title: isAr ? "تعذّر تجهيز الصورة" : "Couldn't prepare the image", description: isAr ? "جرّب مرة ثانية بعد لحظات" : "Give it another try in a moment", variant: "error" });
   }, [isAr, toast]);
 
+  const src = attribution?.src;
+  const kind = attribution?.kind;
+  const delivered = React.useCallback(
+    (how: string) => { if (src) trackCardShared(src, kind ?? "story", { via: how }); },
+    [src, kind]
+  );
+
   /** Hand a ready image to the platform. Call ONLY inside a tap handler. */
   const deliver = React.useCallback(
     (img: { file: File; url: string }) => {
       if (canShareFile(img.file)) {
-        navigator.share({ files: [img.file], text: shareText }).catch((err: Error) => {
+        navigator.share({ files: [img.file], text: shareText }).then(() => delivered("share")).catch((err: Error) => {
           if (err?.name === "AbortError") return; // closed the sheet — a decision, not a failure
           setSheet(img); // refused (e.g. tap expired) → the preview has its own fresh tap
         });
@@ -98,9 +109,10 @@ export function useStoryShare({
         return;
       }
       downloadFile(img.file);
+      delivered("download");
       toast({ title: isAr ? "حفظنا الصورة لك" : "Image saved", description: isAr ? "شاركها من الصور أو انستقرام." : "Share it from your photos or Instagram.", variant: "success" });
     },
-    [isAr, shareText, toast]
+    [delivered, isAr, shareText, toast]
   );
 
   const share = React.useCallback(() => {
@@ -122,7 +134,7 @@ export function useStoryShare({
   }, [cacheKey, deliver, fail, prepare]);
 
   const sheetEl = sheet ? (
-    <StoryPreviewSheet file={sheet.file} url={sheet.url} shareText={shareText} isAr={isAr} onClose={() => setSheet(null)} />
+    <StoryPreviewSheet file={sheet.file} url={sheet.url} shareText={shareText} isAr={isAr} onClose={() => setSheet(null)} onDelivered={delivered} />
   ) : null;
 
   return { share, busy, sheet: sheetEl };
@@ -134,12 +146,15 @@ export function StoryPreviewSheet({
   shareText,
   isAr,
   onClose,
+  onDelivered,
 }: {
   file: File;
   url: string;
   shareText: string;
   isAr: boolean;
   onClose: () => void;
+  /** Called when the image really left — shared, or downloaded. */
+  onDelivered?: (how: string) => void;
 }) {
   const canShare = canShareFile(file);
   const closeRef = React.useRef<HTMLButtonElement>(null);
@@ -160,7 +175,7 @@ export function StoryPreviewSheet({
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-full w-full max-w-sm flex-col items-center gap-4 rounded-[2rem] bg-card p-5 shadow-e3"
+        className="relative flex max-h-full w-full max-w-sm flex-col items-center gap-4 rounded-2xl bg-card p-5 shadow-e3"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -172,15 +187,15 @@ export function StoryPreviewSheet({
         >
           <X className="size-5" />
         </button>
-        <p className="mt-1 font-medium">{isAr ? "صورتك جاهزة ✨" : "Your image is ready ✨"}</p>
+        <p className="mt-1 font-medium">{isAr ? "صورتك جاهزة" : "Your image is ready"}</p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt={isAr ? "صورة المشاركة" : "Share image"} className="max-h-[58vh] w-auto rounded-2xl shadow-e2" />
         {canShare ? (
           <Button
             size="lg"
-            className="w-full rounded-full"
+            className="w-full"
             onClick={() => {
-              navigator.share({ files: [file], text: shareText }).then(onClose).catch((err: Error) => {
+              navigator.share({ files: [file], text: shareText }).then(() => { onDelivered?.("share"); onClose(); }).catch((err: Error) => {
                 if (err?.name !== "AbortError") onClose();
               });
             }}
@@ -188,7 +203,7 @@ export function StoryPreviewSheet({
             <Share2 className="size-4" /> {isAr ? "شارك أو احفظ" : "Share or save"}
           </Button>
         ) : !IS_IOS ? (
-          <Button size="lg" className="w-full rounded-full" onClick={() => { downloadFile(file); onClose(); }}>
+          <Button size="lg" className="w-full" onClick={() => { downloadFile(file); onDelivered?.("download"); onClose(); }}>
             <Download className="size-4" /> {isAr ? "حمّل الصورة" : "Download the image"}
           </Button>
         ) : null}

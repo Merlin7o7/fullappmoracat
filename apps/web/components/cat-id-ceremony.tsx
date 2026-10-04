@@ -3,12 +3,14 @@
 import * as React from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ImageDown, RotateCcw } from "lucide-react";
-import { Button, cn, useFocusTrap, useToast } from "@moraqat/ui";
-import { isFoundingMember } from "@moraqat/core";
+import { Button, cn, eyebrowClass, useFocusTrap, useToast } from "@moraqat/ui";
+import { catVerb, isFoundingMember } from "@moraqat/core";
 import { CatIdCard } from "./cat-id-card";
 import { CatIdStory } from "./cat-id-story";
 import { exportSafeSrc } from "@/lib/card-export";
 import { useStoryShare } from "@/components/story-share";
+import { useShareLink } from "@/lib/share-link";
+import { trackOnce } from "@/lib/track-once";
 import { IlloPaw } from "./illustrations";
 import { formatDate as coreFormatDate } from "@moraqat/core";
 
@@ -23,6 +25,10 @@ interface CeremonyCat {
   photoUrl?: string | null;
   /** Enables the story-frame QR — the pride export works without it. */
   qrToken?: string | null;
+  /** When public, the shared story lands on /i/{slug} naming this cat. */
+  publicSlug?: string | null;
+  /** MALE | FEMALE | UNKNOWN — Arabic copy agrees with the cat (unknown → name-led wording). */
+  gender?: string | null;
 }
 
 /** How the owner chose to appear beside a shared cat (strategy decision D6). */
@@ -108,6 +114,10 @@ export function CatIdCeremony({
   // Trap focus within the ceremony and restore it to the trigger on close — the
   // signature moment must not let keyboard focus wander to the page behind (R097).
   const trapRef = useFocusTrap<HTMLDivElement>(true);
+  // Funnel: the reveal was actually shown — once per Cat ID (strict-mode safe).
+  React.useEffect(() => {
+    if (act === "reveal") trackOnce("cat_id_ceremony_viewed", cat.catIdNumber, { variant });
+  }, [act, cat.catIdNumber, variant]);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -127,8 +137,8 @@ export function CatIdCeremony({
             ? `أهلاً ${cat.name} — صرت فرد من عائلة مرقط، رقم الهوية ${cat.catIdNumber}`
             : `Welcome, ${cat.name} — you're part of the Moracat family, Cat ID ${cat.catIdNumber}`
           : isAr
-            ? `${cat.name} صار عضو — رقم الهوية ${cat.catIdNumber}`
-            : `${cat.name} is a member — Cat ID ${cat.catIdNumber}`}
+            ? `${cat.name} ${catVerb(cat.gender, { m: "صار له رقمه في سجل مرقط", f: "صار لها رقمها في سجل مرقط", n: "في سجل مرقط" })} — رقم الهوية ${cat.catIdNumber}`
+            : `${cat.name} has their number in the Moracat register — Cat ID ${cat.catIdNumber}`}
       </h2>
 
       {mini ? (
@@ -245,7 +255,7 @@ function StampingAct({ isAr, catName, idNumber, onDone }: { isAr: boolean; catNa
       >
         <IlloPaw tone="orange" className="size-7" />
       </motion.span>
-      <p className="mt-6 font-mono text-xs uppercase tracking-[0.28em] text-white/50">
+      <p className={eyebrowClass(isAr ? "ar" : "en", "mt-6 text-white/50")}>
         {isAr ? `نطبع هوية ${catName}…` : `Stamping ${catName}'s ID…`}
       </p>
       {/* The name — stamped first, glyph by glyph. */}
@@ -316,6 +326,7 @@ function RevealAct({
   const firstName = (ownerFirstName ?? "").trim();
   const hasPhoto = Boolean(cat.photoUrl);
 
+  const shareLink = useShareLink(cat.publicSlug ?? null, "story");
   /** THE peak action — the member walks away holding the story (Wrapped moment).
    *  Rendered ahead of time so the tap reaches the share sheet on iPhone. */
   const story = useStoryShare({
@@ -325,8 +336,9 @@ function RevealAct({
     prerender: true,
     cacheKey: [cat.name, cat.catIdNumber, cat.photoUrl, cat.idIssuedAt, isAr].join("|"),
     shareText: isAr
-      ? `${cat.name} صار في عائلة مرقط 🐾 سوّ هوية قطك على moracat.co`
-      : `${cat.name} is now a Moracat 🐾 Create your cat's ID at moracat.co`,
+      ? `هذي هوية ${cat.name} في سجل مرقط 🐾 قطك وش رقمه؟ ${shareLink}`
+      : `This is ${cat.name}'s Moracat ID 🐾 What's your cat's number? ${shareLink}`,
+    attribution: { src: "story", kind: "ceremony" },
   });
   const storyBusy = story.busy;
   const saveStory = story.share;
@@ -413,11 +425,11 @@ function RevealAct({
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative my-auto flex w-full max-w-sm flex-col items-center py-4 text-center">
-      <motion.p {...fade(0.45)} className="font-mono text-xs uppercase tracking-[0.28em] text-[hsl(18_93%_62%)]">
+      <motion.p {...fade(0.45)} className={eyebrowClass(isAr ? "ar" : "en", "text-accent-on-dark")}>
         {isAr ? "صار له رقمه" : "The number is theirs"}
       </motion.p>
       <motion.p {...fade(0.6)} aria-hidden className="mt-3 font-display text-3xl font-semibold tracking-tight text-white">
-        {isAr ? `${cat.name} صار عضو` : `${cat.name} is a member`}
+        {isAr ? `${cat.name} ${catVerb(cat.gender, { m: "صار في السجل", f: "صارت في السجل", n: "في السجل" })}` : `${cat.name} is in the register`}
       </motion.p>
       <motion.p {...fade(0.75)} className="mt-2 text-sm leading-relaxed text-white/65">
         {isAr ? "هوية على اسمه، ورقم يخصّه هو بس." : "An identity in their name, and a number that's theirs alone."}
@@ -455,7 +467,7 @@ function RevealAct({
       </motion.div>
 
       {/* The inscription — quiet, engraved, permanent (R032). */}
-      <motion.p {...fade(0.85)} className="mt-4 font-mono text-xs uppercase tracking-[0.22em] text-white/45">
+      <motion.p {...fade(0.85)} className={eyebrowClass(isAr ? "ar" : "en", "mt-4 text-white/45")}>
         {isAr ? (
           <>عضو رقم <bdi dir="ltr">{cat.catIdNumber}</bdi> · صدرت في {formatIssued(cat.idIssuedAt, true)}</>
         ) : (
