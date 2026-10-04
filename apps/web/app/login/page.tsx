@@ -4,7 +4,7 @@ import { digitsOnly } from "@moraqat/core";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Mail, Smartphone } from "lucide-react";
+import { KeyRound, Loader2, Mail, Smartphone } from "lucide-react";
 import { Button, cn, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -12,25 +12,36 @@ import { Field } from "@/components/field";
 import { PhoneField, composePhone } from "@/components/phone-field";
 import { GoogleButton, googleEnabled } from "@/components/google-button";
 import { AuthShell } from "@/components/auth-shell";
+import { CodeEntry, EMAIL_RE, codeErrorMessage, useResendCooldown } from "@/components/signup/email-code";
+import { patchSignupDraft } from "@/components/signup/draft";
 import { ApiError } from "@/lib/http";
 import { friendlyError } from "@/lib/errors";
 
 type Method = "email" | "phone";
+/**
+ * code     — the default door: email → 6-digit code (sign-up is passwordless,
+ *            so this is the only way most members CAN come back; audit P2).
+ * password — the secondary door for the few who set one (+ SMS when enabled).
+ * forgot   — password reset.
+ */
+type Mode = "code" | "password" | "forgot";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginWithPhone, loginWithGoogle, requestOtp, forgotPassword } = useAuth();
+  const { login, loginWithPhone, loginWithGoogle, requestOtp, forgotPassword, emailCodeStart, emailCodeContinue } = useAuth();
   const { locale } = useLocale();
   const { toast } = useToast();
   const isAr = locale === "ar";
+  const t = (ar: string, en: string) => (isAr ? ar : en);
 
+  const [mode, setMode] = React.useState<Mode>("code");
   const [method, setMethod] = React.useState<Method>("email");
   // Mobile + OTP login needs a live SMS provider; hide it until one is wired.
   const smsEnabled = process.env.NEXT_PUBLIC_SMS_ENABLED === "true";
   // Default OFF — staying signed in is the member's explicit choice, never a
   // silent default (trust precedes convenience).
   const [rememberMe, setRememberMe] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<React.ReactNode>(null);
   // The structured API code behind the current error — UIs branch on codes,
   // never on message prose (e.g. LOCKED_OUT gets an inline reset path).
   const [errorCode, setErrorCode] = React.useState<string | undefined>(undefined);
@@ -47,8 +58,16 @@ export default function LoginPage() {
     setErrorCode(undefined);
   }
 
-  // Email + password
+  // Email (shared by the code and password doors, so switching keeps it)
   const [email, setEmail] = React.useState("");
+
+  // Email + code
+  const [codeSent, setCodeSent] = React.useState(false);
+  const [code, setCode] = React.useState("");
+  const [devCode, setDevCode] = React.useState<string | null>(null);
+  const cooldown = useResendCooldown();
+
+  // Email + password
   const [password, setPassword] = React.useState("");
   const [totp, setTotp] = React.useState("");
   const [needsTotp, setNeedsTotp] = React.useState(false);
@@ -60,7 +79,6 @@ export default function LoginPage() {
   const [otp, setOtp] = React.useState("");
 
   // Forgot password
-  const [forgot, setForgot] = React.useState(false);
   const [forgotEmail, setForgotEmail] = React.useState("");
   const fullPhone = composePhone(dialCode, phone);
 
@@ -71,6 +89,7 @@ export default function LoginPage() {
     const reason = new URLSearchParams(window.location.search).get("reason");
     if (reason === "password-changed") {
       setNotice(isAr ? "تم تغيير كلمة المرور بنجاح. سجّل الدخول بكلمتك الجديدة." : "Your password was changed. Sign in with your new password.");
+      setMode("password");
     }
   }, [isAr]);
 
@@ -87,6 +106,66 @@ export default function LoginPage() {
     router.push(dest);
   }
 
+  function switchMode(next: Mode) {
+    clearError();
+    setMode(next);
+  }
+
+  // ── Email code (primary) ───────────────────────────────────────────────
+  async function sendCode() {
+    clearError();
+    if (!EMAIL_RE.test(email.trim())) {
+      setError(t("اكتب بريدك كاملاً، مثل name@example.com", "Enter your full email, like name@example.com"));
+      return;
+    }
+    setLoading(true);
+    try {
+      const r = await emailCodeStart(email, isAr ? "ar" : "en");
+      setDevCode(r.devCode ?? null);
+      setCode("");
+      setCodeSent(true);
+      cooldown.start();
+    } catch (err) {
+      setError(codeErrorMessage(err, isAr).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verifyCode(value: string) {
+    if (value.length !== 6 || loading) return;
+    clearError();
+    setLoading(true);
+    try {
+      await emailCodeContinue({ email, code: value, intent: "login", locale: isAr ? "ar" : "en" });
+      goToPortal();
+    } catch (err) {
+      const ce = codeErrorMessage(err, isAr);
+      setErrorCode(ce.code);
+      if (ce.code === "EMAIL_NOT_REGISTERED") {
+        setError(
+          <p>
+            {t("ما لقينا حساب بهذا البريد — ", "We couldn't find an account with this email — ")}
+            <Link href="/register" onClick={() => carryEmailToSignup(email)} className="font-medium text-primary underline underline-offset-4">
+              {t("سجّل قطك", "register your cat")}
+            </Link>
+          </p>
+        );
+      } else if (ce.code === "TOTP_REQUIRED") {
+        // A mailbox alone must not bypass a second factor: the password door.
+        setMode("password");
+        setNeedsTotp(true);
+        setError(t("حسابك محمي بخطوتين — ادخل بكلمة المرور ورمز تطبيق المصادقة.", "Your account uses two-step sign-in — use your password and authenticator code."));
+      } else {
+        setError(ce.message);
+      }
+      if (!ce.network) setCode("");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Password (secondary) ───────────────────────────────────────────────
   async function onEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     clearError(); setLoading(true);
@@ -141,7 +220,7 @@ export default function LoginPage() {
         description: devToken ? (isAr ? "افتح الرابط لتعيين كلمة مرور جديدة" : "Open the link to set a new password") : undefined,
       });
       if (devToken) router.push(`/reset-password?token=${devToken}`);
-      else setForgot(false);
+      else setMode("password");
     } catch (err) {
       showError(err);
     } finally { setLoading(false); }
@@ -149,26 +228,32 @@ export default function LoginPage() {
 
   /** LOCKED_OUT's recovery path (R112): waiting is not the only option. */
   function openForgotPrefilled() {
-    setForgot(true);
     setForgotEmail((f) => f || email);
-    clearError();
+    switchMode("forgot");
   }
 
-  if (forgot) {
+  if (mode === "forgot") {
     return (
       <AuthShell isAr={isAr} title={isAr ? "نسيت كلمة المرور؟" : "Forgot password?"} subtitle={isAr ? "أدخل بريدك ونرسل لك رابط الاستعادة" : "Enter your email and we'll send a reset link"}>
         <form onSubmit={onForgot} className="flex flex-col gap-4">
-          <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={forgotEmail} onChange={setForgotEmail} placeholder="you@example.com" autoComplete="email" />
+          <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" inputMode="email" required value={forgotEmail} onChange={setForgotEmail} placeholder="you@example.com" autoComplete="email" />
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" disabled={loading}>{loading && <Loader2 className="size-4 animate-spin" />}{isAr ? "أرسل الرابط" : "Send reset link"}</Button>
-          <button type="button" onClick={() => { setForgot(false); clearError(); }} className="min-h-[44px] text-sm text-muted-foreground hover:text-foreground">{isAr ? "الرجوع لتسجيل الدخول" : "Back to login"}</button>
+          <button type="button" onClick={() => switchMode("code")} className="min-h-[44px] text-sm text-muted-foreground hover:text-foreground">
+            {isAr ? "ادخل برمز على بريدك بدلها" : "Sign in with an email code instead"}
+          </button>
+          <button type="button" onClick={() => switchMode("password")} className="min-h-[44px] text-sm text-muted-foreground hover:text-foreground">{isAr ? "الرجوع لكلمة المرور" : "Back to password sign-in"}</button>
         </form>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell isAr={isAr} title={isAr ? "مرحباً بعودتك" : "Welcome back"} subtitle={isAr ? "سجّل الدخول لإدارة عضويتك" : "Log in to manage your membership"}>
+    <AuthShell
+      isAr={isAr}
+      title={isAr ? "ادخل لملف قطك" : "Back to your cat's file"}
+      subtitle={isAr ? "نرسل لك رمزاً على بريدك — بدون كلمة مرور." : "We'll email you a code — no password needed."}
+    >
       {notice && (
         <div role="status" className="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-foreground">
           {notice}
@@ -185,57 +270,124 @@ export default function LoginPage() {
         </>
       )}
 
-      {/* Method switch — only when SMS OTP is available */}
-      {smsEnabled && (
-        <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
-          <MethodTab active={method === "email"} onClick={() => { setMethod("email"); clearError(); }} icon={Mail} label={isAr ? "البريد" : "Email"} />
-          <MethodTab active={method === "phone"} onClick={() => { setMethod("phone"); clearError(); }} icon={Smartphone} label={isAr ? "الجوال" : "Mobile"} />
+      {mode === "code" ? (
+        <div className="mt-5">
+          {!codeSent ? (
+            <form onSubmit={(e) => { e.preventDefault(); void sendCode(); }} className="flex flex-col gap-4">
+              <Field
+                label={isAr ? "بريدك الإلكتروني" : "Your email"}
+                type="email"
+                inputMode="email"
+                required
+                autoFocus
+                value={email}
+                onChange={setEmail}
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+              {error && <div role="alert" className="text-sm text-destructive">{error}</div>}
+              <Button type="submit" size="lg" disabled={loading}>
+                {loading ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" aria-hidden />}
+                {isAr ? "أرسل رمز الدخول" : "Send my sign-in code"}
+              </Button>
+            </form>
+          ) : (
+            <CodeEntry
+              email={email}
+              isAr={isAr}
+              code={code}
+              onCode={setCode}
+              onComplete={(v) => void verifyCode(v)}
+              busy={loading}
+              error={error}
+              devCode={devCode}
+              resendLeft={cooldown.left}
+              onResend={() => void sendCode()}
+              onChangeEmail={() => { setCodeSent(false); setCode(""); clearError(); }}
+            >
+              <Button size="lg" className="w-full" disabled={loading || code.length !== 6} onClick={() => void verifyCode(code)}>
+                {loading && <Loader2 className="size-4 animate-spin" />}
+                {isAr ? "ادخل" : "Sign in"}
+              </Button>
+            </CodeEntry>
+          )}
+          <button
+            type="button"
+            onClick={() => switchMode("password")}
+            className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            <KeyRound className="size-4" aria-hidden />
+            {isAr ? "أدخل بكلمة المرور" : "Sign in with a password"}
+          </button>
         </div>
-      )}
-
-      {!smsEnabled || method === "email" ? (
-        <form onSubmit={onEmailLogin} className="mt-5 flex flex-col gap-4">
-          <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" required value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
-          <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={password} onChange={setPassword} placeholder="••••••••" autoComplete="current-password" />
-          {needsTotp && <Field label={isAr ? "رمز التحقق (2FA)" : "2FA code"} value={totp} onChange={setTotp} inputMode="numeric" placeholder="123456" autoFocus />}
-          <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={openForgotPrefilled} />
-          {error && (
-            <div role="alert" className="text-sm text-destructive">
-              <p>{error}</p>
-              {/* A lockout is never a dead end (R112): the reset path is right here. */}
-              {errorCode === "LOCKED_OUT" && (
-                <button type="button" onClick={openForgotPrefilled} className="mt-1 min-h-[44px] font-medium text-primary underline-offset-4 hover:underline">
-                  {isAr ? "إعادة تعيين كلمة المرور بدلاً من الانتظار" : "Reset your password instead"}
-                </button>
-              )}
+      ) : (
+        <>
+          {/* Method switch — only when SMS OTP is available */}
+          {smsEnabled && (
+            <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
+              <MethodTab active={method === "email"} onClick={() => { setMethod("email"); clearError(); }} icon={Mail} label={isAr ? "البريد" : "Email"} />
+              <MethodTab active={method === "phone"} onClick={() => { setMethod("phone"); clearError(); }} icon={Smartphone} label={isAr ? "الجوال" : "Mobile"} />
             </div>
           )}
-          <Button type="submit" size="lg" disabled={loading}>{loading && <Loader2 className="size-4 animate-spin" />}{isAr ? "تسجيل الدخول" : "Log in"}</Button>
-        </form>
-      ) : (
-        <form onSubmit={onPhoneLogin} className="mt-5 flex flex-col gap-4">
-          <PhoneField isAr={isAr} label={isAr ? "رقم الجوال" : "Mobile number"} required dialCode={dialCode} onDialCode={setDialCode} value={phone} onValue={setPhone} />
-          {otpSent && (
-            <Field label={isAr ? "رمز الدخول" : "Login code"} value={otp} onChange={(v) => setOtp(digitsOnly(v).slice(0, 6))} inputMode="numeric" required placeholder="••••••" hint={isAr ? "أرسلناه برسالة نصية" : "Sent to you by SMS"} />
+
+          {!smsEnabled || method === "email" ? (
+            <form onSubmit={onEmailLogin} className="mt-5 flex flex-col gap-4">
+              <Field label={isAr ? "البريد الإلكتروني" : "Email"} type="email" inputMode="email" required value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
+              <Field label={isAr ? "كلمة المرور" : "Password"} type="password" required value={password} onChange={setPassword} placeholder="••••••••" autoComplete="current-password" />
+              {needsTotp && <Field label={isAr ? "رمز التحقق (2FA)" : "2FA code"} value={totp} onChange={setTotp} inputMode="numeric" placeholder="123456" autoFocus />}
+              <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={openForgotPrefilled} />
+              {error && (
+                <div role="alert" className="text-sm text-destructive">
+                  <p>{error}</p>
+                  {/* A lockout is never a dead end (R112): the reset path is right here. */}
+                  {errorCode === "LOCKED_OUT" && (
+                    <button type="button" onClick={openForgotPrefilled} className="mt-1 min-h-[44px] font-medium text-primary underline-offset-4 hover:underline">
+                      {isAr ? "إعادة تعيين كلمة المرور بدلاً من الانتظار" : "Reset your password instead"}
+                    </button>
+                  )}
+                </div>
+              )}
+              <Button type="submit" size="lg" disabled={loading}>{loading && <Loader2 className="size-4 animate-spin" />}{isAr ? "ادخل" : "Sign in"}</Button>
+            </form>
+          ) : (
+            <form onSubmit={onPhoneLogin} className="mt-5 flex flex-col gap-4">
+              <PhoneField isAr={isAr} label={isAr ? "رقم الجوال" : "Mobile number"} required dialCode={dialCode} onDialCode={setDialCode} value={phone} onValue={setPhone} />
+              {otpSent && (
+                <Field label={isAr ? "رمز الدخول" : "Login code"} value={otp} onChange={(v) => setOtp(digitsOnly(v).slice(0, 6))} inputMode="numeric" required placeholder="••••••" hint={isAr ? "أرسلناه برسالة نصية" : "Sent to you by SMS"} />
+              )}
+              <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={openForgotPrefilled} />
+              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" size="lg" disabled={loading}>
+                {loading && <Loader2 className="size-4 animate-spin" />}
+                {otpSent ? (isAr ? "دخول" : "Log in") : (isAr ? "أرسل رمز الدخول" : "Send login code")}
+              </Button>
+              {otpSent && (
+                <button type="button" onClick={sendOtp} className="text-sm font-medium text-primary hover:underline">{isAr ? "إعادة إرسال الرمز" : "Resend code"}</button>
+              )}
+            </form>
           )}
-          <RememberRow isAr={isAr} rememberMe={rememberMe} setRememberMe={setRememberMe} onForgot={openForgotPrefilled} />
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" size="lg" disabled={loading}>
-            {loading && <Loader2 className="size-4 animate-spin" />}
-            {otpSent ? (isAr ? "دخول" : "Log in") : (isAr ? "أرسل رمز الدخول" : "Send login code")}
-          </Button>
-          {otpSent && (
-            <button type="button" onClick={sendOtp} className="text-sm font-medium text-primary hover:underline">{isAr ? "إعادة إرسال الرمز" : "Resend code"}</button>
-          )}
-        </form>
+          <button
+            type="button"
+            onClick={() => switchMode("code")}
+            className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            <Mail className="size-4" aria-hidden />
+            {isAr ? "ادخل برمز على بريدك بدلها" : "Sign in with an email code instead"}
+          </button>
+        </>
       )}
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        {isAr ? "ليس لديك حساب؟" : "No account?"}{" "}
-        <Link href="/register" className="font-medium text-primary hover:underline">{isAr ? "أنشئ حساباً" : "Create one"}</Link>
+        {isAr ? "ما عندك حساب؟" : "New here?"}{" "}
+        <Link href="/register" className="font-medium text-primary hover:underline">{isAr ? "سجّل قطك" : "Register your cat"}</Link>
       </p>
     </AuthShell>
   );
+}
+
+/** Someone who tried to sign in with an unregistered email shouldn't type it twice (R117). */
+function carryEmailToSignup(email: string) {
+  patchSignupDraft({ email: email.trim() });
 }
 
 function MethodTab({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof Mail; label: string }) {
@@ -256,11 +408,11 @@ function MethodTab({ active, onClick, icon: Icon, label }: { active: boolean; on
 function RememberRow({ isAr, rememberMe, setRememberMe, onForgot }: { isAr: boolean; rememberMe: boolean; setRememberMe: (v: boolean) => void; onForgot: () => void }) {
   return (
     <div className="flex items-center justify-between">
-      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+      <label className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground">
         <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="size-4 rounded border-input accent-primary" />
         {isAr ? "تذكّرني" : "Remember me"}
       </label>
-      <button type="button" onClick={onForgot} className="text-sm font-medium text-primary hover:underline">{isAr ? "نسيت كلمة المرور؟" : "Forgot password?"}</button>
+      <button type="button" onClick={onForgot} className="min-h-11 text-sm font-medium text-primary hover:underline">{isAr ? "نسيت كلمة المرور؟" : "Forgot password?"}</button>
     </div>
   );
 }

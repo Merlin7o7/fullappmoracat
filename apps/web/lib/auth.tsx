@@ -58,6 +58,20 @@ export interface RegisterInput {
   firstTouch?: FirstTouch;
 }
 
+/** Passwordless sign-in / sign-up by emailed 6-digit code (/auth/email/*). */
+export interface EmailCodeInput {
+  email: string;
+  code: string;
+  locale: "ar" | "en";
+  /** "login" never creates an account (EMAIL_NOT_REGISTERED instead). */
+  intent: "login" | "signup";
+  /** Sign-up only: the new account must accept the terms. */
+  acceptTerms?: boolean;
+  fullName?: string;
+  ref?: string;
+  firstTouch?: FirstTouch | null;
+}
+
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string, opts?: { totp?: string; rememberMe?: boolean }) => Promise<void>;
   loginWithPhone: (phone: string, otp: string, rememberMe?: boolean) => Promise<void>;
@@ -70,6 +84,14 @@ interface AuthContextValue extends AuthState {
    */
   adoptSession: (session: { user: AuthUser; accessToken: string; refreshToken: string }) => void;
   requestOtp: (phone: string, purpose?: "LOGIN" | "REGISTER") => Promise<{ devCode?: string }>;
+  /** Email a 6-digit code (sign-in or sign-up). `devCode` only outside production. */
+  emailCodeStart: (email: string, locale: "ar" | "en") => Promise<{ devCode?: string }>;
+  /**
+   * Spend the emailed code and adopt the session. `created` is true only when
+   * this call made a brand-new account — the sign-up uses it to check an
+   * existing member's cats before issuing another (no accidental twins).
+   */
+  emailCodeContinue: (input: EmailCodeInput) => Promise<{ created: boolean; user: AuthUser }>;
   forgotPassword: (email: string) => Promise<{ devToken?: string }>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -203,6 +225,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const requestOtp = React.useCallback<AuthContextValue["requestOtp"]>(async (phone, purpose = "LOGIN") => {
     return apiPost<{ devCode?: string }>("/auth/otp/request", { phone, purpose });
   }, []);
+
+  const emailCodeStart = React.useCallback<AuthContextValue["emailCodeStart"]>(async (email, locale) => {
+    return apiPost<{ devCode?: string }>("/auth/email/start", { email: email.trim(), locale });
+  }, []);
+
+  const emailCodeContinue = React.useCallback<AuthContextValue["emailCodeContinue"]>(
+    async ({ firstTouch, ref, fullName, acceptTerms, ...rest }) => {
+      const data = await apiPost<AuthResponse & { created?: boolean }>("/auth/email/continue", {
+        ...rest,
+        email: rest.email.trim(),
+        ...(acceptTerms ? { acceptTerms: true } : {}),
+        ...(fullName ? { fullName } : {}),
+        ...(ref ? { ref } : {}),
+        ...(firstTouch ? { firstTouch } : {}),
+      });
+      persist(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
+      return { created: Boolean(data.created), user: data.user };
+    },
+    [persist]
+  );
 
   const forgotPassword = React.useCallback<AuthContextValue["forgotPassword"]>(async (email) => {
     return apiPost<{ devToken?: string }>("/auth/password/forgot", { email });
@@ -419,6 +461,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       adoptSession,
       requestOtp,
+      emailCodeStart,
+      emailCodeContinue,
       forgotPassword,
       resetPassword,
       logout,
@@ -428,7 +472,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authedUpload,
       uploadImage,
     }),
-    [state, login, loginWithPhone, loginWithGoogle, register, adoptSession, requestOtp, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedBlob, authedUpload, uploadImage]
+    [state, login, loginWithPhone, loginWithGoogle, register, adoptSession, requestOtp, emailCodeStart, emailCodeContinue, forgotPassword, resetPassword, logout, updateUser, authedFetch, authedBlob, authedUpload, uploadImage]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

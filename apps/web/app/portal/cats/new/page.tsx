@@ -18,6 +18,16 @@ import { useCats, type PortalCat } from "@/lib/cat-context";
 import { friendlyMessage } from "@/lib/errors";
 import { consumeSource } from "@/lib/source";
 import { track } from "@/lib/track";
+import {
+  HANDOFF_KEY,
+  PHOTO_RETRY_KEY,
+  clearSignupDraft,
+  dataUrlToFile,
+  readJson,
+  removeKey,
+  writeJson,
+  type SignupHandoff,
+} from "@/components/signup/draft";
 import { SAUDI_CITIES, digitsOnly } from "@moraqat/core";
 
 /**
@@ -150,8 +160,8 @@ function CityPicker({
       />
       <p className="text-xs leading-relaxed text-muted-foreground">
         {isAr
-          ? "مدينتك تحدد دفعة قطك في التعداد — وبعدين توصلك عيادات الشركاء القريبة منك."
-          : "Your city sets your cat's class in the census — and later, which partner clinics are near you."}
+          ? "مدينتك تحدد دفعة قطك في سجل مرقط — وبعدين توصلك عيادات الشركاء القريبة منك."
+          : "Your city sets your cat's class in the Moracat register — and later, which partner clinics are near you."}
       </p>
     </div>
   );
@@ -338,47 +348,44 @@ function IssueIdFlow() {
     } catch { /* ignore */ }
   }, []);
 
-  // «4 inputs before the ceremony» (W8): a cat drafted on /register arrives
-  // here already named, sexed and aged — issue it at once, no second form.
+  // A cat drafted on /register (2026-10-04: name, optional photo, owner, and
+  // the two consents) arrives here and is issued at once — no second form.
   const [fromStart, setFromStart] = React.useState(false);
   // The sign-up photo arrives as a data URL; it is uploaded before the ID is
-  // issued so the cat joins the community with its face (founder, 2026-10-04).
+  // issued so the cat joins the community with its face.
   const [photoPending, setPhotoPending] = React.useState(false);
+  // The PDPL people-in-photo line was on screen when the photo was chosen at
+  // sign-up (R106) — only then does the attestation travel with the create.
+  const [photoAttested, setPhotoAttested] = React.useState(false);
+  // A sign-up photo whose upload failed: the ID is issued anyway, and the
+  // photo is kept for a one-tap retry after the ceremony — never swallowed.
+  const failedPhoto = React.useRef<string | null>(null);
   React.useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem("moraqat.draftCat");
-      if (!raw) return;
-      const d = JSON.parse(raw) as {
-        name?: string; gender?: string; ageMonths?: number | null;
-        photo?: string | null; ownerName?: string; dialCode?: string; phone?: string;
-      };
-      if (!d.name || !d.gender) return;
-      sessionStorage.removeItem("moraqat.draftCat");
-      setF((s) => ({
-        ...s,
-        name: d.name!,
-        gender: d.gender!,
-        ageYears: typeof d.ageMonths === "number" ? String(Math.floor(d.ageMonths / 12)) : "",
-        ageMonths: typeof d.ageMonths === "number" ? String(d.ageMonths % 12) : "",
-        ...(d.ownerName ? { ownerName: d.ownerName } : {}),
-        ...(d.phone ? { ownerPhone: d.phone, ownerDialCode: d.dialCode || "+966" } : {}),
-        // Sign-up never asks: the cat is shared, as the platform default.
-        sharePublicly: true,
-      }));
-      if (d.photo && d.photo.startsWith("data:image/")) {
-        setPhotoPending(true);
-        const file = dataUrlToFile(d.photo, `${d.name}.jpg`);
-        uploadImage<{ url: string }>("/uploads/image", file, { filename: file.name })
-          .then((r) => setF((s) => ({ ...s, photoUrl: r.url })))
-          .catch(() => {
-            /* the ID never waits on a photo — it can be added on the profile */
-          })
-          .finally(() => setPhotoPending(false));
-      }
-      setFromStart(true);
-    } catch {
-      /* ignore — the form below still works */
+    const d = readJson<SignupHandoff>(HANDOFF_KEY);
+    if (!d?.name) return;
+    removeKey(HANDOFF_KEY);
+    setF((s) => ({
+      ...s,
+      name: d.name,
+      ...(d.ownerName ? { ownerName: d.ownerName } : {}),
+      ...(d.phone ? { ownerPhone: d.phone, ownerDialCode: d.dialCode || "+966" } : {}),
+      // Asked on the owner step, at the moment they apply — never forced here.
+      waitlistConsent: d.waitlistConsent === true,
+      sharePublicly: d.sharePublicly !== false,
+    }));
+    if (d.photo && d.photo.startsWith("data:image/")) {
+      const photo = d.photo;
+      setPhotoAttested(d.photoAttested === true);
+      setPhotoPending(true);
+      const file = dataUrlToFile(photo, "cat.jpg");
+      uploadImage<{ url: string }>("/uploads/image", file, { filename: file.name })
+        .then((r) => setF((s) => ({ ...s, photoUrl: r.url })))
+        .catch(() => {
+          failedPhoto.current = photo;
+        })
+        .finally(() => setPhotoPending(false));
     }
+    setFromStart(true);
     // Runs once, on arrival from /register.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -443,7 +450,7 @@ function IssueIdFlow() {
   );
 
   const create = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (opts?: { allowDuplicateName?: boolean }) => {
       // Save owner edits to the account first (never enter twice) — but never
       // let a profile hiccup block the Cat ID: the save is non-blocking and
       // self-retries, surfacing honestly if it can't land.
@@ -477,7 +484,8 @@ function IssueIdFlow() {
         method: "POST",
         body: JSON.stringify({
           name: f.name.trim(),
-          gender: f.gender,
+          // Sign-up no longer asks (R016) — absent means UNKNOWN server-side.
+          ...(f.gender ? { gender: f.gender } : {}),
           // Where the cat lives — decides the founding class on their card.
           // Optional since W8: asked after the ceremony when skipped here.
           ...(f.cityCode ? { cityCode: f.cityCode } : {}),
@@ -490,7 +498,8 @@ function IssueIdFlow() {
           // when a photo was actually uploaded with sharing on: the upload act
           // is the consent signal; the server mints the timestamp (R106).
           sharePublicly: f.sharePublicly,
-          ...(f.sharePublicly && f.photoUrl.trim() ? { shareConsent: true } : {}),
+          ...(f.sharePublicly && f.photoUrl.trim() && (!fromStart || photoAttested) ? { shareConsent: true } : {}),
+          ...(opts?.allowDuplicateName ? { allowDuplicateName: true } : {}),
         }),
       });
       try { sessionStorage.removeItem("moraqat.pendingCatProfile"); } catch { /* ignore */ }
@@ -500,22 +509,43 @@ function IssueIdFlow() {
       // R106). Never blocks the Cat ID: attribution and consent are secondary
       // to the thing the person actually came for.
       if (f.waitlistConsent && user?.email) {
-        void authedFetch("/waitlist", {
-          method: "POST",
-          body: JSON.stringify({
-            email: user.email,
-            catName: f.name.trim(),
-            consent: true,
-            locale: isAr ? "ar" : "en",
-            ...(sourceCode ? { source: sourceCode } : {}),
-          }),
-        }).catch(() => { /* the ID is what matters; the list can wait */ });
+        const join = () =>
+          authedFetch("/waitlist", {
+            method: "POST",
+            body: JSON.stringify({
+              email: user.email,
+              catName: f.name.trim(),
+              consent: true,
+              locale: isAr ? "ar" : "en",
+              ...(sourceCode ? { source: sourceCode } : {}),
+            }),
+          });
+        // One quiet retry: a "yes" the member gave must not vanish on a blip.
+        void join().catch(() => new Promise((r) => window.setTimeout(r, 3000)).then(join)).catch(() => undefined);
       }
       return cat;
     },
     onSuccess: (cat) => {
       qc.invalidateQueries({ queryKey: ["cats"] });
       qc.invalidateQueries({ queryKey: ["overview"] });
+      // Issued: nothing of the sign-up draft lingers (R117 kept it until now).
+      clearSignupDraft();
+      if ((cat as { deduplicated?: boolean }).deduplicated) {
+        // The same cat was issued moments ago (a double submit or a retry) —
+        // open it rather than celebrate a twin.
+        toast({ title: isAr ? `هوية ${cat.name} جاهزة من قبل` : `${cat.name}'s ID already exists`, description: isAr ? "فتحنا لك ملفه." : "We opened their file.", variant: "success" });
+        router.push(`/portal/cats/${cat.id}`);
+        return;
+      }
+      if (failedPhoto.current) {
+        writeJson(PHOTO_RETRY_KEY, { catId: cat.id, photo: failedPhoto.current });
+        failedPhoto.current = null;
+        toast({
+          title: isAr ? `ما وصلت صورة ${cat.name}` : `${cat.name}'s photo didn't upload`,
+          description: isAr ? "الهوية صدرت. بعد الاحتفال نعيد رفع الصورة بضغطة." : "The ID is issued. Right after the reveal you can retry the photo with one tap.",
+          variant: "error",
+        });
+      }
       setFirstIssue(Boolean(cat.firstCatIdIssued));
       // The census conversion moment — no PII, just the fact (lib/track.ts).
       track("cat_id_issued", { first: Boolean(cat.firstCatIdIssued) });
@@ -557,10 +587,10 @@ function IssueIdFlow() {
   // A drafted cat is issued as soon as its fields land in state — once.
   const autoIssued = React.useRef(false);
   React.useEffect(() => {
-    if (!fromStart || autoIssued.current || !catName || !f.gender || photoPending) return;
+    if (!fromStart || autoIssued.current || !catName || photoPending) return;
     autoIssued.current = true;
-    create.mutate();
-  }, [fromStart, catName, f.gender, photoPending, create]);
+    create.mutate(undefined);
+  }, [fromStart, catName, photoPending, create]);
 
   // The member's first name — offered in the ceremony's share fork ("appear as
   // my first name"). Prefer what they just typed; fall back to the account.
@@ -572,7 +602,8 @@ function IssueIdFlow() {
         {create.isError ? (
           <div className="space-y-3">
             <p className="font-display text-2xl">{isAr ? "تعذّر إصدار الهوية" : "Couldn't issue the ID"}</p>
-            <Button onClick={() => create.mutate()}>{isAr ? "حاول مرة ثانية" : "Try again"}</Button>
+            <p className="text-sm text-muted-foreground">{friendlyMessage(create.error, isAr)}</p>
+            <Button onClick={() => create.mutate(undefined)}>{isAr ? "حاول مرة ثانية" : "Try again"}</Button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -622,7 +653,7 @@ function IssueIdFlow() {
                 e.preventDefault();
                 if (!catName || create.isPending) return;
                 if (duplicateName) setDupConfirmOpen(true);
-                else create.mutate();
+                else create.mutate(undefined);
               }}
               className="flex flex-col gap-4"
             >
@@ -827,7 +858,7 @@ function IssueIdFlow() {
                 // Prevent, don't apologise (R115): a second cat with the same
                 // name is fine on purpose, never by accident.
                 if (duplicateName) setDupConfirmOpen(true);
-                else create.mutate();
+                else create.mutate(undefined);
               }}
               className="flex flex-col gap-4"
             >
@@ -927,7 +958,7 @@ function IssueIdFlow() {
             <Button variant="tertiary" onClick={() => setDupConfirmOpen(false)}>
               {isAr ? "لا، بعدّل الاسم" : "No, I'll change the name"}
             </Button>
-            <Button onClick={() => { setDupConfirmOpen(false); create.mutate(); }}>
+            <Button onClick={() => { setDupConfirmOpen(false); create.mutate({ allowDuplicateName: true }); }}>
               {isAr ? "نعم، أصدر هوية ثانية" : "Yes, issue another ID"}
             </Button>
           </>
@@ -938,7 +969,7 @@ function IssueIdFlow() {
           (set in create.onSuccess) — never on hope (R115/R117). */}
       {ceremonyCat?.catIdNumber && (
         <CatIdCeremony
-          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, catNumber: ceremonyCat.catNumber, foundingClass: isAr ? ceremonyCat.foundingClass?.ar : ceremonyCat.foundingClass?.en, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl, qrToken: ceremonyCat.qrToken }}
+          cat={{ name: ceremonyCat.name, catIdNumber: ceremonyCat.catIdNumber, catNumber: ceremonyCat.catNumber, foundingClass: isAr ? ceremonyCat.foundingClass?.ar : ceremonyCat.foundingClass?.en, idIssuedAt: ceremonyCat.idIssuedAt, photoUrl: ceremonyCat.photoUrl, qrToken: ceremonyCat.qrToken, publicSlug: ceremonyCat.isPublic ? ceremonyCat.publicSlug ?? null : null, gender: ceremonyCat.gender }}
           isAr={isAr}
           // The full rite is for the household's first ID; every next family
           // member gets the warm, familiar mini welcome (R031/R009).
@@ -1014,8 +1045,8 @@ function NoCatYetDoor({ isAr }: { isAr: boolean }) {
       <p className="text-sm font-medium">{isAr ? "ما عندك قط بعد؟" : "Don't have a cat yet?"}</p>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         {isAr
-          ? "تقدر تنضم بدون قط — تتابع التعداد، وتتصفح القطط اللي تدوّر بيتاً، وتسجّل أول قط لك متى ما جاك."
-          : "You can join without one — follow the census, browse the cats looking for a home, and register your first cat whenever they arrive."}
+          ? "تقدر تنضم بدون قط — تتابع سجل مرقط، وتتصفح القطط اللي تدوّر بيتاً، وتسجّل أول قط لك متى ما جاك."
+          : "You can join without one — follow the Moracat register, browse the cats looking for a home, and register your first cat whenever they arrive."}
       </p>
       <Button variant="tertiary" size="sm" className="mt-2" onClick={() => void go()} disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}
@@ -1023,14 +1054,4 @@ function NoCatYetDoor({ isAr }: { isAr: boolean }) {
       </Button>
     </div>
   );
-}
-
-/** A data: URL → File, decoded in memory (the CSP forbids fetch(data:)). */
-function dataUrlToFile(dataUrl: string, name: string): File {
-  const [head, b64 = ""] = dataUrl.split(",");
-  const mime = /data:([^;]+)/.exec(head ?? "")?.[1] ?? "image/jpeg";
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new File([bytes], name, { type: mime });
 }

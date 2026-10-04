@@ -266,4 +266,16 @@ export class EmailContinueDto {
   @ApiPropertyOptional()
   @IsOptional()
   firstTouch?: unknown;
+
+  /**
+   * Which door the member came through. `login` (the /login page) never
+   * creates an account: an unknown address gets EMAIL_NOT_REGISTERED so the
+   * page can point them at sign-up instead of silently minting an empty
+   * account. Absent or `signup` keeps the original sign-in-or-create
+   * behaviour (backward compatible with the /register caller and the iOS app).
+   */
+  @ApiPropertyOptional({ enum: ["login", "signup"] })
+  @IsOptional()
+  @IsIn(["login", "signup"])
+  intent?: "login" | "signup";
 }

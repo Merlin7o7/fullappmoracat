@@ -31,6 +31,11 @@ export type AuthErrorCode =
   | "EMAIL_ALREADY_VERIFIED"
   // account state
   | "ACCOUNT_NOT_FOUND"
+  // passwordless sign-in from /login for an address with no account
+  | "EMAIL_NOT_REGISTERED"
+  // account deletion re-auth
+  | "PASSWORD_INCORRECT"
+  | "DELETE_CONFIRMATION_REQUIRED"
   | "ACCOUNT_SUSPENDED"
   | "ACCOUNT_DEACTIVATED"
   // password reset + sessions

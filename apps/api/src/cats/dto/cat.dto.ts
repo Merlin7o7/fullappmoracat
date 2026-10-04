@@ -71,23 +71,37 @@ export class CreateCatDto {
   breedId?: string;
 
   /**
-   * Required since the census (MRC-GTM-001 §1). "UNKNOWN" remains a legitimate
-   * answer — a rescue's sex genuinely may not be known — but it must now be a
-   * *choice* the owner made rather than a default nobody looked at.
+   * Optional again since the 2026-10-04 signup (R016 — under six inputs): the
+   * sign-up asks only the cat's name; sex is invited later on the profile,
+   * framed as care. Absent → the column default UNKNOWN. "UNKNOWN" remains a
+   * legitimate answer for a rescue whose sex genuinely isn't known.
    */
-  @ApiProperty({ enum: GENDERS })
+  @ApiPropertyOptional({ enum: GENDERS, default: "UNKNOWN" })
+  @IsOptional()
   @IsIn(GENDERS)
-  gender!: CatGender;
+  gender?: CatGender;
 
   /**
-   * Required since the census. Collected as an approximate age in the wizard
-   * and converted to a date, because most owners don't know the birthday —
-   * life stage, feeding guidance and vaccination timing all need it, and none
-   * of them need the exact day.
+   * Optional since the 2026-10-04 signup. Collected later as an approximate
+   * age and converted to a date. Every consumer (care schedule, feeding,
+   * card, timeline, certificates) treats a missing birth date as "unknown"
+   * — never as a newborn (audited 2026-10-04).
    */
-  @ApiProperty({ example: "2022-05-01" })
+  @ApiPropertyOptional({ example: "2022-05-01" })
+  @IsOptional()
   @IsDateString()
-  birthDate!: string;
+  birthDate?: string;
+
+  /**
+   * The owner deliberately confirmed a second cat with a name they already
+   * use («نعم، أصدر هوية ثانية»). Without it, a same-name create within a
+   * short window returns the cat already issued instead of a twin — a
+   * double-submitted sign-up must never mint two Cat IDs.
+   */
+  @ApiPropertyOptional({ description: "Skip the short-window same-name dedupe" })
+  @IsOptional()
+  @IsBoolean()
+  allowDuplicateName?: boolean;
 
   /**
    * Where the cat lives — a census city code (SAUDI_CITIES in packages/core).

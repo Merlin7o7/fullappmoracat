@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays, Download, Trash2, AlertTriangle, BellRing, Sparkles, ArrowRight } from "lucide-react";
+import { User, Lock, ShieldCheck, Loader2, Check, CalendarDays, Download, Trash2, AlertTriangle, BellRing, Sparkles, ArrowRight, Mail } from "lucide-react";
 import { Card, Badge, Button, Skeleton, cn } from "@moraqat/ui";
 import { QRCodeSVG } from "qrcode.react";
 import { friendlyMessage } from "@/lib/errors";
@@ -17,6 +17,8 @@ import { Field } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { QueryError } from "@/components/query-error";
 import { SavedCardsSection } from "@/components/saved-cards";
+import { OtpBoxes } from "@/components/otp-boxes";
+import { codeErrorMessage, useResendCooldown } from "@/components/signup/email-code";
 
 interface Profile {
   firstName: string | null;
@@ -28,6 +30,8 @@ interface Profile {
   gender?: Gender;
   avatarUrl?: string | null;
   emailVerified?: boolean;
+  /** Sign-up is passwordless; only some members ever set one. */
+  hasPassword?: boolean;
 }
 
 export default function SettingsPage() {
@@ -70,7 +74,7 @@ export default function SettingsPage() {
           <SavedCardsSection isAr={isAr} />
           <PasswordSection isAr={isAr} authedFetch={authedFetch} logout={logout} />
           <TwoFactorSection isAr={isAr} enabled={profile.twoFactorEnabled} authedFetch={authedFetch} onChanged={() => qc.invalidateQueries({ queryKey: ["profile"] })} />
-          <DangerZoneSection isAr={isAr} authedFetch={authedFetch} logout={logout} />
+          <DangerZoneSection isAr={isAr} authedFetch={authedFetch} logout={logout} email={profile.email} hasPassword={Boolean(profile.hasPassword)} />
         </>
       )}
     </div>
@@ -133,14 +137,22 @@ function NotificationsSection({ isAr, authedFetch }: { isAr: boolean; authedFetc
   );
 }
 
-/** PDPL rights — export everything we hold, and leave with dignity (R010/R106). */
-function DangerZoneSection({ isAr, authedFetch, logout }: {
+/** PDPL rights — export everything we hold, and leave with dignity (R010/R068/R106). */
+function DangerZoneSection({ isAr, authedFetch, logout, email, hasPassword }: {
   isAr: boolean; authedFetch: ReturnType<typeof useAuth>["authedFetch"]; logout: () => Promise<void>;
+  email: string; hasPassword: boolean;
 }) {
-  const router = useRouter();
+  const t = (ar: string, en: string) => (isAr ? ar : en);
   const [open, setOpen] = React.useState(false);
+  // Most members never set a password (sign-up is passwordless): the emailed
+  // code is the default confirmation; the password is offered only if it exists.
+  const [method, setMethod] = React.useState<"code" | "password">("code");
+  const [codeSent, setCodeSent] = React.useState(false);
+  const [code, setCode] = React.useState("");
+  const [devCode, setDevCode] = React.useState<string | null>(null);
   const [password, setPassword] = React.useState("");
-  const [confirm, setConfirm] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const cooldown = useResendCooldown();
 
   const exportData = useMutation({
     mutationFn: () => authedFetch<Record<string, unknown>>("/account/export"),
@@ -155,13 +167,37 @@ function DangerZoneSection({ isAr, authedFetch, logout }: {
     },
   });
 
+  const sendCode = useMutation({
+    mutationFn: () => authedFetch<{ sent: boolean; devCode?: string }>("/account/delete/code", { method: "POST", body: "{}" }),
+    onMutate: () => setError(null),
+    onSuccess: (r) => { setCodeSent(true); setCode(""); setDevCode(r.devCode ?? null); cooldown.start(); },
+    onError: (e) => setError(codeErrorMessage(e, isAr).message),
+  });
+
   const del = useMutation({
     mutationFn: () =>
-      authedFetch("/account/delete", { method: "POST", body: JSON.stringify({ password: password || undefined, confirm }) }),
+      authedFetch("/account/delete", {
+        method: "POST",
+        body: JSON.stringify(method === "code" ? { code } : { password }),
+      }),
+    onMutate: () => setError(null),
     onSuccess: () => {
-      void logout().finally(() => router.replace("/?farewell=1"));
+      // Every session is already revoked server-side; clear this device, then
+      // the goodbye. A hard navigation, not router.replace: the portal's auth
+      // guard would otherwise race us to /login the moment the session clears.
+      void logout().finally(() => window.location.replace("/?farewell=1"));
+    },
+    onError: (e) => {
+      const ce = codeErrorMessage(e, isAr);
+      setError(ce.message);
+      if (method === "code" && !ce.network) setCode("");
     },
   });
+
+  const reset = () => {
+    setOpen(false); setMethod("code"); setCodeSent(false); setCode(""); setPassword(""); setError(null); setDevCode(null);
+  };
+  const canDelete = method === "code" ? code.length === 6 : password.length > 0;
 
   return (
     <SectionCard
@@ -190,8 +226,8 @@ function DangerZoneSection({ isAr, authedFetch, logout }: {
                 <p className="text-sm font-medium text-destructive">{isAr ? "حذف الحساب" : "Delete account"}</p>
                 <p className="text-xs text-muted-foreground">
                   {isAr
-                    ? "سنخفي قططك من المجتمع ونُخفي هويتك. سجلات الفواتير تُحفظ مجهّلة كما يقتضي النظام."
-                    : "We'll remove your cats from the community and anonymize your identity. Billing records are kept de-identified as required by law."}
+                    ? "نحذف ملفات قططك ونُخفي هويتك. سجلات الفواتير تُحفظ مجهّلة كما يقتضي النظام."
+                    : "We delete your cats' files and anonymize your identity. Billing records are kept de-identified as required by law."}
                 </p>
               </div>
               <Button variant="secondary" size="sm" onClick={() => setOpen(true)} className="w-fit border-destructive/40 text-destructive hover:bg-destructive/10">
@@ -200,27 +236,66 @@ function DangerZoneSection({ isAr, authedFetch, logout }: {
               </Button>
             </div>
           ) : (
-            <form onSubmit={(e) => { e.preventDefault(); del.mutate(); }} className="grid gap-3">
-              <p className="text-sm font-medium text-destructive">{isAr ? "هل أنت متأكد؟ لا يمكن التراجع." : "Are you sure? This can't be undone."}</p>
-              <Field
-                label={isAr ? "كلمة المرور (إن وُجدت)" : "Password (if you have one)"}
-                type="password"
-                value={password}
-                onChange={setPassword}
-                hint={isAr ? "حسابات جوجل: فعّل التأكيد بالأسفل بدلًا من ذلك." : "Google accounts: tick the confirmation below instead."}
-              />
-              <label className="flex items-start gap-2 text-sm">
-                <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} className="mt-0.5 size-4 accent-[hsl(var(--destructive))]" />
-                <span>{isAr ? "أفهم أنه سيتم حذف حسابي وإخفاء قططي من المجتمع." : "I understand my account will be deleted and my cats removed from the community."}</span>
-              </label>
-              {del.error && <p role="alert" className="text-sm text-destructive">{del.error.message}</p>}
+            <form onSubmit={(e) => { e.preventDefault(); if (canDelete) del.mutate(); }} className="grid gap-3">
+              <p className="text-sm font-medium text-destructive">{t("قبل ما تحذف، هذا اللي بيصير:", "Before you delete, here's what happens:")}</p>
+              <ul className="list-disc space-y-1 ps-5 text-sm text-foreground/90">
+                <li>{t("ملفات قططك تنحذف، وتختفي من المجتمع.", "Your cats' files are deleted and leave the community.")}</li>
+                <li>{t("صفحة رمز الطوق تتوقف — اللي يمسح الطوق ما بيلقى شي يوصله لك.", "The collar QR page stops working — anyone who scans the collar won't be able to reach you.")}</li>
+                <li>{t("ما نقدر نرجّع الحساب بعد الحذف.", "We can't bring the account back afterwards.")}</li>
+              </ul>
+
+              {method === "code" ? (
+                !codeSent ? (
+                  <div className="grid gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t("نرسل رمز تأكيد من 6 أرقام إلى ", "We'll send a 6-digit confirmation code to ")}
+                      <span dir="ltr" className="font-medium text-foreground">{email}</span>
+                    </p>
+                    <Button type="button" variant="secondary" size="sm" className="w-fit" onClick={() => sendCode.mutate()} disabled={sendCode.isPending}>
+                      {sendCode.isPending ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" aria-hidden />}
+                      {t("أرسل رمز التأكيد", "Send the confirmation code")}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t("اكتب الرمز اللي وصلك على ", "Enter the code we sent to ")}
+                      <span dir="ltr" className="font-medium text-foreground">{email}</span>
+                    </p>
+                    <OtpBoxes value={code} onChange={setCode} disabled={del.isPending} isAr={isAr} autoFocus />
+                    {devCode && <p className="text-xs text-muted-foreground" dir="ltr">dev code: {devCode}</p>}
+                    <button
+                      type="button"
+                      className="min-h-11 w-fit text-sm text-primary underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline"
+                      disabled={sendCode.isPending || cooldown.left > 0}
+                      onClick={() => sendCode.mutate()}
+                    >
+                      {cooldown.left > 0 ? t(`أرسل الرمز مرة ثانية بعد ${cooldown.left} ث`, `Send it again in ${cooldown.left}s`) : t("أرسل الرمز مرة ثانية", "Send it again")}
+                    </button>
+                  </div>
+                )
+              ) : (
+                <Field label={t("كلمة المرور", "Password")} type="password" value={password} onChange={setPassword} autoComplete="current-password" />
+              )}
+
+              {hasPassword && (
+                <button
+                  type="button"
+                  className="min-h-11 w-fit text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  onClick={() => { setMethod(method === "code" ? "password" : "code"); setError(null); }}
+                >
+                  {method === "code" ? t("أكّد بكلمة المرور بدلها", "Confirm with your password instead") : t("أكّد برمز على بريدي بدلها", "Confirm with an email code instead")}
+                </button>
+              )}
+
+              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
               <div className="flex flex-wrap gap-2">
-                <Button type="submit" variant="destructive" size="sm" disabled={del.isPending || (!password && !confirm)} className="w-fit">
+                <Button type="submit" variant="destructive" size="sm" disabled={del.isPending || !canDelete} className="w-fit">
                   {del.isPending && <Loader2 className="size-4 animate-spin" />}
-                  {isAr ? "احذف حسابي نهائيًا" : "Permanently delete"}
+                  {isAr ? "احذف حسابي نهائياً" : "Permanently delete my account"}
                 </Button>
-                <Button type="button" variant="tertiary" size="sm" onClick={() => { setOpen(false); setPassword(""); setConfirm(false); }} className="w-fit">
-                  {isAr ? "إلغاء" : "Cancel"}
+                <Button type="button" variant="tertiary" size="sm" onClick={reset} className="w-fit">
+                  {isAr ? "تراجعت، خلّه" : "Keep my account"}
                 </Button>
               </div>
             </form>
@@ -386,7 +461,7 @@ function ProfileSection({ isAr, profile, authedFetch, onSaved }: {
           </p>
         </div>
 
-        {save.error && <p className="text-sm text-destructive sm:col-span-2">{save.error.message}</p>}
+        {save.error && <p role="alert" className="text-sm text-destructive sm:col-span-2">{friendlyMessage(save.error, isAr)}</p>}
         <div className="sm:col-span-2">
           <Button type="submit" disabled={save.isPending}>
             {save.isPending ? <Loader2 className="size-4 animate-spin" /> : saved ? <Check className="size-4" /> : null}
@@ -447,7 +522,7 @@ function PasswordSection({ isAr, authedFetch, logout }: {
             ? "بعد التغيير سنسجّل خروجك وتسجّل الدخول من جديد بكلمة المرور الجديدة."
             : "After changing it, you'll be signed out and asked to sign in again with the new password."}
         </p>
-        {change.error && <p role="alert" className="text-sm text-destructive">{change.error.message}</p>}
+        {change.error && <p role="alert" className="text-sm text-destructive">{friendlyMessage(change.error, isAr)}</p>}
         <Button type="submit" variant="secondary" disabled={change.isPending || !f.currentPassword || !f.newPassword} className="w-fit">
           {change.isPending && <Loader2 className="size-4 animate-spin" />}{isAr ? "تحديث كلمة المرور" : "Update password"}
         </Button>

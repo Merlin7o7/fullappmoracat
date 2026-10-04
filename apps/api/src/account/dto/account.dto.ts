@@ -57,7 +57,14 @@ export class DeleteAccountDto {
   @IsString()
   password?: string;
 
-  @ApiPropertyOptional({ description: "Explicit confirmation for password-less (Google) accounts" })
+  @ApiPropertyOptional({ example: "482913", description: "6-digit code from POST /account/delete/code" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "Code must be 6 digits" })
+  code?: string;
+
+  /** Legacy: no longer sufficient on its own — a code or password is required. */
+  @ApiPropertyOptional({ deprecated: true })
   @IsOptional()
   confirm?: boolean;
 

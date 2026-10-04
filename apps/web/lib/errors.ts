@@ -9,7 +9,13 @@
  * no-blame message for anything unmapped.
  */
 
+import { countLabel } from "@moraqat/core";
 import { ApiError } from "./http";
+
+const MINUTE_FORMS = {
+  ar: { one: "دقيقة", two: "دقيقتين", few: "دقائق", many: "دقيقة" },
+  en: { one: "minute", other: "minutes" },
+};
 
 export interface FriendlyError {
   title: string;
@@ -78,8 +84,25 @@ const MAP: Record<string, Copy> = {
     en: { title: "Confirm your email first", message: "This step needs a confirmed email. Open the confirm-email page and request your code — it takes under a minute." },
   },
   ACCOUNT_NOT_FOUND: {
-    ar: { title: "ما لقينا الحساب", message: "لا يوجد حساب بهذه البيانات. تأكد منها أو أنشئ حساباً جديداً — يأخذ دقيقة." },
-    en: { title: "We couldn't find that account", message: "No account matches those details. Double-check them, or create a new account — it takes a minute." },
+    ar: { title: "ما لقينا الحساب", message: "لا يوجد حساب بهذه البيانات. تأكد منها أو سجّل قطك — في أقل من دقيقتين." },
+    en: { title: "We couldn't find that account", message: "No account matches those details. Double-check them, or register your cat — in under two minutes." },
+  },
+  // /login by emailed code for an address with no account (intent: "login").
+  EMAIL_NOT_REGISTERED: {
+    ar: { title: "ما لقينا حساب بهذا البريد", message: "ما لقينا حساب بهذا البريد — سجّل قطك وتصير هويته جاهزة في أقل من دقيقتين." },
+    en: { title: "No account with this email", message: "We couldn't find an account with this email — register your cat and their ID is ready in under two minutes." },
+  },
+  PASSWORD_INCORRECT: {
+    ar: { title: "كلمة المرور ما تطابقت", message: "كلمة المرور ما تطابقت. جرّب مرة ثانية، أو أكّد برمز على بريدك بدلها." },
+    en: { title: "That password didn't match", message: "The password didn't match. Try again, or confirm with a code to your email instead." },
+  },
+  DELETE_CONFIRMATION_REQUIRED: {
+    ar: { title: "نحتاج تأكيدك", message: "أرسل لنفسك رمز التأكيد على بريدك أولاً، ثم اكتبه هنا." },
+    en: { title: "We need your confirmation", message: "Send yourself the confirmation code first, then enter it here." },
+  },
+  ACCOUNT_SUSPENDED: {
+    ar: { title: "الحساب موقوف", message: "هذا الحساب موقوف حالياً. تواصل مع العناية ونساعدك." },
+    en: { title: "This account is paused", message: "This account isn't active right now. Contact Care and we'll help." },
   },
   WEAK_PASSWORD: {
     ar: { title: "كلمة مرور أقوى تحميك أكثر", message: "استخدم 8 أحرف على الأقل، فيها حرف ورقم." },
@@ -179,8 +202,8 @@ export function friendlyError(err: unknown, isAr: boolean): FriendlyError {
           code: err.code,
           title: copy.title,
           message: isAr
-            ? `لحماية حسابك أوقفنا المحاولات ${m} دقيقة. تقدر تعيد تعيين كلمة المرور الآن بدل الانتظار.`
-            : `To protect your account, attempts are paused for ${m} minute${m === 1 ? "" : "s"}. You can reset your password now instead of waiting.`,
+            ? `لحماية حسابك أوقفنا المحاولات لمدة ${countLabel(m, "ar", MINUTE_FORMS)}. تقدر تعيد تعيين كلمة المرور الآن بدل الانتظار.`
+            : `To protect your account, attempts are paused for ${countLabel(m, "en", MINUTE_FORMS)}. You can reset your password now instead of waiting.`,
         };
       }
       return { code: err.code, ...copy };

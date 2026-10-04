@@ -21,6 +21,7 @@ import { authError } from "../common/errors";
 import { PASSWORD_RULES, passwordRuleFailures } from "./password-policy";
 import {
   otpEmailTemplate,
+  accountDeletionCodeTemplate,
   welcomeTemplate,
   passwordResetTemplate,
   passwordChangedTemplate,
@@ -616,7 +617,16 @@ export class AuthService {
   }
 
   async emailContinue(
-    dto: { email: string; code: string; fullName?: string; acceptTerms?: boolean; locale?: string; ref?: string; firstTouch?: unknown },
+    dto: {
+      email: string;
+      code: string;
+      fullName?: string;
+      acceptTerms?: boolean;
+      locale?: string;
+      ref?: string;
+      firstTouch?: unknown;
+      intent?: "login" | "signup";
+    },
     meta: RequestMeta
   ) {
     const email = dto.email.trim().toLowerCase();
@@ -636,6 +646,16 @@ export class AuthService {
       where: { email, deletedAt: null },
       include: { twoFactor: true },
     });
+    // The /login door never creates an account. Saying "no account here" is
+    // safe at this point — the code just proved this person holds the inbox,
+    // so nothing is revealed to anyone who doesn't already own the address.
+    // The code is left unspent: it expires on its own, and a fresh one is
+    // sent if they go on to register.
+    if (!existing && dto.intent === "login") {
+      throw new BadRequestException(
+        authError("EMAIL_NOT_REGISTERED", "There's no Moracat account with this email yet.")
+      );
+    }
     // A new account must accept the terms. Checked BEFORE the code is spent,
     // so forgetting the tick doesn't cost the member a fresh code.
     if (!existing && !dto.acceptTerms) {
@@ -656,12 +676,17 @@ export class AuthService {
     }
 
     const { firstName, lastName } = splitName(dto.fullName, undefined, undefined);
-    let referredByCode: string | undefined;
-    if (dto.ref) {
-      const referrer = await this.prisma.user.findUnique({ where: { referralCode: dto.ref }, select: { id: true } });
-      if (referrer) referredByCode = dto.ref;
-    }
     const firstTouch = sanitizeFirstTouch(dto.firstTouch as never);
+    // The inviting member: the ?ref= on the sign-up URL, else the one the
+    // first-visit cookie kept (a share link → /i/{slug}?ref= → /register may
+    // lose the query string on the way). Attributed only if the code is real —
+    // the same rule as the password /auth/register path.
+    const refCode = dto.ref?.trim() || firstTouch?.ref?.trim() || undefined;
+    let referredByCode: string | undefined;
+    if (refCode) {
+      const referrer = await this.prisma.user.findUnique({ where: { referralCode: refCode }, select: { id: true } });
+      if (referrer) referredByCode = refCode;
+    }
     const user = await this.prisma.user.create({
       data: {
         email,
@@ -807,6 +832,64 @@ export class AuthService {
     });
     void this.dispatchWelcome(user.email, user.firstName, user.locale);
     return { verified: true };
+  }
+
+  // ── Account deletion re-auth by emailed code ──────────────────────────────
+  // Most members never set a password (sign-up is passwordless), so asking for
+  // one before deletion was a wall. The same email-code machinery confirms the
+  // deletion instead — under its own purpose, so a sign-in or verification
+  // code can never delete an account, and a deletion code can't sign anyone in.
+
+  private static readonly DELETE_PURPOSE = "DELETE_ACCOUNT";
+
+  async sendDeletionCode(userId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true, email: true, firstName: true, locale: true },
+    });
+    if (!user) throw new UnauthorizedException(authError("ACCOUNT_NOT_FOUND", "Account not found"));
+    const purpose = AuthService.DELETE_PURPOSE;
+    const now = Date.now();
+    const recent = await this.prisma.emailVerification.findMany({
+      where: { userId, purpose, createdAt: { gt: new Date(now - 60 * 60 * 1000) } },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    if (recent.length >= EMAIL_OTP_MAX_SENDS_PER_HR || (recent[0] && now - recent[0].createdAt.getTime() < EMAIL_OTP_COOLDOWN_MS)) {
+      throw new BadRequestException(authError("OTP_RATE_LIMITED", "Please wait a moment before requesting another code."));
+    }
+    await this.prisma.emailVerification.deleteMany({ where: { userId, purpose, usedAt: null } });
+    const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+    await this.prisma.emailVerification.create({
+      data: { userId, purpose, codeHash: this.hashOtp(`${purpose}:${code}`, userId), expiresAt: new Date(now + EMAIL_OTP_TTL_MS) },
+    });
+    const tpl = accountDeletionCodeTemplate(this.mailLocale(user.locale), user.firstName, code);
+    try {
+      await this.mail.send({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    } catch (e) {
+      this.logger.error(`deletion code email failed: ${String(e)}`);
+    }
+    if (!IS_PROD) this.logger.log(`Account deletion code for ${user.email}: ${code}`);
+    return { sent: true, ...(IS_PROD ? {} : { devCode: code }) };
+  }
+
+  /** Spend a deletion code. Throws OTP_EXPIRED / OTP_INVALID; attempt-limited. */
+  async consumeDeletionCode(userId: string, code: string): Promise<void> {
+    const purpose = AuthService.DELETE_PURPOSE;
+    const record = await this.prisma.emailVerification.findFirst({
+      where: { userId, purpose, usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!record || record.attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+      throw new BadRequestException(authError("OTP_EXPIRED", "That code has expired. Request a new one."));
+    }
+    const expected = Buffer.from(record.codeHash);
+    const actual = Buffer.from(this.hashOtp(`${purpose}:${String(code).trim()}`, userId));
+    if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+      await this.prisma.emailVerification.update({ where: { id: record.id }, data: { attempts: { increment: 1 } } });
+      throw new BadRequestException(authError("OTP_INVALID", "Incorrect code. Please try again."));
+    }
+    await this.prisma.emailVerification.update({ where: { id: record.id }, data: { usedAt: new Date() } });
   }
 
   private siteUrl(): string {

@@ -75,7 +75,7 @@ export function OtpBoxes({
   }
 
   return (
-    <div className="flex gap-2" dir="ltr" role="group" aria-label={isAr ? "رمز التحقق" : "Verification code"}>
+    <div className="flex w-full max-w-sm gap-2" dir="ltr" role="group" aria-label={isAr ? "رمز التحقق" : "Verification code"}>
       {Array.from({ length: 6 }).map((_, i) => (
         <input
           key={i}
@@ -93,9 +93,9 @@ export function OtpBoxes({
           onFocus={(e) => e.target.select()}
           aria-label={`${isAr ? "الرقم" : "Digit"} ${i + 1}`}
           className={cn(
-            "size-12 rounded-xl border border-input bg-card text-center font-mono text-xl font-semibold tabular-nums outline-none transition",
+            "h-12 min-w-0 max-w-12 flex-1 rounded-xl border border-input bg-card text-center font-mono text-xl font-semibold tabular-nums outline-none transition",
             "focus:border-primary focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background",
-            "disabled:opacity-60 sm:size-14"
+            "disabled:opacity-60 sm:h-14 sm:max-w-14"
           )}
         />
       ))}

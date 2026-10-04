@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { AccountService } from "./account.service";
 import { ChangePasswordDto, DeleteAccountDto, NoCatYetDto, UpdateProfileDto } from "./dto/account.dto";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -129,9 +130,17 @@ export class AccountController {
     return this.account.exportMyData(userId);
   }
 
+  @Post("delete/code")
+  @Throttle({ default: { limit: 4, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Email a 6-digit code that confirms account deletion" })
+  sendDeletionCode(@CurrentUser("id") userId: string) {
+    return this.account.sendDeletionCode(userId);
+  }
+
   @Post("delete")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Delete my account (PDPL erasure — anonymized, re-auth required)" })
+  @ApiOperation({ summary: "Delete my account (PDPL erasure — anonymized; emailed code or password required)" })
   deleteAccount(@CurrentUser("id") userId: string, @Body() dto: DeleteAccountDto) {
     return this.account.deleteAccount(userId, dto);
   }

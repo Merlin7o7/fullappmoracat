@@ -292,6 +292,32 @@ export class CatsService implements OnModuleInit {
   }
 
   async create(userId: string, dto: CreateCatDto) {
+    // Never two Cat IDs by accident (R115/R117): a double-submitted sign-up, a
+    // retried request or a back-and-forward through the issue step returns the
+    // cat this owner issued moments ago under the same name. A deliberate
+    // second «سمبا» passes allowDuplicateName from the confirm dialog.
+    if (!dto.allowDuplicateName) {
+      const recent = await this.prisma.cat.findFirst({
+        where: {
+          userId,
+          deletedAt: null,
+          status: "ACTIVE",
+          nameNormalized: normalizeName(dto.name),
+          createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) },
+        },
+        include: catInclude,
+        orderBy: { createdAt: "desc" },
+      });
+      if (recent) {
+        const owner = await this.prisma.user.findUnique({ where: { id: userId }, select: { primaryCatId: true } });
+        const total = await this.prisma.cat.count({ where: { userId, deletedAt: null } });
+        return {
+          ...this.serialize(recent as CatRow, owner?.primaryCatId ?? recent.id),
+          firstCatIdIssued: total === 1,
+          deduplicated: true,
+        };
+      }
+    }
     // Community visibility is opt-out (decision 2026-08-14): a new cat joins the
     // community feed by default, anonymously (showOwnerName/showCity stay false),
     // and only renders once it has a photo (community.service baseWhere). The
@@ -377,7 +403,7 @@ export class CatsService implements OnModuleInit {
       this.notifications.emit(userId, {
         category: "COMMUNITY",
         type: "cat_id_issued",
-        params: { name: cat.name, catIdNumber: cat.catIdNumber },
+        params: { name: cat.name, catIdNumber: cat.catIdNumber, gender: cat.gender },
         data: { kind: "cat_id_issued", catId: cat.id, catIdNumber: cat.catIdNumber },
       });
       if (user?.email) {
@@ -396,7 +422,7 @@ export class CatsService implements OnModuleInit {
       this.notifications.emit(userId, {
         category: "COMMUNITY",
         type: "cat_made_public",
-        params: { name: cat.name },
+        params: { name: cat.name, gender: cat.gender },
         data: { kind: "cat_made_public", slug: cat.publicSlug },
       });
     }
@@ -1192,7 +1218,7 @@ export class CatsService implements OnModuleInit {
     await this.ownedCat(userId, catId);
     const current = await this.prisma.cat.findUnique({
       where: { id: catId },
-      select: { name: true, publicSlug: true, isPublic: true },
+      select: { name: true, gender: true, publicSlug: true, isPublic: true },
     });
 
     const data: Record<string, unknown> = {};
@@ -1236,7 +1262,7 @@ export class CatsService implements OnModuleInit {
       this.notifications.emit(userId, {
         category: "COMMUNITY",
         type: "cat_made_public",
-        params: { name: current?.name ?? "Your cat" },
+        params: { name: current?.name ?? "", gender: current?.gender ?? "UNKNOWN" },
         data: { kind: "cat_made_public", slug: updated.publicSlug },
       });
     }

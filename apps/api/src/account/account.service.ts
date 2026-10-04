@@ -4,13 +4,14 @@ import {
   Injectable,
   NotFoundException,
   PayloadTooLargeException,
-  UnauthorizedException,
 } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
 import { EventsService } from "../events/events.service";
+import { AuthService } from "../auth/auth.service";
+import { authError } from "../common/errors";
 import type { ChangePasswordDto, DeleteAccountDto, UpdateProfileDto } from "./dto/account.dto";
 
 interface UploadedImage {
@@ -24,7 +25,8 @@ export class AccountService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
-    private readonly events: EventsService
+    private readonly events: EventsService,
+    private readonly auth: AuthService
   ) {}
 
   async profile(userId: string) {
@@ -50,6 +52,9 @@ export class AccountService {
       emailVerified: !!user.emailVerified,
       phoneVerified: !!user.phoneVerified,
       twoFactorEnabled: user.twoFactor?.enabled ?? false,
+      // Sign-up is passwordless, so most members have none. Settings uses this
+      // to offer the right re-auth (an emailed code, or the password if set).
+      hasPassword: !!user.passwordHash,
       noCatYet: !!user.noCatYetAt,
       createdAt: user.createdAt,
     };
@@ -581,6 +586,11 @@ export class AccountService {
    * every session, and drop 2FA/OAuth. Re-authenticated first: password for
    * password accounts, an explicit confirm for password-less (Google) ones.
    */
+  /** Email the member a code that confirms deleting their account. */
+  sendDeletionCode(userId: string) {
+    return this.auth.sendDeletionCode(userId);
+  }
+
   async deleteAccount(userId: string, dto: DeleteAccountDto) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -588,11 +598,21 @@ export class AccountService {
     });
     if (!user) throw new NotFoundException("User not found");
 
-    if (user.passwordHash) {
-      const ok = dto.password ? await bcrypt.compare(dto.password, user.passwordHash) : false;
-      if (!ok) throw new UnauthorizedException("Password is incorrect");
-    } else if (dto.confirm !== true) {
-      throw new BadRequestException("Please confirm account deletion");
+    // Re-auth before an irreversible act. The emailed code works for every
+    // account (most members never set a password); the password remains an
+    // alternative for accounts that have one. A bare `confirm: true` is no
+    // longer enough — a stolen session token must not be able to erase a
+    // member. Errors are 400s with codes, never 401s (a 401 would make the
+    // client try a token refresh and look like an expired session).
+    if (dto.code) {
+      await this.auth.consumeDeletionCode(userId, dto.code);
+    } else if (user.passwordHash && dto.password) {
+      const ok = await bcrypt.compare(dto.password, user.passwordHash);
+      if (!ok) throw new BadRequestException(authError("PASSWORD_INCORRECT", "Password is incorrect"));
+    } else {
+      throw new BadRequestException(
+        authError("DELETE_CONFIRMATION_REQUIRED", "Confirm with the code we email you (or your password).")
+      );
     }
 
     const tombstone = `deleted+${user.id}@deleted.moracat.invalid`;
