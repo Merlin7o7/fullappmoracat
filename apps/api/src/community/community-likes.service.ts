@@ -31,7 +31,7 @@ export class CommunityLikesService {
         isDemo: false,
         photoUrl: { not: null },
       },
-      select: { id: true, name: true, userId: true, publicSlug: true },
+      select: { id: true, name: true, gender: true, userId: true, publicSlug: true },
     });
     if (!cat) throw new NotFoundException("This cat isn't public");
     return cat;
@@ -72,7 +72,7 @@ export class CommunityLikesService {
       this.notifications.emit(cat.userId, {
         category: "COMMUNITY",
         type: likeCount === 1 ? "cat_first_like" : "cat_like_milestone",
-        params: { name: cat.name, likeCount },
+        params: { name: cat.name, likeCount, gender: cat.gender },
         data: { kind: "cat_like_milestone", slug: cat.publicSlug, likeCount },
       });
     }

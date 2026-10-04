@@ -53,8 +53,8 @@ export function noticeShareText(n: ShareableNotice, isAr: boolean): { title: str
   let title: string;
   if (n.status === "REUNITED") {
     title = isAr
-      ? `${name ?? "القط"} رجع لأهله · مرقط`
-      : `${name ?? "This cat"} is home again · Moracat`;
+      ? `${name ?? "القط"} رجع لأهله`
+      : `${name ?? "This cat"} is home again`;
   } else if (n.kind === "LOST") {
     title = isAr
       ? `قط مفقود${name ? `: ${name}` : ""}${place ? ` — ${place}` : ""}`

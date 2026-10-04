@@ -37,6 +37,11 @@ jobs:
       - name: Lint (web)
         run: pnpm --filter @moraqat/web lint
 
+      # Copy guard (AD 2.1 framing, R006): no «رسمي/وطني/حكومي/موثّق» or
+      # "official/government" claims outside the allow-listed contexts.
+      - name: Copy check (banned claims)
+        run: pnpm check:copy
+
       - name: Unit tests
         run: pnpm --filter @moraqat/core test && pnpm --filter @moraqat/api test && pnpm --filter @moraqat/web test
 

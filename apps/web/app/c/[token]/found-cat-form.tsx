@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { MessageSquareHeart, CheckCircle2 } from "lucide-react";
-import { Button } from "@moraqat/ui";
+import { BottomBar, BOTTOM_LAYER, Button } from "@moraqat/ui";
 import { Field } from "@/components/field";
 import { track } from "@/lib/track";
 import { latinizeDigits } from "@moraqat/core";
@@ -67,7 +67,7 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
       <div ref={ref}>
       <div className="flex flex-col items-center gap-2 text-center">
         <CheckCircle2 className="size-8 text-success" />
-        <p className="text-sm font-medium">{isAr ? `وصلت رسالتك لعائلة ${catName}. شكراً لك 🤍` : `Your message reached ${catName}'s family. Thank you 🤍`}</p>
+        <p className="text-sm font-medium">{isAr ? `وصلت رسالتك لعائلة ${catName}. شكراً لك.` : `Your message reached ${catName}'s family. Thank you.`}</p>
       </div>
       </div>
     );
@@ -106,7 +106,9 @@ export function FoundCatForm({ token, catName, isLost, isAr }: { token: string; 
  */
 export function FoundCatCTA({ catName, isLost, isAr }: { catName: string; isLost: boolean; isAr: boolean }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+    // On the one bottom stack (audit 2026-10-04 M2); the cookie notice is
+    // suppressed on /c/*, so nothing ever sits over this button.
+    <BottomBar layer={BOTTOM_LAYER.action} className="border-t border-border bg-background/95 px-3 pt-3 pb-bar backdrop-blur sm:hidden">
       <Button
         variant={isLost ? "destructive" : "primary"}
         size="lg"
@@ -118,6 +120,6 @@ export function FoundCatCTA({ catName, isLost, isAr }: { catName: string; isLost
           ? isAr ? `وجدت ${catName} — أرسل لعائلته` : `I found ${catName} — tell the family`
           : isAr ? "أرسل رسالة للمالك" : "Message the owner"}
       </Button>
-    </div>
+    </BottomBar>
   );
 }

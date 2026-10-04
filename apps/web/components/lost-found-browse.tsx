@@ -183,7 +183,7 @@ export function LostFoundBrowse({
       ) : isError ? (
         <IlloEmpty
           name="mouse"
-          tone="peach"
+          tone="distress"
           float={false}
           title={isAr ? "ما قدرنا نحمّل اللوحة" : "We couldn't load the board"}
           body={isAr ? "جرّب مرة ثانية — الخطأ من عندنا." : "Give it another try — that one's on us."}
@@ -237,7 +237,7 @@ function EmptyBoard({
       <IlloEmpty
         name="mouse"
         variant="green"
-        tone="sage"
+        tone="distress"
         title={isAr ? "ما في نتائج مطابقة" : "Nothing matches that"}
         body={
           isAr
@@ -251,7 +251,8 @@ function EmptyBoard({
     return (
       <IlloEmpty
         name="heart"
-        tone="blush"
+        tone="distress"
+        icon={Home}
         title={isAr ? "لسّا ما رجع قط لأهله من هنا" : "No cat has made it home from here yet"}
         body={isAr ? "أول واحد بيكون له مكان في هذي الصفحة." : "The first one will have a place on this page."}
       />
@@ -261,12 +262,13 @@ function EmptyBoard({
   return (
     <IlloEmpty
       name={kind === "LOST" ? "heart" : "paw"}
-      tone={kind === "LOST" ? "blush" : "sage"}
+      tone="distress"
+      icon={kind === "LOST" ? ShieldCheck : Cat}
       title={
         kind === "LOST"
           ? isAr
-            ? "ما في قط مفقود اليوم 🤍"
-            : "No cat is missing today 🤍"
+            ? "ما في قط مفقود اليوم"
+            : "No cat is missing today"
           : isAr
             ? "ما في قط لقيناه اليوم"
             : "No found cats right now"

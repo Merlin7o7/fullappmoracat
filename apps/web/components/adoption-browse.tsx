@@ -202,7 +202,7 @@ export function AdoptionBrowse({ compact = false }: { compact?: boolean }) {
           <IlloEmpty
             name="heart"
             tone="blush"
-            title={isAr ? "ما في قط ينتظر بيت اليوم 🎉" : "No cat is waiting for a home today 🎉"}
+            title={isAr ? "ما في قط ينتظر بيت اليوم" : "No cat is waiting for a home today"}
             body={
               isAr
                 ? "خبر طيب. لو عندك قط تدوّر له بيتاً، تقدر تعرضه هنا — وتنتقل هويته وسجله كاملاً لصاحبه الجديد."

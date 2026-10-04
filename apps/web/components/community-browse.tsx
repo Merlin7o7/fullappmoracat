@@ -234,7 +234,7 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
   React.useEffect(() => {
     if (section === "featured" && facets.data && facets.data.featuredCount === 0) setSection("new");
   }, [section, facets.data]);
-  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const { data, isLoading, isError, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["community", { section, gender, stage, breedId, cityId, debounced }],
     queryFn: ({ pageParam = 1 }) =>
       api.community({
@@ -277,13 +277,16 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
             <Sparkles className="size-3.5" />
             {isAr ? "مجتمع مرقط" : "Moracat Community"}
           </Badge>
-          <h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+          {/* The page above owns the one <h1>; this is a section heading. */}
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
             {isAr ? "قطط بهوية" : "Cats with an identity"}
-          </h1>
+          </h2>
+          {/* Opt-out is the default (amendment 2026-08-14), so the honest line
+              is "their people kept them visible" — never "chose to share". */}
           <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
             {isAr
-              ? "تصفّح قطط مجتمع مرقط — كل واحدة بهويتها الخاصة."
-              : "Meet the community's cats — each with a Cat ID of their own."}
+              ? "قطط أهلها خلّوها ظاهرة — وكل واحد يقدر يخفي قطه بضغطة."
+              : "Cats whose people keep them visible — and anyone can hide their cat in one tap."}
           </p>
           {/* Quiet trust link — the house rules are one tap away (trust precedes ask). */}
           <Link
@@ -383,8 +386,13 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
         <EmptyLike
           object3d={!!compact}
           illo="mouse"
-          title={isAr ? "تعذّر تحميل المجتمع" : "Couldn't load the community"}
-          body={isAr ? "حاول تحديث الصفحة." : "Please try refreshing the page."}
+          title={isAr ? "ما قدرنا نحمّل المجتمع" : "We couldn't load the community"}
+          body={isAr ? "غالباً انقطاع بسيط في الاتصال — جرّب مرة ثانية." : "Usually a brief connection hiccup — try again."}
+          action={
+            <Button variant="secondary" size="sm" loading={isRefetching} onClick={() => void refetch()}>
+              {isAr ? "جرّب مرة ثانية" : "Try again"}
+            </Button>
+          }
         />
       ) : cats.length === 0 ? (
         hasActiveFilters ? (
@@ -404,7 +412,7 @@ export function CommunityBrowse({ compact = false }: { compact?: boolean }) {
           <EmptyLike
           object3d={!!compact}
             illo="cat"
-            title={isAr ? "حياك الله في مجتمع مرقط 👋" : "Welcome to the Moracat community 👋"}
+            title={isAr ? "حياك الله في مجتمع مرقط" : "Welcome to the Moracat community"}
             body={
               isAr
                 ? "هنا بتلقى قطط الأعضاء — وقطك له مكان محجوز."

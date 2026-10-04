@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FoundCatForm, FoundCatCTA } from "./found-cat-form";
-import { Illo3D } from "@/components/illo-3d";
+import { CatPhotoPlaceholder } from "@/components/cat-photo-placeholder";
 import { Siren, Syringe } from "lucide-react";
 import { IdBand, Seal, StatusTag } from "@moraqat/ui";
 import { vaccinationStandingLabel, type VaccinationStanding } from "@moraqat/core";
@@ -44,8 +44,10 @@ async function fetchCard(token: string): Promise<PublicCard | null> {
 
 export async function generateMetadata({ params }: { params: { token: string } }): Promise<Metadata> {
   const card = await fetchCard(params.token);
+  const isAr = cookies().get("locale")?.value !== "en";
+  // The root template appends the brand; one language per title (R101).
   return {
-    title: card ? `${card.name} · Moracat` : "Moracat",
+    title: card ? card.name : isAr ? "هوية قط" : "Cat ID",
     robots: { index: false, follow: false },
   };
 }
@@ -89,7 +91,8 @@ export default async function PublicCatPage({ params }: { params: { token: strin
               card.isLost ? (
                 <div className="grid size-full place-items-center font-display text-8xl text-muted-foreground/50">{card.name.slice(0, 1)}</div>
               ) : (
-                <div className="grid size-full place-items-center"><Illo3D name="cat" className="size-44" px={176} priority /></div>
+                // Never a toy standing in for a real cat (audit 2026-10-04 Part 05): a neutral frame.
+                <CatPhotoPlaceholder isAr={isAr} label={null} className="rounded-none border-0" />
               )
             )}
           </div>
@@ -118,8 +121,6 @@ export default async function PublicCatPage({ params }: { params: { token: strin
 
         {/* What this tag is, in one line — then one quiet invitation. */}
         <section className="mt-6 space-y-3 rounded-2xl border border-border bg-card p-5 text-center">
-          {/* The physical object behind the scan — never on a lost cat's page. */}
-          {!card.isLost && <Illo3D name="collar" className="mx-auto size-24" px={96} />}
           <p className="text-sm text-muted-foreground">
             {isAr
               ? "هوية مرقط رقم دائم للقط: يوصل من يجده بأهله، ويحمل سجله الصحي لأي عيادة."

@@ -195,16 +195,16 @@ function ReturnInner() {
           </motion.span>
 
           <h1 className="mt-4 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            {isAr ? `عضوية ${catLine} صارت مفعّلة 🎉` : `${catLine}'s membership is now active 🎉`}
+            {isAr ? `خطة عناية ${catLine} صارت مفعّلة` : `${catLine}'s care plan is now active`}
           </h1>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
             {data.plan
               ? isAr
-                ? `باقة «${data.plan.nameAr}» — وهويتهم صارت فعّالة رسمياً.`
-                : `The ${data.plan.nameEn} plan — and their Cat ID is officially active.`
+                ? `خطة «${data.plan.nameAr}» — وأول صندوق يتجهّز.`
+                : `The ${data.plan.nameEn} plan — the first box is being prepared.`
               : isAr
-                ? "وهويتهم صارت فعّالة رسمياً."
-                : "And their Cat ID is officially active."}
+                ? "وأول صندوق يتجهّز."
+                : "The first box is being prepared."}
           </p>
 
           {/* The saved card, now Active — the hero of the moment. */}

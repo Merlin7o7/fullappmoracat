@@ -10,14 +10,21 @@ import { useLocale } from "@/app/providers";
 import { commerceEnabled } from "@/lib/features";
 import { HubLink } from "@/components/hub-link";
 import { ThemeToggle, LangToggle } from "@/components/toggles";
+import { useCats } from "@/lib/cat-context";
+import { localizeName } from "@/lib/translit";
 
 /**
  * «حسابي» — the person, not the cat: who you are on Moracat, how we reach
  * you, hand-overs in flight, and help. Log out lives here (and on the desktop
  * rail) so the phone bar can stay four honest tabs.
+ *
+ * One identifier per cat, and it's the Cat ID (R087, audit 2026-10-04
+ * Problem 5): the account-level "member number" (MRC-M-…) is an internal
+ * key and is never shown to owners — two numbers read as two memberships.
  */
 export default function AccountPage() {
   const { user, logout } = useAuth();
+  const { activeCats } = useCats();
   const { locale } = useLocale();
   const isAr = locale === "ar";
   const router = useRouter();
@@ -37,9 +44,15 @@ export default function AccountPage() {
         <Ledger>
           <LedgerRow label={isAr ? "البريد" : "Email"} value={<span dir="ltr">{user.email}</span>} />
           {user.phone && <LedgerRow label={isAr ? "الجوال" : "Mobile"} value={<span dir="ltr">{user.phone}</span>} />}
-          {user.memberIdNumber && (
-            <LedgerRow label={isAr ? "رقم العضوية" : "Member number"} value={<span dir="ltr" className="font-mono">{user.memberIdNumber}</span>} />
-          )}
+          {activeCats
+            .filter((c) => c.catIdNumber)
+            .map((c) => (
+              <LedgerRow
+                key={c.id}
+                label={isAr ? `هوية ${localizeName(c.name, "ar")}` : `${localizeName(c.name, "en")}'s Cat ID`}
+                value={<span dir="ltr" className="font-mono">{c.catIdNumber}</span>}
+              />
+            ))}
           <LedgerRow
             label={isAr ? "اللغة والمظهر" : "Language & theme"}
             value={

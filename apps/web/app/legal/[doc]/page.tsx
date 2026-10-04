@@ -16,8 +16,9 @@ export function generateMetadata({ params }: { params: { doc: string } }): Metad
   const doc = getLegalDoc(params.doc);
   if (!doc) return { title: "Moracat" };
   const isAr = cookies().get("locale")?.value !== "en";
-  // The root template appends "· Moracat" — don't brand the title twice.
-  const title = `${doc.title.en} · ${doc.title.ar}`;
+  // The root template appends the brand — don't brand the title twice. One
+  // language per title: Arabic under ar (the default), English under en (R101).
+  const title = isAr ? doc.title.ar : doc.title.en;
   const description = isAr ? doc.intro.ar : doc.intro.en;
   return {
     title,

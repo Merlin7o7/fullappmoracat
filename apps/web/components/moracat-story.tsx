@@ -70,14 +70,14 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
         <div className="grid gap-4 md:grid-cols-2">
           <BenefitCard
             icon={Package}
-            title={isAr ? "خطة العناية الشهرية — قريباً" : "The monthly care plan — coming"}
+            title={isAr ? "خطة العناية الشهرية — لاحقاً" : "The monthly care plan — later"}
             items={isAr ? ["أكل ورمل ومكافآت على مقاس قطك", "توصل لبابك كل شهر", "اختيارية — والهوية تظل مجانية"] : ["Food, litter and treats sized to your cat", "At your door every month", "Optional — the ID stays free"]}
           />
           <BenefitCard
             icon={Stethoscope}
             title={isAr ? "أسعار الأعضاء عند الشركاء — لاحقاً" : "Member rates at partners — later"}
             // Member-rate lexicon (R085/R087): recognition, not coupon talk.
-            items={isAr ? ["عيادات وعناية ومتاجر نختارها بعناية", "لا نعلن عن شريك قبل أن يكون جاهزاً فعلاً", "نبلّغ الأعضاء أول بأول"] : ["Clinics, grooming and shops we choose carefully", "No partner is announced before it is really ready", "Members hear first"]}
+            items={isAr ? ["عيادات وعناية ومتاجر نختارها بعناية", "لا نعلن عن شريك قبل أن يكون جاهزاً فعلاً", "نعلنه هنا أول ما يجهز"] : ["Clinics, grooming and shops we choose carefully", "No partner is announced before it is really ready", "Announced here the moment it's ready"]}
           />
           <BenefitCard
             icon={Heart}
@@ -87,7 +87,7 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
           <BenefitCard
             icon={HeartPulse}
             title={isAr ? "السجل الصحي — شغّال اليوم" : "The health record — live today"}
-            items={isAr ? ["التطعيمات ومواعيدها، والوزن ومنحناه", "قائمة عناية أسبوعية لكل قطط البيت", "ملخص صحي ترسله لأي طبيب برابط مؤقت", "العيادة تشوف السجل بإذنك فقط"] : ["Vaccinations and their dates, weight and its trend", "A weekly care list for every cat in the home", "A health summary you send any vet by temporary link", "A clinic sees the record only with your permission"]}
+            items={isAr ? ["التطعيمات ومواعيدها، والوزن ومنحناه", "قائمة عناية أسبوعية لكل قطط البيت", "ملخص صحي ترسله لأي طبيب برابط مؤقت", "العيادة تشوف بيانات السلامة فقط — والباقي بإذنك"] : ["Vaccinations and their dates, weight and its trend", "A weekly care list for every cat in the home", "A health summary you send any vet by temporary link", "A clinic sees safety data only — the rest with your permission"]}
           />
         </div>
       </Section>
@@ -110,8 +110,8 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
             label={isAr ? "الهوية — لك الآن" : "The ID — yours now"}
             body={
               isAr
-                ? "الرقم والبطاقة والسجل الصحي وصفحة المجتمع ومفقود وموجود — كلها شغّالة ومجانية، وما تنسحب منك لو ما اشتركت."
-                : "The number, the card, the health record, the community page and Lost & Found — all working and free, and never taken away if you don't subscribe."
+                ? "الرقم والبطاقة والسجل الصحي وصفحة المجتمع ومفقود وموجود — كلها شغّالة ومجانية، وما تنسحب منك لو ما أخذت خطة."
+                : "The number, the card, the health record, the community page and Lost & Found — all working and free, and never taken away if you don't take a plan."
             }
           />
           <StatusCard
@@ -149,7 +149,7 @@ export function MoracatStory({ isAr, catName, membershipActive = false, variant 
       {/* 6 — Our vision */}
       <Section
         eyebrow={isAr ? "رؤيتنا" : "Our vision"}
-        title={isAr ? "منظومة واحدة لكل ما يخص قطك" : "One ecosystem for everything your cat needs"}
+        title={isAr ? "مكان واحد لكل ما يخص قطك" : "One place for everything your cat needs"}
         lead={
           isAr
             ? "نبي كل قط في السعودية يكون له مكان واحد يجمع حياته: هويته، وسجله الصحي، وعنايته، وناسه — من أول يوم له في البيت إلى آخره."

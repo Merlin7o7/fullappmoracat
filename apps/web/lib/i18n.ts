@@ -11,7 +11,7 @@ export const dict = {
   ar: {
     dir: "rtl" as const,
     brand: "مرقط",
-    nav: { how: "كيف تشتغل", plans: "العضوية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية", community: "المجتمع", benefits: "مزايا الأعضاء", adopt: "تبنَّ قطاً", lostFound: "مفقود وموجود" },
+    nav: { how: "كيف تشتغل", plans: "خطط العناية", products: "المتجر", about: "من احنا", login: "تسجيل الدخول", blog: "المدونة", tools: "حاسبة التغذية", community: "المجتمع", benefits: "مزايا الأعضاء", adopt: "تبنَّ قطاً", lostFound: "مفقود وموجود" },
     announce: "نرحّب بقططكم في كل مدن السعودية — انضمّ للمجتمع",
     hero: {
       badge: "سجل مرقط — لقطط السعودية",
@@ -32,29 +32,33 @@ export const dict = {
       ctaSecondary: "وش هي هوية مرقط؟",
       trust: "مجاناً · أقل من دقيقتين · بدون بطاقة",
       previewNote: "هذي معاينة — رقم قطك الحقيقي يطلع لحظة التسجيل.",
+      // Mobile-first hero (audit 2026-10-04 Problem 4): one sentence under the
+      // card; the rest of `subtitle` moves into the first story chapter.
+      subtitleShort: "لو ضاع، اللي يلقاه يوصلك بدون ما ينكشف رقمك — وسجله الصحي معه في أي عيادة.",
+      subtitleRest: "سجّل قطك وياخذ هويته باسمه ورقمه — مجاناً، في أقل من دقيقتين.",
     },
     features: {
       title: "وش تسوّي الهوية؟",
       lede: "هوية وحدة تمشي مع قطك طول عمره — ترجّعه لك لو ضاع، وتحفظ سجله، وتعرّف الناس عليه.",
       items: [
         { eyebrow: "هويته", title: "هوية باسمه ورقمه", body: "كل قط له هوية خاصة فيها اسمه وصورته ورقمه — نفس الهوية اللي يحملها طول عمره." },
-        { eyebrow: "عنايته الشهرية — قريباً", title: "عناية شهرية، لسّا ما فتحت", body: "نجهّز خطة شهرية موجّهة من عمر قطك واحتياجه. ما فتحنا الاشتراكات بعد، وما نبيع شي اليوم — نعدّ القطط أولاً. أول ما تفتح، المسجّلون أول من يدري." },
+        { eyebrow: "عنايته الشهرية — لاحقاً", title: "خطة عناية شهرية، لسّا ما فتحت", body: "نجهّز خطة عناية شهرية مبنية على عمر قطك واحتياجه. ما نبيع شي اليوم — نسجّل القطط أولاً. نعلن موعدها هنا وبالإيميل لمن وافق." },
         { eyebrow: "ملفه الصحي", title: "سجله يمشي معه", body: "التطعيمات والوزن وملاحظات الطبيب — كلها في هويته، حاضرة معك في كل زيارة للعيادة." },
         { eyebrow: "مجتمعه", title: "معروف ومحبوب", body: "قطك ينضم لمجتمع أهل القطط في السعودية من أول يوم — وتقدر تخليه خاص بضغطة. القرار لك دايم." },
       ],
     },
     plans: {
-      title: "عضوية وحدة، تنبني من قطك",
+      title: "خطة عناية وحدة، تنبني من قطك",
       subtitle: "نرشّح خطة قطك من عمره واحتياجه — اختيار موجّه، لا جداول تخمين. سعر واحد واضح من البداية.",
       from: "تبدأ من",
       month: "/ شهرياً",
       cta: "ابنِ خطة قطك",
-      soonBadge: "قريب",
-      soonNote: "العضويات قريب — سوِّ هوية قطك اليوم وتكون من أول الأعضاء المؤسسين.",
+      soonBadge: "لاحقاً",
+      soonNote: "خطط العناية الشهرية تفتح لاحقاً — نعلن موعدها هنا وبالإيميل لمن وافق. هوية قطك مجانية من اليوم.",
       includes: [
         "عناية شهرية على مقاس قطك — أكل ورمل ومكافآت",
         "هوية دائمة وسجل صحي يمشي معه",
-        "سعر الأعضاء عند شركائنا المؤسسين",
+        "خطة مبنية من عمر قطك ووزنه وعدد قطط البيت",
         "مجتمع أهل القطط — وقطك نجمه",
       ],
       billingNote: RENEWAL_BILLING_NOTE.ar,
@@ -83,16 +87,16 @@ export const dict = {
       latestPrefix: "آخر تسجيل:",
       soonTitle: "وش الجاي؟",
       soonBody:
-        "الاشتراك الشهري لعناية قطك يفتح بعد مرحلة التسجيل. ما نبيع شي اليوم، وما نطلب بطاقة. تسجيل قطك يحجز لك مكانك في قائمة الانتظار — وبس.",
+        "خطط العناية الشهرية تفتح لاحقاً — نعلن موعدها هنا وبالإيميل لمن وافق. ما نبيع شي اليوم، وما نطلب بطاقة.",
     },
     /**
      * Joining the waitlist is a *consequence* of registering, so it is stated
      * plainly at the moment of registration and never pre-ticked (PDPL, R106).
      */
     waitlist: {
-      consentLabel: "أبلغوني بالإيميل أول ما تفتح العضويات",
+      consentLabel: "أبغى أعرف أول ما تفتح خطط العناية",
       consentHelp:
-        "تسجيل قطك يضيفك لقائمة انتظار العضوية. ما نرسل لك شي إلا إذا وافقت هنا، وتقدر توقف الرسائل في أي وقت. بياناتك محفوظة داخل السعودية.",
+        "ما نرسل لك شي عن خطط العناية إلا إذا وافقت هنا، وتقدر توقف الرسائل في أي وقت. نحمي بياناتك وفق نظام حماية البيانات الشخصية — التفاصيل في سياسة الخصوصية.",
       positionLabel: "ترتيبك في القائمة",
       positionNote: "ترتيبك حسب وقت انضمامك — ما فيه شي يقدّمك أو يأخّرك.",
     },
@@ -102,11 +106,11 @@ export const dict = {
       title: "أسئلة تسألونها كثير",
       items: [
         { q: "هل هوية القط مجانية؟", a: "نعم — مجانية اليوم ودايم. الهوية والسجل الصحي والمجتمع لك بلا مقابل، وما نطلب بطاقة." },
-        { q: "وش تبيعون الحين؟", a: "ولا شي. إحنا في مرحلة التسجيل — نسجّل القطط بس. الاشتراك الشهري للعناية يفتح بعدين، ونبلّغ المسجّلين أول ما يصير." },
-        { q: "لما تفتح العضويات، لازم أدفع عشان أحتفظ بالهوية؟", a: "لا. حسابك وهوية قطك وسجله والمجتمع تظل مجانية — هذا مكتوب في شروطنا. الاشتراك الشهري للعناية شي اختياري منفصل، وتسجيلك اليوم يحجز مكانك في قائمة الانتظار بس." },
+        { q: "وش تبيعون الحين؟", a: "ولا شي. إحنا في مرحلة التسجيل — نسجّل القطط بس. خطط العناية الشهرية تفتح لاحقاً — نعلن موعدها هنا وبالإيميل لمن وافق." },
+        { q: "لما تفتح خطط العناية، لازم أدفع عشان أحتفظ بالهوية؟", a: "لا. حسابك وهوية قطك وسجله والمجتمع تظل مجانية — هذا مكتوب في شروطنا. خطة العناية الشهرية شي اختياري منفصل." },
         { q: "وش يعني «عضو مؤسِّس»؟", a: "أول 1000 قط يتسجّل. الصفة تجي من رقم قطك المتسلسل نفسه — مو شي نعطيه أو نسحبه، ورقمه يظل رقمه." },
-        { q: "من يقدر يشوف سجل قطك الصحي؟", a: "أنت بس — إلا إذا منحت عيادة موثّقة إذن الاطلاع وقت الزيارة، وتقدر تسحبه بعدها بضغطة. كل مرة يُفتح فيها السجل تجدها مكتوبة في سجل الاطلاع داخل حسابك." },
-        { q: "وش تسوون ببياناتي؟", a: "نحفظها داخل السعودية ونستخدمها لهوية قطك وسجله. ما نرسل لك إيميل تسويقي إلا بموافقتك، وتقدر توقفها أو تحذف بياناتك متى ما تبي." },
+        { q: "من يقدر يشوف سجل قطك الصحي؟", a: "أنت. العيادات الموثّقة تشوف بس حداً أدنى للسلامة — مثل الحساسية والأدوية الحالية — لأن حساسية مخفية ممكن تكلّف قطك حياته. الباقي ما تشوفه عيادة إلا إذا منحتها الإذن، وتسحبه بضغطة. وكل مرة يُفتح فيها السجل تلقاها مكتوبة في سجل الاطلاع داخل حسابك." },
+        { q: "وش تسوون ببياناتي؟", a: "نستخدمها لهوية قطك وسجله، وما نبيعها لأحد. نحمي بياناتك وفق نظام حماية البيانات الشخصية — التفاصيل في سياسة الخصوصية. ما نرسل لك إيميل تسويقي إلا بموافقتك، وتقدر توقفه أو تحذف بياناتك متى ما تبي." },
       ],
       /**
        * Rendered ONLY when commerceEnabled() — in the visible FAQ and in the
@@ -114,15 +118,15 @@ export const dict = {
        * markup may reveal the paid product before launch (R040/R006).
        */
       commerceItems: [
-        { q: "كيف يشتغل اشتراك العناية؟", a: "أربع خطط شهرية، ونقترح عليك الأنسب من ملف قطك — عمره ووزنه وعدد قطط البيت. شهر واحد أو مدة مدفوعة مقدّماً، مع خصم على مدتَي 6 و12 شهراً." },
-        { q: "أقدر ألغي أو أوقف الاشتراك؟", a: RENEWAL_FAQ_ANSWER.ar },
+        { q: "كيف تشتغل خطة العناية؟", a: "أربع خطط شهرية، ونقترح عليك الأنسب من ملف قطك — عمره ووزنه وعدد قطط البيت. شهر واحد أو مدة مدفوعة مقدّماً، مع خصم على مدتَي 6 و12 شهراً." },
+        { q: "أقدر ألغي أو أوقف خطة العناية؟", a: RENEWAL_FAQ_ANSWER.ar },
         { q: "وين توصّلون؟", a: "حالياً في الرياض وجدة، وبقية المدن تباعاً — وهوية قطك وسجله متاحة في كل مكان من اليوم. الأسعار نهائية بلا رسوم خفية." },
       ],
     },
     closing: {
       title: "قطك جاهز لهويته؟",
       titleNamed: "{name} جاهز لهويته؟",
-      sub: "دقيقتين وتكون الهوية بين يديك — ومعاينتها مجاناً.",
+      sub: "أقل من دقيقتين وتكون الهوية بين يديك — ومجانية دايم.",
     },
     footerNote: "صُنعت بمحبة لأهل القطط في السعودية",
     footer: "© 2026 مؤسسة عبدالرحمن منصور الغامدي التجارية. جميع الحقوق محفوظة.",
@@ -130,7 +134,7 @@ export const dict = {
   en: {
     dir: "ltr" as const,
     brand: "Moracat",
-    nav: { how: "How it works", plans: "Membership", products: "Shop", about: "About", login: "Log in", blog: "Journal", tools: "Feeding calculator", community: "Community", benefits: "Member benefits", adopt: "Adopt", lostFound: "Lost & Found" },
+    nav: { how: "How it works", plans: "Care plans", products: "Shop", about: "About", login: "Log in", blog: "Journal", tools: "Feeding calculator", community: "Community", benefits: "Member benefits", adopt: "Adopt", lostFound: "Lost & Found" },
     announce: "Now welcoming cats across Saudi Arabia — join the community",
     hero: {
       badge: "The Moracat register — for Saudi cats",
@@ -144,29 +148,31 @@ export const dict = {
       ctaSecondary: "What is a Moracat ID?",
       trust: "Free · Under two minutes · No card needed",
       previewNote: "This is a preview — your cat's real number is issued the moment you register.",
+      subtitleShort: "If they're ever lost, whoever finds them reaches you without seeing your number — and their health record walks into any clinic with them.",
+      subtitleRest: "Register your cat and they get a Cat ID with their name and their own number — free, in under two minutes.",
     },
     features: {
       title: "What the Cat ID does",
       lede: "One identity that stays with your cat for life — it brings them home if they're lost, keeps their record, and tells people who they are.",
       items: [
         { eyebrow: "Their identity", title: "An ID with their name and number", body: "Every cat gets a unique Cat ID with their name, photo and number — the same one they'll carry for life." },
-        { eyebrow: "Their monthly care — coming", title: "Monthly care, not open yet", body: "We're building a monthly plan guided by your cat's age and needs. Subscriptions aren't open and nothing is for sale today — we're counting cats first. When it opens, registered cats hear first." },
+        { eyebrow: "Their monthly care — later", title: "A monthly care plan, not open yet", body: "We're building a monthly care plan shaped by your cat's age and needs. Nothing is for sale today — we're registering cats first. We'll announce the date here, and by email to those who agreed." },
         { eyebrow: "Their health record", title: "A record that travels", body: "Vaccinations, weight and vet notes live on their ID — in your pocket at every vet visit." },
         { eyebrow: "Their community", title: "Seen and celebrated", body: "Your cat joins a growing community of Saudi cat people from day one — and one tap keeps them private. The choice is always yours." },
       ],
     },
     plans: {
-      title: "One membership, built from your cat",
+      title: "One care plan, built from your cat",
       subtitle: "We guide you to your cat's plan from their age and needs — a guided fit, not guesswork. One clear price from the start.",
       from: "From",
       month: "/ month",
       cta: "Build your cat's plan",
-      soonBadge: "Soon",
-      soonNote: "Memberships open soon — create your cat's ID today and you'll be first in line as a founding member.",
+      soonBadge: "Later",
+      soonNote: "Monthly care plans open later — we'll announce the date here, and by email to those who agreed. Your cat's ID is free from today.",
       includes: [
         "Monthly care sized to your cat — food, litter and treats",
         "A permanent Cat ID and a health record that travels",
-        "Member rates at our founding partners",
+        "A plan shaped by your cat's age, weight and household",
         "A community of cat people — starring your cat",
       ],
       billingNote: RENEWAL_BILLING_NOTE.en,
@@ -189,12 +195,12 @@ export const dict = {
       latestPrefix: "Most recent:",
       soonTitle: "What's next",
       soonBody:
-        "The monthly care subscription opens after the census. Nothing is for sale today and we never ask for a card. Registering your cat holds your place on the waitlist — that's all it does.",
+        "Monthly care plans open later — we'll announce the date here, and by email to those who agreed. Nothing is for sale today, and we never ask for a card.",
     },
     waitlist: {
-      consentLabel: "Email me when memberships open",
+      consentLabel: "Tell me as soon as care plans open",
       consentHelp:
-        "Registering your cat adds you to the membership waitlist. We won't email you unless you agree here, and you can stop the emails at any time. Your data is stored inside Saudi Arabia.",
+        "We won't email you about care plans unless you agree here, and you can stop the emails at any time. We protect your data under Saudi PDPL — details in our Privacy Policy.",
       positionLabel: "Your place in line",
       positionNote: "Your place is simply when you joined — nothing moves you up or down.",
     },
@@ -204,11 +210,11 @@ export const dict = {
       title: "Questions we hear a lot",
       items: [
         { q: "Is the Cat ID free?", a: "Yes — free today and always. The ID, the health record and the community cost nothing, and we never ask for a card." },
-        { q: "What are you selling right now?", a: "Nothing. We're in the registration phase — we're only registering cats. The monthly care subscription opens later, and registered cats hear first." },
-        { q: "When memberships open, do I have to pay to keep the ID?", a: "No. Your account, your cat's ID, their record and the community stay free — it's written in our terms. The monthly care subscription is a separate, optional thing; registering today only holds your place on the waitlist." },
+        { q: "What are you selling right now?", a: "Nothing. We're in the registration phase — we're only registering cats. Monthly care plans open later — we'll announce the date here, and by email to those who agreed." },
+        { q: "When care plans open, do I have to pay to keep the ID?", a: "No. Your account, your cat's ID, their record and the community stay free — it's written in our terms. The monthly care plan is a separate, optional thing." },
         { q: "What does “Founding Member” mean?", a: "The first 1,000 cats registered. The status comes from your cat's sequential number itself — it isn't something we hand out or take away, and their number stays theirs." },
-        { q: "Who can see my cat's health record?", a: "Only you — unless you grant a verified clinic access at the time of a visit, and you can take it back in one tap afterwards. Every time the record is opened, you'll find it written in the access ledger inside your account." },
-        { q: "What do you do with my data?", a: "We store it inside Saudi Arabia and use it for your cat's ID and record. We don't send marketing email without your consent, and you can withdraw it or delete your data at any time." },
+        { q: "Who can see my cat's health record?", a: "You. Verified clinics see only a minimum of safety data — like allergies and current medications — because a hidden allergy could cost your cat their life. Everything else stays closed to a clinic unless you grant access, and you take it back in one tap. Every time the record is opened, you'll find it written in the access ledger inside your account." },
+        { q: "What do you do with my data?", a: "We use it for your cat's ID and record, and never sell it. We protect your data under Saudi PDPL — details in our Privacy Policy. We don't send marketing email without your consent, and you can withdraw it or delete your data at any time." },
       ],
       /**
        * Rendered ONLY when commerceEnabled() — in the visible FAQ and in the
@@ -216,7 +222,7 @@ export const dict = {
        * markup may reveal the paid product before launch (R040/R006).
        */
       commerceItems: [
-        { q: "How does the care subscription work?", a: "Four monthly plans — we suggest the right one from your cat's own profile: age, weight and how many cats share the home. One month or a prepaid term; 6 and 12-month terms carry a discount." },
+        { q: "How does the care plan work?", a: "Four monthly plans — we suggest the right one from your cat's own profile: age, weight and how many cats share the home. One month or a prepaid term; 6 and 12-month terms carry a discount." },
         { q: "Can I cancel or pause?", a: RENEWAL_FAQ_ANSWER.en },
         { q: "Where do you deliver?", a: "Riyadh and Jeddah for now, more cities in turn — the Cat ID and health record work everywhere today. Prices are final, with no hidden fees." },
       ],
@@ -224,7 +230,7 @@ export const dict = {
     closing: {
       title: "Ready for their ID?",
       titleNamed: "Ready for {name}'s ID?",
-      sub: "Two minutes, and it's in your hands — the preview is free.",
+      sub: "Under two minutes, and it's in your hands — free, always.",
     },
     footerNote: "Made with love for Saudi cat people",
     footer: "© 2026 Abdulrahman Mansour Alghamdi Trading Establishment. All rights reserved.",

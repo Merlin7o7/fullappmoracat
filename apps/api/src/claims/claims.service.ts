@@ -42,7 +42,7 @@ export class ClaimsService {
     const invite = await this.prisma.claimInvite.findUnique({
       where: { tokenHash: hashClaimToken(token) },
       include: {
-        cat: { select: { id: true, name: true, photoUrl: true, claimStatus: true, isDemo: true, nameNormalized: true, deletedAt: true } },
+        cat: { select: { id: true, name: true, gender: true, photoUrl: true, claimStatus: true, isDemo: true, nameNormalized: true, deletedAt: true } },
       },
     });
     if (!invite || invite.cat.deletedAt) {
@@ -196,7 +196,7 @@ export class ClaimsService {
       this.notifications.emit(userId, {
         category: "COMMUNITY",
         type: "cat_id_issued",
-        params: { name: invite.cat.name, catIdNumber },
+        params: { name: invite.cat.name, catIdNumber, gender: invite.cat.gender },
         data: { kind: "cat_id_issued", catId: invite.catId, catIdNumber },
       });
       this.events.emit("cat_id_issued", { userId, catId: invite.catId, orgId: invite.orgId, props: { origin: "CLINIC" } });

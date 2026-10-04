@@ -345,7 +345,7 @@ export function AdoptionListingView({ id }: { id: string }) {
               </Link>
             ) : settled ? (
               <div className="rounded-2xl bg-muted/60 p-4 text-center text-sm text-muted-foreground">
-                {isAr ? "هذا القط لقى بيته 🎉" : "This cat found their home 🎉"}{" "}
+                {isAr ? "هذا القط لقى بيته" : "This cat found their home"}{" "}
                 <Link href="/adopt" className="font-medium text-primary underline underline-offset-4">
                   {isAr ? "شوف القطط اللي تنتظر" : "See the cats still waiting"}
                 </Link>

@@ -457,7 +457,7 @@ export class OwnershipService {
 
       const cat = await tx.cat.findUnique({
         where: { id: t.catId },
-        select: { id: true, name: true, userId: true, deletedAt: true, catIdNumber: true },
+        select: { id: true, name: true, gender: true, userId: true, deletedAt: true, catIdNumber: true },
       });
       if (!cat || cat.deletedAt) {
         throw new NotFoundException({ code: "TRANSFER_CAT_GONE", message: "This cat's record is no longer available." });
@@ -593,13 +593,13 @@ export class OwnershipService {
     this.notifications.emit(result.fromUserId, {
       category: "SYSTEM",
       type: "ownership_transfer_completed_from",
-      params: { name: result.cat.name, to: to?.firstName ?? "" },
+      params: { name: result.cat.name, to: to?.firstName ?? "", gender: result.cat.gender },
       data: { kind: "ownership_transfer", catId: result.cat.id },
     });
     this.notifications.emit(userId, {
       category: "SYSTEM",
       type: "ownership_transfer_completed_to",
-      params: { name: result.cat.name, id: result.cat.catIdNumber ?? "" },
+      params: { name: result.cat.name, id: result.cat.catIdNumber ?? "", gender: result.cat.gender },
       data: { kind: "ownership_transfer", catId: result.cat.id, url: `/portal/cats?cat=${result.cat.id}` },
     });
 

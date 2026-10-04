@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const notice = await fetchNoticeForShare(params.id);
   const isAr = cookies().get("locale")?.value !== "en";
   if (!notice) {
-    return { title: isAr ? "مفقود وموجود · مرقط" : "Lost & Found · Moracat" };
+    return { title: isAr ? "مفقود وموجود" : "Lost & Found" };
   }
   const { title, description } = noticeShareText(notice, isAr);
   const url = `${SITE}/lost-found/${params.id}`;

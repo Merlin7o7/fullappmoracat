@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import {
   buildNotificationText,
   type NotificationParams,
+  type NotificationText,
   type NotificationType,
 } from "./notifications.messages";
 
@@ -38,6 +39,7 @@ export class NotificationsService {
   private readonly logger = new Logger("Notifications");
 
   constructor(private readonly prisma: PrismaService) {}
+
 
   /** Write an in-app notification. Safe to `void` — never throws to the caller. */
   async notify(userId: string, input: NotifyInput) {
@@ -97,7 +99,7 @@ export class NotificationsService {
       this.prisma.notification.count({ where: { userId, readAt: null } }),
     ]);
     return {
-      items,
+      items: items.map(relocalize),
       unread,
       pagination: {
         page: Math.max(1, page),
@@ -136,5 +138,25 @@ export class NotificationsService {
       data: { readAt: new Date() },
     });
     return { success: true, updated: res.count };
+  }
+}
+
+/**
+ * Re-render a stored row's text from its `type` + `params` with today's
+ * catalogue. Copy is a promise (R006): when a line is corrected — «رسمياً»
+ * removed, a verb made to agree with the cat — rows already in a member's feed
+ * must not keep the old wording forever. Rows without a known type keep what
+ * was stored.
+ */
+function relocalize<T extends { data: unknown }>(row: T): T {
+  const data = row.data && typeof row.data === "object" ? (row.data as Record<string, unknown>) : null;
+  if (!data || typeof data.type !== "string") return row;
+  const params = data.params && typeof data.params === "object" ? (data.params as NotificationParams) : {};
+  try {
+    const i18n = buildNotificationText(data.type as NotificationType, params) as NotificationText | undefined;
+    if (!i18n?.ar?.title || !i18n?.en?.title) return row;
+    return { ...row, data: { ...data, i18n } };
+  } catch {
+    return row;
   }
 }

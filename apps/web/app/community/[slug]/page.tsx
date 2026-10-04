@@ -26,9 +26,11 @@ async function fetchCat(slug: string): Promise<CommunityProfile | null> {
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const cat = await fetchCat(params.slug);
-  if (!cat) return { title: "Moracat Community" };
-  const title = `${cat.name} · Moracat`;
-  const description = cat.bio || `${cat.name} — a member of the Moracat community.`;
+  const isAr = cookies().get("locale")?.value !== "en";
+  if (!cat) return { title: isAr ? "مجتمع مرقط" : "Moracat community" };
+  // The root template appends the brand; one language per title (R101).
+  const title = cat.name;
+  const description = cat.bio || (isAr ? `${cat.name} في مجتمع مرقط.` : `${cat.name} in the Moracat community.`);
   const url = `${SITE}/community/${params.slug}`;
   return {
     title,

@@ -13,8 +13,8 @@ export function generateMetadata(): Metadata {
   const isAr = cookies().get("locale")?.value !== "en";
   const title = isAr ? "ما هو مرقط؟" : "What is Moracat?";
   const description = isAr
-    ? "مرقط عضوية لأصحاب القطط: هوية دائمة لكل قط، أساسيات شهرية، مزايا شركاء، ومجتمع. الهوية هي البداية، والعضوية تفتح القيمة الكاملة."
-    : "Moracat is a membership for cat owners: a permanent Cat ID, monthly essentials, partner benefits, and community. The ID is the beginning — the membership unlocks the full value.";
+    ? "مرقط منصة خاصة لأهل القطط: هوية دائمة لكل قط برقمه، وسجل صحي يمشي معه، ومجتمع، ومفقود وموجود — مجاناً. خطط العناية الشهرية تفتح لاحقاً."
+    : "Moracat is a private platform for cat people: a permanent numbered Cat ID, a health record that travels with them, a community and Lost & Found — free. Monthly care plans open later.";
   const url = `${SITE}/about`;
   return {
     title,
@@ -29,7 +29,7 @@ export default function AboutPage() {
   const isAr = cookies().get("locale")?.value !== "en";
 
   return (
-    <div className="min-h-screen">
+    <div className="marketing min-h-screen">
       <SiteHeader />
       <main id="main" tabIndex={-1} className="container max-w-5xl py-12 outline-none sm:py-16">
         <MoracatStory isAr={isAr} variant="page" />

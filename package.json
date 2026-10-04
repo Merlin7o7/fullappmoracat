@@ -15,6 +15,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "e2e": "node apps/api/e2e/run.mjs",
+    "check:copy": "node scripts/check-banned-words.mjs",
     "db:build": "pnpm --filter @moraqat/db build",
     "db:generate": "pnpm --filter @moraqat/db generate",
     "db:migrate": "pnpm --filter @moraqat/db migrate",

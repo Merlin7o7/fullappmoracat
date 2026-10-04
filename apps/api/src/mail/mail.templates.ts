@@ -251,11 +251,42 @@ export function otpEmailTemplate(locale: Locale, name: string | null, code: stri
   };
 }
 
+/**
+ * The code that confirms an account deletion. Its own wording, never the
+ * generic "confirm your email" one: someone who didn't ask to leave must be
+ * able to tell at a glance that this email is about deleting their account.
+ */
+export function accountDeletionCodeTemplate(locale: Locale, name: string | null, code: string): BuiltEmail {
+  const ar = locale === "ar";
+  const heading = ar ? "رمز حذف حسابك" : "Your account deletion code";
+  const body = [
+    hiName(ar, name),
+    ar
+      ? "طلبت حذف حسابك في مرقط. هذا الرمز يأكّد الحذف، وصالح لمدة 10 دقائق. بعد الحذف تنحذف ملفات قططك وتتوقف صفحة رمز الطوق عن العمل."
+      : "You asked to delete your Moracat account. This code confirms it and is valid for 10 minutes. Once deleted, your cats' files are removed and the collar QR page stops working.",
+  ];
+  const codeBlock = `<div style="margin:14px 0 4px;text-align:center;"><span style="display:inline-block;padding:14px 22px;border-radius:14px;background:${BRAND.chipBg};border:1px solid ${BRAND.hairline};font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:10px;color:${BRAND.green};">${code}</span></div>`;
+  return {
+    subject: ar ? `رمز حذف الحساب: ${code} — مرقط` : `Account deletion code: ${code} — Moracat`,
+    html: layout({
+      locale,
+      preheader: `${heading}: ${code}`,
+      heading,
+      body,
+      extra: codeBlock,
+      footnote: ar
+        ? "إذا ما طلبت الحذف، تجاهل هذه الرسالة — حسابك باقي كما هو. ونقترح تغيّر كلمة مرور بريدك."
+        : "If you didn't ask for this, ignore this email — your account stays as it is. We'd suggest changing your email password.",
+    }),
+    text: toText(heading, body, undefined, [code]),
+  };
+}
+
 export function welcomeTemplate(locale: Locale, name: string | null): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? "أهلاً بك في مرقط 🐾" : "Welcome to Moracat 🐾";
+  const heading = ar ? "أهلاً بك في مرقط" : "Welcome to Moracat";
   const body = [
-    name ? (ar ? `أهلاً ${name} 🐾` : `Welcome, ${name} 🐾`) : ar ? "أهلاً بك 🐾" : "Welcome 🐾",
+    name ? (ar ? `أهلاً ${name}` : `Welcome, ${name}`) : ar ? "أهلاً بك" : "Welcome",
     ar
       ? "سعداء بانضمامك. سجّل قطك، أنشئ هويته في مرقط، وشاركه مع مجتمع مرقط — كل قط يستاهل هوية تخصّه."
       : "We're glad you're here. Register your cat, issue their Moracat Cat ID, and share it with the Moracat community — every cat deserves an identity of their own.",
@@ -344,11 +375,11 @@ export function emailChangeTemplate(locale: Locale, url: string): BuiltEmail {
 
 export function catIdIssuedTemplate(locale: Locale, catName: string, catIdNumber: string): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? `هوية ${catName} جاهزة 🎉` : `${catName}'s Cat ID is ready 🎉`;
+  const heading = ar ? `هوية ${catName} جاهزة` : `${catName}'s Cat ID is ready`;
   const body = [
     ar
-      ? `مبروك — أصبح لـ${catName} هوية موثّقة في مرقط. احتفظ بها، اطبعها، أو أضفها إلى محفظتك، وشاركها متى ما أردت.`
-      : `Congratulations — ${catName} now has a verified identity on Moracat. Keep it, print it, add it to your wallet, and share it whenever you like.`,
+      ? `صار لـ${catName} هوية في مرقط برقمها. احفظها، اطبعها، وشاركها متى ما تبي.`
+      : `${catName} now has a Moracat Cat ID with their own number. Save it, print it, and share it whenever you like.`,
   ];
   const cta = { label: ar ? "افتح هوية القط" : "Open the Cat ID", url: `${siteUrl()}/portal/cats` };
   return {
@@ -362,16 +393,16 @@ export function catIdIssuedTemplate(locale: Locale, catName: string, catIdNumber
 
 export function waitlistJoinedTemplate(locale: Locale, name: string | null): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? "أنت على قائمة الإطلاق 🎉" : "You're on the launch list 🎉";
+  const heading = ar ? "أنت في قائمة الانتظار" : "You're on the waitlist";
   const body = [
     hiName(ar, name),
     ar
-      ? "سجّلناك ضمن أعضاء التأسيس. سنراسلك أول ما تُفتح العضويات، وستكون من أوائل من يحصل عليها. لا حاجة لأي إجراء الآن."
-      : "You're in as a founding member. We'll email you the moment memberships open, and you'll be among the first to get in. Nothing to do for now.",
+      ? "سجّلناك في قائمة انتظار خطط العناية. نراسلك أول ما تفتح خطط العناية الشهرية — وما يلزمك تسوي شي الحين."
+      : "You're on the waitlist for care plans. We'll email you as soon as monthly care plans open — there's nothing to do for now.",
   ];
   const cta = { label: ar ? "عد إلى حسابك" : "Back to your account", url: `${siteUrl()}/portal` };
   return {
-    subject: ar ? "أنت على قائمة الإطلاق — مرقط" : "You're on the launch list — Moracat",
+    subject: ar ? "أنت في قائمة الانتظار — مرقط" : "You're on the waitlist — Moracat",
     html: layout({ locale, preheader: heading, heading, body, cta }),
     text: toText(heading, body, cta),
   };
@@ -421,7 +452,7 @@ export function orderConfirmationTemplate(
   locale: Locale, name: string | null, orderNumber: string, total: number, items: { name: string; qty: number }[]
 ): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? "تأكيد طلبك ✅" : "Your order is confirmed ✅";
+  const heading = ar ? "تأكيد طلبك" : "Your order is confirmed";
   const body = [
     hiName(ar, name),
     ar ? `استلمنا طلبك وجارٍ تجهيزه. إليك ملخّصه.` : `We've received your order and it's being prepared. Here's the summary.`,
@@ -488,20 +519,20 @@ export function paymentFailedTemplate(locale: Locale, name: string | null, retry
 
 export function subscriptionConfirmedTemplate(locale: Locale, name: string | null, planName: string, nextChargeAt: string): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? "عضويتك مفعّلة 🎉" : "Your membership is active 🎉";
+  const heading = ar ? "خطة العناية مفعّلة" : "Your care plan is active";
   const body = [
     hiName(ar, name),
     ar
-      ? `أهلاً بك في باقة «${planName}». عضويتك مفعّلة الآن، وهوية قطك أصبحت مفعّلة بكامل مزايا الأعضاء.`
-      : `Welcome to the ${planName} plan. Your membership is now active, and your Cat ID is live with full member benefits.`,
+      ? `أهلاً بك في خطة «${planName}». خطة العناية مفعّلة الآن.`
+      : `Welcome to the ${planName} plan. Your care plan is now active.`,
   ];
   const rows: [string, string][] = [
-    [ar ? "الباقة" : "Plan", planName],
+    [ar ? "الخطة" : "Plan", planName],
     [ar ? "التجديد القادم" : "Next renewal", nextChargeAt],
   ];
-  const cta = { label: ar ? "إدارة العضوية" : "Manage membership", url: `${siteUrl()}/portal/subscriptions` };
+  const cta = { label: ar ? "إدارة خطة العناية" : "Manage care plan", url: `${siteUrl()}/portal/subscriptions` };
   return {
-    subject: ar ? "عضويتك مفعّلة — مرقط" : "Your membership is active — Moracat",
+    subject: ar ? "خطة العناية مفعّلة — مرقط" : "Your care plan is active — Moracat",
     html: layout({ locale, preheader: heading, heading, body, extra: summary(rows, ar), cta }),
     text: toText(heading, body, cta, rows.map(([k, v]) => `${k}: ${v}`)),
   };
@@ -524,19 +555,19 @@ export function termEndInvitationTemplate(
   renewUrl: string
 ): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? `عضوية ${catName} تقترب من نهايتها` : `${catName}'s membership is nearly up`;
+  const heading = ar ? `خطة عناية ${catName} تقترب من نهايتها` : `${catName}'s care plan is nearly up`;
   const body = [
     hiName(ar, name),
     ar
-      ? `تنتهي مدة باقة «${planName}» بتاريخ ${endsAt}. لا نجدّد تلقائياً أبداً ولا نخصم منك بصمت — متى ما رغبت، جدّد بضغطة واحدة وتستمر مزايا ${catName} دون انقطاع.`
-      : `Your ${planName} term ends on ${endsAt}. We never renew automatically and never charge you silently — whenever you're ready, renew in one tap and ${catName}'s benefits continue without a gap.`,
+      ? `تنتهي مدة خطة «${planName}» بتاريخ ${endsAt}. لا نجدّد تلقائياً أبداً ولا نخصم منك بصمت — متى ما رغبت، جدّد بضغطة واحدة وتستمر عناية ${catName} دون انقطاع.`
+      : `Your ${planName} term ends on ${endsAt}. We never renew automatically and never charge you silently — whenever you're ready, renew in one tap and ${catName}'s care continues without a gap.`,
     ar
-      ? `التجديد لمدة مماثلة يبدأ من ${sar(amount, ar)}. وإذا احتجت وقتاً، سجلّ ${catName} وكل ذكرياته محفوظة معك دائماً.`
+      ? `التجديد لمدة مماثلة يبدأ من ${sar(amount, ar)}. وإذا احتجت وقتاً، سجلّ ${catName} وكل ما فيه محفوظ معك دائماً.`
       : `Renewing for another term starts at ${sar(amount, ar)}. And if you need time, ${catName}'s record and everything in it stays safe with you, always.`,
   ];
-  const cta = { label: ar ? `جدّد عضوية ${catName}` : `Renew ${catName}'s membership`, url: renewUrl };
+  const cta = { label: ar ? `جدّد خطة عناية ${catName}` : `Renew ${catName}'s care plan`, url: renewUrl };
   return {
-    subject: ar ? `عضوية ${catName} تقترب من نهايتها — مرقط` : `${catName}'s membership is nearly up — Moracat`,
+    subject: ar ? `خطة عناية ${catName} تقترب من نهايتها — مرقط` : `${catName}'s care plan is nearly up — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, cta, footnote: ar ? "لا يوجد أي خصم تلقائي. القرار لك بالكامل." : "There is no automatic charge. The choice is entirely yours." }),
     text: toText(heading, body, cta),
   };
@@ -554,19 +585,19 @@ export function membershipLapsedTemplate(
   renewUrl: string
 ): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? `عضوية ${catName} انتهت — وكل شيء محفوظ` : `${catName}'s membership has ended — everything's saved`;
+  const heading = ar ? `خطة عناية ${catName} انتهت — وكل شي محفوظ` : `${catName}'s care plan has ended — everything's saved`;
   const body = [
     hiName(ar, name),
     ar
-      ? `انتهت مدة عضوية ${catName}، وشكراً لأنك كنت معنا. هوية ${catName} وسجلّه الصحي وصوره وكل ذكرياته محفوظة كما هي — لن نحذف شيئاً.`
-      : `${catName}'s membership term has ended, and thank you for being with us. ${catName}'s Cat ID, health record, photos and every memory stay exactly as they are — we won't delete a thing.`,
+      ? `انتهت مدة خطة عناية ${catName}، وشكراً لأنك كنت معنا. هوية ${catName} والسجل الصحي والصور وكل الذكريات محفوظة كما هي — ما نحذف شي.`
+      : `${catName}'s care plan term has ended, and thank you for being with us. ${catName}'s Cat ID, health record, photos and every memory stay exactly as they are — we won't delete a thing.`,
     ar
-      ? `متى ما حبيت ترجع، مكان ${catName} محجوز وكأنك ما غبت.`
-      : `Whenever you'd like to come back, ${catName}'s place is waiting — like you never left.`,
+      ? `متى ما حبيت ترجع لخطة العناية، ترجع بضغطة وكأنك ما غبت.`
+      : `Whenever you'd like to come back to the care plan, it's one tap — like you never left.`,
   ];
-  const cta = { label: ar ? `رجّع عضوية ${catName}` : `Welcome ${catName} back`, url: renewUrl };
+  const cta = { label: ar ? `رجّع خطة عناية ${catName}` : `Restart ${catName}'s care plan`, url: renewUrl };
   return {
-    subject: ar ? `عضوية ${catName} انتهت — مرقط` : `${catName}'s membership has ended — Moracat`,
+    subject: ar ? `خطة عناية ${catName} انتهت — مرقط` : `${catName}'s care plan has ended — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, cta }),
     text: toText(heading, body, cta),
   };
@@ -634,20 +665,20 @@ export function renewalUpcomingTemplate(
   skipUrl: string
 ): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? `عضوية ${catName} تتجدد في ${endsAt}` : `${catName}'s membership renews on ${endsAt}`;
+  const heading = ar ? `خطة عناية ${catName} تتجدد في ${endsAt}` : `${catName}'s care plan renews on ${endsAt}`;
   const body = [
     hiName(ar, name),
     ar
-      ? `كما طلبت، نجدّد باقة «${planName}» تلقائياً بتاريخ ${endsAt} بمبلغ ${sar(amount, ar)} على البطاقة المنتهية بـ ${last4}. لا شيء يتغيّر في صندوق ${catName}.`
+      ? `كما طلبت، نجدّد خطة «${planName}» تلقائياً بتاريخ ${endsAt} بمبلغ ${sar(amount, ar)} على البطاقة المنتهية بـ ${last4}. لا شيء يتغيّر في صندوق ${catName}.`
       : `As you asked, we'll renew the ${planName} plan automatically on ${endsAt} for ${sar(amount, ar)} on the card ending ${last4}. Nothing about ${catName}'s box changes.`,
     ar
       ? "ما تبي التجديد هالمرة؟ أوقفه بضغطة وحدة قبل التاريخ — بدون أسئلة، وسجلّ قطك يبقى معك."
       : "Don't want it this time? Stop it in one tap before then — no questions, and your cat's record stays yours.",
   ];
-  const cta = { label: ar ? "إدارة العضوية" : "Manage membership", url: manageUrl };
+  const cta = { label: ar ? "إدارة خطة العناية" : "Manage care plan", url: manageUrl };
   const pills = actionLink(skipUrl, ar ? "لا تجدّدها هالمرة" : "Don't renew this time");
   return {
-    subject: ar ? `عضوية ${catName} تتجدد في ${endsAt} — مرقط` : `${catName}'s membership renews on ${endsAt} — Moracat`,
+    subject: ar ? `خطة عناية ${catName} تتجدد في ${endsAt} — مرقط` : `${catName}'s care plan renews on ${endsAt} — Moracat`,
     html: layout({ locale, preheader: heading, heading, body, extra: `<div style="text-align:center;margin:4px 0 10px;">${pills}</div>`, cta, footnote: ar ? "أنت من فعّل التجديد التلقائي، وتقدر توقفه في أي وقت." : "You switched auto-renew on, and you can switch it off any time." }),
     text: toText(heading, body, cta, [`${ar ? "لا تجدّدها" : "Skip"}: ${skipUrl}`]),
   };
@@ -669,16 +700,16 @@ export function renewalFailedTemplate(
 ): BuiltEmail {
   const ar = locale === "ar";
   const heading = final
-    ? ar ? `آخر محاولة لتجديد عضوية ${catName}` : `Last try renewing ${catName}'s membership`
-    : ar ? `ما نجح تجديد عضوية ${catName}` : `We couldn't renew ${catName}'s membership`;
+    ? ar ? `آخر محاولة لتجديد خطة عناية ${catName}` : `Last try renewing ${catName}'s care plan`
+    : ar ? `ما نجح تجديد خطة عناية ${catName}` : `We couldn't renew ${catName}'s care plan`;
   const body = [
     hiName(ar, name),
     ar
-      ? `الدفعة على البطاقة المنتهية بـ ${last4} ما نجحت (المحاولة ${attempt}). مزايا ${catName} مستمرة حتى ${graceUntil} — حدّث البطاقة ونكمل من حيث توقفنا.`
-      : `The charge on the card ending ${last4} didn't go through (attempt ${attempt}). ${catName}'s benefits continue until ${graceUntil} — update the card and we'll pick up where we left off.`,
+      ? `الدفعة على البطاقة المنتهية بـ ${last4} ما نجحت (المحاولة ${attempt}). خطة عناية ${catName} مستمرة حتى ${graceUntil} — حدّث البطاقة ونكمل من حيث توقفنا.`
+      : `The charge on the card ending ${last4} didn't go through (attempt ${attempt}). ${catName}'s care plan continues until ${graceUntil} — update the card and we'll pick up where we left off.`,
     final
       ? ar
-        ? `بعد ${graceUntil} تتوقف الصناديق بهدوء. سجلّ ${catName} وهويته يبقيان معك دائماً، والرجوع يأخذ دقيقة.`
+        ? `بعد ${graceUntil} تتوقف الصناديق بهدوء. هوية ${catName} والسجل كامل يبقون معك دائماً، والرجوع يأخذ دقيقة.`
         : `After ${graceUntil} the boxes pause quietly. ${catName}'s record and ID stay yours always, and coming back takes a minute.`
       : ar
         ? "نحاول مرة ثانية تلقائياً خلال أيام — أو حدّث البطاقة الآن وننهيها اليوم."
@@ -711,7 +742,7 @@ export function catFoundTemplate(
   url: string
 ): BuiltEmail {
   const ar = locale === "ar";
-  const heading = ar ? `شخص وجد ${catName} 🐾` : `Someone found ${catName} 🐾`;
+  const heading = ar ? `شخص وجد ${catName}` : `Someone found ${catName}`;
   const body = [
     hiName(ar, name),
     ar ? `مسح أحدهم رمز ${catName} على الطوق وترك لك رسالة:` : `Someone scanned ${catName}'s collar tag and left you a message:`,
@@ -740,7 +771,7 @@ export function refundRequestedTemplate(
   const body = [
     hiName(ar, name),
     ar
-      ? `استلمنا طلبك بخصوص استرداد المتبقّي من باقة «${planName}». سيتواصل معك فريق العناية خلال 24 ساعة عمل، ولن تُخصم منك أي رسوم إضافية.`
+      ? `استلمنا طلبك بخصوص استرداد المتبقّي من خطة «${planName}». سيتواصل معك فريق العناية خلال 24 ساعة عمل، ولن تُخصم منك أي رسوم إضافية.`
       : `We've received your request to refund the remainder of your ${planName} plan. Our care team will reach out within one business day, and you won't be charged anything further.`,
   ];
   const cta = { label: ar ? "تواصل مع العناية" : "Contact Care", url: supportUrl() };
@@ -798,7 +829,7 @@ export function ownershipTransferTemplate(
   const ar = locale === "ar";
   const who = i.fromName ? esc(i.fromName) : ar ? "أحد أعضاء مرقط" : "a Moracat member";
   const cat = esc(i.catName);
-  const heading = ar ? `${who} يسلّمك ${cat} 🐾` : `${who} is handing ${cat} over to you 🐾`;
+  const heading = ar ? `${who} يسلّمك ${cat}` : `${who} is handing ${cat} over to you`;
   const body = [
     ar
       ? `${who} يريد نقل ملكية ${cat} إليك في مرقط. لو وافقت، تنتقل لك هوية ${cat} بنفس رقمها — ومعها سجلها كامل: التطعيمات، الوزن، وملاحظات الطبيب. ما يبدأ شي من الصفر.`
@@ -833,8 +864,8 @@ export function ownershipTransferDoneTemplate(
 
   const heading = toNew
     ? ar
-      ? `${cat} صار لك 🎉`
-      : `${cat} is yours 🎉`
+      ? `${cat} عندك الحين`
+      : `${cat} is yours`
     : ar
       ? `تم نقل ${cat} إلى ${other}`
       : `${cat} has been transferred to ${other}`;
@@ -842,18 +873,18 @@ export function ownershipTransferDoneTemplate(
   const body = toNew
     ? [
         ar
-          ? `مبروك — ${cat} انتقل لعضويتك. هويته بنفس الرقم، وسجله الصحي كامل معك من اليوم.`
-          : `Congratulations — ${cat} is now part of your membership. Same Cat ID number, and the full health record came with them.`,
+          ? `مبروك — ${cat} صار في حسابك. الهوية بنفس الرقم، والسجل الصحي كامل معك من اليوم.`
+          : `Congratulations — ${cat} is now on your account. Same Cat ID number, and the full health record came with them.`,
         ar
           ? "أول شي ننصح فيه: راجع بيانات التواصل للطوارئ، واختر مين من العيادات يشوف سجل قطك. القرار صار لك وحدك."
           : "First thing worth doing: set the emergency contacts, and choose which clinics may open the record. That's yours to decide now, and only yours.",
       ]
     : [
         ar
-          ? `اكتمل نقل ملكية ${cat} إلى ${other}. ما عاد لك وصول لملفه — وهذا مقصود: القط صار في بيت غيره.`
+          ? `اكتمل نقل ملكية ${cat} إلى ${other}. ما عاد لك وصول لملف ${cat} — وهذا مقصود: القرار صار للبيت الجديد.`
           : `${cat}'s transfer to ${other} is complete. You no longer have access to their record — by design: they're in another home now.`,
         ar
-          ? `سجل ${cat} كامل انتقل معه، وسنوات عنايتك فيه محفوظة في سجل الملكية. شكراً لك على الاعتناء فيه.`
+          ? `سجل ${cat} كامل انتقل للبيت الجديد، وسنوات عنايتك محفوظة في سجل الملكية. شكراً لأنك اعتنيت بـ${cat}.`
           : `${cat}'s whole record went with them, and your years of care stay recorded in their ownership history. Thank you for looking after them.`,
       ];
 
@@ -864,7 +895,7 @@ export function ownershipTransferDoneTemplate(
   return {
     subject: toNew
       ? ar
-        ? `${cat} صار لك — مرقط`
+        ? `${cat} عندك الحين — مرقط`
         : `${cat} is yours — Moracat`
       : ar
         ? `تم نقل ${cat} — مرقط`
@@ -914,7 +945,7 @@ export function adoptionAcceptedTemplate(
   const heading = ar ? `${who} وافق — ${cat} بانتظارك` : `${who} said yes — ${cat} is waiting`;
   const body = [
     ar
-      ? `خبر حلو: ${who} وافق على طلبك لتبنّي ${cat}. تقدرون تتفقون على التفاصيل، وبعدها يرسل لك نقل الهوية — وتنتقل لك هوية ${cat} وسجله كامل.`
+      ? `خبر حلو: ${who} وافق على طلبك لتبنّي ${cat}. تقدرون تتفقون على التفاصيل، وبعدها يرسل لك نقل الهوية — وتنتقل لك هوية ${cat} وسجلها كامل.`
       : `Good news: ${who} accepted your enquiry about ${cat}. Agree the details between you, then they'll send the Cat ID transfer — ${cat}'s ID and full record come to you with it.`,
   ];
   const cta = { label: ar ? "افتح المحادثة" : "Open the conversation", url: i.url };
@@ -953,8 +984,8 @@ export function lostFoundMessageTemplate(
   const heading =
     i.kind === "LOST"
       ? ar
-        ? `أحدهم شاف ${cat} 🐾`
-        : `Someone may have seen ${cat} 🐾`
+        ? `أحدهم شاف ${cat}`
+        : `Someone may have seen ${cat}`
       : ar
         ? `وصلتك رسالة عن القط اللي لقيته`
         : `A message about the cat you found`;

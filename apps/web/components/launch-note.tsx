@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Founding-member launch note — the exciting "you're first, here's when your box
- * arrives" message. Reads the central launch config; auto-retires after the
+ * First-box launch note — "you're among the first care plans, here's when your
+ * box arrives". (Not the founding-member status: that comes from the Cat ID's
+ * own number, never from buying a plan.) Reads the central launch config; auto-retires after the
  * first-delivery date (renders nothing once we're live). Shown before payment,
  * reinforced after checkout, and on the dashboard until the first box ships.
  */
@@ -34,18 +35,18 @@ export function LaunchDeliveryNote({
 
   return (
     <div
-      className={`rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.08] to-card p-4 sm:p-5 ${className}`}
+      className={`rounded-2xl border border-primary/25 bg-primary/[0.05] p-4 sm:p-5 ${className}`}
       role="status"
     >
       <p className="flex items-start gap-2.5 text-sm font-semibold">
         <PartyPopper className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-        {isAr ? "أنت تحجز مكانك كأحد أعضاء مرقط المؤسّسين." : "You're reserving your place as a Moracat founding member."}
+        {isAr ? "من أوائل خطط العناية في مرقط." : "Among the first Moracat care plans."}
       </p>
       <p className="mt-2 flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground">
         <PackageCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
         {isAr
-          ? `أول صندوق اشتراك يُشحن للتوصيل ابتداءً من ${date}. بعدها تصلك الصناديق حسب جدولك المختار.`
-          : `Your first subscription box ships for delivery starting ${date}. After that, boxes arrive on your chosen schedule.`}
+          ? `أول صندوق في خطة العناية يُشحن للتوصيل ابتداءً من ${date}. بعدها تصلك الصناديق حسب جدولك المختار.`
+          : `Your first care-plan box ships for delivery starting ${date}. After that, boxes arrive on your chosen schedule.`}
       </p>
     </div>
   );

@@ -1,15 +1,15 @@
 "use client";
 
 /**
- * Membership conversion surface — the bridge from an issued Cat ID to an active
- * membership (the core product). Two honest states, one component:
+ * Care-plan surface. Lexicon (R087): every cat with a Cat ID is already a
+ * member — free, for good — so nothing here "activates" or "completes" a
+ * membership. The paid product is «خطة العناية». Two honest states:
  *
- *  • Non-subscriber  → a warm "complete {cat}'s membership" card: what activating
- *    unlocks, an honest status pill, and one clear CTA. Commerce-aware — never a
- *    dead "Subscribe" link before launch (R006/R040): pre-launch it reads as
- *    "founding member, opens soon".
- *  • Subscriber      → the membership status card: plan, renewal, next box,
- *    benefits, manage/upgrade. No prompts once they've joined.
+ *  • No plan  → what a care plan would add, and one clear CTA. Commerce-aware —
+ *    never a dead "Subscribe" link before launch (R006/R040): pre-launch it
+ *    reads as "care plans open later".
+ *  • On a plan → the plan's status card: plan, renewal, next box, manage.
+ *    No prompts once they've joined.
  *
  * The cat stays the hero (R009): copy is named after the cat, calm not pushy
  * (care, don't extract — P8), and the ask is singular (R005).
@@ -17,10 +17,11 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  BadgeCheck, Package, Percent, Stethoscope, Users, Gift, ArrowRight,
-  Sparkles, CalendarClock, Truck, Settings, Clock,
+  BadgeCheck, Package, Percent, ArrowRight,
+  Sparkles, CalendarClock, Truck, Settings, Clock, PauseCircle,
 } from "lucide-react";
 import { Button, Badge, Card } from "@moraqat/ui";
+import { PARTNERS } from "@/lib/partners";
 import { localizeName } from "@/lib/translit";
 import { formatDate } from "@/lib/datetime";
 import { effectiveNextDelivery } from "@/lib/launch";
@@ -33,17 +34,17 @@ export interface MembershipBenefit {
   ar: string;
 }
 
-/** What an active membership unlocks — the six pillars, cat-first framing. */
+/**
+ * What a care plan adds — only what the plan itself does. The Cat ID is free
+ * for good (FAQ + terms), so it is never listed as something a plan unlocks;
+ * partner rates appear only once a partner exists (R006/R040).
+ */
 export const MEMBERSHIP_BENEFITS: MembershipBenefit[] = [
-  // The Cat ID itself is free for good (FAQ + terms) — a paid benefit must
-  // never be worded as "activating" it.
-  { icon: BadgeCheck, en: "“Member” status on the Cat ID", ar: "صفة «عضو» على هوية قطك" },
-  { icon: Package, en: "Monthly essentials delivered", ar: "أساسيات شهرية توصل لبابك" },
+  { icon: Package, en: "Food and litter at your door every month", ar: "الأكل والرمل يوصلون بابك كل شهر" },
+  { icon: BadgeCheck, en: "A plan shaped by your cat's age and weight", ar: "خطة مبنية من عمر قطك ووزنه" },
+  { icon: PauseCircle, en: "Pause or stop in one tap", ar: "توقفها أو تلغيها بضغطة" },
   // Member-rate lexicon (R085/R087): recognition, never coupon talk.
-  { icon: Percent, en: "Member rates honoured at partners", ar: "سعر الأعضاء محفوظ عند الشركاء" },
-  { icon: Stethoscope, en: "Veterinary benefits", ar: "مزايا بيطرية" },
-  { icon: Users, en: "Community perks", ar: "امتيازات في المجتمع" },
-  { icon: Gift, en: "Future member rewards", ar: "مكافآت الأعضاء القادمة" },
+  ...(PARTNERS.length > 0 ? [{ icon: Percent, en: "Member rates at partners", ar: "سعر الأعضاء عند الشركاء" }] : []),
 ];
 
 export interface ActiveSubscription {
@@ -89,14 +90,14 @@ export function MembershipCard({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <Badge variant="success" className="gap-1">
-              <BadgeCheck className="size-3.5" /> {isAr ? "عضوية فعّالة" : "Active membership"}
+              <BadgeCheck className="size-3.5" /> {isAr ? "خطة العناية فعّالة" : "Care plan active"}
             </Badge>
             <h2 className="mt-3 font-display text-2xl font-bold tracking-tight">
-              {isAr ? `باقة ${planName}` : `${planName} plan`}
+              {isAr ? `خطة ${planName}` : `${planName} plan`}
             </h2>
             {name && (
               <p className="mt-1 text-sm text-primary-foreground/85">
-                {isAr ? `هوية ${name} مفعّلة رسمياً` : `${name}'s Cat ID is officially active`}
+                {isAr ? `عناية ${name} الشهرية` : `${name}'s monthly care`}
               </p>
             )}
           </div>
@@ -128,10 +129,10 @@ export function MembershipCard({
         {commerce && (
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href="/portal/subscriptions">
-              <Button variant="secondary" size="sm"><Settings className="size-4" /> {isAr ? "إدارة العضوية" : "Manage membership"}</Button>
+              <Button variant="secondary" size="sm"><Settings className="size-4" /> {isAr ? "إدارة خطة العناية" : "Manage care plan"}</Button>
             </Link>
             <Link href={subscribeHref}>
-              <Button variant="secondary" size="sm"><ArrowRight className="size-4 rtl:rotate-180" /> {isAr ? "ترقية الباقة" : "Upgrade plan"}</Button>
+              <Button variant="secondary" size="sm"><ArrowRight className="size-4 rtl:rotate-180" /> {isAr ? "غيّر الخطة" : "Change plan"}</Button>
             </Link>
           </div>
         )}
@@ -139,30 +140,32 @@ export function MembershipCard({
     );
   }
 
-  // ── Non-subscriber: the "complete your membership" prompt ──────────────────
+  // ── No plan yet: what a care plan would add ─────────────────────────────────
   const pending = membershipStatus === "PENDING";
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.08] via-card to-card p-6 shadow-e1 sm:p-7">
+    <section className="relative overflow-hidden rounded-2xl border border-primary/25 bg-primary/[0.05] p-6 shadow-e1 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
             {name
-              ? isAr ? `أكمل عضوية ${name}` : `Complete ${name}'s membership`
-              : isAr ? "أكمل عضويتك" : "Complete your membership"}
+              ? isAr ? `خطة عناية لـ${name}` : `A care plan for ${name}`
+              : isAr ? "خطة عناية لقطك" : "A care plan for your cat"}
           </h2>
           <p className="mt-1 max-w-lg text-sm leading-relaxed text-muted-foreground">
             {isAr
-              ? `هوية ${name ?? "قطك"} صادرة — وتفعيلها بالعضوية يفتح العناية الشهرية والمزايا الكاملة.`
-              : `${name ?? "Your cat"}'s ID is issued — activating it with a membership unlocks monthly care and the full benefits.`}
+              ? `هوية ${name ?? "قطك"} جاهزة ومجانية دايم. خطة العناية الشهرية شي اختياري فوقها.`
+              : `${name ?? "Your cat"}'s ID is ready, and free for good. The monthly care plan is an optional extra on top.`}
           </p>
         </div>
-        <Badge variant="secondary" dot className="shrink-0">
-          <Clock className="size-3.5" />
-          {pending ? (isAr ? "قيد التفعيل" : "Pending") : (isAr ? "غير مفعّلة" : "Inactive")}
-        </Badge>
+        {pending && (
+          <Badge variant="secondary" dot className="shrink-0">
+            <Clock className="size-3.5" />
+            {isAr ? "خطة العناية قيد التفعيل" : "Care plan starting"}
+          </Badge>
+        )}
       </div>
 
-      {/* The six pillars — proof of value before the ask (R004). */}
+      {/* What the plan does — proof of value before the ask (R004). */}
       <ul className="mt-5 grid gap-x-5 gap-y-2.5 sm:grid-cols-2">
         {MEMBERSHIP_BENEFITS.map((b) => (
           <li key={b.en} className="flex items-center gap-2.5 text-sm">
@@ -177,12 +180,12 @@ export function MembershipCard({
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {commerce ? (
           <Link href={subscribeHref}>
-            <Button size="lg"><Sparkles className="size-4" /> {isAr ? "اشترك الآن" : "Subscribe now"} <ArrowRight className="size-4 rtl:rotate-180" /></Button>
+            <Button size="lg"><Sparkles className="size-4" /> {isAr ? "شوف خطة العناية" : "See the care plan"} <ArrowRight className="size-4 rtl:rotate-180" /></Button>
           </Link>
         ) : (
           <>
             <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-              <Sparkles className="size-4" /> {isAr ? "خطة العناية تفتح قريباً — وهويتك مجانية دايماً" : "The care plan opens soon — your ID stays free for good"}
+              <Sparkles className="size-4" /> {isAr ? "خطط العناية تفتح لاحقاً — وهوية قطك مجانية دايم" : "Care plans open later — your cat's ID stays free for good"}
             </span>
           </>
         )}
@@ -206,7 +209,7 @@ export function MembershipsClosedNotice({ isAr, body }: { isAr: boolean; body: s
       <IlloPaw tone="peach" className="pointer-events-none absolute bottom-6 end-10 size-7 rotate-[18deg] opacity-60" />
       <IlloCan tone="green" className="h-24 w-auto" />
       <p className="font-display text-lg font-bold tracking-tight">
-        {isAr ? "العضويات لم تُفتح بعد" : "Memberships aren't open yet"}
+        {isAr ? "خطط العناية ما فتحت بعد" : "Care plans aren't open yet"}
       </p>
       <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">{body}</p>
       <Link href="/portal">

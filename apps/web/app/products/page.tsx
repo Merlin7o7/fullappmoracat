@@ -49,7 +49,7 @@ export default function ProductsPage() {
   });
 
   return (
-    <div className="min-h-screen">
+    <div className="marketing min-h-screen">
       <SiteHeader />
 
       <section id="main" tabIndex={-1} className="container py-12 outline-none sm:py-16">
@@ -58,9 +58,9 @@ export default function ProductsPage() {
           <Sticker rotate={12} className="-top-4 end-2 hidden sm:block">
             <IlloFish tone="orange" className="h-7 w-auto opacity-80" />
           </Sticker>
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-primary shadow-e1">
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-primary shadow-e1 rtl:normal-case rtl:tracking-normal">
             <IlloCan tone="pink" className="h-4 w-auto" />{" "}
-            {commerce ? (isAr ? "المتجر" : "Shop") : isAr ? "قريباً" : "Coming soon"}
+            {commerce ? (isAr ? "المتجر" : "Shop") : isAr ? "لاحقاً" : "Later"}
           </p>
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
             {commerce
@@ -69,7 +69,7 @@ export default function ProductsPage() {
           </h1>
         </div>
 
-        {/* ── Census mode: an honest forthcoming page, not an empty grid ────── */}
+        {/* ── Registration phase: an honest forthcoming page, not an empty grid ── */}
         {!commerce ? (
           <div className="mx-auto max-w-md rounded-2xl bg-cream/60 px-6 py-14 text-center dark:bg-cream/40">
             <Illo3D name="can" className="mx-auto mb-5 block size-24" px={96} />
@@ -79,8 +79,8 @@ export default function ProductsPage() {
             {/* No prices, no tiers, no dates we can't keep (R006/R040). */}
             <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
               {isAr
-                ? "نحن الآن في مرحلة التعداد — نتعرّف على قطط السعودية أولاً. نختار المنتجات بعناية، وحين نفتح المتجر ستكون هوية قطك جاهزة قبل الجميع."
-                : "We're in the Census right now — getting to know Saudi's cats first. We're curating carefully, and when the shop opens your cat's ID will already be waiting."}
+                ? "إحنا الآن في مرحلة التسجيل — نسجّل القطط أولاً. نختار المنتجات بعناية، وهوية قطك مجانية وجاهزة من اليوم."
+                : "We're in the registration phase — registering cats first. We're choosing products carefully, and your cat's ID is free and ready from today."}
             </p>
             {/* One clear action (R005), and it's free — trust precedes the ask (R004). */}
             <Link href="/register" className={cn(buttonVariants({ variant: "primary", size: "md" }), "mt-6")}>

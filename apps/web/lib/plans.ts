@@ -1,5 +1,5 @@
 /**
- * Plan catalogue — the 4 official Moracat plans (Pricing Model v2, MRC-FIN-002).
+ * Plan catalogue — the 4 Moracat care plans (Pricing Model v2, MRC-FIN-002).
  * Mirrors the DB (seed-catalog) and the financial model so marketing renders
  * correct pricing even before the API responds. Single source of truth:
  * seed-catalog.ts / GET /plans.
@@ -8,8 +8,10 @@
  * + litter); every higher tier contains everything below it and adds value.
  * Pricing is per MONTH per household — the base price covers the first cat and
  * each additional cat adds `modulePrice` (up to MAX_CATS, curve per §5).
- * Savings claims are made against the MARKET basket (five-store sweep), never
- * against our own shelf (R006) — Essentials/Kitten make no savings claim at all.
+ * No plan makes a comparative price claim (R006): the July 2026 market sweep
+ * did not support one, so the copy describes what is in the box — never that
+ * it costs less than buying the same things elsewhere. Lexicon (R087): the paid
+ * product is «خطة العناية», never «باقة» / «اشتراك» in member-facing copy.
  */
 export type PlanTier = "kitten" | "starter" | "standard" | "premium";
 
@@ -24,7 +26,6 @@ export interface Plan {
   taglineAr: string;
   featuresEn: string[];
   featuresAr: string[];
-  popular?: boolean;
   /** Acquisition tier for cats under ~9 months (auto-graduates to adult plans). */
   kitten?: boolean;
 }
@@ -71,13 +72,13 @@ export const PLANS: Plan[] = [
       "2kg kitten dry food",
       "15 kitten wet pouches & cans",
       "10L gentle clumping litter",
-      "Grows with her — graduates to an adult plan at ~9 months",
+      "Grows with your cat — moves to an adult plan at ~9 months",
     ],
     featuresAr: [
       "2كجم طعام جاف للصغار",
       "15 كيساً وعلبة طعام رطب للصغار",
       "10 لتر رمل متكتل لطيف",
-      "تكبر معها — تنتقل لخطة البالغين عند ~9 أشهر",
+      "تكبر مع قطك — تنتقل لخطة البالغين عند ~9 أشهر",
     ],
   },
   {
@@ -92,13 +93,13 @@ export const PLANS: Plan[] = [
       "2kg dry food",
       "15 wet food pouches",
       "10L clumping litter",
-      "No extras — necessities at market price",
+      "No extras — just the necessities",
     ],
     featuresAr: [
       "2كجم طعام جاف",
       "15 كيس طعام رطب",
       "10 لتر رمل متكتل",
-      "بدون إضافات — الضروريات بسعر السوق",
+      "بدون إضافات — الضروريات فقط",
     ],
   },
   {
@@ -113,15 +114,12 @@ export const PLANS: Plan[] = [
       "30 wet pouches — a real month of mixed feeding",
       "2kg dry food + 10L litter",
       "Treats, toy & grooming wipes",
-      "Genuinely below the same basket at market prices",
     ],
     featuresAr: [
       "30 كيساً رطباً — شهر حقيقي من التغذية المختلطة",
       "2كجم طعام جاف + 10 لتر رمل",
       "مكافآت ولعبة ومناديل عناية",
-      "أقل فعلياً من نفس السلة بأسعار السوق",
     ],
-    popular: true,
   },
   {
     tier: "premium",
@@ -129,19 +127,19 @@ export const PLANS: Plan[] = [
     nameAr: "التوقيع",
     price: planPrice("premium").price,
     modulePrice: planPrice("premium").modulePrice,
-    taglineEn: "Complete, upgraded — the full care ritual",
-    taglineAr: "العناية الكاملة، مرفوعة درجة — طقس العناية الكامل",
+    taglineEn: "Complete, a step further",
+    taglineAr: "العناية الكاملة، بدرجة أعلى",
     featuresEn: [
       "Everything in Complete",
       "+9 premium wet rotation pouches",
       "Advanced clumping litter upgrade",
-      "Monthly supplement course & premium toy",
+      "Monthly supplements & a premium toy",
     ],
     featuresAr: [
       "كل ما في العناية الكاملة",
       "+9 أكياس تشكيلة رطب فاخرة",
       "ترقية إلى رمل متكتل متقدم",
-      "كورس مكملات شهري ولعبة فاخرة",
+      "مكمّلات شهرية ولعبة فاخرة",
     ],
   },
 ];

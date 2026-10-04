@@ -43,7 +43,7 @@ export default function DiscoverPage() {
           href="/portal/community"
           icon={Users}
           title={isAr ? "المجتمع" : "Community"}
-          body={isAr ? "قطط الأعضاء في السعودية — بما اختار أصحابها إظهاره فقط." : "Members' cats across Saudi Arabia — showing only what their owners chose."}
+          body={isAr ? "قطط أهلها خلّوها ظاهرة — وكل واحد يقدر يخفي قطه بضغطة." : "Cats whose people keep them visible — anyone can hide their cat in one tap."}
         />
         <HubLink
           href="/vet-directory"

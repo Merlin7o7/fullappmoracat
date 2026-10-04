@@ -5,6 +5,8 @@
  * the web needing per-type code — and older rows still fall back to the stored
  * `title`/`body`. Add a case here and every surface localizes automatically.
  */
+import { catPossessive, catPronoun, catVerb, countLabel, formatNumber } from "@moraqat/core";
+
 export type NotificationType =
   | "password_reset_requested"
   | "password_changed"
@@ -74,10 +76,39 @@ export interface NotificationText {
 
 const p = (params: NotificationParams, key: string) => String(params[key] ?? "");
 
+/*
+ * Grammar (MRC-UX audit 2026-10-04, Part 08). Callers that know the cat's
+ * gender pass `params.gender` ("MALE" | "FEMALE" | "UNKNOWN"); without it the
+ * copy falls back to neutral phrasing around the cat's name — never a silent
+ * masculine. Lexicon (R087): «عضو» = has a Cat ID; the paid product is
+ * «خطة العناية» — never «عضوية» / «اشتراك» / «باقة». No emoji in titles.
+ */
+const LIKE_FORMS = {
+  ar: { one: "إعجاب واحد", two: "إعجابين", few: "إعجابات", many: "إعجاباً" },
+  en: { one: "like", other: "likes" },
+};
+/** «100 إعجاب» — round hundreds and thousands take the singular, not «إعجاباً». */
+function likesLabel(n: number, locale: "ar" | "en"): string {
+  if (locale === "ar" && n >= 100 && n % 100 === 0) return `${formatNumber(n, "ar")} إعجاب`;
+  return countLabel(n, locale, LIKE_FORMS);
+}
+const YEAR_FORMS = {
+  ar: { one: "سنة", two: "سنتين", few: "سنوات", many: "سنة" },
+  en: { one: "year", other: "years" },
+};
+const yearsLabel = (n: number, locale: "ar" | "en") => countLabel(n, locale, YEAR_FORMS);
+
 export function buildNotificationText(
   type: NotificationType,
   params: NotificationParams = {}
 ): NotificationText {
+  const name = p(params, "name");
+  const gender = params.gender;
+  /** «رقمه» / «رقمها» / «رقم لولو». */
+  const his = (noun: string) => catPossessive(noun, gender, name);
+  const their = catPronoun(gender, "en", { case: "possessive" });
+  const Their = their.charAt(0).toUpperCase() + their.slice(1);
+  const them = catPronoun(gender, "en", { case: "object" });
   switch (type) {
     case "password_reset_requested":
       return {
@@ -101,50 +132,74 @@ export function buildNotificationText(
           body: "Your account password was updated. If this wasn't you, contact us immediately.",
         },
       };
-    case "cat_id_issued":
+    case "cat_id_issued": {
+      // The register is Moracat's own — a private company's archive, never an
+      // official one (AD 2.1 framing, R006).
+      const id = p(params, "catIdNumber");
       return {
         ar: {
-          title: `هوية ${p(params, "name")} جاهزة`,
-          body: `تم تسجيل ${p(params, "name")} رسمياً برقم ${p(params, "catIdNumber")}. اضغط لعرض البطاقة.`,
+          title: `هوية ${name} جاهزة`,
+          body: catVerb(gender, {
+            m: `${name} صار له رقمه في سجل مرقط: ${id}. افتح هويته.`,
+            f: `${name} صار لها رقمها في سجل مرقط: ${id}. افتح هويتها.`,
+            n: `صار لـ${name} رقم في سجل مرقط: ${id}. افتح الهوية.`,
+          }),
         },
         en: {
-          title: `${p(params, "name")}'s Cat ID is ready`,
-          body: `${p(params, "name")} is now officially registered as ${p(params, "catIdNumber")}. Tap to view the card.`,
+          title: `${name}'s Cat ID is ready`,
+          body: `${name} now has ${their} own number in the Moracat register: ${id}. Open ${their} Cat ID.`,
         },
       };
+    }
     case "cat_made_public":
+      // The opt-out receipt (amendment 2026-08-14): say what is shown, what is
+      // not, that a photo is required, and where the off switch is.
       return {
         ar: {
-          title: `${p(params, "name")} أصبح في المجتمع`,
-          body: "ملفه العام صار ظاهراً للجميع — بدون اسمك. تقدر تخفيه في أي وقت من إعدادات القط.",
+          title: catVerb(gender, {
+            m: `${name} صار في مجتمع مرقط`,
+            f: `${name} صارت في مجتمع مرقط`,
+            n: `ملف ${name} صار في مجتمع مرقط`,
+          }),
+          body: catVerb(gender, {
+            m: "يظهر في المجتمع متى ما كانت له صورة — واسمك ومدينتك ما يظهرون إلا إذا اخترت. تخفيه بضغطة من ملفه متى ما تبي.",
+            f: "تظهر في المجتمع متى ما كانت لها صورة — واسمك ومدينتك ما يظهرون إلا إذا اخترت. تخفيها بضغطة من ملفها متى ما تبي.",
+            n: `ملف ${name} يظهر في المجتمع متى ما كانت فيه صورة — واسمك ومدينتك ما يظهرون إلا إذا اخترت. تخفيه بضغطة من الملف متى ما تبي.`,
+          }),
         },
         en: {
-          title: `${p(params, "name")} is live in the community`,
-          body: "Their public profile is now discoverable — your name is not shown. You can turn this off anytime from the cat's settings.",
+          title: `${name} is in the Moracat community`,
+          body: `${Their} profile shows in the community once it has a photo — your name and city only show if you choose. One tap on ${their} profile hides ${them} again.`,
         },
       };
     case "cat_first_like":
       return {
         ar: {
-          title: `${p(params, "name")} حصل على أول إعجاب ❤️`,
-          body: `أحدهم أحب ${p(params, "name")} في المجتمع.`,
+          title: `أول إعجاب لـ${name}`,
+          body: `أحد أهل القطط حبّ ${name} في المجتمع.`,
         },
         en: {
-          title: `${p(params, "name")} got their first like ❤️`,
-          body: `Someone loved ${p(params, "name")} in the community.`,
+          title: `${name}'s first like`,
+          body: `Someone loved ${name} in the community.`,
         },
       };
-    case "cat_like_milestone":
+    case "cat_like_milestone": {
+      const likes = Number(params.likeCount) || 0;
       return {
         ar: {
-          title: `${p(params, "name")} وصل إلى ${p(params, "likeCount")} إعجاب ❤️`,
-          body: `${p(params, "name")} محبوب — ${p(params, "likeCount")} عضو وأكثر.`,
+          title: `${likesLabel(likes, "ar")} لـ${name}`,
+          body: catVerb(gender, {
+            m: `${name} محبوب في المجتمع.`,
+            f: `${name} محبوبة في المجتمع.`,
+            n: `أهل المجتمع يحبّون ${name}.`,
+          }),
         },
         en: {
-          title: `${p(params, "name")} reached ${p(params, "likeCount")} likes ❤️`,
-          body: `${p(params, "name")} is being loved — ${p(params, "likeCount")} members and counting.`,
+          title: `${name} reached ${likesLabel(likes, "en")}`,
+          body: `${name} is being loved in the community.`,
         },
       };
+    }
     case "cat_hidden":
       return {
         ar: {
@@ -163,12 +218,16 @@ export function buildNotificationText(
     case "cat_featured":
       return {
         ar: {
-          title: `${p(params, "name")} مميّز ⭐`,
-          body: `اختار أحد المشرفين ${p(params, "name")} ليكون مميّزاً في المجتمع. صار في الواجهة الآن.`,
+          title: catVerb(gender, {
+            m: `${name} مميّز في المجتمع`,
+            f: `${name} مميّزة في المجتمع`,
+            n: `${name} في واجهة المجتمع`,
+          }),
+          body: `اختار أحد المشرفين ${name} لواجهة المجتمع.`,
         },
         en: {
-          title: `${p(params, "name")} is featured ⭐`,
-          body: `A moderator featured ${p(params, "name")} in the community. They're front and centre now.`,
+          title: `${name} is featured`,
+          body: `A moderator featured ${name} at the front of the community.`,
         },
       };
     case "support_replied":
@@ -207,34 +266,34 @@ export function buildNotificationText(
     case "renewal_upcoming":
       return {
         ar: {
-          title: `تجديد عضوية ${p(params, "name")} قريب`,
-          body: `عضوية ${p(params, "name")} تنتهي في ${p(params, "endsAt")}، ونجدّدها تلقائياً بمبلغ ${p(params, "total")} ${p(params, "currency")}. ما تبي التجديد؟ أوقفه بضغطة وحدة قبل التاريخ.`,
+          title: `تجديد خطة عناية ${name} قريب`,
+          body: `خطة عناية ${name} تنتهي في ${p(params, "endsAt")}، ونجدّدها تلقائياً بمبلغ ${p(params, "total")} ${p(params, "currency")}. ما تبي التجديد؟ أوقفه بضغطة وحدة قبل التاريخ.`,
         },
         en: {
-          title: `${p(params, "name")}'s membership renews soon`,
-          body: `${p(params, "name")}'s membership ends ${p(params, "endsAt")}, and we'll renew it automatically for ${p(params, "total")} ${p(params, "currency")}. Don't want it? Stop it in one tap before then.`,
+          title: `${name}'s care plan renews soon`,
+          body: `${name}'s care plan ends ${p(params, "endsAt")}, and we'll renew it automatically for ${p(params, "total")} ${p(params, "currency")}. Don't want it? Stop it in one tap before then.`,
         },
       };
     case "membership_renewed":
       return {
         ar: {
-          title: `تجدّدت عضوية ${p(params, "name")}`,
-          body: `جدّدنا عضوية ${p(params, "name")} — ${p(params, "total")} ${p(params, "currency")}. مدفوعة حتى ${p(params, "endsAt")}، وتقدر توقفها في أي وقت.`,
+          title: `تجدّدت خطة عناية ${name}`,
+          body: `جدّدنا خطة عناية ${name} — ${p(params, "total")} ${p(params, "currency")}. مدفوعة حتى ${p(params, "endsAt")}، وتقدر توقفها في أي وقت.`,
         },
         en: {
-          title: `${p(params, "name")}'s membership renewed`,
-          body: `We renewed ${p(params, "name")}'s membership — ${p(params, "total")} ${p(params, "currency")}. Paid through ${p(params, "endsAt")}, and you can stop it any time.`,
+          title: `${name}'s care plan renewed`,
+          body: `We renewed ${name}'s care plan — ${p(params, "total")} ${p(params, "currency")}. Paid through ${p(params, "endsAt")}, and you can stop it any time.`,
         },
       };
     case "renewal_payment_failed":
       return {
         ar: {
-          title: "ما نجح تجديد العضوية",
-          body: `ما قدرنا نكمل تجديد عضوية ${p(params, "name")} على البطاقة المنتهية بـ ${p(params, "last4")}. عضوية ${p(params, "name")} وسجلاته ما زالت معك — حدّث طريقة الدفع ونكمل.`,
+          title: "ما نجح تجديد خطة العناية",
+          body: `ما قدرنا نكمل تجديد خطة عناية ${name} على البطاقة المنتهية بـ ${p(params, "last4")}. هوية ${name} و${his("سجل")} ما زالت معك — حدّث طريقة الدفع ونكمل.`,
         },
         en: {
-          title: "We couldn't renew the membership",
-          body: `The renewal for ${p(params, "name")} didn't go through on the card ending ${p(params, "last4")}. ${p(params, "name")}'s records are still yours — update your payment method and we'll finish it.`,
+          title: "We couldn't renew the care plan",
+          body: `The renewal for ${name} didn't go through on the card ending ${p(params, "last4")}. ${name}'s ID and record are still yours — update your payment method and we'll finish it.`,
         },
       };
     case "renewal_final_notice":
@@ -242,12 +301,12 @@ export function buildNotificationText(
       // grace week, the record is never taken away, the fix is one tap (R068).
       return {
         ar: {
-          title: `آخر محاولة لتجديد عضوية ${p(params, "name")}`,
-          body: `حاولنا ثلاث مرات ولم تنجح الدفعة على البطاقة المنتهية بـ ${p(params, "last4")}. مزايا ${p(params, "name")} مستمرة حتى ${p(params, "graceUntil")} — حدّث البطاقة قبلها ونكمل من حيث توقفنا. سجلّه وهويته معك في كل الأحوال.`,
+          title: `آخر محاولة لتجديد خطة عناية ${name}`,
+          body: `حاولنا ثلاث مرات ولم تنجح الدفعة على البطاقة المنتهية بـ ${p(params, "last4")}. خطة عناية ${name} مستمرة حتى ${p(params, "graceUntil")} — حدّث البطاقة قبلها ونكمل من حيث توقفنا. ${his("سجل")} و${his("هوية")} معك في كل الأحوال.`,
         },
         en: {
-          title: `Last try renewing ${p(params, "name")}'s membership`,
-          body: `We tried three times and the card ending ${p(params, "last4")} didn't go through. ${p(params, "name")}'s benefits continue until ${p(params, "graceUntil")} — update the card before then and we'll pick up where we left off. Their record and ID stay yours either way.`,
+          title: `Last try renewing ${name}'s care plan`,
+          body: `We tried three times and the card ending ${p(params, "last4")} didn't go through. ${name}'s care plan continues until ${p(params, "graceUntil")} — update the card before then and we'll pick up where we left off. ${Their} record and ID stay yours either way.`,
         },
       };
     case "order_refunded":
@@ -300,23 +359,23 @@ export function buildNotificationText(
       // An INVITATION, never a charge warning — nothing renews automatically.
       return {
         ar: {
-          title: `عضوية ${p(params, "name")} تقترب من نهايتها`,
-          body: `تنتهي مدة الباقة بتاريخ ${p(params, "endsAt")}. ما نجدّد تلقائياً — جدّد بضغطة متى ما حبيت وتستمر المزايا.`,
+          title: `خطة عناية ${name} تقترب من نهايتها`,
+          body: `تنتهي مدة الخطة بتاريخ ${p(params, "endsAt")}. ما نجدّد تلقائياً — جدّد بضغطة متى ما حبيت وتستمر العناية.`,
         },
         en: {
-          title: `${p(params, "name")}'s membership is nearly up`,
+          title: `${name}'s care plan is nearly up`,
           body: `The term ends ${p(params, "endsAt")}. We never renew automatically — renew in a tap whenever you're ready.`,
         },
       };
     case "membership_lapsed":
       return {
         ar: {
-          title: `عضوية ${p(params, "name")} انتهت — وكل شيء محفوظ`,
-          body: `سجلّ ${p(params, "name")} وهويته وصوره محفوظة كما هي. مكانه محجوز متى ما حبيت ترجع.`,
+          title: `خطة عناية ${name} انتهت — وكل شي محفوظ`,
+          body: `سجلّ ${name} و${his("هوية")} و${his("صور")} محفوظة كما هي. ترجع لخطة العناية متى ما حبيت.`,
         },
         en: {
-          title: `${p(params, "name")}'s membership has ended — everything's saved`,
-          body: `${p(params, "name")}'s record, ID and photos are all kept. Their place is waiting whenever you'd like to return.`,
+          title: `${name}'s care plan has ended — everything's saved`,
+          body: `${name}'s record, ID and photos are all kept. The care plan is there whenever you'd like to return.`,
         },
       };
     case "vaccination_due": {
@@ -341,11 +400,11 @@ export function buildNotificationText(
     case "cat_found_report":
       return {
         ar: {
-          title: `شخص وجد ${p(params, "name")} 🐾`,
+          title: `شخص وجد ${p(params, "name")}`,
           body: `مسح أحدهم رمز ${p(params, "name")} وترك رسالة: «${p(params, "message")}»${p(params, "phone") ? ` — تواصل معه على ${p(params, "phone")}` : ""}.`,
         },
         en: {
-          title: `Someone found ${p(params, "name")} 🐾`,
+          title: `Someone found ${p(params, "name")}`,
           body: `Someone scanned ${p(params, "name")}'s tag and left a message: “${p(params, "message")}”${p(params, "phone") ? ` — reach them on ${p(params, "phone")}` : ""}.`,
         },
       };
@@ -353,27 +412,37 @@ export function buildNotificationText(
       // Only claim what exists: the birthday frame is a personalization option
       // the member can apply in one tap — we point at it, never pretend it
       // auto-applied (R006).
+    {
+      const years = Number(params.age) || 0;
+      const ageAr = yearsLabel(years, "ar");
       return {
         ar: {
-          title: `${p(params, "name")} يكمل ${p(params, "age")} اليوم 🎂`,
-          body: `كل عام و${p(params, "name")} بخير. جرّب إطار عيد الميلاد على بطاقته وشاركها مع أهل البيت.`,
+          title: catVerb(gender, {
+            m: `${name} يكمل ${ageAr} اليوم`,
+            f: `${name} تكمل ${ageAr} اليوم`,
+            n: `عيد ميلاد ${name} اليوم — ${ageAr}`,
+          }),
+          body: `كل عام و${name} بخير. جرّب إطار عيد الميلاد على ${his("بطاقة")} وشاركها مع أهل البيت.`,
         },
         en: {
-          title: `${p(params, "name")} turns ${p(params, "age")} today 🎂`,
-          body: `Happy birthday, ${p(params, "name")}! Try the birthday frame on their card and share it with the family.`,
+          title: `${name} turns ${years} today`,
+          body: `Happy birthday, ${name}! Try the birthday frame on ${their} card and share it with the family.`,
         },
       };
-    case "member_anniversary":
+    }
+    case "member_anniversary": {
+      const years = Number(params.years) || 1;
       return {
         ar: {
-          title: `سنة مع مرقط 🐾`,
-          body: `اليوم تكتمل ${p(params, "years")} منذ انضمام ${p(params, "name")}. شكراً لأنك جزء من العائلة.`,
+          title: `${yearsLabel(years, "ar")} مع مرقط`,
+          body: `اليوم صار لـ${name} ${yearsLabel(years, "ar")} في سجل مرقط. شكراً لأنك جزء من العائلة.`,
         },
         en: {
-          title: `A year with Moracat 🐾`,
-          body: `Today marks ${p(params, "years")} since ${p(params, "name")} joined. Thank you for being family.`,
+          title: years === 1 ? "A year with Moracat" : `${yearsLabel(years, "en")} with Moracat`,
+          body: `Today ${name} has been in the Moracat register for ${yearsLabel(years, "en")}. Thank you for being family.`,
         },
       };
+    }
     case "refund_requested":
       return {
         ar: {
@@ -425,11 +494,11 @@ export function buildNotificationText(
       return {
         ar: {
           title: `صندوق ${p(params, "name") || "قطّك"} يُجهَّز`,
-          body: `الصندوق ${p(params, "box")} من ${p(params, "of")} — مدفوع مسبقاً مع اشتراكك، ونبلغك إذا خرج للتوصيل.`,
+          body: `الصندوق ${p(params, "box")} من ${p(params, "of")} — مدفوع مسبقاً مع خطة العناية، ونبلغك إذا خرج للتوصيل.`,
         },
         en: {
           title: `${p(params, "name") || "Your cat"}'s box is being packed`,
-          body: `Box ${p(params, "box")} of ${p(params, "of")} — already paid with your membership. We'll tell you when it's out for delivery.`,
+          body: `Box ${p(params, "box")} of ${p(params, "of")} — already paid with your care plan. We'll tell you when it's out for delivery.`,
         },
       };
     case "partner_needs_review":
@@ -468,33 +537,37 @@ export function buildNotificationText(
     case "ownership_transfer_declined":
       return {
         ar: {
-          title: `${p(params, "name")} باقٍ عندك`,
-          body: "العضو الآخر اعتذر عن استلام القط. ملفه وهويته ما تغيّر فيهم شي.",
+          title: catVerb(gender, {
+            m: `${name} باقٍ عندك`,
+            f: `${name} باقية عندك`,
+            n: `${name} عندك — ما تغيّر شي`,
+          }),
+          body: `العضو الآخر اعتذر عن الاستلام. هوية ${name} و${his("سجل")} ما تغيّر فيهم شي.`,
         },
         en: {
-          title: `${p(params, "name")} is staying with you`,
-          body: "The other member declined. Nothing about their Cat ID or record changed.",
+          title: `${name} is staying with you`,
+          body: `The other member declined. Nothing about ${their} Cat ID or record changed.`,
         },
       };
     case "ownership_transfer_completed_from":
       return {
         ar: {
-          title: `تم نقل ${p(params, "name")}`,
-          body: `${p(params, "to") || "العضو الجديد"} استلم ${p(params, "name")} وسجله كامل. سنوات عنايتك محفوظة في سجل ملكيته.`,
+          title: `تم نقل ${name}`,
+          body: `${p(params, "to") || "العضو الجديد"} استلم ${name} و${his("سجل")} كامل. سنوات عنايتك محفوظة في ${his("سجل ملكية")}.`,
         },
         en: {
-          title: `${p(params, "name")} has moved`,
-          body: `${p(params, "to") || "Their new owner"} now holds ${p(params, "name")} and the full record. Your years of care stay in their ownership history.`,
+          title: `${name} has moved`,
+          body: `${p(params, "to") || "Their new owner"} now holds ${name} and the full record. Your years of care stay in ${their} ownership history.`,
         },
       };
     case "ownership_transfer_completed_to":
       return {
         ar: {
-          title: `${p(params, "name")} صار لك 🎉`,
-          body: `هويته ${p(params, "id")} انتقلت لك بنفس الرقم، ومعها سجله الصحي. ابدأ بجهات الطوارئ ومن يشوف سجله.`,
+          title: catVerb(gender, { m: `${name} صار لك`, f: `${name} صارت لك`, n: `${name} عندك الحين` }),
+          body: `${his("هوية")} ${p(params, "id")} انتقلت لك بنفس الرقم، ومعها السجل الصحي كامل. ابدأ بجهات الطوارئ ومن يقدر يشوف السجل.`,
         },
         en: {
-          title: `${p(params, "name")} is yours 🎉`,
+          title: `${name} is yours`,
           body: `Cat ID ${p(params, "id")} came to you with the same number, and the health record with it. Start with emergency contacts and record access.`,
         },
       };
@@ -523,7 +596,7 @@ export function buildNotificationText(
     case "adoption_request_declined":
       return {
         ar: {
-          title: `${p(params, "name")} لقى بيت ثاني`,
+          title: catVerb(gender, { m: `${name} لقى بيت ثاني`, f: `${name} لقت بيت ثاني`, n: `${name} راح لبيت ثاني` }),
           body: params.note
             ? `صاحب القط ردّ: «${p(params, "note")}». في قطط ثانية تنتظر بيت — شوف الباقي.`
             : "في قطط ثانية تنتظر بيتاً — شوف الباقي متى ما حبيت.",
@@ -538,11 +611,11 @@ export function buildNotificationText(
     case "lost_found_message":
       return {
         ar: {
-          title: params.name ? `رسالة عن ${p(params, "name")} 🐾` : "رسالة على إعلانك 🐾",
+          title: params.name ? `رسالة عن ${p(params, "name")}` : "رسالة على إعلانك",
           body: `«${p(params, "message")}»${p(params, "phone") ? ` — تواصل على ${p(params, "phone")}` : ""}`,
         },
         en: {
-          title: params.name ? `A message about ${p(params, "name")} 🐾` : "A message on your notice 🐾",
+          title: params.name ? `A message about ${p(params, "name")}` : "A message on your notice",
           body: `“${p(params, "message")}”${p(params, "phone") ? ` — reach them on ${p(params, "phone")}` : ""}`,
         },
       };

@@ -12,14 +12,13 @@ import { LikeButton, useCommunityLikes } from "@/components/community-browse";
 import { ReportCatButton } from "@/components/community-report";
 import { Illo3D } from "@/components/illo-3d";
 import { IlloHeart, IlloPaw, IlloSprig, Sticker } from "@/components/illustrations";
-import { Sparkles } from "@/components/home/sparkles";
 import { localizeName } from "@/lib/translit";
 import type { CommunityProfile } from "@/lib/api";
 import {
   ABOUT_Q, FAVORITES_Q, FUN_Q, PERSONALITY_Q, earnedBadges, resolvePersonalization,
   type AnswerMap, type BadgeDef, type Question,
 } from "@/lib/cat-profile";
-import { formatAge as coreFormatAge, formatDate as coreFormatDate } from "@moraqat/core";
+import { catVerb, formatAge as coreFormatAge, formatDate as coreFormatDate } from "@moraqat/core";
 
 const STAGE_LABEL: Record<string, [string, string]> = {
   KITTEN: ["Kitten", "هريرة"],
@@ -95,8 +94,8 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
     breed && { icon: CatIcon, label: isAr ? "الفصيلة" : "Breed", value: breed, tint: "bg-butter/60" },
     (age || stage) && { icon: Cake, label: isAr ? "العمر" : "Age", value: (age ?? stage)!, tint: "bg-blush/50" },
     city && { icon: MapPin, label: isAr ? "المدينة" : "City", value: city, tint: "bg-sage/25" },
-    cat.gender === "FEMALE" && { emoji: "♀️", label: isAr ? "الجنس" : "Sex", value: isAr ? "أنثى" : "Female", tint: "bg-peach/60" },
-    cat.gender === "MALE" && { emoji: "♂️", label: isAr ? "الجنس" : "Sex", value: isAr ? "ذكر" : "Male", tint: "bg-peach/60" },
+    cat.gender === "FEMALE" && { label: isAr ? "الجنس" : "Sex", value: isAr ? "أنثى" : "Female", tint: "bg-peach/60" },
+    cat.gender === "MALE" && { label: isAr ? "الجنس" : "Sex", value: isAr ? "ذكر" : "Male", tint: "bg-peach/60" },
     ...answerFacts(ABOUT_Q.filter((q) => q.id !== "nickname"), ch?.about, isAr).map((f) => ({ ...f, tint: "bg-cream" })),
   ].filter(Boolean) as { icon?: React.ElementType; emoji?: string; label: string; value: string; tint: string }[];
 
@@ -112,14 +111,13 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
       </Link>
 
       {/* ── Hero: the cat, their decorated card, and the love ─────────────── */}
-      <section className="mesh-bg-rich relative overflow-hidden rounded-[2.5rem] border border-border bg-card shadow-e2">
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-e2">
         {cat.coverUrl && (
           <div className="absolute inset-x-0 top-0 h-40 overflow-hidden sm:h-52">
             <ImgWithFallback src={cat.coverUrl} alt="" className="size-full object-cover opacity-90" fallback={<span className="block size-full" />} />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-card" />
           </div>
         )}
-        <Sparkles preset="hero" />
         <div className="relative grid gap-10 p-6 pt-8 sm:p-10 lg:grid-cols-[1fr_minmax(0,22rem)] lg:items-center">
           <div className="text-center lg:text-start">
             {/* The photo, round, with their mood emoji pinned to it */}
@@ -140,15 +138,15 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-              {cat.isFeatured && <Chip className="bg-accent/15 text-accent-ink">✨ {isAr ? "مميّز" : "Featured"}</Chip>}
-              {cat.isFounding && <Chip className="bg-primary/10 text-primary">🪪 {isAr ? "عضو مؤسس" : "Founding member"}</Chip>}
+              {cat.isFeatured && <Chip className="bg-accent/15 text-accent-ink">{isAr ? catVerb(cat.gender, { m: "مميّز", f: "مميّزة", n: "في الواجهة" }) : "Featured"}</Chip>}
+              {cat.isFounding && <Chip className="bg-primary/10 text-primary">{isAr ? "عضو مؤسس" : "Founding member"}</Chip>}
             </div>
             <h1 className="mt-3 font-display text-5xl leading-tight sm:text-6xl">
               <span className="underline-marker">{name}</span>
             </h1>
             {nickname && (
               <p className="mt-2 text-lg text-muted-foreground">
-                {isAr ? "يدلّعونه: " : "Also known as "}
+                {isAr ? catVerb(cat.gender, { m: "يدلّعونه: ", f: "يدلّعونها: ", n: "اسم الدلع: " }) : "Also known as "}
                 <span className="font-medium text-foreground">{nickname}</span>
               </p>
             )}
@@ -175,15 +173,15 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
                 isAr={isAr}
                 className="rounded-full border border-border bg-card px-4 hover:bg-muted"
               />
-              <Button size="sm" className="btn-shine rounded-full px-5" onClick={share}>
+              <Button size="sm" className="px-5" onClick={share}>
                 {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
                 {isAr ? `شارك ${name}` : `Share ${name}`}
               </Button>
             </div>
 
             {cat.bio && (
-              <div className="relative mt-6 rounded-[1.75rem] border border-border bg-card/90 p-5 text-start shadow-e1 backdrop-blur">
-                <span aria-hidden className="absolute -top-3 start-6 rounded-full bg-blush px-3 py-0.5 text-xs font-medium">💬 {isAr ? "عنه" : "About"}</span>
+              <div className="relative mt-6 rounded-2xl border border-border bg-card/90 p-5 text-start shadow-e1 backdrop-blur">
+                <span aria-hidden className="absolute -top-3 start-6 rounded-full bg-blush px-3 py-0.5 text-xs font-medium">{isAr ? catVerb(cat.gender, { m: "عنه", f: "عنها", n: `عن ${name}` }) : "About"}</span>
                 <p className="text-base leading-relaxed text-foreground/90">{cat.bio}</p>
               </div>
             )}
@@ -214,7 +212,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
               />
             </div>
             {rp.isCustomised && (
-              <p className="mt-4 text-center text-xs text-muted-foreground">🎨 {isAr ? `صمّم أهله بطاقته بأنفسهم` : `Card styled by ${name}'s family`}</p>
+              <p className="mt-4 text-center text-xs text-muted-foreground">{isAr ? catVerb(cat.gender, { m: "صمّم أهله بطاقته بأنفسهم", f: "صمّم أهلها بطاقتها بأنفسهم", n: `صمّم أهل ${name} البطاقة بأنفسهم` }) : `Card styled by ${name}'s family`}</p>
             )}
           </div>
         </div>
@@ -242,7 +240,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
       {facts.length > 0 && (
         <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {facts.map((f) => (
-            <div key={f.label} className={cn("rounded-[1.5rem] border border-border/60 p-4", f.tint)}>
+            <div key={f.label} className={cn("rounded-xl border border-border/60 p-4", f.tint)}>
               <dt className="flex items-center gap-1.5 text-xs text-foreground/70">
                 {f.icon ? <f.icon className="size-3.5" aria-hidden /> : <span aria-hidden>{f.emoji}</span>} {f.label}
               </dt>
@@ -287,7 +285,7 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
               <div
                 key={p.id}
                 className={cn(
-                  "aspect-square overflow-hidden rounded-[1.75rem] bg-muted shadow-e1 transition-transform duration-300 hover:rotate-0 motion-reduce:transition-none",
+                  "aspect-square overflow-hidden rounded-2xl bg-muted shadow-e1 transition-transform duration-300 hover:rotate-0 motion-reduce:transition-none",
                   i % 3 === 0 ? "-rotate-1" : i % 3 === 1 ? "rotate-1" : "rotate-0"
                 )}
               >
@@ -305,15 +303,14 @@ export function CommunityProfileView({ cat, slug }: { cat: CommunityProfile; slu
       )}
 
       {/* ── The invitation: every visitor is one cat away from their own ID ── */}
-      <section className="mesh-bg-rich relative mt-12 overflow-hidden rounded-[2.5rem] border border-border bg-card px-6 py-12 text-center shadow-e2">
-        <Sparkles preset="panel" />
+      <section className="relative mt-12 overflow-hidden rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-e2">
         <Sticker rotate={-12} className="start-8 top-8 hidden md:block"><IlloSprig tone="leaf" className="h-14 w-auto opacity-70" /></Sticker>
         <p className="relative font-display text-4xl">{isAr ? "قطك يستاهل هوية مثل هذي" : "Your cat deserves one too"}</p>
         <p className="relative mx-auto mt-3 max-w-md text-muted-foreground">
           {isAr ? "هوية باسمه ورقمه، ومكان يحكي شخصيته — مجاناً، في أقل من دقيقتين." : "An ID with their name and number, and a page for their personality — free, in under two minutes."}
         </p>
         <Link href="/register" className="relative mt-6 inline-block">
-          <Button size="lg" className="btn-shine rounded-full px-8">
+          <Button size="lg" className="px-8">
             {isAr ? "سوّ هوية قطك" : "Create your cat's ID"} <ArrowRight className="size-4 rtl:rotate-180" />
           </Button>
         </Link>
@@ -360,15 +357,14 @@ function answerFacts(questions: Question[], answers: AnswerMap | undefined, isAr
 
 function CharacterPanel({ title, illo, tint, items }: { title: string; illo: "heart" | "fish" | "mouse"; tint: string; items: Fact[] }) {
   return (
-    <section className={cn("relative mt-8 overflow-hidden rounded-[2rem] border border-border/60 p-6 sm:p-8", tint)}>
-      <Sparkles preset="panel" />
+    <section className={cn("relative mt-8 overflow-hidden rounded-2xl border border-border/60 p-6 sm:p-8", tint)}>
       <div className="relative mb-5 flex items-center gap-3">
         <Illo3D name={illo} px={72} className="relative size-16 shrink-0 motion-safe:animate-float" />
         <h2 className="font-display text-3xl">{title}</h2>
       </div>
       <dl className="relative grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((f) => (
-          <div key={f.label} className="rounded-[1.5rem] bg-card/90 p-4 shadow-e1 backdrop-blur">
+          <div key={f.label} className="rounded-xl bg-card/90 p-4 shadow-e1 backdrop-blur">
             <dt className="text-xs text-muted-foreground">{f.label}</dt>
             <dd className="mt-1 flex items-start gap-2 text-base font-medium">
               <span aria-hidden className="text-lg leading-6">{f.emoji}</span>

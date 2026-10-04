@@ -14,9 +14,16 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moracat.co";
 export function generateMetadata(): Metadata {
   const isAr = cookies().get("locale")?.value !== "en";
   const title = isAr ? "مزايا الأعضاء" : "Member benefits";
-  const description = isAr
-    ? "سعر العضو عند شركاء مرقط المؤسّسين — عيادات بيطرية، عناية، ومتاجر مختارة بعناية. الهوية تفتح المزايا."
-    : "Your member rate at Moracat's founding partners — hand-picked vets, grooming and pet retail. The Cat ID unlocks the benefits.";
+  // Honest about the partner list (R006/R040): no network is described until
+  // one exists.
+  const description =
+    PARTNERS.length > 0
+      ? isAr
+        ? "سعر الأعضاء عند شركاء مرقط — عيادات وعناية ومتاجر مختارة بعناية. اعرض هوية قطك عند الشريك."
+        : "Your member rate at Moracat's partners — hand-picked vets, grooming and pet retail. Show your cat's ID at the partner."
+      : isAr
+        ? "ما عندنا شركاء حالياً — أول ما يتأكد شريك يظهر هنا مع ميزته بالضبط. وهوية قطك مجانية من اليوم."
+        : "No partners yet — the moment one is confirmed, it appears here with its exact benefit. Your cat's ID is free from today.";
   const url = `${SITE}/benefits`;
   return {
     title,
@@ -49,12 +56,12 @@ export default function BenefitsPage() {
     {
       icon: BadgeCheck,
       title: isAr ? "اعرضها عند الشريك" : "Show it at a partner",
-      body: isAr ? "بيّن هوية قطك عند أي شريك مؤسّس ليُطبَّق سعر العضو." : "Present your cat's ID at any founding partner to apply your member rate.",
+      body: isAr ? "بيّن هوية قطك عند الشريك ليُطبَّق سعر الأعضاء." : "Present your cat's ID at the partner to apply your member rate.",
     },
     {
       icon: Sparkles,
       title: isAr ? "سعرك محفوظ" : "Your rate, honoured",
-      body: isAr ? "سعر العضو مثبّت لك — تقدير لعضويتك، مو قسيمة خصم." : "Your member rate is honoured — recognition of your membership, not a coupon.",
+      body: isAr ? "سعر الأعضاء محفوظ لك — تقدير لعضويتك، مو قسيمة خصم." : "Your member rate is honoured — recognition of your membership, not a coupon.",
     },
   ];
 
@@ -64,21 +71,28 @@ export default function BenefitsPage() {
       <main id="main" tabIndex={-1} className="container max-w-5xl py-12 outline-none sm:py-16">
         {/* Hero — member rates framed as recognition, never coupon-shouting (R085). */}
         <section className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+          <p className="text-sm font-semibold text-primary">
             {isAr ? "مزايا الأعضاء" : "Member benefits"}
           </p>
           <h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            {isAr ? "عضويتك مُقدَّرة عند شركائنا" : "Your membership, recognised at our partners"}
+            {hasPartners
+              ? isAr ? "عضويتك مُقدَّرة عند شركائنا" : "Your membership, recognised at our partners"
+              : isAr ? "مزايا الأعضاء — نبنيها شريكاً شريكاً" : "Member benefits — built one partner at a time"}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            {isAr
-              ? "الهوية تفتح سعر العضو عند شبكة مختارة بعناية من العيادات البيطرية والعناية والمتاجر — نبنيها شريكاً شريكاً، ونقول لك بصدق وين وصلنا."
-              : "The Cat ID unlocks your member rate across a hand-picked network of vets, grooming and pet retail — built one partner at a time, and we'll always tell you honestly where we've reached."}
+            {hasPartners
+              ? isAr
+                ? "اعرض هوية قطك عند شركائنا من العيادات والعناية والمتاجر، ويُطبَّق سعر الأعضاء — ونقول لك بصدق وين وصلنا."
+                : "Show your cat's ID at our partner vets, groomers and shops and your member rate applies — and we'll always tell you honestly where we've reached."
+              : isAr
+                ? "ما عندنا شركاء حالياً، ونقولها بصراحة. أول ما يتأكد شريك — عيادة أو عناية أو متجر — يظهر هنا مع ميزته بالضبط."
+                : "We don't have partners yet, and we'd rather say so. The moment one is confirmed — a vet, a groomer or a shop — it appears here with its exact benefit."}
           </p>
         </section>
 
-        {/* How it works — true for a show-your-ID flow; claims no automated scan
-            or savings tally that isn't built yet (R040). */}
+        {/* How it works — shown only once a partner exists: describing a
+            working network with zero partners is a claim we can't show (R040). */}
+        {hasPartners && (
         <section className="mt-14 sm:mt-20">
           <div className="grid gap-4 sm:grid-cols-3 sm:gap-6">
             {steps.map((s, i) => (
@@ -95,12 +109,13 @@ export default function BenefitsPage() {
             ))}
           </div>
         </section>
+        )}
 
         {/* Partners — real signed partners, or an honest welcome while the first
             founding partners are being confirmed (R111, never a void; R006). */}
         <section className="mt-16 sm:mt-24">
           <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            {isAr ? "الشركاء المؤسّسون" : "Founding partners"}
+            {isAr ? "الشركاء" : "Partners"}
           </h2>
 
           {hasPartners ? (
@@ -144,11 +159,8 @@ export default function BenefitsPage() {
               <Illo3D name="cat" className="size-32" px={128} />
               <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
                 {isAr
-                  ? "نوقّع أول شركائنا المؤسّسين الآن — عيادات وعناية ومتاجر نختارها بعناية عشان قطك يستاهل الأفضل. أول ما نجهّز شريكاً، يظهر هنا، ونخبر الأعضاء أول بأول."
-                  : "We're signing our first founding partners now — vets, grooming and shops we're choosing carefully, because your cat deserves the best. The moment a partner is confirmed, they'll appear here, and members hear first."}
-              </p>
-              <p className="text-sm text-muted-foreground/80">
-                {isAr ? "سوِّ هوية قطك اليوم وتكون أول من يعرف." : "Create your cat's ID today and be first to know."}
+                  ? "ما فيه شركاء بعد. نختارهم بعناية — وأول ما يتأكد شريك، يظهر هنا مع الميزة اللي يقدّمها بالضبط."
+                  : "No partners yet. We're choosing them carefully — the moment one is confirmed, it appears here with the exact benefit it offers."}
               </p>
             </div>
           )}
@@ -168,14 +180,14 @@ export default function BenefitsPage() {
         <section className="mt-16 flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-8 text-center shadow-e1 sm:mt-24 sm:p-12">
           <IlloPaw tone="peach" className="size-8 rotate-[12deg]" />
           <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            {isAr ? "الهوية تفتح كل هذا" : "The ID unlocks all of this"}
+            {isAr ? "هوية قطك مجانية من اليوم" : "Your cat's ID is free from today"}
           </h2>
           <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-            {isAr ? "أنشئ هوية مرقط لقطك مجاناً — وكن من الأعضاء المؤسّسين." : "Create your cat's Moracat ID for free — and become a founding member."}
+            {isAr ? "سجّل قطك مجاناً — في أقل من دقيقتين." : "Register your cat for free — in under two minutes."}
           </p>
           <Link href="/register">
             <Button size="lg" className="mt-1">
-              {isAr ? "سوِّ هوية قطك" : "Create your cat's ID"} <ArrowRight className="size-4 rtl:rotate-180" />
+              {isAr ? "سجّل قطك" : "Register your cat"} <ArrowRight className="size-4 rtl:rotate-180" />
             </Button>
           </Link>
         </section>

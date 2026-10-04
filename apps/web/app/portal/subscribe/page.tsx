@@ -1,11 +1,13 @@
 "use client";
 
 // ════════════════════════════════════════════════════════════════════════
-//  Membership — two modes on one route, switched by commerceEnabled():
+//  Care plans — two modes on one route, switched by commerceEnabled():
 //
-//  • Commerce OFF (Community Mode): the launch-waitlist experience. No
-//    checkout, no payment, no activation path — visitors see the benefits,
-//    a premium preview, and can join the launch waitlist.
+//  • Commerce OFF (Community Mode): the honest "later" page. No checkout,
+//    no payment, no activation path — visitors see what a care plan will be,
+//    a preview, and can ask to be told when plans open. Lexicon (R087): the
+//    paid product is «خطة العناية»; the free Cat ID is never "inactive", and
+//    partner rates appear only when PARTNERS is non-empty (R006/R040).
 //  • Commerce ON: D2 — the Plan Builder. The plan is COMPUTED from the cat's
 //    own profile via the shared feeding engine, never chosen from a tier
 //    table (Design Authority amendment 2026-07-10). Adjusting is allowed,
@@ -50,7 +52,9 @@ import { ProductIntro } from "@/components/product-intro";
 import { QueryError } from "@/components/query-error";
 import { LaunchDeliveryNote } from "@/components/launch-note";
 import { IlloHeart, IlloPaw } from "@/components/illustrations";
-import { formatNumber } from "@moraqat/core";
+import { formatSAR, formatSARMonthly } from "@moraqat/core";
+import { PARTNERS } from "@/lib/partners";
+import { friendlyError } from "@/lib/errors";
 
 type Interest = "KITTEN" | "STARTER" | "STANDARD" | "PREMIUM" | "unsure";
 
@@ -198,7 +202,7 @@ function PlanBuilderInner() {
           <IlloPaw tone="butter" className="size-20" />
           <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
             {isAr
-              ? "نفصّل الباقة على مقاس قطك — عرّفنا عليه أولاً ونلاقي له الأنسب"
+              ? "نفصّل خطة العناية على مقاس قطك — عرّفنا عليه أولاً ونلاقي له الأنسب"
               : "We tailor the box to your cat — introduce them first and we'll find their best fit"}
           </p>
           <Button onClick={() => router.push("/portal/cats")}>
@@ -238,7 +242,7 @@ function PlanBuilderInner() {
           </h1>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             {isAr
-              ? "أربعة أسئلة سريعة — ونرشّح الباقة اللي تناسب استهلاككم فعلاً، بلا تخمين."
+              ? "أربعة أسئلة سريعة — ونرشّح الخطة اللي تناسب استهلاككم فعلاً، بلا تخمين."
               : "Four quick questions — then we recommend the box that fits what you actually use, no guessing."}
           </p>
         </div>
@@ -305,7 +309,7 @@ function PlanBuilderInner() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Result hero — "from your answers, here's the fit" (never auto-picked). */}
-      <section className="relative overflow-hidden rounded-3xl border border-accent/20 bg-gradient-to-br from-accent/[0.10] via-background to-primary/[0.06] p-7 shadow-e2 sm:p-9">
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-7 shadow-e1 sm:p-9">
         <IlloHeart
           tone="pink"
           className="pointer-events-none absolute -top-3 end-4 size-12 rotate-[12deg] opacity-40"
@@ -322,11 +326,11 @@ function PlanBuilderInner() {
           {isAr ? "توصيتنا لك" : "Our recommendation"}
         </Badge>
         <h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          {isAr ? `باقة ${catLine} — على مقاس استهلاككم` : `${catLine}'s plan — sized to how you shop`}
+          {isAr ? `خطة عناية ${catLine} — على مقاس استهلاككم` : `${catLine}'s care plan — sized to how you shop`}
         </h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
           {isAr
-            ? "حسب إجاباتكم، هذي الباقة الأنسب — والقرار لكم، تقدرون تغيّرونها."
+            ? "حسب إجاباتكم، هذي الخطة الأنسب — والقرار لكم، تقدرون تغيّرونها."
             : "From your answers, this is the best fit — and it's your call; you can still change it."}
         </p>
       </section>
@@ -352,7 +356,7 @@ function PlanBuilderInner() {
                 {isAr ? selectedPlan.nameAr : selectedPlan.nameEn}
               </p>
               <p className="mt-1.5 font-display text-2xl font-bold">
-                <span className="tabular" dir="ltr">{selectedPlan.price} SAR</span>
+                <span className="tabular">{formatSAR(selectedPlan.price, isAr ? "ar" : "en")}</span>
                 <span className="ms-1.5 text-sm font-normal text-muted-foreground">
                   {isAr ? "/ شهرياً" : "/ month"}
                 </span>
@@ -362,20 +366,12 @@ function PlanBuilderInner() {
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {isAr ? RENEWAL_SHORT.ar : RENEWAL_SHORT.en}
               </p>
-              {/* A savings claim ONLY where the API's market basket proves one
-                  (R006). Essentials/Kitten serialise null — they get the honest
-                  "market price, delivered" framing instead, never a وفر line. */}
-              {selectedPlan.marketSavingsPct != null ? (
-                <p className="mt-1 text-xs font-semibold text-success">
-                  {isAr
-                    ? `أوفر بنسبة ${formatNumber(selectedPlan.marketSavingsPct, "ar")}٪ من نفس السلة بأسعار السوق`
-                    : `${selectedPlan.marketSavingsPct}% below the same basket at market prices`}
-                </p>
-              ) : (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {isAr ? "بسعر السوق — يوصلك بابك" : "Market price — delivered to your door"}
-                </p>
-              )}
+              {/* No comparative price claim (R006): the July 2026 market sweep
+                  did not support one, so we say what the plan does — never that
+                  it costs less than buying the same things elsewhere. */}
+              <p className="mt-1 text-xs text-muted-foreground">
+                {isAr ? "يوصلك بابك كل شهر" : "Delivered to your door every month"}
+              </p>
             </div>
 
             {/* Transparent reasons, straight from the member's own answers (R006). */}
@@ -463,17 +459,9 @@ function PlanBuilderInner() {
                           </span>
                         </span>
                         <span className="shrink-0 text-end">
-                          <span className="block font-display text-sm font-bold tabular" dir="ltr">
-                            {p.price} <span className="text-xs font-normal">SAR</span>
+                          <span className="block font-display text-sm font-bold tabular">
+                            {formatSAR(p.price, isAr ? "ar" : "en")}
                           </span>
-                          {/* Savings badge only from the API's market data (R006). */}
-                          {p.marketSavingsPct != null && (
-                            <span className="block text-xs font-medium text-success">
-                              {isAr
-                                ? `أوفر ${formatNumber(p.marketSavingsPct, "ar")}٪ من السوق`
-                                : `${p.marketSavingsPct}% below market`}
-                            </span>
-                          )}
                         </span>
                       </button>
                     );
@@ -500,8 +488,8 @@ function PlanBuilderInner() {
             <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
               <PauseCircle className="size-3.5 shrink-0" aria-hidden />
               {isAr
-                ? "توقّف أو ألغِ متى ما تبي — من صفحة اشتراكك، بضغطة"
-                : "Pause or cancel anytime — one tap from your subscription page."}
+                ? "توقّف أو ألغِ متى ما تبي — من صفحة خطة العناية، بضغطة"
+                : "Pause or cancel anytime — one tap from your care plan page."}
             </p>
           </div>
         </Card>
@@ -550,7 +538,7 @@ function Segmented({
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Commerce OFF — Community Mode: "Memberships are launching soon"
+   Commerce OFF — Community Mode: "Care plans open later"
    ══════════════════════════════════════════════════════════════════════════ */
 
 function ComingSoonInner() {
@@ -596,64 +584,67 @@ function ComingSoonInner() {
     onSuccess: () => {
       setJoined(true);
       toast({
-        title: isAr ? "سجّلناك في قائمة الإطلاق 🎉" : "You're on the launch list 🎉",
+        title: isAr ? "سجّلناك في قائمة الانتظار" : "You're on the waitlist",
         variant: "success",
       });
     },
-    onError: (e: Error) => toast({ title: e.message, variant: "error" }),
+    onError: (e: unknown) => {
+      const f = friendlyError(e, isAr);
+      toast({ title: f.title, description: f.message, variant: "error" });
+    },
   });
 
+  // What a care plan WILL be — only things the plan itself will do. The Cat
+  // ID is already fully working and free (never "activated" by paying), and
+  // partner rates are listed only once a partner actually exists (R006/R040).
   const benefits = [
     {
-      // Member rates, not discounts — recognition, never coupon shouting (R085).
-      icon: BadgeCheck,
-      titleAr: "أسعار الأعضاء",
-      titleEn: "Member rates",
-      bodyAr: "سعر الأعضاء عند شركائنا المؤسسين.",
-      bodyEn: "Your member rate, honoured at our founding partners.",
-    },
-    {
-      icon: Stethoscope,
-      titleAr: "مزايا العيادات",
-      titleEn: "Vet perks",
-      bodyAr: "سعر الأعضاء في العيادات والفحوصات لدى شركائنا.",
-      bodyEn: "Your member rate at partner clinics and check-ups.",
-    },
-    {
       icon: Truck,
-      titleAr: "توصيل منسّق",
-      titleEn: "Curated deliveries",
-      bodyAr: "صناديق مختارة لقطك تصل في الوقت — بدون تفكير.",
-      bodyEn: "Hand-picked boxes for your cat, delivered on time — effortless.",
+      titleAr: "توصيل شهري",
+      titleEn: "Monthly delivery",
+      bodyAr: "أكل ورمل قطك يوصلون بابك كل شهر — في الرياض وجدة أولاً.",
+      bodyEn: "Your cat's food and litter at your door every month — Riyadh and Jeddah first.",
     },
     {
       icon: ShieldCheck,
-      titleAr: "هوية مفعّلة",
-      titleEn: "Active Cat ID",
-      bodyAr: "هوية قطك تصبح مفعّلة مع مزايا وامتيازات الأعضاء.",
-      bodyEn: "Your Cat ID becomes active with full member benefits.",
+      titleAr: "مبنية من ملف قطك",
+      titleEn: "Built from your cat's profile",
+      bodyAr: "نرشّح الخطة من عمر قطك ووزنه وعدد قطط البيت — والقرار لك.",
+      bodyEn: "We suggest the plan from your cat's age, weight and household — the choice stays yours.",
+    },
+    ...(PARTNERS.length > 0
+      ? [
+          {
+            // Member rates, not discounts — recognition, never coupon shouting (R085).
+            icon: BadgeCheck,
+            titleAr: "سعر الأعضاء",
+            titleEn: "Member rates",
+            bodyAr: "سعر الأعضاء عند شركائنا.",
+            bodyEn: "Your member rate, honoured at our partners.",
+          },
+        ]
+      : []),
+    {
+      icon: Stethoscope,
+      titleAr: "هوية قطك تظل مجانية",
+      titleEn: "The Cat ID stays free",
+      bodyAr: "الهوية والسجل الصحي والمجتمع مجانية دايم — مع خطة أو بدونها.",
+      bodyEn: "The ID, the health record and the community stay free — with or without a plan.",
     },
   ];
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden rounded-3xl border border-accent/20 bg-gradient-to-br from-accent/[0.10] via-background to-primary/[0.06] p-7 shadow-e2 sm:p-9">
-        <IlloHeart
-          tone="pink"
-          className="pointer-events-none absolute -top-3 end-4 size-12 rotate-[12deg] opacity-40"
-        />
-        <Badge variant="secondary" className="gap-1.5">
-          <Sparkles className="size-3.5" />
-          {isAr ? "قريباً" : "Coming soon"}
-        </Badge>
-        <h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          {isAr ? "العضويات على وشك الإطلاق" : "Memberships are launching soon"}
+      <section className="rounded-2xl border border-border bg-card p-6 shadow-e1 sm:p-8">
+        <Badge variant="secondary">{isAr ? "لاحقاً" : "Later"}</Badge>
+        <h1 className="mt-3 font-display text-3xl tracking-tight sm:text-4xl">
+          {isAr ? "خطط العناية الشهرية تفتح لاحقاً" : "Monthly care plans open later"}
         </h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
           {isAr
-            ? `هوية ${catLine || "قطك"} صدرت وجاهزة. نحن نجهّز العضويات بعناية — وفّرنا لك مكانك في قائمة الإطلاق لتكون أول من يعرف.`
-            : `${catLine || "Your cat"}'s ID is issued and ready. We're crafting memberships with care — save your spot and be the first to know.`}
+            ? `هوية ${catLine || "قطك"} جاهزة ومجانية دايم. خطط العناية نجهّزها بعناية — نعلن موعدها هنا وبالإيميل لمن وافق.`
+            : `${catLine || "Your cat"}'s ID is ready, and free for good. We're preparing care plans with care — we'll announce the date here, and by email to those who agreed.`}
         </p>
       </section>
 
@@ -680,7 +671,7 @@ function ComingSoonInner() {
           <div className="mb-3 flex items-center gap-2">
             <Lock className="size-3.5 text-muted-foreground" />
             <h2 className="font-display text-sm font-semibold text-muted-foreground">
-              {isAr ? "لمحة عن الباقات عند الإطلاق" : "A preview of plans at launch"}
+              {isAr ? "لمحة عن خطط العناية" : "A preview of the care plans"}
             </h2>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -693,12 +684,11 @@ function ComingSoonInner() {
                 <div className="mb-1 flex items-center justify-between">
                   <span className="font-display font-semibold">{isAr ? p.nameAr : p.nameEn}</span>
                   <Badge variant="outline" className="text-xs">
-                    {isAr ? "قريباً" : "Soon"}
+                    {isAr ? "لاحقاً" : "Later"}
                   </Badge>
                 </div>
-                <p className="font-display text-xl font-bold tabular text-muted-foreground" dir="ltr">
-                  {p.price}
-                  <span className="text-xs font-normal"> SAR/mo</span>
+                <p className="font-display text-xl font-bold tabular text-muted-foreground">
+                  {formatSARMonthly(p.price, isAr ? "ar" : "en")}
                 </p>
                 <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                   {p.contents.slice(0, 4).map((c) => (
@@ -734,8 +724,8 @@ function ComingSoonInner() {
                   {user?.email}
                 </span>
                 {isAr
-                  ? " لحظة فتح العضويات. لا حاجة لأي إجراء الآن."
-                  : " the moment memberships open. Nothing to do for now."}
+                  ? " أول ما تفتح خطط العناية. ما يلزمك تسوي شي الحين."
+                  : " as soon as care plans open. Nothing to do for now."}
               </p>
             </div>
           </Card>
@@ -744,12 +734,12 @@ function ComingSoonInner() {
             <div className="flex items-center gap-2">
               <BellRing className="size-4 text-accent-foreground" />
               <h2 className="font-display text-lg font-semibold">
-                {isAr ? "أخبرني عند الإطلاق" : "Notify me at launch"}
+                {isAr ? "أبغى أعرف أول ما تفتح خطط العناية" : "Tell me when care plans open"}
               </h2>
             </div>
             <p className="text-sm text-muted-foreground">
               {isAr
-                ? "أي باقة تهمّك أكثر؟ (اختياري)"
+                ? "أي خطة تهمّك أكثر؟ (اختياري)"
                 : "Which plan interests you most? (optional)"}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -794,7 +784,7 @@ function ComingSoonInner() {
                   ) : (
                     <BellRing className="size-4" />
                   )}
-                  {isAr ? "أخبرني عند الإطلاق" : "Notify me"}
+                  {isAr ? "بلّغوني بالإيميل" : "Email me"}
                 </Button>
               </div>
             </div>

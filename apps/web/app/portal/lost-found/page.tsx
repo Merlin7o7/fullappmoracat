@@ -74,7 +74,7 @@ function PortalLostFoundInner() {
     <div className="mx-auto max-w-4xl space-y-6">
       <IlloHeader
         name="cat"
-        tone="cream"
+        tone="distress"
         align="start"
         eyebrow={isAr ? "مفقود وموجود" : "Lost & Found"}
         title={isAr ? "إعلاناتي" : "My notices"}
@@ -133,7 +133,7 @@ function PortalLostFoundInner() {
       ) : (data?.items.length ?? 0) === 0 ? (
         <IlloEmpty
           name="paw"
-          tone="sage"
+          tone="distress"
           title={isAr ? "ما عندك إعلان — وهذا الأفضل" : "No notices — which is how it should stay"}
           body={
             isAr
@@ -190,8 +190,8 @@ function NoticeRow({
         title:
           status === "REUNITED"
             ? isAr
-              ? "الحمد لله 🤍"
-              : "Wonderful news 🤍"
+              ? "الحمد لله"
+              : "Wonderful news"
             : status === "CLOSED"
               ? isAr
                 ? "أغلقنا الإعلان"
@@ -297,11 +297,11 @@ function NoticeRow({
                   {setStatus.isPending ? <Loader2 className="size-4 animate-spin" /> : <Home className="size-4" />}
                   {post.kind === "LOST"
                     ? isAr
-                      ? "رجع لي 🎉"
-                      : "They're home 🎉"
+                      ? "رجع لي"
+                      : "They're home"
                     : isAr
-                      ? "وصل صاحبه 🎉"
-                      : "Owner found them 🎉"}
+                      ? "وصل صاحبه"
+                      : "Owner found them"}
                 </Button>
                 <Button
                   size="sm"

@@ -53,7 +53,9 @@ export function ExploreHome({ isAr, firstName }: { isAr: boolean; firstName: str
         ? "كل واحد منهم يحمل هوية مرقط — وتنتقل معه هويته وسجله الصحي كاملاً لبيتك."
         : "Each one holds a Moracat Cat ID — and it comes to you with their whole health record.",
       count: adoption.data?.total,
-      countLabel: isAr ? "ينتظرون" : "waiting",
+      // "Label: N" rather than "N label" — no Arabic number agreement to get
+      // wrong («5 إعلان»), whatever the count (R110).
+      countLabel: isAr ? "بانتظار بيت" : "Waiting for a home",
     },
     {
       href: "/lost-found",
@@ -65,7 +67,7 @@ export function ExploreHome({ isAr, firstName }: { isAr: boolean; firstName: str
         ? "لو لقيت قطاً في حيّك، تقدر تساعده يرجع لأهله — حتى لو ما عندك قط."
         : "If you find a cat in your neighbourhood, you can help them get home — no cat of your own required.",
       count: lostFound.data ? lostFound.data.lost + lostFound.data.found : undefined,
-      countLabel: isAr ? "إعلان قائم" : "open notices",
+      countLabel: isAr ? "إعلانات قائمة" : "Open notices",
     },
     {
       href: "/community",
@@ -77,7 +79,7 @@ export function ExploreHome({ isAr, firstName }: { isAr: boolean; firstName: str
         ? "تعرّف على قطط الأعضاء في كل مدن السعودية — وشوف كيف تكون الهوية."
         : "Meet member cats across Saudi Arabia — and see what a Cat ID actually looks like.",
       count: census.data?.registered,
-      countLabel: isAr ? "قط في التعداد" : "cats counted",
+      countLabel: isAr ? "قطط مسجّلة في مرقط" : "Cats registered on Moracat",
     },
   ];
 
@@ -94,16 +96,16 @@ export function ExploreHome({ isAr, firstName }: { isAr: boolean; firstName: str
             <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
               {firstName
                 ? isAr
-                  ? `حياك الله يا ${firstName} 👋`
-                  : `Welcome, ${firstName} 👋`
+                  ? `حياك الله يا ${firstName}`
+                  : `Welcome, ${firstName}`
                 : isAr
-                  ? "حياك الله في مرقط 👋"
-                  : "Welcome to Moracat 👋"}
+                  ? "حياك الله في مرقط"
+                  : "Welcome to Moracat"}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               {isAr
-                ? "ما عندك قط بعد — ولا يهم. حسابك شغّال من الحين: تصفّح القطط اللي تدوّر بيتاً، وتابع التعداد، وساعد قطة ضايعة ترجع لأهلها. وأول ما يجيك قط، هويته تنطبع في أقل من دقيقتين."
-                : "No cat yet — that's completely fine. Your account works from today: browse the cats looking for a home, follow the census, and help a lost cat get back. And the moment a cat does arrive, their Cat ID takes under two minutes."}
+                ? "ما عندك قط بعد — ولا يهم. حسابك شغّال من الحين: تصفّح القطط اللي تدوّر بيتاً، وتابع سجل مرقط، وساعد قطة ضايعة ترجع لأهلها. وأول ما يجيك قط، هويته تنطبع في أقل من دقيقتين."
+                : "No cat yet — that's completely fine. Your account works from today: browse the cats looking for a home, follow the Moracat register, and help a lost cat get back. And the moment a cat does arrive, their Cat ID takes under two minutes."}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
               <Link href="/adopt">
@@ -140,7 +142,7 @@ export function ExploreHome({ isAr, firstName }: { isAr: boolean; firstName: str
               </div>
               {d.count != null && (
                 <p className="text-xs font-medium text-primary">
-                  {formatNumber(d.count, isAr ? "ar" : "en")} {d.countLabel}
+                  {d.countLabel}: {formatNumber(d.count, isAr ? "ar" : "en")}
                 </p>
               )}
             </Card>

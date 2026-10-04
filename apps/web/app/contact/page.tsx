@@ -5,7 +5,8 @@ import { ContactView } from "@/components/contact-view";
 
 export function generateMetadata(): Metadata {
   const isAr = cookies().get("locale")?.value !== "en";
-  const title = "Contact · تواصل معنا";
+  // One language per title — Arabic under ar (the default), English under en (R101).
+  const title = isAr ? "تواصل معنا" : "Contact";
   const description = isAr
     ? `تواصل مع فريق مرقط — إنستغرام ${CONTACT.instagramHandle}، هاتف ${CONTACT.phoneDisplay}، وبريد الدعم والخصوصية. تُشغَّل المنصة من قِبل ${LEGAL_ENTITY.ar}.`
     : `Reach the Moracat team — Instagram ${CONTACT.instagramHandle}, phone ${CONTACT.phoneDisplay}, and support & privacy email. Operated by ${LEGAL_ENTITY.en}.`;

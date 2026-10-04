@@ -66,3 +66,6 @@ export * from "./format";
 // The care schedule — recorded due dates, routine cadence, and (only with a
 // vet-approved protocol) proposed kitten doses (retention engine, W9).
 export * from "./care-schedule";
+
+// Cat-subject Arabic grammar: gendered verbs/pronouns, never a silent masculine.
+export * from "./grammar";

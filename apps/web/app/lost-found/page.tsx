@@ -7,7 +7,6 @@ import { Button } from "@moraqat/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { LostFoundBrowse } from "@/components/lost-found-browse";
-import { Illo3D } from "@/components/illo-3d";
 import { Sticker, IlloPaw } from "@/components/illustrations";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
@@ -52,8 +51,10 @@ export default function LostFoundPage() {
             <Sticker rotate={9} className="end-10 top-10 hidden md:block">
               <IlloPaw tone="green" className="size-8 opacity-70" />
             </Sticker>
-            {/* One 3D object, at size: the cat everyone here is looking for. */}
-            <Illo3D name="cat" className="mx-auto mb-5 block size-28" px={112} priority />
+            {/* No 3D on a distress surface (audit 2026-10-04 Part 05) — a flat, still mark. */}
+            <span aria-hidden className="mx-auto mb-5 grid size-14 place-items-center rounded-full border border-border bg-card text-foreground/70">
+              <Search className="size-6" />
+            </span>
             <h1 className="mx-auto max-w-2xl font-display text-4xl font-semibold tracking-tight sm:text-5xl">
               {isAr ? "مفقود وموجود" : "Lost & Found"}
             </h1>

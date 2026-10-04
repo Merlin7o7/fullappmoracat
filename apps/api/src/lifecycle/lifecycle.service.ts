@@ -608,9 +608,9 @@ export class LifecycleService {
     // event, not a UTC instant) while returning only today's handful of rows.
     const { month: todayMonth, day: todayDay } = today;
     const cats = await this.prisma.$queryRaw<
-      { id: string; name: string; userId: string; birthDate: Date | null; idIssuedAt: Date | null }[]
+      { id: string; name: string; gender: string; userId: string; birthDate: Date | null; idIssuedAt: Date | null }[]
     >`
-      SELECT id, name, "userId", "birthDate", "idIssuedAt"
+      SELECT id, name, gender::text AS gender, "userId", "birthDate", "idIssuedAt"
       FROM cats
       WHERE status = 'ACTIVE'
         AND "deletedAt" IS NULL
@@ -638,7 +638,7 @@ export class LifecycleService {
             this.notifications.emit(c.userId, {
               category: "SYSTEM",
               type: "cat_birthday",
-              params: { name: c.name, age: String(age) },
+              params: { name: c.name, age: String(age), gender: c.gender },
               data: { catId: c.id },
             });
           });
@@ -652,7 +652,7 @@ export class LifecycleService {
             this.notifications.emit(c.userId, {
               category: "SYSTEM",
               type: "member_anniversary",
-              params: { name: c.name, years: String(years) },
+              params: { name: c.name, years: String(years), gender: c.gender },
               data: { catId: c.id },
             });
           });

@@ -38,10 +38,14 @@ async function verify(token: string): Promise<Verification> {
   }
 }
 
-export const metadata: Metadata = {
-  title: "Verify certificate · Moracat",
-  robots: { index: false, follow: false },
-};
+// One language per title — the root template appends the brand (R101).
+export function generateMetadata(): Metadata {
+  const isAr = cookies().get("locale")?.value !== "en";
+  return {
+    title: isAr ? "التحقق من الشهادة" : "Verify certificate",
+    robots: { index: false, follow: false },
+  };
+}
 
 const STANDING: Record<string, { ar: string; en: string }> = {
   UP_TO_DATE: { ar: "التطعيمات محدّثة", en: "Vaccinations up to date" },

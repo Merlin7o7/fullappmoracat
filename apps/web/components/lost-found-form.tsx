@@ -117,8 +117,8 @@ export function LostFoundForm({
               ? "خذ نفس. املأ اللي تقدر عليه الحين — تقدر تكمّل الباقي بعدين، والإعلان ينشر على طول."
               : "Take a breath. Fill in what you can right now — you can add the rest later, and the notice goes up immediately."
             : isAr
-              ? "شكراً لك 🤍 أهم شي: الوصف، والمكان، ورقم الشريحة لو تقدر تقرأه عند أقرب عيادة."
-              : "Thank you 🤍 What matters most: the description, the place, and a microchip number if a nearby clinic can scan them."}
+              ? "شكراً لك. أهم شي: الوصف، والمكان، ورقم الشريحة لو تقدر تقرأه عند أقرب عيادة."
+              : "Thank you. What matters most: the description, the place, and a microchip number if a nearby clinic can scan them."}
         </p>
       </div>
 

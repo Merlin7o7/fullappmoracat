@@ -65,7 +65,7 @@ export function LostFoundView({ id }: { id: string }) {
       <div className="mx-auto max-w-2xl px-4 py-12">
         <IlloEmpty
           name="mouse"
-          tone="peach"
+          tone="distress"
           float={false}
           title={isAr ? "ما لقينا هذا الإعلان" : "We couldn't find this notice"}
           body={isAr ? "يمكن رجع القط لأهله وأُغلق الإعلان." : "The cat may be home and the notice closed."}
@@ -264,8 +264,8 @@ export function LostFoundView({ id }: { id: string }) {
               <p className="rounded-2xl bg-muted/60 p-4 text-center text-sm text-muted-foreground">
                 {home
                   ? isAr
-                    ? "هذا القط رجع لأهله 🎉"
-                    : "This cat made it home 🎉"
+                    ? "هذا القط رجع لأهله"
+                    : "This cat made it home"
                   : isAr
                     ? "هذا الإعلان مغلق."
                     : "This notice is closed."}
@@ -343,8 +343,8 @@ export function LostFoundView({ id }: { id: string }) {
           toast({
             title: isAr ? "وصلت رسالتك" : "Your message is on its way",
             description: isAr
-              ? "أبلغنا صاحب الإعلان على طول. شكراً لك 🤍"
-              : "We've told them right away. Thank you 🤍",
+              ? "أبلغنا صاحب الإعلان على طول. شكراً لك"
+              : "We've told them right away. Thank you",
           });
           void queryClient.invalidateQueries({ queryKey: ["lost-found-post", id] });
         }}

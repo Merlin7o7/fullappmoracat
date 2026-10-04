@@ -260,8 +260,8 @@ export default async function HealthSummaryPage({ params }: { params: { token: s
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
           <PrintButton label={t("اطبع الملخص", "Print summary")} />
-          <Link href="/vet-directory" className="text-xs text-muted-foreground underline underline-offset-4">
-            {t("عيادة؟ انضم لشبكة مرقط", "A clinic? Join the Moracat network")}
+          <Link href="/vet/apply" className="text-xs text-muted-foreground underline underline-offset-4">
+            {t("عيادة؟ اعرف كيف ننضم الشركاء", "A clinic? See how partners join")}
           </Link>
         </div>
       </footer>
