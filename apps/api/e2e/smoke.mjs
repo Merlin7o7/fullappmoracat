@@ -125,11 +125,14 @@ ok(badCity.status === 400, "an unknown city code is rejected (400), never defaul
   const noCity = await call("/cats", "POST", { name: "NoCity", activityLevel: "LOW", isIndoor: true, gender: "MALE", birthDate: "2023-01-01" }, C);
   ok(noCity.status === 201 && noCity.json?.cityCode === null, "a cat without a city is issued (city comes later, never defaulted)");
 }
-for (const [field, body] of [
-  ["gender", { name: "NoSex", activityLevel: "LOW", isIndoor: true, birthDate: "2023-01-01", cityCode: "riyadh" }],
-  ["birthDate", { name: "NoAge", activityLevel: "LOW", isIndoor: true, gender: "MALE", cityCode: "riyadh" }],
-]) {
-  ok((await call("/cats", "POST", body, C)).status === 400, `${field} is required at registration`);
+// Audit 2026-10-04 (R016, six inputs): sex and age are no longer asked at
+// sign-up — they're invited on the profile. A cat without them is issued with
+// sex UNKNOWN and no birth date: recorded as unknown, never guessed.
+{
+  const noSex = await call("/cats", "POST", { name: "NoSex", activityLevel: "LOW", isIndoor: true, birthDate: "2023-01-01", cityCode: "riyadh" }, C);
+  ok(noSex.status === 201 && noSex.json?.gender === "UNKNOWN", "a cat without a sex is issued as UNKNOWN (never guessed)");
+  const noAge = await call("/cats", "POST", { name: "NoAge", activityLevel: "LOW", isIndoor: true, gender: "MALE", cityCode: "riyadh" }, C);
+  ok(noAge.status === 201 && noAge.json?.birthDate == null, "a cat without a birth date is issued with none (never guessed)");
 }
 
 // A shared household number must fail as a sentence, not a 500. Registration
@@ -381,6 +384,31 @@ console.log("━━ private health documents + launch readiness (Wave 1) ━━"
     ok((await call("/auth/email/continue", "POST", { email: pwEmail, code: start.json.devCode, acceptTerms: true })).status === 400, "a used code can't be replayed");
     const quick = await call("/cats", "POST", { name: "Quick", gender: "FEMALE", birthDate: "2025-06-01" }, made.json.accessToken);
     ok(quick.status === 201 && !!quick.json?.catIdNumber && quick.json.cityCode === null, "a cat is issued with name, sex and age alone (city comes later)");
+
+    // 2026-10-04 (R016): the cat's name alone is enough; sex/age come later.
+    const bare = await call("/cats", "POST", { name: "Lulu" }, made.json.accessToken);
+    ok(bare.status === 201 && bare.json?.gender === "UNKNOWN" && bare.json?.birthDate === null, "a cat is issued with its name alone (sex UNKNOWN, no birth date)");
+    const twin = await call("/cats", "POST", { name: "lulu" }, made.json.accessToken);
+    ok(twin.status === 201 && twin.json?.id === bare.json.id && twin.json?.deduplicated === true, "a same-name re-submit moments later returns the same cat, not a twin");
+    const meant = await call("/cats", "POST", { name: "Lulu", allowDuplicateName: true }, made.json.accessToken);
+    ok(meant.status === 201 && meant.json?.id !== bare.json.id, "a deliberate second Lulu is still allowed");
+
+    // /login never creates an account (intent: "login").
+    const ghost = `ghost+${rnd()}@e.com`;
+    const gs = await call("/auth/email/start", "POST", { email: ghost });
+    const gc = await call("/auth/email/continue", "POST", { email: ghost, code: gs.json.devCode, intent: "login" });
+    ok(gc.status === 400 && gc.json?.code === "EMAIL_NOT_REGISTERED", "login by code for an unknown email says so instead of creating an account");
+
+    // Passwordless deletion: an emailed code, never a bare confirm.
+    ok((await call("/account/profile", "GET", undefined, made.json.accessToken)).json?.hasPassword === false, "the profile says a passwordless member has no password");
+    const bareDel = await call("/account/delete", "POST", { confirm: true }, made.json.accessToken);
+    ok(bareDel.status === 400 && bareDel.json?.code === "DELETE_CONFIRMATION_REQUIRED", "deleting needs a code (a bare confirm is refused)");
+    const dc = await call("/account/delete/code", "POST", {}, made.json.accessToken);
+    ok(dc.status === 200 && /^\d{6}$/.test(dc.json?.devCode ?? ""), "a deletion code is emailed");
+    const badDel = await call("/account/delete", "POST", { code: dc.json.devCode === "000000" ? "111111" : "000000" }, made.json.accessToken);
+    ok(badDel.status === 400 && badDel.json?.code === "OTP_INVALID", "a wrong deletion code is refused");
+    const del = await call("/account/delete", "POST", { code: dc.json.devCode }, made.json.accessToken);
+    ok(del.status === 200 && del.json?.deleted === true, "the right code deletes the account");
   }
 
   console.log("━━ vet health summary link + Apple Wallet (Wave 6) ━━");
@@ -1087,7 +1115,7 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
   let st = (await call(`/vet/registration/${orgId}`, "GET", undefined, O)).json;
   ok(st.org?.status === "REGISTERING" && st.gaps.length > 0 && st.editableSteps.includes("documents"), "wizard state lists bilingual gaps");
   ok(st.gaps.every((g) => g.ar && g.en && g.step), "every gap is bilingual and linked to a step");
-  const early = await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-09-16", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O);
+  const early = await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-10-04", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O);
   ok(early.status === 400 && early.json?.code === "VET_REG_INCOMPLETE" && Array.isArray(early.json?.gaps), "incomplete registration can't be submitted (gaps returned)");
 
   const crNumber = String(1000000000 + Math.floor(Math.random() * 899999999));
@@ -1140,7 +1168,7 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
   ok(st.team?.length === 2 && st.gaps.length === 0, "team saved — registration is complete (no gaps)");
   ok((await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "1999-01-01", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O)).json?.code === "VET_REG_TERMS_OUTDATED",
     "an outdated terms version can't be accepted");
-  const submitted = (await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-09-16", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O)).json;
+  const submitted = (await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-10-04", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O)).json;
   ok(submitted.org?.status === "SUBMITTED" && submitted.terms?.accepted?.signedByName === "نورة الحربي", "submitted with click-accept terms evidence");
   ok(submitted.invites?.length === 2 && submitted.invites.every((i) => i.state === "pending"), "staff invitations sent at submission");
   ok((await call(`/vet/registration/${orgId}/clinic`, "PUT", { nameAr: "x y", nameEn: "x y", legalNameAr: "x y", crNumber, unifiedNumber: "7001234567", crExpiresAt: nextYear }, O)).json?.code === "VET_REG_LOCKED",
@@ -1184,7 +1212,7 @@ console.log("━━ vet clinic registration (MRC-VET-002) ━━");
     { fullName: "د. سارة القحطاني", email: vetEmail, phone: "0561234567", role: "VET", licenceNo: "SVL-FIXED-" + tag, branchIds: [branchId] },
     { fullName: "Faisal Desk", email: deskEmail, phone: "0571234567", role: "RECEPTION" },
   ] }, O);
-  const resub = (await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-09-16", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O)).json;
+  const resub = (await call(`/vet/registration/${orgId}/submit`, "POST", { acceptTerms: true, termsVersion: "2026-10-04", signedByName: "نورة الحربي", signedByTitle: "المالكة" }, O)).json;
   ok(resub.org?.status === "SUBMITTED" && resub.terms?.accepted?.version === 2 && Object.keys(resub.devInviteTokens ?? {}).length === 0,
     "resubmitted (agreement v2) without re-inviting existing team");
 
