@@ -8,7 +8,7 @@ import {
   ArrowRight, ArrowLeft, Loader2, Check, Sparkles, RotateCcw, FlipHorizontal2,
   Plus, Minus, Trash2, Wand2,
 } from "lucide-react";
-import { Card, Button, cn, useToast } from "@moraqat/ui";
+import { Card, Button, cn, eyebrowClass, useToast } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
@@ -159,7 +159,7 @@ export function CatOnboardingJourney({ catId, startOnDesign = false }: { catId: 
       {/* Header — warm, name-first, honest about being optional (R081/R082). */}
       <div className="relative mb-6">
         <IlloPaw tone="peach" className="pointer-events-none absolute -top-4 end-0 size-10 rotate-[14deg] opacity-40" />
-        <p className="font-mono text-xs uppercase tracking-[0.24em] text-accent-ink">
+        <p className={eyebrowClass(isAr ? "ar" : "en", "text-accent-ink")}>
           {isAr ? "عائلة مرقط" : "The Moracat family"}
         </p>
         <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
@@ -882,7 +882,7 @@ function Celebration({ cat, draft, badges, completeness, isAr, dispName, reduced
       {!reduced && <DriftLayer />}
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative flex w-full max-w-sm flex-col items-center py-8 text-center">
-        <motion.p {...fade(0.35)} className="font-mono text-xs uppercase tracking-[0.28em] text-[hsl(18_93%_62%)]">
+        <motion.p {...fade(0.35)} className={eyebrowClass(isAr ? "ar" : "en", "text-accent-on-dark")}>
           {isAr ? "أهلاً في العائلة" : "Welcome to the family"}
         </motion.p>
         <motion.h2 {...fade(0.5)} className="mt-3 font-display text-3xl font-semibold tracking-tight text-white">

@@ -1,11 +1,247 @@
 {
-  "extends": ["next/core-web-vitals"],
+  "extends": [
+    "next/core-web-vitals"
+  ],
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint"],
+  "plugins": [
+    "@typescript-eslint"
+  ],
   "rules": {
     "@next/next/no-img-element": "warn",
     "react-hooks/exhaustive-deps": "warn",
-    "@typescript-eslint/no-explicit-any": "off"
+    "@typescript-eslint/no-explicit-any": "off",
+    "no-restricted-properties": [
+      "error",
+      {
+        "property": "toLocaleString",
+        "message": "Use formatNumber/formatMoney/formatDate from @moraqat/core (R110: one formatter, Western digits)."
+      },
+      {
+        "property": "toLocaleDateString",
+        "message": "Use formatDate from @moraqat/core (R110)."
+      },
+      {
+        "property": "toLocaleTimeString",
+        "message": "Use formatDate/formatTime from @moraqat/core (R110)."
+      },
+      {
+        "object": "Intl",
+        "message": "Intl.* lives in packages/core/src/format.ts only (R110). Import the formatter from @moraqat/core."
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/(^|\\s|:)rounded(-[a-z]{1,2})?-\\[/]",
+        "message": "Design system (audit 2026-10-04 Part 05): no arbitrary rounded-[…] outside components/home/** and the Cat ID card — use rounded (10px control), rounded-2xl (18px card) or rounded-full."
+      },
+      {
+        "selector": "TemplateElement[value.raw=/(^|\\s|:)rounded(-[a-z]{1,2})?-\\[/]",
+        "message": "Design system (audit 2026-10-04 Part 05): no arbitrary rounded-[…] outside components/home/** and the Cat ID card — use rounded (10px control), rounded-2xl (18px card) or rounded-full."
+      },
+      {
+        "selector": "Literal[value=/(^|\\s|:)(bg-gradient-to-|bg-\\[linear-gradient|bg-\\[radial-gradient)/]",
+        "message": "Design system: no gradients in product UI — gradients are marketing-only (homepage, /about, /products) and document objects."
+      },
+      {
+        "selector": "TemplateElement[value.raw=/(^|\\s|:)(bg-gradient-to-|bg-\\[linear-gradient|bg-\\[radial-gradient)/]",
+        "message": "Design system: no gradients in product UI — gradients are marketing-only (homepage, /about, /products) and document objects."
+      },
+      {
+        "selector": "Literal[value=/-\\[(#[0-9a-fA-F]{3,8}|hsl\\(\\d|rgb\\(\\d|rgba\\(\\d)/]",
+        "message": "Design system: no arbitrary hex/hsl colours in TSX outside document objects — use tokens (text-accent-ink, text-accent-on-dark, text-warning-ink, …)."
+      },
+      {
+        "selector": "TemplateElement[value.raw=/-\\[(#[0-9a-fA-F]{3,8}|hsl\\(\\d|rgb\\(\\d|rgba\\(\\d)/]",
+        "message": "Design system: no arbitrary hex/hsl colours in TSX outside document objects — use tokens (text-accent-ink, text-accent-on-dark, text-warning-ink, …)."
+      },
+      {
+        "selector": "JSXText[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+        "message": "Brand (audit Part 05): no emoji in JSX copy — use the sticker set (components/illustrations.tsx). Emoji are allowed only in outbound shareText."
+      },
+      {
+        "selector": "JSXElement > JSXExpressionContainer > Literal[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+        "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+      },
+      {
+        "selector": "JSXElement > JSXExpressionContainer > ConditionalExpression > Literal[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+        "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+      },
+      {
+        "selector": "JSXElement > JSXExpressionContainer > ConditionalExpression > TemplateLiteral > TemplateElement[value.raw=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+        "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+      },
+      {
+        "selector": "JSXOpeningElement:not(:has(JSXAttribute[name.name='dir'])) > JSXAttribute[name.name='className'] Literal[value=/font-mono/][value=/(^|\\s)tracking-/]",
+        "message": "R103: font-mono + tracking-* without dir=\"ltr\" tracks Arabic apart. Add dir=\"ltr\" for Latin serials, or use <Eyebrow>/eyebrowClass() from @moraqat/ui."
+      }
+    ]
   },
-  "ignorePatterns": [".next", "node_modules"]
+  "overrides": [
+    {
+      "files": [
+        "components/home/**",
+        "components/home-view.tsx",
+        "app/about/**",
+        "app/products/**",
+        "components/moracat-story.tsx"
+      ],
+      "rules": {
+        "no-restricted-syntax": [
+          "warn",
+          {
+            "selector": "Literal[value=/-\\[(#[0-9a-fA-F]{3,8}|hsl\\(\\d|rgb\\(\\d|rgba\\(\\d)/]",
+            "message": "Design system: no arbitrary hex/hsl colours in TSX outside document objects — use tokens (text-accent-ink, text-accent-on-dark, text-warning-ink, …)."
+          },
+          {
+            "selector": "TemplateElement[value.raw=/-\\[(#[0-9a-fA-F]{3,8}|hsl\\(\\d|rgb\\(\\d|rgba\\(\\d)/]",
+            "message": "Design system: no arbitrary hex/hsl colours in TSX outside document objects — use tokens (text-accent-ink, text-accent-on-dark, text-warning-ink, …)."
+          },
+          {
+            "selector": "JSXText[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand (audit Part 05): no emoji in JSX copy — use the sticker set (components/illustrations.tsx). Emoji are allowed only in outbound shareText."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > Literal[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > ConditionalExpression > Literal[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > ConditionalExpression > TemplateLiteral > TemplateElement[value.raw=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXOpeningElement:not(:has(JSXAttribute[name.name='dir'])) > JSXAttribute[name.name='className'] Literal[value=/font-mono/][value=/(^|\\s)tracking-/]",
+            "message": "R103: font-mono + tracking-* without dir=\"ltr\" tracks Arabic apart. Add dir=\"ltr\" for Latin serials, or use <Eyebrow>/eyebrowClass() from @moraqat/ui."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "components/certificate-card.tsx",
+        "components/cat-id-story.tsx",
+        "components/story-share.tsx",
+        "components/cat-id-share.tsx",
+        "components/lost-found-share.tsx",
+        "app/**/opengraph-image.tsx",
+        "app/**/twitter-image.tsx",
+        "app/**/*-image.tsx"
+      ],
+      "rules": {
+        "no-restricted-syntax": [
+          "warn",
+          {
+            "selector": "Literal[value=/(^|\\s|:)rounded(-[a-z]{1,2})?-\\[/]",
+            "message": "Design system (audit 2026-10-04 Part 05): no arbitrary rounded-[…] outside components/home/** and the Cat ID card — use rounded (10px control), rounded-2xl (18px card) or rounded-full."
+          },
+          {
+            "selector": "TemplateElement[value.raw=/(^|\\s|:)rounded(-[a-z]{1,2})?-\\[/]",
+            "message": "Design system (audit 2026-10-04 Part 05): no arbitrary rounded-[…] outside components/home/** and the Cat ID card — use rounded (10px control), rounded-2xl (18px card) or rounded-full."
+          },
+          {
+            "selector": "Literal[value=/(^|\\s|:)(bg-gradient-to-|bg-\\[linear-gradient|bg-\\[radial-gradient)/]",
+            "message": "Design system: no gradients in product UI — gradients are marketing-only (homepage, /about, /products) and document objects."
+          },
+          {
+            "selector": "TemplateElement[value.raw=/(^|\\s|:)(bg-gradient-to-|bg-\\[linear-gradient|bg-\\[radial-gradient)/]",
+            "message": "Design system: no gradients in product UI — gradients are marketing-only (homepage, /about, /products) and document objects."
+          },
+          {
+            "selector": "JSXText[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand (audit Part 05): no emoji in JSX copy — use the sticker set (components/illustrations.tsx). Emoji are allowed only in outbound shareText."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > Literal[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > ConditionalExpression > Literal[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > ConditionalExpression > TemplateLiteral > TemplateElement[value.raw=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXOpeningElement:not(:has(JSXAttribute[name.name='dir'])) > JSXAttribute[name.name='className'] Literal[value=/font-mono/][value=/(^|\\s)tracking-/]",
+            "message": "R103: font-mono + tracking-* without dir=\"ltr\" tracks Arabic apart. Add dir=\"ltr\" for Latin serials, or use <Eyebrow>/eyebrowClass() from @moraqat/ui."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "components/cat-id-card.tsx"
+      ],
+      "rules": {
+        "no-restricted-syntax": [
+          "warn",
+          {
+            "selector": "JSXText[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand (audit Part 05): no emoji in JSX copy — use the sticker set (components/illustrations.tsx). Emoji are allowed only in outbound shareText."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > Literal[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > ConditionalExpression > Literal[value=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXElement > JSXExpressionContainer > ConditionalExpression > TemplateLiteral > TemplateElement[value.raw=/[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]|\\u2764|\\u2728|\\u2B50/]",
+            "message": "Brand: no emoji in JSX copy (allowed only in outbound shareText)."
+          },
+          {
+            "selector": "JSXOpeningElement:not(:has(JSXAttribute[name.name='dir'])) > JSXAttribute[name.name='className'] Literal[value=/font-mono/][value=/(^|\\s)tracking-/]",
+            "message": "R103: font-mono + tracking-* without dir=\"ltr\" tracks Arabic apart. Add dir=\"ltr\" for Latin serials, or use <Eyebrow>/eyebrowClass() from @moraqat/ui."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "**/lost-found*",
+        "**/lost-found*/**",
+        "app/c/**",
+        "app/vet/**",
+        "app/error.tsx",
+        "app/global-error.tsx",
+        "app/not-found.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/components/illo-3d",
+                "message": "No 3D objects on distress, clinical or error surfaces (audit 2026-10-04 Part 05). Use IlloEmpty/IlloHeader with tone=\"distress\", a flat illustration, or <CatPhotoPlaceholder>."
+              },
+              {
+                "name": "./illo-3d",
+                "message": "No 3D objects on distress, clinical or error surfaces (audit 2026-10-04 Part 05). Use IlloEmpty/IlloHeader with tone=\"distress\", a flat illustration, or <CatPhotoPlaceholder>."
+              },
+              {
+                "name": "../illo-3d",
+                "message": "No 3D objects on distress, clinical or error surfaces (audit 2026-10-04 Part 05). Use IlloEmpty/IlloHeader with tone=\"distress\", a flat illustration, or <CatPhotoPlaceholder>."
+              },
+              {
+                "name": "../components/illo-3d",
+                "message": "No 3D objects on distress, clinical or error surfaces (audit 2026-10-04 Part 05). Use IlloEmpty/IlloHeader with tone=\"distress\", a flat illustration, or <CatPhotoPlaceholder>."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": [
+    ".next",
+    "node_modules"
+  ]
 }

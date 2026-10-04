@@ -193,7 +193,7 @@ export default async function VetDirectoryPage({
           ) : clinics.length === 0 ? (
             <Card className="relative flex flex-col items-center gap-3 overflow-hidden p-12 text-center">
               <IlloPaw tone="peach" aria-hidden className="pointer-events-none absolute start-8 top-6 size-7 -rotate-12 opacity-50" />
-              <Illo3D name="carrier" className="size-24 animate-float" px={96} />
+              <Illo3D name="carrier" className="size-24" px={96} />
               <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
                 {city || emergency
                   ? isAr

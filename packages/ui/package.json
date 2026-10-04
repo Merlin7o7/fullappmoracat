@@ -10,7 +10,7 @@
     "./preset": "./tailwind-preset.ts"
   },
   "scripts": {
-    "lint": "eslint src",
+    "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

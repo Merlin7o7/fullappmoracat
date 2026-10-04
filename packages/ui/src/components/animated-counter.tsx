@@ -10,16 +10,22 @@ interface AnimatedCounterProps {
   suffix?: string;
   className?: string;
   /**
-   * BCP-47 locale for number formatting (R110). Pass "ar" for Arabic-Indic
-   * digits on member-facing value (e.g. the savings tally). Defaults to
-   * "en-US" — deterministic Latin numerals, which also avoids an SSR/CSR
-   * hydration mismatch when the caller doesn't know the locale at render.
+   * The number formatter (R103/R110: one formatter, Western digits). Pass the
+   * app's `formatNumber` from @moraqat/core, e.g. `(n) => formatNumber(n, "ar")`.
+   * The default groups with commas and fixes `decimals` — never
+   * `toLocaleString`, which gave admin Arabic-Indic digits (audit Part 05).
    */
-  locale?: string;
+  format?: (n: number) => string;
+}
+
+function defaultFormat(n: number, decimals: number): string {
+  const [int, frac] = n.toFixed(decimals).split(".");
+  const grouped = (int ?? "0").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return frac ? `${grouped}.${frac}` : grouped;
 }
 
 /** Counts up to `value` on mount/change. Respects prefers-reduced-motion. */
-export function AnimatedCounter({ value, durationMs = 900, decimals = 0, prefix = "", suffix = "", className, locale = "en-US" }: AnimatedCounterProps) {
+export function AnimatedCounter({ value, durationMs = 900, decimals = 0, prefix = "", suffix = "", className, format }: AnimatedCounterProps) {
   const [display, setDisplay] = React.useState(0);
   const fromRef = React.useRef(0);
 
@@ -42,6 +48,6 @@ export function AnimatedCounter({ value, durationMs = 900, decimals = 0, prefix 
     return () => cancelAnimationFrame(raf);
   }, [value, durationMs]);
 
-  const formatted = display.toLocaleString(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  const formatted = format ? format(Number(display.toFixed(decimals))) : defaultFormat(display, decimals);
   return <span className={className}>{prefix}{formatted}{suffix}</span>;
 }

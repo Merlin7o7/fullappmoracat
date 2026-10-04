@@ -17,6 +17,9 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
   variable: "--font-mono",
   display: "swap",
+  // Arabic visitors (the default) rarely see mono — don't spend first-paint
+  // bandwidth preloading it (audit 2026-10-04 M7).
+  preload: false,
 });
 // Display face: Fraunces — a warm, softly-inked serif with real character.
 // Latin only; Arabic display stays Lyon via the [dir="rtl"] font stack.
@@ -25,6 +28,8 @@ const fraunces = Fraunces({
   variable: "--font-display",
   display: "swap",
   axes: ["SOFT", "opsz"],
+  // Latin display only — not preloaded for the Arabic-first audience (M7).
+  preload: false,
 });
 
 // Arabic TEXT face — IBM Plex Sans Arabic (OFL) in four real weights, so a
@@ -47,7 +52,12 @@ const arabicText = IBM_Plex_Sans_Arabic({
 // `var(--font-arabic), var(--font-sans)` stack — keeping numbers crisp while
 // Arabic copy keeps its premium Lyon identity.
 const arabic = localFont({
-  src: "./fonts/lyon-arabic-display-regular.otf",
+  // Subset to the Arabic letter ranges in the unicode-range below and served
+  // as WOFF: 43 KB instead of the 310 KB OTF (audit 2026-10-04 M7). Generated
+  // with fontTools (pyftsubset --flavor=woff); WOFF2 needs brotli, which isn't
+  // installed on the build box — regenerate as .woff2 when it is. The source
+  // OTF stays in app/fonts as the master.
+  src: "./fonts/lyon-arabic-display-subset.woff",
   variable: "--font-arabic-display",
   display: "swap",
   // No auto-generated metric fallback: next/font's adjusted face covers

@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { Home } from "lucide-react";
 import { Button } from "@moraqat/ui";
-import { Illo3D } from "@/components/illo-3d";
+import { IlloCat } from "@/components/illustrations";
 
 /**
- * 404 — a signature moment, not a dead end (R111/R112). The lost cat is the
- * hero; warm bilingual copy; one clear action home (R086). Server component,
+ * 404 — a signature moment, not a dead end (R111/R112). Warm bilingual copy;
+ * one clear action home (R086). A flat, still sticker cat — no floating 3D on
+ * an error page (AD 2.1 motion rule; audit 2026-10-04 Part 05). Server component,
  * so copy is bilingual inline rather than locale-switched.
  */
 export default function NotFound() {
   return (
     <div className="mesh-bg grid min-h-dvh place-items-center px-4">
       <div className="flex max-w-md flex-col items-center text-center">
-        <Illo3D name="cat" className="size-40 animate-float" px={160} priority />
+        <IlloCat tone="green" className="h-28 w-auto" />
         <p aria-hidden className="mt-8 font-display text-6xl font-semibold leading-none tracking-tight text-primary/15" dir="ltr">
           404
         </p>

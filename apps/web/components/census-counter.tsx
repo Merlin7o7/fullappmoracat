@@ -15,10 +15,11 @@ import { formatNumber } from "@moraqat/core";
  * are registered it says seven, and that honesty is the campaign, not a
  * compromise of it (R040, R006).
  *
- * When the count can't be fetched it says so plainly rather than rendering a
- * zero — a zero would be a lie about the world, where "we can't reach the
- * counter" is the truth about us (R112: every error is a recovery, and R111:
- * the empty state is a welcome, not a void).
+ * When the count can't be fetched — or hasn't arrived yet (a cold API start
+ * can take seconds) — it renders NOTHING. Never a zero (a lie about the
+ * world), and no longer «العدّاد مو متاح الحين» either: a public status
+ * message about our plumbing is noise on a marketing page (audit 2026-10-04,
+ * Part 06 Home). The number appears when it is real, or not at all.
  */
 
 export function useCensus() {
@@ -42,8 +43,9 @@ interface CensusCounterProps {
   t: {
     counterLabel: string;
     counterLabelOne: string;
-    counterLoading: string;
-    counterUnavailable: string;
+    /** Kept in the dictionary for compatibility; no longer rendered. */
+    counterLoading?: string;
+    counterUnavailable?: string;
   };
   /** "hero" is the inline chip beside the CTA; "strip" is the big standalone number. */
   variant?: "hero" | "strip";
@@ -54,24 +56,21 @@ export function CensusCounter({ isAr, t, variant = "hero", className }: CensusCo
   const { data, isLoading, isError } = useCensus();
   const reduced = useReducedMotion();
 
-  if (isLoading) {
-    return (
-      <p className={cn("text-sm text-muted-foreground", className)} aria-live="polite">
-        {t.counterLoading}
-      </p>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <p className={cn("text-sm text-muted-foreground", className)} aria-live="polite">
-        {t.counterUnavailable}
-      </p>
-    );
-  }
+  // Loading, cold start or error: nothing at all (see the note above).
+  if (isLoading || isError || !data) return null;
 
   const count = data.registered;
-  const label = count === 1 ? t.counterLabelOne : t.counterLabel;
+  // Arabic counted noun: 3–10 (by the last two digits) take the plural «قطط»;
+  // everything else keeps the singular «قطة» (11+ tamyeez, and 1/2 read fine
+  // after a numeral). English keeps its one/other pair.
+  const tail = count % 100;
+  const label = isAr
+    ? tail >= 3 && tail <= 10
+      ? "قطط مسجّلة في مرقط"
+      : t.counterLabel
+    : count === 1
+      ? t.counterLabelOne
+      : t.counterLabel;
   const formatted = formatCount(count, isAr);
 
   if (variant === "strip") {

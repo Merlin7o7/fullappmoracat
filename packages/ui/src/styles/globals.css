@@ -208,6 +208,13 @@
     opacity: 0.07;
     mix-blend-mode: overlay;
   }
+  /* Audit M8: a full-screen blended layer is a constant compositing cost on
+     low-end Android, and at phone sizes the grain is invisible anyway. */
+  @media (max-width: 639px) {
+    body::before {
+      display: none;
+    }
+  }
 
   /* Tabular figures for prices, stats, timers — prevents layout shift. */
   .tabular,
@@ -221,8 +228,10 @@
    * 2. Arabic text — body, UI, labels, small headings — is IBM Plex Sans
    *    Arabic (four real weights). Latin glyphs and the (Western) digits fall
    *    through to the sans.
-   * 3. Lyon Arabic Display has ONE weight, so it is used only at display sizes
-   *    (text-3xl and up ≈ 30px+) at weight 400 — size carries the hierarchy.
+   * 3. Lyon Arabic Display has ONE weight, so it is used only at text-xl and
+   *    up (≥ 20px) at weight 400 — size carries the hierarchy. Below that a
+   *    `.font-display` heading is Plex Sans Arabic 600, so a bold small heading
+   *    stays bold in Arabic (amendment 2026-10-04, audit Part 05/08).
    * 4. Arabic is a joined script: any letter-spacing tears the joins, so it is
    *    zero for everything that is not explicitly Latin (dir="ltr" or mono).
    */
@@ -240,17 +249,40 @@
   [dir="rtl"] .font-arabic {
     font-family: var(--font-arabic-text), var(--font-sans);
   }
-  /* Every Arabic display heading wears the brand face (Lyon Arabic Display),
-     at any size — the dashboard's 20–24 px titles included (founder,
-     2026-10-03). Lyon has one weight, so it is pinned to 400: size carries
-     the hierarchy, never a synthesised bold. */
-  [dir="rtl"] .font-display,
+  /* Arabic display headings: Lyon from text-xl up (the dashboard's 20–24 px
+     titles included, founder 2026-10-03), pinned to its one weight (400).
+     Below text-xl — and on a `.font-display` with no size of its own — the
+     heading is drawn by Plex Sans Arabic at 600, a real weight, so the 273
+     bold headings the audit counted keep their hierarchy in Arabic
+     (amendment 2026-10-04, MRC-UX-AUDIT-2026-10-04 Part 05/08). The size test
+     reads the class list (responsive variants included — a heading that
+     reaches text-xl at any breakpoint keeps Lyon) and arbitrary numeric
+     sizes such as the Cat ID's text-[7.2cqw]. */
+  [dir="rtl"] .font-display {
+    font-family: var(--font-arabic-text), var(--font-sans);
+    font-weight: 600;
+  }
+  [dir="rtl"] .font-display:is(
+      [class*="text-xl"], [class*="text-2xl"], [class*="text-3xl"], [class*="text-4xl"],
+      [class*="text-5xl"], [class*="text-6xl"], [class*="text-7xl"], [class*="text-8xl"], [class*="text-9xl"],
+      [class*="text-[0"], [class*="text-[1"], [class*="text-[2"], [class*="text-[3"], [class*="text-[4"],
+      [class*="text-[5"], [class*="text-[6"], [class*="text-[7"], [class*="text-[8"], [class*="text-[9"],
+      [class*="text-[clamp"]
+    ),
   [dir="rtl"] .font-arabic-display {
     font-family: var(--font-arabic-display), var(--font-arabic-text), var(--font-sans);
     font-weight: 400;
   }
   [dir="rtl"] body *:not([dir="ltr"]):not(.font-mono) {
     letter-spacing: 0 !important;
+  }
+  /* Mono is Latin-only: in an RTL page, mono that is not explicitly LTR
+     (serials carry dir="ltr") may hold Arabic — «نطبع هوية…» at the ceremony
+     was tracked apart. Zero the tracking and let Arabic glyphs fall through
+     to Plex Sans Arabic instead of an OS fallback (audit Part 08, P1). */
+  [dir="rtl"] .font-mono:not([dir="ltr"]):not([dir="ltr"] *) {
+    letter-spacing: 0 !important;
+    font-family: var(--font-mono), var(--font-arabic-text), ui-monospace, monospace;
   }
   /* Latin display type keeps its tight, editorial tracking — LTR only. */
   [dir="ltr"] .font-display {
@@ -339,17 +371,21 @@
   }
 
   /* Homepage glitter (2026-10-02, founder: "more glittery and rounded").
-   * Marketing surfaces only — product UI stays AD 2.1. Under reduced motion
+   * Marketing surfaces only — product UI stays AD 2.1. Enforced, not hoped
+   * for: every glitter class only renders under a `.marketing` ancestor
+   * (the homepage, /about, /products roots; audit Part 05 "Glitter"). In
+   * product UI the same class names are inert. Under reduced motion
    * the global kill-switch runs one instant iteration, and both keyframes
    * start and end on the resting state, so sparkles stay visible but still. */
-  .mesh-bg-rich {
+  .marketing .mesh-bg-rich,
+  .marketing.mesh-bg-rich {
     background-image:
       radial-gradient(55% 50% at 15% 10%, hsl(var(--primary) / 0.14), transparent 62%),
       radial-gradient(45% 45% at 88% 18%, hsl(var(--accent) / 0.16), transparent 60%),
       radial-gradient(50% 40% at 70% 95%, hsl(var(--blush) / 0.45), transparent 65%),
       radial-gradient(40% 35% at 5% 85%, hsl(var(--butter) / 0.55), transparent 65%);
   }
-  .sparkle {
+  .marketing .sparkle {
     animation: sparkle-twinkle var(--sparkle-dur, 3.2s) ease-in-out infinite;
     animation-delay: var(--sparkle-delay, 0s);
     transform-origin: center;
@@ -358,13 +394,13 @@
     0%, 100% { opacity: 0.9; transform: scale(1) rotate(0deg); }
     50% { opacity: 0.15; transform: scale(0.45) rotate(45deg); }
   }
-  /* A light sweep across the primary CTA every few seconds. */
-  .btn-shine {
+  /* A light sweep across the primary CTA every few seconds — marketing only. */
+  .marketing .btn-shine {
     position: relative;
     overflow: hidden;
     isolation: isolate;
   }
-  .btn-shine::after {
+  .marketing .btn-shine::after {
     content: "";
     position: absolute;
     inset: -20% auto -20% -60%;
@@ -388,7 +424,7 @@
 
   /* Hand-drawn marker underline for the hero's accent word. Drawn in the
    * accent orange; sits behind the text like a swipe of highlighter. */
-  .underline-marker {
+  .marketing .underline-marker {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'%3E%3Cpath d='M3 10 Q 50 3 100 8 T 197 6' fill='none' stroke='%23f86c2f' stroke-width='5' stroke-linecap='round' opacity='0.85'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: 0 100%;
@@ -429,8 +465,22 @@
   .bottom-safe { bottom: max(0.75rem, env(safe-area-inset-bottom)); }
   /* Bottom-sheet inner padding that clears the home indicator. */
   .pb-safe-6 { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
-  /* Reserve scroll room under a fixed bottom bar (nav height + inset). */
-  .pb-nav { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+  /* Reserve scroll room under the bottom stack (portal tab bar + any notice
+     above it). --bottom-stack is published by BottomStackProvider; before it
+     has measured, fall back to the tab bar's height + inset. */
+  .pb-nav { padding-bottom: calc(var(--bottom-stack, calc(4rem + env(safe-area-inset-bottom))) + 1.5rem); }
+  /* Inside a <BottomBar>: pad for the home indicator only when this bar is
+     the one touching the screen edge (--bb-safe is set by BottomBar). */
+  .pb-bar { padding-bottom: max(0.75rem, var(--bb-safe, env(safe-area-inset-bottom))); }
+  .pb-bar-0 { padding-bottom: var(--bb-safe, env(safe-area-inset-bottom)); }
+  /* Generic: room for whatever is on the bottom stack. */
+  .pb-stack { padding-bottom: var(--bottom-stack, 0px); }
+
+  /* On-screen floor for container-query microtype (the Cat ID card): set the
+     intended size in --cq-size and it never renders below 11px on screen,
+     while exports at full width keep the designed proportion.
+     Usage: className="card-micro [--cq-size:2.1cqw]" (audit Part 05: 5–8px). */
+  .card-micro { font-size: max(var(--cq-size, 2cqw), 11px); }
 
   /* Staggered entrance helpers (respect reduced-motion via base rule). */
   .animate-delay-75 { animation-delay: 75ms; }
@@ -463,4 +513,21 @@
     font-size: 1rem;
     line-height: 1.5rem;
   }
+}
+
+/* Every switch is a 44px target (audit M5: switches were 24px tall) — the
+ * hit area grows invisibly around the visible track, so the seven existing
+ * implementations comply without each being rebuilt. New code uses the
+ * packages/ui <Switch>. :where() keeps this at zero specificity. */
+:where(button[role="switch"]:not(.absolute)) {
+  position: relative;
+}
+:where(button[role="switch"])::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }

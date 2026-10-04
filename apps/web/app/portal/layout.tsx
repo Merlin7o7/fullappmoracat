@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Loader2, MailCheck, ShieldCheck, WifiOff, X } from "lucide-react";
-import { cn } from "@moraqat/ui";
+import { LogOut, MailCheck, ShieldCheck, WifiOff, X } from "lucide-react";
+import { cn, LoadingState, Skeleton } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { CatProvider, useCats } from "@/lib/cat-context";
@@ -13,10 +13,9 @@ import { buildGreeting, type Gender } from "@/lib/greeting";
 import { CatSwitcher } from "@/components/cat-switcher";
 import { ThemeToggle, LangToggle } from "@/components/toggles";
 import { Logo } from "@/components/logo";
-import { IlloPaw } from "@/components/illustrations";
 import { NotificationsBell } from "@/app/portal/notifications/notifications-bell";
 import { localizeName } from "@/lib/translit";
-import { visiblePortalTabs, activeTabKey } from "./nav";
+import { visiblePortalTabs, activeTabKey, type PortalTab } from "./nav";
 import { PortalMobileNav } from "./portal-mobile-nav";
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -44,15 +43,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     }
   }, [ready, user, router, pathname]);
 
+  // Perceived speed (audit 2026-10-04 M7): the shell — rail, header, tab bar
+  // — paints immediately while auth resolves, with skeleton content where the
+  // page will be, instead of a full-screen paw and spinner on every visit.
   if (!ready || !user) {
-    return (
-      <div className="grid min-h-screen place-items-center">
-        <div className="flex flex-col items-center gap-3">
-          <IlloPaw tone="peach" className="size-8 animate-bob" />
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
+    return <PortalShellSkeleton isAr={isAr} tabs={tabs} activeTab={activeTab} pathname={pathname} />;
   }
 
   return (
@@ -260,5 +255,57 @@ function PortalGreeting({ isAr, gender, firstName }: { isAr: boolean; gender?: G
       <p className="min-w-0 flex-1 truncate text-sm font-medium sm:hidden">{compact}</p>
       <p className="hidden min-w-0 flex-1 truncate text-sm font-medium sm:block">{greeting.title}</p>
     </>
+  );
+}
+
+/**
+ * The portal's frame without the member in it yet: the same rail, header and
+ * tab bar, so nothing jumps when auth resolves — only the content swaps from
+ * skeleton rows to the page. Nothing here reads the user or their cats.
+ */
+function PortalShellSkeleton({
+  isAr, tabs, activeTab, pathname,
+}: { isAr: boolean; tabs: PortalTab[]; activeTab: string | null | undefined; pathname: string }) {
+  return (
+    <div className="flex min-h-screen" aria-busy="true">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-primary p-4 pt-safe text-primary-foreground md:flex">
+        <Link href="/" aria-label="Moracat" className="mb-8 flex px-2 pt-1">
+          <Logo className="h-9" priority onDark />
+        </Link>
+        <nav aria-label={isAr ? "التنقل" : "Navigation"} className="flex flex-1 flex-col gap-1">
+          {tabs.map((t) => (
+            <Link
+              key={t.key}
+              href={t.href}
+              aria-current={t.key === activeTab && pathname === t.href ? "page" : undefined}
+              className={cn(
+                "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                t.key === activeTab ? "bg-primary-foreground/[0.14] text-primary-foreground" : "text-primary-foreground/85"
+              )}
+            >
+              <t.icon className="size-4" aria-hidden />
+              {isAr ? t.ar : t.en}
+            </Link>
+          ))}
+        </nav>
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 pt-safe backdrop-blur sm:px-6">
+          <Link href="/" aria-label="Moracat" className="flex md:hidden">
+            <Logo className="h-8" priority />
+          </Link>
+          <Skeleton className="h-4 w-32 flex-none" />
+          <Skeleton className="size-9 flex-none rounded-full" />
+        </header>
+        <main id="main" tabIndex={-1} className="pb-nav flex-1 p-4 outline-none sm:p-6 md:pb-6">
+          <div className="mx-auto max-w-5xl space-y-6">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="aspect-[85.6/54] w-full max-w-sm rounded-2xl" />
+            <LoadingState rows={3} label={isAr ? "نجهّز صفحتك…" : "Getting your page ready…"} />
+          </div>
+        </main>
+      </div>
+      <PortalMobileNav tabs={tabs} isAr={isAr} />
+    </div>
   );
 }

@@ -2,60 +2,69 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Cookie } from "lucide-react";
-import { Button } from "@moraqat/ui";
+import { usePathname } from "next/navigation";
+import { BottomBar, BOTTOM_LAYER, Button } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
+import { CONSENT_OPEN_EVENT, readConsent, writeConsent } from "@/lib/track";
 
-const KEY = "moraqat.cookieConsent";
-/** Fired on accept so other fixed-bottom UI (the mobile register bar) can
- *  wait its turn instead of stacking on the banner. */
-export const COOKIE_CONSENT_EVENT = "moraqat:cookie-consent";
-
-/** True once the visitor has dismissed the notice (safe on the server). */
-export function hasCookieConsent(): boolean {
-  try {
-    return typeof window !== "undefined" && !!localStorage.getItem(KEY);
-  } catch {
-    return false;
-  }
-}
-
-/** Minimal, honest cookie notice — we only use essential storage (see policy). */
+/**
+ * The measurement notice — one honest sentence and a real choice (audit
+ * MRC-UX-AUDIT-2026-10-04 Problem 4/7, Part 07 M2).
+ *
+ *  · «موافق» turns on Moracat's own first-party measurement; «بدون قياس»
+ *    keeps it off, and lib/track.ts then sends nothing at all. Nothing is
+ *    sent before a choice either.
+ *  · It is a slim strip on the bottom stack's top layer: it sits ABOVE the
+ *    portal tab bar and any sticky CTA, never on top of them.
+ *  · Never on /c/* — a finder holding a stranger's cat needs the one button,
+ *    not a notice (audit Part 06, Lost & Found).
+ *  · The footer's «إعدادات القياس» reopens it to change the choice.
+ */
 export function CookieConsent() {
   const { locale } = useLocale();
   const isAr = locale === "ar";
+  const pathname = usePathname() ?? "";
   const [show, setShow] = React.useState(false);
 
   React.useEffect(() => {
-    if (!localStorage.getItem(KEY)) setShow(true);
+    if (!readConsent()) setShow(true);
+    const reopen = () => setShow(true);
+    window.addEventListener(CONSENT_OPEN_EVENT, reopen);
+    return () => window.removeEventListener(CONSENT_OPEN_EVENT, reopen);
   }, []);
 
-  if (!show) return null;
+  if (!show || pathname.startsWith("/c/")) return null;
 
-  function accept() {
-    localStorage.setItem(KEY, "1");
+  const choose = (choice: "granted" | "denied") => {
+    writeConsent(choice);
     setShow(false);
-    window.dispatchEvent(new Event(COOKIE_CONSENT_EVENT));
-  }
+  };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 p-3 sm:p-4" role="dialog" aria-label={isAr ? "إشعار ملفات الارتباط" : "Cookie notice"}>
-      {/* One compact row at every width: on a phone a stacked card took a fifth
-          of the first screen — and hid the page's one action behind a notice. */}
-      <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-e3 sm:p-4">
-        <Cookie className="hidden size-5 shrink-0 text-primary sm:block" />
-        <p className="flex-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+    <BottomBar
+      layer={BOTTOM_LAYER.notice}
+      role="region"
+      aria-label={isAr ? "إشعار القياس" : "Measurement notice"}
+      className="z-[45] border-t border-border bg-card/95 shadow-e3 backdrop-blur sm:pointer-events-none sm:border-0 sm:bg-transparent sm:px-4 sm:pb-4 sm:shadow-none sm:backdrop-blur-none"
+    >
+      <div className="flex flex-col gap-2 px-4 pt-3 pb-bar sm:pointer-events-auto sm:border-border sm:bg-card sm:shadow-e3 sm:mx-auto sm:max-w-3xl sm:flex-row sm:items-center sm:gap-4 sm:rounded-2xl sm:border sm:p-4">
+        <p className="text-xs leading-relaxed text-muted-foreground sm:flex-1 sm:text-sm">
           {isAr
-            ? "نستخدم تخزيناً محلياً لتشغيل الموقع ولقياس استخدامه بشكل مجهول — بلا إعلانات ولا تتبّع خارج مرقط. "
-            : "We use local storage to run the site and to measure its use anonymously — no ads, no tracking beyond Moracat. "}
-          <Link href="/legal/cookies" className="font-medium text-primary hover:underline">
-            {isAr ? "اعرف أكثر" : "Learn more"}
+            ? "نقيس استخدام الموقع بأنفسنا لنحسّنه، ولا نشاركه مع أي جهة إعلانية. "
+            : "We measure how the site is used, ourselves, to improve it — and never share it with any advertiser. "}
+          <Link href="/legal/privacy" className="font-medium text-primary underline-offset-4 hover:underline">
+            {isAr ? "سياسة الخصوصية" : "Privacy policy"}
           </Link>
         </p>
-        <Button size="sm" onClick={accept} className="min-h-11 shrink-0">
-          {isAr ? "تمام" : "Got it"}
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => choose("denied")}>
+            {isAr ? "بدون قياس" : "No measurement"}
+          </Button>
+          <Button size="sm" className="flex-1 sm:flex-none" onClick={() => choose("granted")}>
+            {isAr ? "موافق" : "Allow"}
+          </Button>
+        </div>
       </div>
-    </div>
+    </BottomBar>
   );
 }

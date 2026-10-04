@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { HomeView } from "@/components/home-view";
+import { FarewellNotice } from "@/components/farewell-notice";
 import { commerceEnabled } from "@/lib/features";
 import { jsonLdProps } from "@/lib/json-ld";
 import { getDict } from "@/lib/i18n";
@@ -46,6 +47,7 @@ export default function HomePage() {
     <>
       <script {...jsonLdProps(faqJsonLd)} />
       <script {...jsonLdProps(websiteJsonLd)} />
+      <FarewellNotice />
       <HomeView />
     </>
   );

@@ -11,7 +11,13 @@ import { cn } from "@moraqat/ui";
  * `finish="auto"` (default) shows plush on light and metal on dark wherever
  * both exist, so a screen never has to choose.
  *
- * Usage rules (brand):
+ * Usage rules (brand; tightened by audit MRC-UX-AUDIT-2026-10-04 Part 05):
+ *   0. Enforced here, not by memory: product UI renders at most 160 px (a
+ *      `max-w-40 max-h-40` guard; pass `hero` only on marketing heroes), and
+ *      infinite float/bob classes are stripped unless `loop` is set (the
+ *      homepage hero/chapters and loading states only). Never on Lost &
+ *      Found, finder (/c), clinic, or error surfaces (lint-enforced), and
+ *      never as a stand-in for a real cat — use <CatPhotoPlaceholder>.
  *   1. One 3D object per screen, at 64 px or larger — empty states, 404/error,
  *      welcomes, celebrations. Below that size use the flat stickers in
  *      `illustrations.tsx`; 3D turns muddy when small.
@@ -71,7 +77,15 @@ export interface Illo3DProps {
   label?: string;
   /** Above-the-fold hero: load eagerly. */
   priority?: boolean;
+  /** Marketing hero only: lifts the 160 px product-UI cap. */
+  hero?: boolean;
+  /** Allow an infinite float/bob (homepage hero + chapters, loading states). */
+  loop?: boolean;
 }
+
+/** Product UI cap (px) — the largest a 3D object renders outside marketing heroes. */
+export const ILLO3D_MAX_PX = 160;
+const LOOP_CLASSES = /(^|\s)(?:[a-z-]+:)*animate-(?:float|bob|wiggle)(?=\s|$)/g;
 
 const src = (file: string) => `/brand/3d/${file}.webp`;
 
@@ -85,7 +99,11 @@ export function Illo3D({
   directional = false,
   label,
   priority = false,
+  hero = false,
+  loop = false,
 }: Illo3DProps) {
+  const size = hero ? px : Math.min(px, ILLO3D_MAX_PX);
+  const boxClass = loop ? className : className?.replace(LOOP_CLASSES, " ");
   const files = FILES[name];
   const plush = (variant && VARIANTS[name]?.[variant]) || files.plush;
   const metal = files.metal;
@@ -100,7 +118,7 @@ export function Illo3D({
       src={src(file)}
       alt={label ?? ""}
       fill
-      sizes={`${px}px`}
+      sizes={`${size}px`}
       priority={priority}
       draggable={false}
       className={cn("select-none object-contain", directional && "rtl:-scale-x-100", themeClass)}
@@ -109,7 +127,7 @@ export function Illo3D({
 
   return (
     <span
-      className={cn("relative inline-block size-28 shrink-0", className)}
+      className={cn("relative inline-block size-28 shrink-0", boxClass, !hero && "max-h-40 max-w-40")}
       aria-hidden={label ? undefined : true}
       role={label ? "img" : undefined}
       aria-label={label}

@@ -5,12 +5,17 @@ import { Instagram, Phone } from "lucide-react";
 import { useLocale } from "@/app/providers";
 import { commerceEnabled } from "@/lib/features";
 import { CONTACT, REGISTRATION, copyright } from "@/lib/org";
+import { openConsentSettings } from "@/lib/track";
 import { IlloCat, IlloMouse, IlloPaw, IlloSprig } from "./illustrations";
 
 /**
  * The site footer — a deep-green field with the brand's quietest joke:
- * a cat forever chasing a mouse along the top edge. Giant wordmark,
- * honest links, no newsletter begging.
+ * a cat chasing a mouse along the top edge. Giant wordmark, honest links,
+ * no newsletter begging.
+ *
+ * The chase is a still frame now: AD 2.1 allows infinite loops only on the
+ * homepage hero and loading states — "never in a footer" (audit 2026-10-04).
+ * Every link is a 44px target on phones (audit M5: they were 21px).
  */
 export function SiteFooter() {
   const { t, locale } = useLocale();
@@ -59,24 +64,20 @@ export function SiteFooter() {
   ];
 
   return (
-    <footer className="relative mt-24 overflow-hidden bg-primary text-primary-foreground">
-      {/* The chase — runs the width of the footer, forever, slowly. */}
+    <footer className="relative mt-12 overflow-hidden bg-primary text-primary-foreground sm:mt-24">
+      {/* The chase — one frame of it, held still along the top edge. */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-1 h-14 select-none overflow-hidden" dir="ltr">
-        <div className="animate-marquee flex w-max items-end gap-[46vw] pt-3 [animation-duration:52s]">
-          {[0, 1].map((i) => (
-            <div key={i} className="flex items-end gap-14">
-              <IlloMouse tone="peach" className="h-7 w-auto" />
-              <IlloCat tone="orange" className="h-11 w-auto" />
-            </div>
-          ))}
+        <div className="container flex items-end gap-14 pt-3">
+          <IlloMouse tone="peach" className="h-7 w-auto" />
+          <IlloCat tone="orange" className="h-11 w-auto" />
         </div>
       </div>
 
-      <div className="container pb-10 pt-24">
-        <div className="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
+      <div className="container pb-8 pt-20 sm:pb-10 sm:pt-24">
+        <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.2fr_2fr]">
           {/* Brand block */}
           <div>
-            <p className="font-display text-6xl font-semibold tracking-tight sm:text-7xl">
+            <p className="font-display text-5xl font-semibold tracking-tight sm:text-7xl">
               {isAr ? "مرقط" : "Moracat"}
             </p>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-primary-foreground/85">
@@ -88,14 +89,14 @@ export function SiteFooter() {
                 href={CONTACT.instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex w-fit items-center gap-2 text-sm text-primary-foreground/85 transition-colors hover:text-primary-foreground"
+                className="inline-flex min-h-11 w-fit items-center gap-2 text-sm text-primary-foreground/85 transition-colors hover:text-primary-foreground sm:min-h-0"
               >
                 <Instagram className="size-4" /> {CONTACT.instagramHandle}
               </a>
               <a
                 href={CONTACT.telHref}
                 dir="ltr"
-                className="inline-flex w-fit items-center gap-2 text-sm text-primary-foreground/85 transition-colors hover:text-primary-foreground"
+                className="inline-flex min-h-11 w-fit items-center gap-2 text-sm text-primary-foreground/85 transition-colors hover:text-primary-foreground sm:min-h-0"
               >
                 <Phone className="size-4" /> {CONTACT.phoneDisplay}
               </a>
@@ -103,18 +104,18 @@ export function SiteFooter() {
           </div>
 
           {/* Link columns */}
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3 sm:gap-8">
             {cols.map((col) => (
               <nav key={col.title} aria-label={col.title}>
-                <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground/85">
+                <h3 className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground/85 sm:mb-4">
                   {col.title}
                 </h3>
-                <ul className="space-y-2.5">
+                <ul className="sm:space-y-2.5">
                   {col.links.map((l) => (
                     <li key={l.href + l.label}>
                       <Link
                         href={l.href}
-                        className="text-sm text-primary-foreground/80 transition-colors hover:text-primary-foreground"
+                        className="inline-flex min-h-11 items-center text-sm text-primary-foreground/80 transition-colors hover:text-primary-foreground sm:min-h-0"
                       >
                         {l.label}
                       </Link>
@@ -127,7 +128,7 @@ export function SiteFooter() {
         </div>
 
         {/* Legal links — bilingual, no more 404s. */}
-        <nav aria-label={isAr ? "روابط قانونية" : "Legal"} className="mt-12 flex flex-wrap gap-x-5 gap-y-2 border-t border-primary-foreground/15 pt-6">
+        <nav aria-label={isAr ? "روابط قانونية" : "Legal"} className="mt-12 flex flex-wrap gap-x-5 border-t border-primary-foreground/15 pt-6 sm:gap-y-2">
           {[
             { href: "/legal/privacy", label: isAr ? "الخصوصية" : "Privacy" },
             { href: "/legal/terms", label: isAr ? "الشروط" : "Terms" },
@@ -135,10 +136,18 @@ export function SiteFooter() {
             { href: "/legal/community-guidelines", label: isAr ? "إرشادات المجتمع" : "Community Guidelines" },
             { href: "/legal/content-policy", label: isAr ? "سياسة المحتوى" : "Content Policy" },
           ].map((l) => (
-            <Link key={l.href} href={l.href} className="text-xs text-primary-foreground/85 transition-colors hover:text-primary-foreground">
+            <Link key={l.href} href={l.href} className="inline-flex min-h-11 items-center text-xs text-primary-foreground/85 transition-colors hover:text-primary-foreground sm:min-h-0">
               {l.label}
             </Link>
           ))}
+          {/* Change the measurement choice at any time — reopens the notice. */}
+          <button
+            type="button"
+            onClick={openConsentSettings}
+            className="inline-flex min-h-11 items-center text-xs text-primary-foreground/85 underline-offset-4 transition-colors hover:text-primary-foreground hover:underline sm:min-h-0"
+          >
+            {isAr ? "إعدادات القياس" : "Measurement settings"}
+          </button>
         </nav>
 
         <div className="mt-6 flex flex-col items-center justify-between gap-4 pt-2 sm:flex-row">

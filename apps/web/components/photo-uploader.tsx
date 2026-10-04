@@ -12,6 +12,7 @@ import * as React from "react";
 import { Camera, ImageUp, Loader2, X, ZoomIn, Check, RotateCw } from "lucide-react";
 import { Button, cn, useToast, useFocusTrap } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
+import { friendlyError } from "@/lib/errors";
 import { ImgWithFallback } from "@/components/img-with-fallback";
 
 export interface PhotoUploaderProps {
@@ -55,6 +56,9 @@ export function PhotoUploader({
   const [dragOver, setDragOver] = React.useState(false);
   const [preparing, setPreparing] = React.useState(false);
   const [progress, setProgress] = React.useState<number | null>(null); // null = idle
+  // A failed upload keeps the cropped image so "try again" needs no re-crop,
+  // and the failure stays on screen until resolved — never silent (R112/R117).
+  const [failed, setFailed] = React.useState<{ blob: Blob; message: string } | null>(null);
 
   async function pickFile(file: File | undefined | null) {
     if (!file) return;
@@ -89,6 +93,7 @@ export function PhotoUploader({
 
   async function handleCropped(blob: Blob) {
     setSrc(null);
+    setFailed(null);
     setProgress(0);
     try {
       const res = await uploadImage<Record<string, unknown>>(endpoint, blob, {
@@ -98,7 +103,14 @@ export function PhotoUploader({
       await onUploaded(res);
       toast({ title: isAr ? "تم رفع الصورة" : "Photo uploaded", variant: "success" });
     } catch (e) {
-      toast({ title: e instanceof Error ? e.message : isAr ? "فشل الرفع" : "Upload failed", variant: "error" });
+      // Never a raw English API message (R084/R113): what happened + what to do.
+      const f = friendlyError(e, isAr);
+      setFailed({ blob, message: f.message });
+      toast({
+        title: isAr ? "ما وصلت الصورة" : "The photo didn't upload",
+        description: isAr ? `${f.message} صورتك محفوظة هنا — اضغط «حاول مرة ثانية».` : `${f.message} Your photo is kept here — tap "Try again".`,
+        variant: "error",
+      });
     } finally {
       setProgress(null);
     }
@@ -180,6 +192,23 @@ export function PhotoUploader({
           )}
         </div>
       </div>
+
+      {failed && !busy && (
+        <div role="alert" className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-destructive/30 bg-destructive/[0.06] px-3 py-2 text-sm">
+          <span className="min-w-0 flex-1">
+            <span className="font-medium">{isAr ? "ما وصلت الصورة. " : "The photo didn't upload. "}</span>
+            <span className="text-muted-foreground">{failed.message}</span>
+          </span>
+          <span className="flex gap-1">
+            <Button type="button" size="sm" variant="secondary" onClick={() => handleCropped(failed.blob)}>
+              {isAr ? "حاول مرة ثانية" : "Try again"}
+            </Button>
+            <Button type="button" size="sm" variant="tertiary" onClick={() => setFailed(null)}>
+              {isAr ? "تجاهل" : "Dismiss"}
+            </Button>
+          </span>
+        </div>
+      )}
 
       <input
         ref={inputRef}
@@ -381,7 +410,7 @@ function ImageCropper({ initialSrc, aspect, maxEdge, rounded, isAr, onCancel, on
       <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-5 shadow-e3">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-display text-base font-semibold">{isAr ? "اضبط الصورة" : "Position photo"}</h3>
-          <button onClick={onCancel} aria-label={isAr ? "إلغاء" : "Cancel"} className="rounded-full p-1 hover:bg-muted">
+          <button type="button" onClick={onCancel} aria-label={isAr ? "إلغاء" : "Cancel"} className="-me-2 grid size-11 place-items-center rounded-full hover:bg-muted">
             <X className="size-4" />
           </button>
         </div>
@@ -430,7 +459,7 @@ function ImageCropper({ initialSrc, aspect, maxEdge, rounded, isAr, onCancel, on
             onClick={rotate}
             aria-label={isAr ? "تدوير" : "Rotate"}
             title={isAr ? "تدوير" : "Rotate"}
-            className="grid size-8 shrink-0 place-items-center rounded-full border border-border hover:bg-muted"
+            className="grid size-11 shrink-0 place-items-center rounded-full border border-border hover:bg-muted"
           >
             <RotateCw className="size-4" />
           </button>

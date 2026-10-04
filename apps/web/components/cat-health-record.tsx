@@ -84,7 +84,7 @@ export function CatHealthRecord({ record, isAr }: { record: HealthRecord; isAr: 
 
       {nothingYet && (
         <Card className="p-8 text-center">
-          <Illo3D name="heart" className="mx-auto mb-3 size-24 animate-float" px={96} />
+          <Illo3D name="heart" className="mx-auto mb-3 size-24" px={96} />
           <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
             {isAr
               ? `سجل ${cat.name} يبدأ من هنا. أضف أول تطعيم أدناه، أو اطلب من عيادتك مسح هوية ${cat.name} في الزيارة القادمة — وسيُكتب السجل هنا تلقائياً.`

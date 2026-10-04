@@ -1,15 +1,28 @@
+"use client";
+
 import { cn } from "@moraqat/ui";
+import { useIsMarketing } from "@/components/marketing";
 
 /**
  * Twinkling four-point glints scattered over a marketing surface (homepage
  * "glitter", 2026-10-02). Purely decorative: aria-hidden, pointer-events off,
  * positions are fixed per preset so server and client render identically.
  * Under reduced motion they hold still (see `.sparkle` in globals.css).
+ * Renders nothing outside a <MarketingProvider> — glitter never leaks into
+ * product UI (audit 2026-10-04 Part 05).
  */
 
 type Glint = { top: string; left: string; size: number; delay: number; dur: number; tone: "gold" | "accent" | "primary" | "white" };
 
-const PRESETS: Record<"hero" | "panel" | "band", Glint[]> = {
+const PRESETS: Record<"hero" | "edge" | "panel" | "band", Glint[]> = {
+  // Phone hero: glints only in the side gutters (x ≤ 4% or ≥ 93%), so none
+  // can land on the headline or the card (audit M6: a glint sat on «هوية»).
+  edge: [
+    { top: "6%", left: "2%", size: 12, delay: 0, dur: 3.4, tone: "gold" },
+    { top: "30%", left: "94%", size: 12, delay: 1.1, dur: 2.8, tone: "accent" },
+    { top: "58%", left: "1.5%", size: 10, delay: 0.5, dur: 3.8, tone: "primary" },
+    { top: "84%", left: "93.5%", size: 12, delay: 1.9, dur: 3.0, tone: "gold" },
+  ],
   hero: [
     { top: "8%", left: "6%", size: 18, delay: 0, dur: 3.4, tone: "gold" },
     { top: "18%", left: "44%", size: 12, delay: 1.1, dur: 2.8, tone: "accent" },
@@ -42,6 +55,8 @@ const FILL: Record<Glint["tone"], string> = {
 };
 
 export function Sparkles({ preset = "hero", className }: { preset?: keyof typeof PRESETS; className?: string }) {
+  const marketing = useIsMarketing();
+  if (!marketing) return null;
   return (
     <div aria-hidden className={cn("pointer-events-none absolute inset-0", className)}>
       {PRESETS[preset].map((g, i) => (

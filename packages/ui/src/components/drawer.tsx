@@ -38,7 +38,7 @@ export function Drawer({ open, onClose, title, children, className }: DrawerProp
         className={cn(
           // px/pt/pb split so the bottom sheet's footer clears the iOS home
           // indicator (pb-safe-6) without doubling padding on desktop.
-          "absolute inset-x-0 bottom-0 max-h-[85dvh] animate-slide-in-up overflow-y-auto rounded-t-2xl border border-border bg-card px-6 pt-6 pb-safe-6 shadow-e3",
+          "absolute inset-x-0 bottom-0 max-h-[calc(100dvh-2rem)] animate-slide-in-up overflow-y-auto overscroll-contain rounded-t-2xl border border-border bg-card px-6 pt-6 pb-safe-6 shadow-e3",
           "sm:inset-y-0 sm:end-0 sm:inset-x-auto sm:h-full sm:max-h-none sm:w-full sm:max-w-md sm:rounded-none sm:rounded-s-2xl",
           className
         )}
@@ -46,7 +46,7 @@ export function Drawer({ open, onClose, title, children, className }: DrawerProp
         {title && (
           <div className="mb-4 flex items-center justify-between">
             <h2 id={titleId} className="font-display text-lg font-semibold tracking-tight">{title}</h2>
-            <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <button type="button" onClick={onClose} aria-label="Close" className="-me-2 grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
             </button>
           </div>

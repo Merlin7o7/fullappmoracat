@@ -10,12 +10,19 @@ interface DialogProps {
   title: string;
   description?: string;
   children?: React.ReactNode;
-  /** Footer actions (buttons). */
+  /** Footer actions (buttons). Sticky at the bottom while the body scrolls. */
   footer?: React.ReactNode;
   className?: string;
 }
 
-/** Accessible modal: role=dialog, aria-modal, Esc + scrim dismiss, focus capture. */
+/**
+ * Accessible modal: role=dialog, aria-modal, Esc + scrim dismiss, focus capture.
+ *
+ * Audit M3 (R063): the panel never outgrows the screen — it caps at
+ * 100dvh − 2rem and scrolls, with the footer pinned so the confirming action
+ * stays reachable with the keyboard open. Below `sm` it is a bottom sheet
+ * (full width, 18px top corners, slides up; reduced motion stills it).
+ */
 export function Dialog({ open, onClose, title, description, children, footer, className }: DialogProps) {
   // Traps Tab within the panel and restores focus to the trigger on close.
   const panelRef = useFocusTrap<HTMLDivElement>(open);
@@ -36,7 +43,7 @@ export function Dialog({ open, onClose, title, description, children, footer, cl
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-4">
       {/* Scrim (50% black) isolates foreground; click dismisses. */}
       <div className="absolute inset-0 animate-fade-in bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
       <div
@@ -47,14 +54,23 @@ export function Dialog({ open, onClose, title, description, children, footer, cl
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative w-full max-w-md animate-scale-in rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-e3 outline-none",
+          "relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden border border-border bg-card text-card-foreground shadow-e3 outline-none",
+          // Phone: a bottom sheet. sm+: a centred card.
+          "animate-slide-in-up rounded-t-2xl border-b-0 sm:max-w-md sm:animate-scale-in sm:rounded-2xl sm:border-b",
           className
         )}
       >
-        <h2 id={titleId} className="font-display text-lg font-semibold tracking-tight">{title}</h2>
-        {description && <p id={descId} className="mt-1.5 text-sm text-muted-foreground">{description}</p>}
-        {children && <div className="mt-4">{children}</div>}
-        {footer && <div className="mt-6 flex justify-end gap-2">{footer}</div>}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6">
+          <h2 id={titleId} className="font-display text-lg font-semibold tracking-tight">{title}</h2>
+          {description && <p id={descId} className="mt-1.5 text-sm text-muted-foreground">{description}</p>}
+          {children && <div className="mt-4">{children}</div>}
+        </div>
+        {footer && (
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border bg-card px-6 pb-safe-6 pt-4 sm:flex-row sm:justify-end sm:pb-6">
+            {footer}
+          </div>
+        )}
+        {!footer && <span aria-hidden className="block h-[env(safe-area-inset-bottom)] shrink-0 sm:hidden" />}
       </div>
     </div>
   );

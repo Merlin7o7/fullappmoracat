@@ -15,7 +15,7 @@ import { cn } from "../lib/cn";
  *
  * One radius family for controls (10px). Pills are reserved for chips,
  * avatars and the seal. Every size clears the 44px target except `sm`, which
- * is for dense desktop rows only (R092).
+ * is 44px on phones and 40px from `sm` up (dense desktop rows) (R092).
  */
 const buttonVariants = cva(
   "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium [touch-action:manipulation] transition-[transform,box-shadow,background-color,border-color,color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:translate-y-px [&_svg]:size-4 [&_svg]:shrink-0",
@@ -29,7 +29,9 @@ const buttonVariants = cva(
         contextual: "bg-accent text-accent-foreground shadow-e1 hover:bg-[hsl(var(--accent-hover))]",
       },
       size: {
-        sm: "h-10 px-4",
+        // 44px on phones (owner flows are thumb flows, R092); 40px from `sm` up
+        // where dense desktop rows need it (audit M5: 214 owner-facing uses).
+        sm: "h-11 px-4 sm:h-10",
         md: "h-11 px-5",
         lg: "h-13 px-7 text-base",
         xl: "h-14 px-8 text-base",

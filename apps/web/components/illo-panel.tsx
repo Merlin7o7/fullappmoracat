@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@moraqat/ui";
+import { Search, type LucideIcon } from "lucide-react";
 import { Illo3D, type Illo3DName } from "./illo-3d";
 
 /**
@@ -24,9 +25,25 @@ import { Illo3D, type Illo3DName } from "./illo-3d";
  *
  * `tone` tints the GROUND — the soft disc the object sits on — and never the
  * object. Copper stays where it belongs: the dark-theme mouse, nowhere else.
+ *
+ * DISTRESS MODE (audit MRC-UX-AUDIT-2026-10-04 Part 05: "never on distress,
+ * clinical or error surfaces"): `tone="distress"` — or `art={null}` — drops
+ * the 3D object for a flat line icon on a plain disc. No blur, no float.
+ * Lost & Found, transfers-gone-wrong and anything a worried person reads use
+ * it. Pass `icon` to choose the glyph (default: a search lens).
  */
 
-export type IlloTone = "cream" | "sage" | "butter" | "peach" | "blush" | "none";
+export type IlloTone = "cream" | "sage" | "butter" | "peach" | "blush" | "none" | "distress";
+type FlatIcon = LucideIcon;
+
+/** The flat, still mark used in distress mode. */
+function FlatMark({ icon: Icon = Search, compact }: { icon?: FlatIcon; compact?: boolean }) {
+  return (
+    <span className={cn("grid place-items-center rounded-full border border-border bg-muted text-foreground/70", compact ? "size-12" : "size-14")}>
+      <Icon className={compact ? "size-5" : "size-6"} aria-hidden />
+    </span>
+  );
+}
 
 /** The warm paper grounds from the brand palette. Never applied to an object. */
 const TONE: Record<IlloTone, string> = {
@@ -36,11 +53,16 @@ const TONE: Record<IlloTone, string> = {
   peach: "bg-orange-100/70 dark:bg-orange-500/10",
   blush: "bg-rose-100/60 dark:bg-rose-500/10",
   none: "",
+  distress: "",
 };
 
 export interface IlloEmptyProps {
-  /** Which brand object carries this moment. One per screen. */
-  name: Illo3DName;
+  /** Which brand object carries this moment. One per screen. Ignored in distress mode. */
+  name?: Illo3DName;
+  /** `null` = no 3D (flat icon). A node replaces the object entirely. */
+  art?: React.ReactNode | null;
+  /** Flat glyph for distress mode. */
+  icon?: FlatIcon;
   variant?: string;
   tone?: IlloTone;
   title: string;
@@ -48,7 +70,7 @@ export interface IlloEmptyProps {
   /** One clear action (R005). A second is a `secondary`, never a peer. */
   action?: React.ReactNode;
   secondary?: React.ReactNode;
-  /** Gentle float. Off for anything a person is waiting on. */
+  /** Kept for API compatibility — Illo3D strips infinite loops in product UI. */
   float?: boolean;
   className?: string;
   /** Tighter padding for an empty state inside a card rather than a page. */
@@ -63,16 +85,19 @@ export interface IlloEmptyProps {
  */
 export function IlloEmpty({
   name,
+  art,
+  icon,
   variant,
   tone = "cream",
   title,
   body,
   action,
   secondary,
-  float = true,
+  float = false,
   className,
   compact = false,
 }: IlloEmptyProps) {
+  const flat = tone === "distress" || art === null || !name;
   return (
     <div
       className={cn(
@@ -81,6 +106,11 @@ export function IlloEmpty({
         className
       )}
     >
+      {flat ? (
+        <FlatMark icon={icon} compact={compact} />
+      ) : art !== undefined ? (
+        <div aria-hidden>{art}</div>
+      ) : (
       <div className="relative grid place-items-center">
         {tone !== "none" && (
           <span
@@ -94,7 +124,7 @@ export function IlloEmpty({
           />
         )}
         <Illo3D
-          name={name}
+          name={name!}
           variant={variant}
           px={compact ? 96 : 128}
           className={cn(
@@ -105,6 +135,7 @@ export function IlloEmpty({
           )}
         />
       </div>
+      )}
       <p className={cn("mt-5 font-display font-bold tracking-tight", compact ? "text-base" : "text-lg sm:text-xl")}>
         {title}
       </p>
@@ -120,7 +151,11 @@ export function IlloEmpty({
 }
 
 export interface IlloHeaderProps {
-  name: Illo3DName;
+  /** Ignored in distress mode. */
+  name?: Illo3DName;
+  /** `null` = no 3D (flat icon). */
+  art?: React.ReactNode | null;
+  icon?: FlatIcon;
   variant?: string;
   tone?: IlloTone;
   eyebrow?: string;
@@ -140,6 +175,8 @@ export interface IlloHeaderProps {
  */
 export function IlloHeader({
   name,
+  art,
+  icon,
   variant,
   tone = "cream",
   eyebrow,
@@ -150,6 +187,7 @@ export function IlloHeader({
   className,
 }: IlloHeaderProps) {
   const centred = align === "center";
+  const flat = tone === "distress" || art === null || !name;
   return (
     <header
       className={cn(
@@ -158,12 +196,16 @@ export function IlloHeader({
         className
       )}
     >
+      {flat ? (
+        <FlatMark icon={icon} />
+      ) : (
       <div className="relative grid shrink-0 place-items-center">
         {tone !== "none" && (
           <span aria-hidden className={cn("absolute size-20 rounded-full blur-xl opacity-80", TONE[tone])} />
         )}
-        <Illo3D name={name} variant={variant} px={80} className="relative size-20" priority />
+        {art !== undefined ? art : <Illo3D name={name!} variant={variant} px={80} className="relative size-20" priority />}
       </div>
+      )}
       <div className={cn("min-w-0", centred && "flex flex-col items-center")}>
         {eyebrow && (
           <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">

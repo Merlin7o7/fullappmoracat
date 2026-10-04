@@ -4,7 +4,7 @@ import * as React from "react";
 import { ThemeProvider } from "next-themes";
 import { MotionConfig } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ToastProvider } from "@moraqat/ui";
+import { BottomStackProvider, ToastProvider } from "@moraqat/ui";
 import { dict, type Locale } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { CookieConsent } from "@/components/cookie-consent";
@@ -89,7 +89,8 @@ export function Providers({
   }, [locale]);
 
   // One landing event per browser session, with whatever attribution was on
-  // the URL (MRC-PROD-001 T2). Coarse, first-party, never personal.
+  // the URL (MRC-PROD-001 T2). Coarse, first-party, never personal — and only
+  // sent once the visitor has chosen «موافق» (lib/track.ts holds it until then).
   React.useEffect(() => {
     trackPageLanded();
   }, []);
@@ -119,8 +120,13 @@ export function Providers({
           <AuthProvider>
             <ToastProvider>
               <LocaleContext.Provider value={value}>
-                {children}
-                <CookieConsent />
+                {/* One bottom stack: every fixed-bottom bar registers here and
+                    --bottom-stack is published for toasts and page padding
+                    (audit 2026-10-04 M2). */}
+                <BottomStackProvider>
+                  {children}
+                  <CookieConsent />
+                </BottomStackProvider>
               </LocaleContext.Provider>
             </ToastProvider>
           </AuthProvider>

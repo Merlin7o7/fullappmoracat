@@ -2,7 +2,7 @@
 
 import { RotateCcw } from "lucide-react";
 import { Button } from "@moraqat/ui";
-import { Illo3D } from "@/components/illo-3d";
+import { IlloMouse } from "@/components/illustrations";
 
 /**
  * Every error is a recovery (R112) — warm, blameless copy (R084/R113),
@@ -13,7 +13,8 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
   return (
     <div className="mesh-bg grid min-h-dvh place-items-center px-4">
       <div className="flex max-w-md flex-col items-center text-center">
-        <Illo3D name="mouse" className="size-28" px={112} />
+        {/* Flat and still: no 3D on error surfaces (audit 2026-10-04 Part 05). */}
+        <IlloMouse tone="sage" className="h-16 w-auto rtl:-scale-x-100" />
         <h1 className="mt-7 font-display text-2xl font-semibold tracking-tight" lang="ar" dir="rtl">
           حدث خطأ ما — ليس منك
         </h1>

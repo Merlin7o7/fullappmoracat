@@ -1,0 +1,20 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": { "ecmaVersion": 2022, "sourceType": "module", "ecmaFeatures": { "jsx": true } },
+  "plugins": ["@typescript-eslint", "react-hooks", "@next/next"],
+  "extends": ["eslint:recommended"],
+  "env": { "browser": true, "es2022": true },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-undef": "off",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "no-restricted-properties": [
+      "error",
+      { "property": "toLocaleString", "message": "Take a formatter from the caller (@moraqat/core formatNumber) — R110." },
+      { "object": "Intl", "message": "Intl.* lives in packages/core/src/format.ts only (R110)." }
+    ]
+  },
+  "ignorePatterns": ["node_modules"]
+}

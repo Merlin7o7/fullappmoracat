@@ -41,6 +41,10 @@ const preset: Partial<Config> = {
           foreground: "hsl(var(--accent-foreground))",
           // Text-safe orange (AA on paper) — for orange words, not fills.
           ink: "hsl(var(--accent-ink))",
+          // Theme-invariant orange for near-black scrims (ceremony stage, photo
+          // overlays) — replaces hand-rolled hsl(18 93% 62%). `text-accent-on-dark`.
+          "on-dark": "hsl(var(--accent-on-dark))",
+          onDark: "hsl(var(--accent-on-dark))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -54,6 +58,8 @@ const preset: Partial<Config> = {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
           ink: "hsl(var(--warning-ink))",
+          "on-dark": "hsl(var(--warning-on-dark))",
+          onDark: "hsl(var(--warning-on-dark))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",

@@ -173,31 +173,10 @@ export function IlloCan({ tone = "pink", label, className, ...props }: IlloProps
       <ellipse cx="40" cy="14" rx="32" ry="11" fill={body} />
       <ellipse cx="40" cy="13" rx="24" ry="7" fill={lid} />
       <ellipse cx="40" cy="12.5" rx="10" ry="2.6" fill={body} opacity="0.7" />
-      {/* label */}
-      <text
-        x="40"
-        y="46"
-        textAnchor="middle"
-        fill={text}
-        fontFamily="var(--font-sans)"
-        fontWeight="800"
-        fontSize="13.5"
-        letterSpacing="0.4"
-      >
-        CAT
-      </text>
-      <text
-        x="40"
-        y="60"
-        textAnchor="middle"
-        fill={text}
-        fontFamily="var(--font-sans)"
-        fontWeight="800"
-        fontSize="13.5"
-        letterSpacing="0.4"
-      >
-        FOOD
-      </text>
+      {/* label — a wordless band (no Latin inside Arabic stickers, audit P3):
+          the tin reads as food from its shape and the fish alone. */}
+      <rect x="8" y="38" width="64" height="20" fill={text} opacity="0.22" />
+      <rect x="20" y="45.5" width="40" height="5" rx="2.5" fill={text} opacity="0.75" />
       {/* fish */}
       <path
         d="M24 76c4.5-4.6 11-7 17-7 5 0 9.4 1.7 12 4.6-2.6 2.9-7 4.6-12 4.6-6 0-12.5-2.4-17-2.2Z"

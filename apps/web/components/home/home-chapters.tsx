@@ -24,10 +24,13 @@ import { Sparkles } from "@/components/home/sparkles";
  * maximise the hook"). Motion is a short reveal + a gentle float; both stop
  * under reduced motion.
  */
-export function HomeChapters({ isAr }: { isAr: boolean }) {
+export function HomeChapters({ isAr, intro }: { isAr: boolean; intro?: string }) {
   const t = (ar: string, en: string) => (isAr ? ar : en);
   return (
-    <div className="space-y-24 py-20 sm:space-y-32 sm:py-28">
+    // id="how" is where the header's and footer's «كيف تشتغل» land (audit
+    // 2026-10-04: the link was dead). Mobile spacing is tight on purpose —
+    // the page was 10,900px on a phone (M4); the story stays, the air goes.
+    <div id="how" className="scroll-mt-24 space-y-12 py-12 sm:space-y-32 sm:py-28">
       <Chapter
         n="01"
         illo="collar"
@@ -39,6 +42,7 @@ export function HomeChapters({ isAr }: { isAr: boolean }) {
           "هوية مرقط رقم دائم باسم قطك. على طوقه رمز يقرأه أي جوال: من يلقاه يوصل لك برسالة — دون أن يرى رقمك.",
           "A Moracat ID is a permanent number in your cat's name. A code on the collar any phone can read: whoever finds them reaches you with a message — without ever seeing your number."
         )}
+        lead={intro}
         artifact={<ScanArtifact isAr={isAr} />}
       />
       <Chapter
@@ -106,25 +110,26 @@ function Reveal({ children, className }: { children: React.ReactNode; className?
 }
 
 function Chapter({
-  n, illo, kicker, title, body, artifact, flip, tint, chip,
-}: { n: string; illo: Illo3DName; kicker: string; title: string; body: string; artifact: React.ReactNode; flip?: boolean; tint: string; chip: string }) {
+  n, illo, kicker, title, body, lead, artifact, flip, tint, chip,
+}: { n: string; illo: Illo3DName; kicker: string; title: string; body: string; lead?: string; artifact: React.ReactNode; flip?: boolean; tint: string; chip: string }) {
   return (
     <section className="container">
-      <div className={cn("grid items-stretch gap-6 lg:grid-cols-2 lg:gap-8", flip && "lg:[&>*:first-child]:order-2")}>
+      <div className={cn("grid items-stretch gap-3 sm:gap-6 lg:grid-cols-2 lg:gap-8", flip && "lg:[&>*:first-child]:order-2")}>
         {/* The copy, on a soft card */}
-        <Reveal className="flex flex-col justify-center rounded-[2rem] border border-border bg-card p-8 shadow-e1 sm:p-12">
+        <Reveal className="flex flex-col justify-center rounded-[2rem] border border-border bg-card p-6 shadow-e1 sm:p-12">
           <span className={cn("inline-flex w-fit items-center gap-2 rounded-full border border-foreground/10 px-4 py-1.5 text-sm font-medium text-foreground/80", chip)}>
             <span dir="ltr" className="font-mono text-xs opacity-70">{n}</span> {kicker}
           </span>
-          <h2 className="mt-5 max-w-xl font-display text-4xl leading-tight sm:text-5xl">{title}</h2>
-          <p className="mt-4 max-w-lg text-lg leading-relaxed text-muted-foreground">{body}</p>
+          <h2 className="mt-4 max-w-xl text-balance font-display text-3xl leading-tight sm:mt-5 sm:text-5xl">{title}</h2>
+          <p className="mt-3 max-w-lg text-base leading-relaxed text-muted-foreground sm:mt-4 sm:text-lg">{body}</p>
+          {lead && <p className="mt-3 max-w-lg text-base font-medium leading-relaxed text-foreground/85 sm:text-lg">{lead}</p>}
         </Reveal>
         {/* The product, floating on a tinted, glittering panel with its 3D object */}
-        <Reveal className={cn("relative overflow-hidden rounded-[2rem] border border-border/60 px-6 pb-8 pt-6 sm:px-10 sm:pb-10", tint)}>
+        <Reveal className={cn("relative overflow-hidden rounded-[2rem] border border-border/60 px-4 pb-5 pt-3 sm:px-10 sm:pb-10 sm:pt-6", tint)}>
           <Sparkles preset="panel" />
           <Sticker rotate={-12} className="start-6 top-8 hidden sm:block"><IlloPaw tone="butter" className="size-9" /></Sticker>
           {/* The object peeks over the top of the product, like the hero cat. */}
-          <Illo3D name={illo} px={144} className="relative z-10 mx-auto -mb-7 block size-28 motion-safe:animate-float sm:size-36" />
+          <Illo3D name={illo} px={144} hero loop className="relative z-10 mx-auto -mb-5 block size-20 motion-safe:animate-float sm:-mb-7 sm:size-36" />
           <div className="relative">{artifact}</div>
         </Reveal>
       </div>
@@ -236,19 +241,20 @@ function MemberCats({ isAr }: { isAr: boolean }) {
   const cats = (q.data?.items ?? []).filter((c) => c.photoUrl).slice(0, 8);
   if (cats.length < 4) return null; // a thin strip says less than none
   return (
-    <section className="container space-y-6">
-      <Reveal className="flex flex-wrap items-end justify-between gap-4">
+    <section className="container space-y-4 sm:space-y-6">
+      <Reveal className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <div>
           <p className="text-sm text-muted-foreground">{isAr ? "مجتمع مرقط" : "The Moracat community"}</p>
-          <h2 className="font-display text-4xl sm:text-5xl">{isAr ? "قطط حقيقية، في بيوت حقيقية" : "Real cats, in real homes"}</h2>
+          <h2 className="text-balance font-display text-3xl sm:text-5xl">{isAr ? "قطط حقيقية، في بيوت حقيقية" : "Real cats, in real homes"}</h2>
         </div>
         <Link href="/community" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline">
           {isAr ? "شوف المجتمع" : "See the community"} <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
         </Link>
       </Reveal>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {cats.map((c) => (
-          <Link key={c.slug} href={`/community/${c.slug}`} className="group block">
+        {cats.map((c, i) => (
+          // Four on a phone (one 2x2 block), eight from sm (M4 length budget).
+          <Link key={c.slug} href={`/community/${c.slug}`} className={cn("group block", i >= 4 && "hidden sm:block")}>
             <div className="aspect-square overflow-hidden rounded-[1.75rem] bg-[hsl(var(--cream))] shadow-e1 transition-transform duration-300 group-hover:-rotate-2 motion-reduce:transition-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={c.photoUrl!} alt={c.name} loading="lazy" className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none" />
@@ -258,7 +264,7 @@ function MemberCats({ isAr }: { isAr: boolean }) {
           </Link>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">{isAr ? "تظهر هنا فقط القطط التي اختار أصحابها مشاركتها." : "Only cats whose owners chose to share them appear here."}</p>
+      <p className="text-xs text-muted-foreground">{isAr ? "قطط أهلها خلّوها ظاهرة — وكل واحد يقدر يخفي قطه بضغطة." : "Cats whose owners keep them visible — anyone can hide theirs in one tap."}</p>
     </section>
   );
 }
@@ -267,12 +273,12 @@ function ForClinics({ isAr }: { isAr: boolean }) {
   const t = (ar: string, en: string) => (isAr ? ar : en);
   return (
     <section className="container">
-      <Reveal className="relative grid gap-8 overflow-hidden rounded-[2.5rem] bg-primary p-8 text-primary-foreground sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
+      <Reveal className="relative grid gap-6 overflow-hidden rounded-[2.5rem] bg-primary p-6 text-primary-foreground sm:gap-8 sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
         <Sparkles preset="band" />
         <div className="relative space-y-4">
           <p className="text-sm text-primary-foreground/75">{t("للعيادات البيطرية", "For veterinary clinics")}</p>
-          <h2 className="max-w-2xl font-display text-4xl leading-tight sm:text-5xl">{t("القط يدخل عيادتك ومعه تاريخه", "The cat walks in with their history")}</h2>
-          <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/85">
+          <h2 className="max-w-2xl text-balance font-display text-3xl leading-tight sm:text-5xl">{t("القط يدخل عيادتك ومعه تاريخه", "The cat walks in with their history")}</h2>
+          <p className="max-w-xl text-base leading-relaxed text-primary-foreground/85 sm:text-lg">
             {t(
               "امسح الهوية، اقرأ الحساسية والتطعيمات في ثوانٍ، واكتب الزيارة في سجل يبقى مع القط — وكل ذلك بإذن صاحبه.",
               "Scan the ID, read allergies and vaccines in seconds, and write the visit into a record that stays with the cat — all with the owner's consent."
@@ -290,23 +296,26 @@ function ForClinics({ isAr }: { isAr: boolean }) {
 function Promises({ isAr }: { isAr: boolean }) {
   const t = (ar: string, en: string) => (isAr ? ar : en);
   const items = [
-    { blob: "bg-butter/80", icon: EyeOff, title: t("رقمك لا يظهر لأحد", "Your number is never shown"), body: t("من يلقى قطك يراسلك عبر مرقط — ما يشوف رقمك ولا اسمك الكامل.", "Whoever finds your cat messages you through Moracat — they never see your number or full name.") },
+    { blob: "bg-butter/80", icon: EyeOff, title: t("رقمك ما يظهر في صفحة الرمز — ولا على نسخة الطوق", "Your number isn't on the scan page — or on the collar copy"), body: t("من يلقى قطك يراسلك عبر مرقط — ما يشوف رقمك ولا اسمك الكامل.", "Whoever finds your cat messages you through Moracat — they never see your number or full name.") },
     { blob: "bg-blush/70", icon: ShieldCheck, title: t("العيادة تقرأ بإذنك", "Clinics read with your permission"), body: t("تختار ماذا تشوف كل عيادة، وتشوف سجلاً بكل من فتح ملف قطك.", "You choose what each clinic sees, and you can see everyone who opened your cat's file.") },
     { blob: "bg-sage/30", icon: Link2, title: t("كل مشاركة لها نهاية", "Every share has an end"), body: t("روابط الملخص الصحي مؤقتة، وتوقفها بضغطة.", "Health-summary links are temporary, and you end them with one tap.") },
   ];
   return (
-    <section className="container space-y-8">
+    <section className="container space-y-5 sm:space-y-8">
       <Reveal className="relative">
-        <h2 className="max-w-2xl font-display text-4xl leading-tight sm:text-5xl">{t("وعود نقدر نثبتها", "Promises we can show you")}</h2>
+        <h2 className="max-w-2xl text-balance font-display text-3xl leading-tight sm:text-5xl">{t("وعود نقدر نثبتها", "Promises we can show you")}</h2>
         <Sticker rotate={12} className="end-4 top-0 hidden md:block"><IlloHeart tone="pink" className="size-10" /></Sticker>
         <Sticker rotate={-10} className="end-20 top-10 hidden md:block"><IlloSprig tone="leaf" className="h-12 w-auto opacity-70" /></Sticker>
       </Reveal>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
         {items.map((i) => (
-          <Reveal key={i.title} className="relative space-y-3 overflow-hidden rounded-[2rem] border border-border bg-card p-7 shadow-e1">
-            <span className={cn("grid size-12 place-items-center rounded-full text-primary", i.blob)}><i.icon className="size-5" aria-hidden /></span>
-            <p className="font-medium">{i.title}</p>
-            <p className="text-sm leading-relaxed text-muted-foreground">{i.body}</p>
+          // A row on a phone (icon beside the words), a card from md.
+          <Reveal key={i.title} className="relative flex gap-4 overflow-hidden rounded-[2rem] border border-border bg-card p-5 shadow-e1 md:block md:space-y-3 md:p-7">
+            <span className={cn("grid size-11 shrink-0 place-items-center rounded-full text-primary md:size-12", i.blob)}><i.icon className="size-5" aria-hidden /></span>
+            <span className="block min-w-0 space-y-1 md:space-y-3">
+              <span className="block font-medium">{i.title}</span>
+              <span className="block text-sm leading-relaxed text-muted-foreground">{i.body}</span>
+            </span>
           </Reveal>
         ))}
       </div>

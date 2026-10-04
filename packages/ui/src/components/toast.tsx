@@ -100,7 +100,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       onFocusCapture={() => pause(t.id)}
       onBlurCapture={() => resume(t.id)}
       className={cn(
-        "pointer-events-auto relative flex w-full max-w-sm animate-slide-in-up items-start gap-3 overflow-hidden rounded-xl border bg-popover p-4 pe-10 text-popover-foreground shadow-e3",
+        "pointer-events-auto relative flex w-full max-w-sm animate-slide-in-up items-start gap-3 overflow-hidden rounded-xl border bg-popover p-4 pe-12 text-popover-foreground shadow-e3",
         variantStyles[t.variant],
       )}
     >
@@ -111,8 +111,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       </div>
       <button
         onClick={() => dismiss(t.id)}
+        type="button"
         aria-label="Dismiss"
-        className="absolute end-3 top-3 rounded-md p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="absolute end-0.5 top-0.5 grid size-11 place-items-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
       </button>
@@ -122,20 +123,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
+      {/* Toasts float above the bottom stack (portal tab bar, sticky CTAs,
+          the measurement notice) — never on top of them (audit M2). */}
       {/* Two persistent live regions: errors announce assertively (they can't be
           missed before auto-dismiss), everything else politely. Both are always
           in the DOM so SRs register the region before content arrives. */}
       <div
         aria-live="assertive"
         aria-atomic="false"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[100] flex flex-col items-center gap-2 p-4 sm:items-end sm:p-6"
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--bottom-stack,0px)+1rem)] z-[100] flex flex-col items-center gap-2 px-4 sm:items-end sm:px-6"
       >
         {assertive.map(renderCard)}
       </div>
       <div
         aria-live="polite"
         aria-atomic="false"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[100] flex flex-col items-center gap-2 p-4 sm:items-end sm:p-6"
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--bottom-stack,0px)+1rem)] z-[100] flex flex-col items-center gap-2 px-4 sm:items-end sm:px-6"
       >
         {polite.map(renderCard)}
       </div>

@@ -143,7 +143,16 @@ the regulatory risk of «هوية رسمية». So:
 - Arabic text face: **IBM Plex Sans Arabic** (400/500/600/700) for body, UI,
   labels and headings below display size. Real weights; `font-synthesis: none`.
 - Arabic display face: **Lyon Arabic Display**, one weight, used only at
-  display sizes (`text-3xl`+) at weight 400 — size carries hierarchy.
+  `text-xl`+ (≥ 20px) at weight 400 — size carries hierarchy. Below `text-xl`
+  a `.font-display` heading is IBM Plex Sans Arabic **600**, so small bold
+  headings keep their weight in Arabic. *(Amended 2026-10-04 — was
+  `text-3xl`+; the founder's 2026-10-03 change put Lyon on every size and
+  flattened 273 bold headings to 400. Settles audit MRC-UX-AUDIT-2026-10-04
+  Part 05/08; enforced in `packages/ui/src/styles/globals.css`.)*
+- Arabic is never tracked, **mono included**: `[dir=rtl] .font-mono` that is
+  not `dir="ltr"` gets zero tracking and falls back to Plex Sans Arabic.
+  Eyebrows use `<Eyebrow>` / `eyebrowClass()` (packages/ui), which branch by
+  locale. *(2026-10-04.)*
 - **Zero letter-spacing on Arabic.** Tracking is allowed only on Latin
   (`dir="ltr"`, mono serials, Latin display).
 - Minimum 13px (`text-xs`); inputs are 16px on phones.

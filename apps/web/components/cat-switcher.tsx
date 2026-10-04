@@ -156,7 +156,7 @@ export function CatSwitcher({ isAr }: { isAr: boolean }) {
                         title={isAr ? "اجعله الأساسي" : "Make primary"}
                         aria-label={isAr ? "اجعله الأساسي" : "Make primary"}
                         onClick={() => { void setPrimaryCat(c.id).catch(() => {}); }}
-                        className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/15 hover:text-accent-foreground"
+                        className="grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/15 hover:text-accent-foreground"
                       >
                         <Star className="size-3.5" />
                       </button>
@@ -204,7 +204,7 @@ export function InlineCatPicker({ onPick }: { onPick?: (id: string) => void }) {
               onPick?.(c.id);
             }}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm transition-colors",
+              "flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors",
               active ? "border-primary bg-primary/10 font-medium text-foreground" : "border-border text-muted-foreground hover:bg-muted"
             )}
           >

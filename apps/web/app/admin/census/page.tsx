@@ -23,6 +23,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Cat, MapPin, Sparkles, Loader2 } from "lucide-react";
 import { Card, Badge, Skeleton, AnimatedCounter } from "@moraqat/ui";
+import { formatNumber } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { QueryError } from "@/components/query-error";
@@ -57,7 +58,6 @@ export default function AdminCensusPage() {
   const { authedFetch, user } = useAuth();
   const { locale } = useLocale();
   const isAr = locale === "ar";
-  const numLocale = isAr ? "ar" : "en-US";
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin-census", user?.id],
@@ -97,7 +97,7 @@ export default function AdminCensusPage() {
               <Skeleton className="h-12 w-40" />
             ) : (
               <p className="font-display text-5xl font-bold tabular" dir="ltr">
-                <AnimatedCounter value={data.registered} locale={numLocale} />
+                <AnimatedCounter value={data.registered} format={(n) => formatNumber(n, isAr ? "ar" : "en")} />
               </p>
             )}
             <p className="mt-1 text-sm font-medium">{isAr ? "هوية قط مسجّلة" : "Cat IDs registered"}</p>

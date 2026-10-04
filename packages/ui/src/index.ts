@@ -30,3 +30,11 @@ export {
   type StatusTone,
 } from "./components/states";
 export { IdBand, Ledger, LedgerRow, Seal } from "./components/register";
+export {
+  BottomStackProvider,
+  BottomBar,
+  BOTTOM_LAYER,
+  type BottomBarProps,
+} from "./components/bottom-stack";
+export { Eyebrow, eyebrowClass, type EyebrowProps, type EyebrowLocale } from "./components/eyebrow";
+export { Switch, type SwitchProps } from "./components/switch";

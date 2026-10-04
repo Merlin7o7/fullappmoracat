@@ -33,7 +33,7 @@ import {
   PauseCircle,
   HeartHandshake,
 } from "lucide-react";
-import { Card, Button, Badge, Skeleton, cn } from "@moraqat/ui";
+import { BottomBar, BOTTOM_LAYER, Card, Button, Badge, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { useCats } from "@/lib/cat-context";
@@ -767,7 +767,7 @@ function CheckoutInner() {
 
       {/* ── Sticky mobile bar — the exact total + the action survive scrolling
              (R021/R100: the commitment stays visible in the thumb zone). ───── */}
-      {!session && <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+      {!session && <BottomBar layer={BOTTOM_LAYER.action} className="border-t border-border bg-card/95 px-3 pt-3 pb-bar backdrop-blur sm:hidden">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="min-w-0">
             <p className="font-display text-base font-bold leading-tight">
@@ -795,7 +795,7 @@ function CheckoutInner() {
                   : isAr ? "ادفع بالبطاقة" : "Pay by card"}
           </Button>
         </div>
-      </div>}
+      </BottomBar>}
     </div>
   );
 }
