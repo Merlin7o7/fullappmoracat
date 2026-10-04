@@ -13,6 +13,7 @@
  */
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
+import { ownerDeliveryNotice } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   VetPatientsService,
@@ -84,7 +85,7 @@ export class VetConsentService {
     const clinicAr = org?.nameAr ?? "عيادة شريكة";
     const scope = TIER_COPY[dto.tier];
 
-    await this.patients.notifyOwner({
+    const delivery = await this.patients.notifyOwner({
       userId: cat.user.id,
       category: "SYSTEM",
       type: "vet_consent_requested",
@@ -109,10 +110,24 @@ export class VetConsentService {
       },
     });
 
+    // The request IS the notification, so if it didn't reach anyone, nothing
+    // was requested — and the counter must hear that, not "owner asked".
+    if (!delivery.delivered) {
+      return {
+        requested: false,
+        alreadyGranted: false,
+        tier: dto.tier,
+        currentTier: existing.tier,
+        ownerNotification: delivery,
+        notice: ownerDeliveryNotice(delivery),
+      };
+    }
     return {
       requested: true,
+      alreadyGranted: false,
       tier: dto.tier,
       currentTier: existing.tier,
+      ownerNotification: delivery,
       notice: {
         ar: `وصل الطلب لمالك ${cat.name}. لا يُفتح السجل قبل موافقتهم.`,
         en: `${cat.name}'s owner has been asked. Nothing opens until they say yes.`,

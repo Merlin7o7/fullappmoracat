@@ -10,6 +10,7 @@
 import * as React from "react";
 import { Check, Copy, KeyRound } from "lucide-react";
 import { Badge, Button, Input, useToast } from "@moraqat/ui";
+import { digitsOnly } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
 import { useVetActor, useVetFetch } from "@/lib/vet-api";
 import { SectionCard } from "@/components/vet/vet-shell-bits";
@@ -36,7 +37,9 @@ export function PinSection() {
   const [error, setError] = React.useState<{ title: string; message: string } | null>(null);
   const [copied, setCopied] = React.useState(false);
 
-  const digits = (v: string) => v.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/\D/g, "").slice(0, 6);
+  // The shared core helper: Arabic-Indic AND Eastern-Arabic (۰–۹) digits both
+  // count — the local copy only knew ٠–٩, so a Persian/Urdu keyboard's PIN vanished.
+  const digits = (v: string) => digitsOnly(v).slice(0, 6);
 
   function reset() {
     setCurrentPin("");

@@ -14,17 +14,26 @@
  *     (which works from any screen anyway) and the typed number.
  *   • No camera, or permission denied — say so honestly and hand over the path
  *     that always works. A denied permission is not an error state.
+ *
+ * Two safety rules (audit 2026-10-04):
+ *   • A lookup that returns MORE than one cat (an owner's phone → a household)
+ *     shows a picker — photo, name, sex, Cat ID. It never opens results[0],
+ *     the alphabetically-first cat: that is a wrong-patient risk.
+ *   • `?intent=emergency` (the Today screen's Emergency button) says so in the
+ *     header, and a single exact hit goes straight to break-glass.
  */
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  Cat,
   CameraOff,
   Flashlight,
   Keyboard,
   Loader2,
   ScanLine,
   ShieldCheck,
+  Siren,
   WifiOff,
 } from "lucide-react";
 import { Badge, Button, Card, cn } from "@moraqat/ui";
@@ -37,6 +46,7 @@ import {
   useVetActor,
   useVetApi,
   vetFriendlyError,
+  type VetSearchResult,
 } from "@/lib/vet-api";
 import { EmptyState } from "@/components/vet/vet-shell-bits";
 import { NewPatientSheet } from "@/components/vet/new-patient-sheet";
@@ -81,9 +91,32 @@ export default function VetScanPage() {
   // Walk-ins (T4): a no-match is the moment reception registers the cat.
   const [newPatient, setNewPatient] = React.useState(false);
   const [noMatchFor, setNoMatchFor] = React.useState<string | null>(null);
+  // More than one cat for one identifier (a household phone): the operator chooses.
+  const [choices, setChoices] = React.useState<VetSearchResult[] | null>(null);
+  const [emergency, setEmergency] = React.useState(false);
   React.useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("new") === "1") setNewPatient(true);
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get("new") === "1") setNewPatient(true);
+    if (qs.get("intent") === "emergency") setEmergency(true);
   }, []);
+
+  /** Where a resolved cat goes: its profile, or straight to break-glass in an emergency. */
+  const go = React.useCallback(
+    (hit: VetSearchResult) => {
+      pushRecentLookup({
+        catId: hit.catId,
+        name: hit.name,
+        catIdNumber: hit.catIdNumber,
+        photoUrl: hit.photoUrl ?? null,
+      });
+      router.push(
+        emergency && can("emergency.access")
+          ? `/vet/emergency/${encodeURIComponent(hit.catId)}`
+          : `/vet/patients/${encodeURIComponent(hit.catId)}`
+      );
+    },
+    [can, emergency, router]
+  );
 
   const allowed = can("patient.search");
   const canCreate = can("patient.create");
@@ -99,7 +132,16 @@ export default function VetScanPage() {
       const slowTimer = setTimeout(() => setSlow(true), SLOW_LOOKUP_MS);
       try {
         const res = await api.searchPatients(token);
-        const hit = res.results?.[0];
+        const results = res.results ?? [];
+        setChoices(null);
+        // Never open results[0] of many — the first cat alphabetically in a
+        // household is not necessarily the cat on the table.
+        if (results.length > 1) {
+          setNoMatchFor(null);
+          setChoices(results);
+          return;
+        }
+        const hit = results[0];
         if (!hit) {
           setNoMatchFor(raw);
           setError(
@@ -110,14 +152,8 @@ export default function VetScanPage() {
           return;
         }
         setNoMatchFor(null);
-        pushRecentLookup({
-          catId: hit.catId,
-          name: hit.name,
-          catIdNumber: hit.catIdNumber,
-          photoUrl: hit.photoUrl ?? null,
-        });
         if (source === "camera" && navigator.vibrate) navigator.vibrate(12);
-        router.push(`/vet/patients/${encodeURIComponent(hit.catId)}`);
+        go(hit);
       } catch (err) {
         setError(vetFriendlyError(err, isAr).message);
       } finally {
@@ -130,7 +166,7 @@ export default function VetScanPage() {
         }, 1200);
       }
     },
-    [api, isAr, router],
+    [api, isAr, go],
   );
 
   /* ── Camera ─────────────────────────────────────────────────────────────── */
@@ -279,13 +315,24 @@ export default function VetScanPage() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="font-display text-xl font-semibold leading-tight sm:text-2xl">
-            {isAr ? "امسح بطاقة العضو" : "Scan a member's card"}
+          <h1 className="flex items-center gap-2 font-display text-xl font-semibold leading-tight sm:text-2xl">
+            {emergency && <Siren className="size-5 shrink-0 text-destructive" aria-hidden />}
+            {emergency
+              ? isAr
+                ? "طوارئ: امسح طوق القط أو بطاقته"
+                : "Emergency: scan the cat's collar or card"
+              : isAr
+                ? "امسح بطاقة العضو"
+                : "Scan a member's card"}
           </h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            {isAr
-              ? "قرّب البطاقة من الكاميرا — تُقرأ وحدها، بدون زر."
-              : "Hold the card up — it reads itself, no button to press."}
+            {emergency
+              ? isAr
+                ? "قراءة واحدة تفتح معلومات السلامة فوراً، مع ذكر السبب. يُسجَّل الوصول ويُبلَّغ المالك."
+                : "One read opens the safety information straight away, with a stated reason. The access is logged and the owner told."
+              : isAr
+                ? "قرّب البطاقة من الكاميرا — تُقرأ وحدها، بدون زر."
+                : "Hold the card up — it reads itself, no button to press."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -300,7 +347,7 @@ export default function VetScanPage() {
             </Badge>
           )}
           {!online && (
-            <Badge variant="secondary">
+            <Badge variant="outline">
               <WifiOff className="size-3" aria-hidden />
               {isAr ? "دون اتصال" : "Offline"}
             </Badge>
@@ -428,6 +475,52 @@ export default function VetScanPage() {
           </p>
         )}
       </Card>
+
+      {choices && choices.length > 1 && (
+        <Card className="p-3 sm:p-4" role="region" aria-labelledby="scan-choices-title">
+          <h2 id="scan-choices-title" className="text-sm font-semibold text-foreground">
+            {isAr ? `${choices.length} قطط بهذا الرقم — أيّها أمامك؟` : `${choices.length} cats match — which one is with you?`}
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {isAr
+              ? "تحقّقوا من الصورة ورقم الهوية قبل فتح الملف."
+              : "Check the photo and the Cat ID before opening the file."}
+          </p>
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {choices.map((c) => (
+              <li key={c.catId}>
+                <button
+                  type="button"
+                  onClick={() => go(c)}
+                  className="flex min-h-[64px] w-full items-center gap-3 rounded-xl border border-border px-3 py-2 text-start transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-muted text-muted-foreground" aria-hidden>
+                    {c.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.photoUrl} alt="" className="size-full object-cover" />
+                    ) : (
+                      <Cat className="size-5" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-base font-medium">{c.name}</span>
+                    <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+                      <span>
+                        {c.sex === "FEMALE" ? (isAr ? "أنثى" : "Female") : c.sex === "MALE" ? (isAr ? "ذكر" : "Male") : isAr ? "الجنس غير مسجّل" : "Sex not recorded"}
+                      </span>
+                      {c.catIdNumber && (
+                        <span className="font-mono tabular-nums" dir="ltr">
+                          {c.catIdNumber}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {error && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/30 bg-destructive/[0.06] px-3 py-2.5">

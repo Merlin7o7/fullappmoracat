@@ -17,6 +17,8 @@
  * or change settings, whatever the person's role.
  */
 
+import type { LicenceStanding } from "./vet-visit-contract";
+
 export type VetRole =
   | "OWNER"
   | "MANAGER"
@@ -157,6 +159,13 @@ const COUNTER_MODE_DENIED: ReadonlySet<VetCapability> = new Set<VetCapability>([
 
 export interface VetActorContext {
   role: VetRole;
+  /**
+   * The actor's practitioner-licence standing (see `licenceStanding`). A doctor
+   * role whose licence is MISSING or EXPIRED keeps everything else but has its
+   * prescribing and co-signing HELD, and authors drafts (`requiresCoSign`).
+   * Omitted = not evaluated (existing callers, listings) — nothing is held.
+   */
+  licence?: LicenceStanding;
   /** True when the session was unlocked by PIN on a registered counter device. */
   counterMode?: boolean;
   /**
@@ -184,11 +193,28 @@ function inSandbox(ctx: VetActorContext): boolean {
   return !!ctx.orgStatus && ctx.orgStatus !== "LIVE";
 }
 
+/**
+ * What a doctor's licence unlocks. Without a licence on file these are held —
+ * a prescription or a countersignature is a licensed act, whoever's account
+ * it is (UX audit 2026-10-04: staff invited after go-live defaulted to
+ * Veterinarian with prescribing rights and no licence number).
+ */
+export const LICENCE_HELD_CAPABILITIES: ReadonlySet<VetCapability> = new Set<VetCapability>([
+  "prescription.write",
+  "prescription.dispense",
+  "record.cosign",
+]);
+
+function licenceHeld(ctx: VetActorContext): boolean {
+  return ctx.licence === "MISSING" || ctx.licence === "EXPIRED";
+}
+
 /** Every capability this actor holds, in this context. */
 export function capabilitiesFor(ctx: VetActorContext): VetCapability[] {
   let caps = [...(MATRIX[ctx.role] ?? [])];
   if (ctx.counterMode) caps = caps.filter((c) => !COUNTER_MODE_DENIED.has(c));
   if (inSandbox(ctx)) caps = caps.filter((c) => SETUP_SANDBOX_CAPABILITIES.has(c));
+  if (licenceHeld(ctx)) caps = caps.filter((c) => !LICENCE_HELD_CAPABILITIES.has(c));
   return caps;
 }
 
@@ -196,6 +222,7 @@ export function capabilitiesFor(ctx: VetActorContext): VetCapability[] {
 export function can(ctx: VetActorContext, capability: VetCapability): boolean {
   if (ctx.counterMode && COUNTER_MODE_DENIED.has(capability)) return false;
   if (inSandbox(ctx) && !SETUP_SANDBOX_CAPABILITIES.has(capability)) return false;
+  if (licenceHeld(ctx) && LICENCE_HELD_CAPABILITIES.has(capability)) return false;
   return (MATRIX[ctx.role] ?? []).includes(capability);
 }
 
@@ -211,9 +238,14 @@ export function assignableRoles(role: VetRole): VetRole[] {
   }
 }
 
-/** Does this role's clinical authorship need a co-signature to become final? */
-export function requiresCoSign(role: VetRole): boolean {
-  return role === "INTERN";
+/**
+ * Does this author's clinical writing need a co-signature to become final?
+ * Interns always; a doctor whose licence is not on file (or has lapsed) too —
+ * their record is real and attributed, but it is not a fact until a licensed
+ * colleague signs it.
+ */
+export function requiresCoSign(role: VetRole, licence?: LicenceStanding): boolean {
+  return role === "INTERN" || licence === "MISSING" || licence === "EXPIRED";
 }
 
 /** Bilingual role labels — one source, used by the portal and by admin. */

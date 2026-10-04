@@ -3,6 +3,7 @@ import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
   IsArray,
+  IsDateString,
   IsEmail,
   IsIn,
   IsInt,
@@ -90,6 +91,23 @@ export class InviteStaffDto {
   @IsString()
   @MaxLength(80)
   title?: string;
+
+  @ApiPropertyOptional({
+    example: "SVC-11482",
+    description: "Practitioner licence number. REQUIRED for doctor roles (VET_SENIOR, VET).",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  licenceNo?: string;
+
+  @ApiPropertyOptional({
+    example: "2027-06-30",
+    description: "Licence expiry. REQUIRED for doctor roles, and must be in the future.",
+  })
+  @IsOptional()
+  @IsDateString()
+  licenceExpiresAt?: string;
 }
 
 export class ChangeStaffRoleDto {
@@ -116,6 +134,11 @@ export class ChangeStaffRoleDto {
   @IsString()
   @MaxLength(80)
   licenceNo?: string;
+
+  @ApiPropertyOptional({ example: "2027-06-30", description: "Practitioner licence expiry." })
+  @IsOptional()
+  @IsDateString()
+  licenceExpiresAt?: string;
 }
 
 export class StaffReasonDto {

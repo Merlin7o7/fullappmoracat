@@ -24,7 +24,15 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma, type ConsentTier } from "@moraqat/db";
-import { normalizeSaudiPhone, parseQrValue } from "@moraqat/core";
+import {
+  annotateDoses,
+  latinizeDigits,
+  normalizeSaudiPhone,
+  parseQrValue,
+  riyadhDayBounds,
+  vaccineDisplayName,
+  type VetOwnerDelivery,
+} from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { normalizeName } from "../common/text";
 import { PlaceholderOwnerService } from "./placeholder-owner.service";
@@ -75,7 +83,9 @@ export type VetErrorCode =
   | "VET_INVALID_TRANSITION"
   | "VET_NO_REFILLS"
   | "VET_REASON_REQUIRED"
-  | "VET_FUTURE_DATE";
+  | "VET_FUTURE_DATE"
+  | "VET_FORBIDDEN"
+  | "VET_LICENCE_REQUIRED";
 
 export interface VetErrorBody {
   code: VetErrorCode;
@@ -130,7 +140,11 @@ export { normalizeSaudiPhone };
  * tested first so a 15-digit chip is never mistaken for a phone number.
  */
 export function detectQuery(raw: string): DetectedQuery {
-  const q = raw.trim();
+  // An Arabic keyboard types ٠٥٥…; a phone or chip typed that way was being
+  // classified as a NAME and searched only among this clinic's own patients
+  // (UX audit 2026-10-04). Latin digits first, then the ladder. Directional
+  // marks a scanner or a pasted number can carry are dropped too.
+  const q = latinizeDigits(raw.trim()).replace(/[\u200e\u200f\u202a-\u202e]/g, "");
   // The collar QR now carries the public page URL (T6); a camera scanner
   // hands the whole URL over. Legacy `MRCV1:` cards keep working too.
   if (/^https?:\/\//i.test(q) || q.toUpperCase().startsWith("MRCV1:")) {
@@ -487,11 +501,14 @@ export class VetPatientsService {
     ar: { title: string; body: string };
     en: { title: string; body: string };
     data?: Record<string, unknown>;
-  }): Promise<void> {
+  }): Promise<VetOwnerDelivery> {
     try {
       // A clinic-created cat has no owner yet: the placeholder account must
-      // never accumulate notifications meant for a person.
-      if (await this.placeholder.is(input.userId)) return;
+      // never accumulate notifications meant for a person — and the clinic must
+      // be TOLD nobody was reached, rather than shown "owner notified".
+      if (await this.placeholder.is(input.userId)) {
+        return { delivered: false, channel: null, reason: "UNCLAIMED" };
+      }
       await this.prisma.notification.create({
         data: {
           userId: input.userId,
@@ -507,8 +524,11 @@ export class VetPatientsService {
           } as Prisma.InputJsonValue,
         },
       });
+      // In-app is the only channel today; say so rather than implying more.
+      return { delivered: true, channel: "IN_APP", reason: null };
     } catch (e) {
       this.logger.error(`owner notify failed user=${input.userId}: ${String(e)}`);
+      return { delivered: false, channel: null, reason: "FAILED" };
     }
   }
 
@@ -987,16 +1007,29 @@ export class VetPatientsService {
       }),
     ]);
     const orgs = await this.orgLookup(activeRx.map((p) => p.orgId));
-    const now = new Date();
+    // Overdue is judged on the LATEST dose of each vaccine only. Every older
+    // dose carries an older dueAt that has naturally passed; flagging those
+    // painted every vaccinated cat with history as overdue (audit 2026-10-04).
+    const annotated = annotateDoses(vaccinations);
     return {
       sterilised: cat?.isNeutered ?? null,
       lifeStage: cat?.lifeStage ?? null,
       isIndoor: cat?.isIndoor ?? null,
       diet: cat?.diet ?? null,
       vaccinationStatus: cat?.vaccinationStatus ?? null,
-      vaccinations: vaccinations.map((v) => ({
-        ...v,
-        overdue: Boolean(v.dueAt && v.dueAt < now),
+      vaccinations: annotated.map((v) => ({
+        id: v.id,
+        name: v.name,
+        administeredAt: v.administeredAt,
+        dueAt: v.dueAt,
+        vetName: v.vetName,
+        clinic: v.clinic,
+        batchNo: v.batchNo,
+        vaccineCode: v.vaccineCode,
+        label: vaccineDisplayName(v.name, v.vaccineCode),
+        isLatest: v.isLatest,
+        standing: v.standing,
+        overdue: v.overdue,
       })),
       recentWeights: weights,
       activePrescriptions: activeRx.map((p) => ({
@@ -1054,7 +1087,7 @@ export class VetPatientsService {
     query: { q?: string; cursor?: string; limit?: number }
   ) {
     const limit = Math.min(Math.max(query.limit ?? 25, 1), 50);
-    const term = query.q?.trim();
+    const term = query.q ? latinizeDigits(query.q.trim()) : undefined;
 
     const where: Prisma.CatWhereInput = {
       deletedAt: null,
@@ -1543,18 +1576,29 @@ export class VetPatientsService {
 
   // ── helpers ─────────────────────────────────────────────────────────────
 
-  /** Build an inclusive [from, to] filter; `to` covers the whole calendar day. */
+  /**
+   * Build an inclusive [from, to] filter. A bare date is a RIYADH calendar day:
+   * `from` starts at Riyadh midnight and `to` runs through the end of that
+   * Riyadh day. (It used to be the server's local — UTC — day, so a visit at
+   * 01:30 Riyadh time filed under yesterday and late visits vanished.)
+   */
   dateRange(from?: string, to?: string): Prisma.DateTimeFilter | undefined {
     if (!from && !to) return undefined;
     const filter: Prisma.DateTimeFilter = {};
-    if (from) filter.gte = new Date(from);
+    if (from) filter.gte = isBareDate(from) ? riyadhDayOf(from).start : new Date(from);
     if (to) {
-      const end = new Date(to);
-      // A bare date means "through the end of that day", which is what a human
-      // filtering a day-book means.
-      if (/^\d{4}-\d{2}-\d{2}$/.test(to)) end.setHours(23, 59, 59, 999);
-      filter.lte = end;
+      filter.lte = isBareDate(to) ? new Date(riyadhDayOf(to).end.getTime() - 1) : new Date(to);
     }
     return filter;
   }
+}
+
+/** `YYYY-MM-DD` with no time part. */
+export function isBareDate(v: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
+/** The Riyadh calendar day named by a bare `YYYY-MM-DD` (noon avoids any edge). */
+export function riyadhDayOf(day: string): { start: Date; end: Date; day: string } {
+  return riyadhDayBounds(new Date(`${day}T12:00:00+03:00`));
 }

@@ -11,6 +11,12 @@
  * Every payload class is `whitelist + forbidNonWhitelisted` validated, so an
  * unknown key is a 400, not a silently persisted mystery field in a medical
  * record.
+ *
+ * THE CONTRACT LIVES IN @moraqat/core (vet-entry-contract.ts). Every enum here
+ * is imported from it, every payload class `implements` its core interface,
+ * and `vet-record.dto.test.ts` compares these decorators against
+ * `VET_ENTRY_FIELDS` field by field — so the portal's composer and this
+ * validator cannot drift apart again (UX audit 2026-10-04, Problem 1).
  */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type, plainToInstance } from "class-transformer";
@@ -29,32 +35,68 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateNested,
   validateSync,
 } from "class-validator";
+import {
+  ALLERGY_OVERRIDE_MIN_LENGTH,
+  ATTACHMENT_KINDS,
+  CLINICAL_ENTRY_TYPES,
+  COMPLIANCE_LEVELS,
+  DIAGNOSIS_SEVERITIES,
+  DIAGNOSIS_STATUSES,
+  DIET_TYPES,
+  IMAGING_MODALITIES,
+  LAB_FLAGS,
+  NOTE_SUBTYPES,
+  PRESCRIPTION_ACTIONS,
+  PRESCRIPTION_FORMS,
+  VACCINATION_ROUTES,
+  VACCINE_CODES,
+  type ClinicalEntryType,
+  type DentalPayload,
+  type DiagnosisPayload,
+  type ExamPayload,
+  type HospitalizationPayload,
+  type ImagingPayload,
+  type LabPayload,
+  type LabResult,
+  type NotePayload,
+  type NutritionPayload,
+  type PrescriptionAction,
+  type PrescriptionPayload,
+  type SupplementPayload,
+  type SurgeryPayload,
+  type TreatmentPayload,
+  type VaccinationPayload,
+  type VaccineCode,
+  type VetAllergyOverride,
+  type VetPrescriptionStatusRequest,
+  type WeightPayload,
+} from "@moraqat/core";
 
-export const CLINICAL_ENTRY_TYPES = [
-  "EXAM",
-  "DIAGNOSIS",
-  "VACCINATION",
-  "TREATMENT",
-  "PRESCRIPTION",
-  "LAB",
-  "IMAGING",
-  "SURGERY",
-  "DENTAL",
-  "HOSPITALIZATION",
-  "WEIGHT",
-  "NUTRITION",
-  "SUPPLEMENT",
-  "NOTE",
-] as const;
-export type ClinicalEntryTypeName = (typeof CLINICAL_ENTRY_TYPES)[number];
+// Re-exported so existing imports from this module keep working.
+export {
+  ATTACHMENT_KINDS,
+  CLINICAL_ENTRY_TYPES,
+  COMPLIANCE_LEVELS,
+  DIAGNOSIS_SEVERITIES,
+  DIAGNOSIS_STATUSES,
+  DIET_TYPES,
+  IMAGING_MODALITIES,
+  NOTE_SUBTYPES,
+  PRESCRIPTION_ACTIONS,
+  PRESCRIPTION_FORMS,
+  VACCINATION_ROUTES,
+};
+export type { PrescriptionAction };
+export type ClinicalEntryTypeName = ClinicalEntryType;
 
 // ── Per-type payloads ─────────────────────────────────────────────────────
 
 /** SOAP-lite. Every field optional (§09): a vet must never be blocked by a form. */
-export class ExamPayloadDto {
+export class ExamPayloadDto implements ExamPayload {
   @ApiPropertyOptional({ description: "S — what the owner reports" })
   @IsOptional()
   @IsString()
@@ -101,10 +143,7 @@ export class ExamPayloadDto {
   respiratoryRate?: number;
 }
 
-export const DIAGNOSIS_SEVERITIES = ["MILD", "MODERATE", "SEVERE", "CRITICAL"] as const;
-export const DIAGNOSIS_STATUSES = ["SUSPECTED", "CONFIRMED", "RESOLVED", "CHRONIC", "RULED_OUT"] as const;
-
-export class DiagnosisPayloadDto {
+export class DiagnosisPayloadDto implements DiagnosisPayload {
   @ApiProperty({ example: "Feline lower urinary tract disease" })
   @IsString()
   @MaxLength(200)
@@ -127,13 +166,31 @@ export class DiagnosisPayloadDto {
   notes?: string;
 }
 
-export const VACCINATION_ROUTES = ["SC", "IM", "IN", "ORAL", "OTHER"] as const;
+export class VaccinationPayloadDto implements VaccinationPayload {
+  @ApiPropertyOptional({
+    enum: VACCINE_CODES,
+    description:
+      "The coded vaccine — what overdue logic and reminders key on. Older clients may omit it; the " +
+      "server then derives it from `vaccine`.",
+  })
+  @IsOptional()
+  @IsIn(VACCINE_CODES)
+  vaccineCode?: VaccineCode;
 
-export class VaccinationPayloadDto {
-  @ApiProperty({ example: "Tricat Trio (FVRCP)" })
+  @ApiPropertyOptional({
+    example: "Tricat Trio (FVRCP)",
+    description: "Display name. Required when `vaccineCode` is OTHER or absent.",
+  })
+  @IsOptional()
   @IsString()
   @MaxLength(120)
-  vaccine!: string;
+  vaccine?: string;
+
+  @ApiPropertyOptional({ example: "Purevax RCP", description: "The commercial product, separate from the vaccine." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  product?: string;
 
   @ApiPropertyOptional({ example: "B-4471X" })
   @IsOptional()
@@ -167,7 +224,7 @@ export class VaccinationPayloadDto {
   dueAt?: string;
 }
 
-export class TreatmentPayloadDto {
+export class TreatmentPayloadDto implements TreatmentPayload {
   @ApiPropertyOptional({ example: "Otitis externa" })
   @IsOptional()
   @IsString()
@@ -216,9 +273,7 @@ export class TreatmentPayloadDto {
   followUpAt?: string;
 }
 
-export const PRESCRIPTION_FORMS = ["tablet", "capsule", "suspension", "injection", "topical", "drops", "other"] as const;
-
-export class PrescriptionPayloadDto {
+export class PrescriptionPayloadDto implements PrescriptionPayload {
   @ApiProperty({ example: "Amoxicillin/clavulanate" })
   @IsString()
   @MaxLength(160)
@@ -277,7 +332,7 @@ export class PrescriptionPayloadDto {
   expiresAt?: string;
 }
 
-export class LabResultDto {
+export class LabResultDto implements LabResult {
   @ApiProperty({ example: "Creatinine" })
   @IsString()
   @MaxLength(120)
@@ -300,13 +355,13 @@ export class LabResultDto {
   @MaxLength(60)
   referenceRange?: string;
 
-  @ApiPropertyOptional({ enum: ["LOW", "NORMAL", "HIGH", "ABNORMAL"] })
+  @ApiPropertyOptional({ enum: LAB_FLAGS })
   @IsOptional()
-  @IsIn(["LOW", "NORMAL", "HIGH", "ABNORMAL"])
-  flag?: "LOW" | "NORMAL" | "HIGH" | "ABNORMAL";
+  @IsIn(LAB_FLAGS)
+  flag?: (typeof LAB_FLAGS)[number];
 }
 
-export class LabPayloadDto {
+export class LabPayloadDto implements LabPayload {
   @ApiProperty({ example: "Renal panel" })
   @IsString()
   @MaxLength(160)
@@ -338,9 +393,7 @@ export class LabPayloadDto {
   interpretation?: string;
 }
 
-export const IMAGING_MODALITIES = ["XRAY", "ULTRASOUND", "CT", "MRI", "ENDOSCOPY", "OTHER"] as const;
-
-export class ImagingPayloadDto {
+export class ImagingPayloadDto implements ImagingPayload {
   @ApiProperty({ enum: IMAGING_MODALITIES })
   @IsIn(IMAGING_MODALITIES)
   modality!: (typeof IMAGING_MODALITIES)[number];
@@ -363,7 +416,7 @@ export class ImagingPayloadDto {
   interpretation?: string;
 }
 
-export class SurgeryPayloadDto {
+export class SurgeryPayloadDto implements SurgeryPayload {
   @ApiProperty({ example: "Ovariohysterectomy" })
   @IsString()
   @MaxLength(200)
@@ -393,7 +446,7 @@ export class SurgeryPayloadDto {
   followUpAt?: string;
 }
 
-export class DentalPayloadDto {
+export class DentalPayloadDto implements DentalPayload {
   @ApiProperty({ example: "Scale and polish" })
   @IsString()
   @MaxLength(200)
@@ -427,7 +480,7 @@ export class DentalPayloadDto {
   homeCare?: string;
 }
 
-export class HospitalizationPayloadDto {
+export class HospitalizationPayloadDto implements HospitalizationPayload {
   @ApiProperty({ example: "2026-07-18T09:00:00.000Z" })
   @IsDateString()
   admittedAt!: string;
@@ -461,7 +514,7 @@ export class HospitalizationPayloadDto {
   dischargeInstructions?: string;
 }
 
-export class WeightPayloadDto {
+export class WeightPayloadDto implements WeightPayload {
   @ApiProperty({ example: 4.2, description: "Weight in kilograms." })
   @IsNumber()
   @Min(0.05)
@@ -482,9 +535,7 @@ export class WeightPayloadDto {
   method?: string;
 }
 
-export const DIET_TYPES = ["DRY", "WET", "MIXED", "RAW", "PRESCRIPTION", "HOME_COOKED", "OTHER"] as const;
-
-export class NutritionPayloadDto {
+export class NutritionPayloadDto implements NutritionPayload {
   @ApiProperty({ enum: DIET_TYPES })
   @IsIn(DIET_TYPES)
   dietType!: (typeof DIET_TYPES)[number];
@@ -527,9 +578,7 @@ export class NutritionPayloadDto {
   notes?: string;
 }
 
-export const COMPLIANCE_LEVELS = ["GOOD", "PARTIAL", "POOR", "UNKNOWN"] as const;
-
-export class SupplementPayloadDto {
+export class SupplementPayloadDto implements SupplementPayload {
   @ApiProperty({ example: "Omega-3" })
   @IsString()
   @MaxLength(160)
@@ -565,9 +614,7 @@ export class SupplementPayloadDto {
   compliance?: (typeof COMPLIANCE_LEVELS)[number];
 }
 
-export const NOTE_SUBTYPES = ["GENERAL", "HANDLING", "BEHAVIOUR", "OWNER_COMMUNICATION", "REFERRAL"] as const;
-
-export class NotePayloadDto {
+export class NotePayloadDto implements NotePayload {
   @ApiProperty({ example: "Hates carriers — wrap in a towel and she settles." })
   @IsString()
   @MaxLength(4000)
@@ -638,6 +685,30 @@ export function validateEntryPayload(
 
 // ── Request bodies ────────────────────────────────────────────────────────
 
+/**
+ * A clinician's typed override of a recorded-allergy match. It travels BESIDE
+ * the payload (never inside it — the payload is the clinical fact, the override
+ * is the decision to proceed despite a warning) and is recorded on the entry's
+ * note, the prescription's warnings and the audit log, under the author's name.
+ */
+export class AllergyOverrideDto implements VetAllergyOverride {
+  @ApiProperty({ type: [String], example: ["Penicillin"], description: "The recorded allergens the drug matched." })
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(120, { each: true })
+  matched!: string[];
+
+  @ApiProperty({
+    example: "Mild historic reaction; benefit outweighs risk, owner informed, monitoring 30 min.",
+    description: `The clinical justification — at least ${ALLERGY_OVERRIDE_MIN_LENGTH} characters.`,
+  })
+  @IsString()
+  @MinLength(ALLERGY_OVERRIDE_MIN_LENGTH)
+  @MaxLength(1000)
+  justification!: string;
+}
+
 export class CreateClinicalEntryDto {
   @ApiProperty({ description: "The cat this record belongs to." })
   @IsString()
@@ -679,6 +750,12 @@ export class CreateClinicalEntryDto {
   @IsOptional()
   @IsDateString()
   occurredAt?: string;
+
+  @ApiPropertyOptional({ type: () => AllergyOverrideDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AllergyOverrideDto)
+  allergyOverride?: AllergyOverrideDto;
 }
 
 export class ReviseClinicalEntryDto {
@@ -707,6 +784,12 @@ export class ReviseClinicalEntryDto {
   @IsOptional()
   @IsDateString()
   occurredAt?: string;
+
+  @ApiPropertyOptional({ type: () => AllergyOverrideDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AllergyOverrideDto)
+  allergyOverride?: AllergyOverrideDto;
 }
 
 export class RetractClinicalEntryDto {
@@ -728,8 +811,6 @@ export class CoSignClinicalEntryDto {
   @MaxLength(1000)
   note?: string;
 }
-
-export const ATTACHMENT_KINDS = ["xray", "ultrasound", "photo", "pdf", "lab", "other"] as const;
 
 export class CreateAttachmentDto {
   @ApiProperty({
@@ -768,10 +849,7 @@ export class CreateAttachmentDto {
   kind?: (typeof ATTACHMENT_KINDS)[number];
 }
 
-export const PRESCRIPTION_ACTIONS = ["dispense", "refill", "complete", "cancel"] as const;
-export type PrescriptionAction = (typeof PRESCRIPTION_ACTIONS)[number];
-
-export class UpdatePrescriptionStatusDto {
+export class UpdatePrescriptionStatusDto implements VetPrescriptionStatusRequest {
   @ApiProperty({
     enum: PRESCRIPTION_ACTIONS,
     description:

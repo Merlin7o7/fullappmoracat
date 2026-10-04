@@ -9,9 +9,12 @@
  */
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@moraqat/db";
+import { isStaleOpenVisit, riyadhDayBounds, visitReasonLabel } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   VetPatientsService,
+  isBareDate,
+  riyadhDayOf,
   staffLabel,
   vetBadRequest,
   vetConflict,
@@ -204,19 +207,21 @@ export class VetVisitsService {
   async list(actor: VetActor, query: ListVisitsQueryDto) {
     const limit = Math.min(query.limit ?? PAGE_DEFAULT, 100);
     const page = Math.max(1, query.page ?? 1);
+    const today = riyadhDayBounds(new Date());
 
+    // Every "day" here is a RIYADH day. The book used to bound days in server
+    // time (UTC), so the 00:00–03:00 Riyadh visits filed under yesterday and a
+    // visit left open overnight vanished from Today (audit 2026-10-04).
     let checkedInAt = this.patients.dateRange(query.from, query.to);
+    let isTodaysBook = false;
     if (!checkedInAt && query.date) {
-      const start = new Date(query.date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setHours(23, 59, 59, 999);
-      checkedInAt = { gte: start, lte: end };
+      const day = isBareDate(query.date) ? riyadhDayOf(query.date) : riyadhDayBounds(new Date(query.date));
+      checkedInAt = { gte: day.start, lt: day.end };
+      isTodaysBook = day.day === today.day;
     }
     if (!checkedInAt && !query.state && !query.catId) {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      checkedInAt = { gte: start };
+      checkedInAt = { gte: today.start, lt: today.end };
+      isTodaysBook = true;
     }
 
     // A staff member scoped to specific branches sees only those branches' book.
@@ -226,13 +231,20 @@ export class VetVisitsService {
         ? { OR: [{ branchId: { in: actor.branchIds } }, { branchId: null }] }
         : {};
 
+    // Today's book always carries every OPEN visit, whatever day it began on:
+    // a cat still in the clinic is today's work. Stale ones say so.
+    const dayFilter: Prisma.VisitWhereInput = checkedInAt
+      ? isTodaysBook && !query.state
+        ? { OR: [{ checkedInAt }, { state: "OPEN" }] }
+        : { checkedInAt }
+      : {};
+
     const where: Prisma.VisitWhereInput = {
       orgId: actor.orgId,
-      ...(checkedInAt ? { checkedInAt } : {}),
+      AND: [dayFilter, branchFilter],
       ...(query.state ? { state: query.state } : {}),
       ...(query.mode ? { mode: query.mode } : {}),
       ...(query.catId ? { catId: query.catId } : {}),
-      ...branchFilter,
     };
 
     const [rows, total, openNow] = await Promise.all([
@@ -248,8 +260,8 @@ export class VetVisitsService {
     ]);
 
     return {
-      items: rows.map((v) => this.present(v)),
-      summary: { openNow },
+      items: rows.map((v) => this.present(v, today.start)),
+      summary: { openNow, day: today.day },
       pagination: {
         page,
         limit,
@@ -309,13 +321,19 @@ export class VetVisitsService {
       where: { visitId: visit.id, status: "DRAFT" },
     });
 
+    // An empty visit's closing reason is recorded on the visit (a code such as
+    // "no-show", or free text). It no longer overwrites the reason the cat came
+    // in for: both survive, as "<arrival reason> · <closing reason>".
+    const closingReason = dto.reason?.trim() && visit._count.entries === 0 ? dto.reason.trim() : null;
     const updated = await this.prisma.visit.update({
       where: { id: visit.id },
       data: {
         state: "CLOSED",
         closedAt: new Date(),
         closedById: actor.staffId,
-        ...(dto.reason?.trim() && visit._count.entries === 0 ? { reason: dto.reason.trim() } : {}),
+        ...(closingReason
+          ? { reason: visit.reason ? `${visit.reason} · ${closingReason}`.slice(0, 200) : closingReason }
+          : {}),
         ...(dto.followUpAt ? { followUpAt: new Date(dto.followUpAt) } : {}),
       },
       select: VISIT_SELECT,
@@ -374,7 +392,7 @@ export class VetVisitsService {
     const clinicAr = org?.nameAr ?? "العيادة";
     const catName = updated.cat.name;
 
-    await this.patients.notifyOwner({
+    const delivery = await this.patients.notifyOwner({
       userId: updated.cat.userId,
       category: "SYSTEM",
       type: "vet_visit_summary",
@@ -395,7 +413,13 @@ export class VetVisitsService {
       },
     });
 
-    return { visit: this.present(updated), delivered: true };
+    // The summary is saved on the visit either way; `delivered` says whether an
+    // owner actually received it (an unclaimed cat has nobody to receive it).
+    return {
+      visit: this.present(updated),
+      delivered: delivery.delivered,
+      ownerNotification: delivery,
+    };
   }
 
   // ── helpers ─────────────────────────────────────────────────────────────
@@ -436,7 +460,10 @@ export class VetVisitsService {
     });
   }
 
-  private present(v: Prisma.VisitGetPayload<{ select: typeof VISIT_SELECT }>) {
+  private present(
+    v: Prisma.VisitGetPayload<{ select: typeof VISIT_SELECT }>,
+    todayStart: Date = riyadhDayBounds(new Date()).start
+  ) {
     const waitMinutes =
       v.state === "OPEN" ? Math.floor((Date.now() - v.checkedInAt.getTime()) / 60_000) : null;
     return {
@@ -451,7 +478,10 @@ export class VetVisitsService {
       },
       mode: v.mode,
       state: v.state,
+      // Stored as a code (or legacy free text); rendered per locale here so no
+      // client ever shows "vaccination" to an Arabic reader.
       reason: v.reason,
+      reasonLabel: v.reason ? { ar: visitReasonLabel(v.reason, "ar"), en: visitReasonLabel(v.reason, "en") } : null,
       presentingComplaint: v.presentingComplaint,
       branch: v.branch ? { id: v.branch.id, ar: v.branch.nameAr, en: v.branch.nameEn } : null,
       openedBy: v.openedBy ? { id: v.openedBy.id, name: staffLabel(v.openedBy), role: v.openedBy.role } : null,
@@ -465,6 +495,8 @@ export class VetVisitsService {
       waitMinutes,
       // A calm nudge, not an alarm: amber at 10 minutes is the only escalation.
       waitLevel: waitMinutes === null ? null : waitMinutes >= 10 ? "amber" : "calm",
+      // OPEN since an earlier Riyadh day — kept in today's queue, and labelled.
+      stale: isStaleOpenVisit(v, todayStart),
     };
   }
 }

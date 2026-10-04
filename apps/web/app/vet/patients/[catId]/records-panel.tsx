@@ -34,7 +34,13 @@ import {
   Syringe,
   TriangleAlert,
 } from "lucide-react";
-import { Badge, Button, Card, Skeleton, cn, useToast } from "@moraqat/ui";
+import { Badge, Button, Card, Input, Skeleton, cn, useToast } from "@moraqat/ui";
+import {
+  PRESCRIPTION_ACTION_LABELS,
+  latestDosePerVaccine,
+  ownerDeliveryNotice,
+  type PrescriptionAction,
+} from "@moraqat/core";
 import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
 import { QueryError } from "@/components/query-error";
@@ -127,9 +133,12 @@ export default function RecordsPanel({
 
 type VaxState = "OVERDUE" | "DUE_SOON" | "VALID" | "NO_RECORD";
 
-function vaxState(v: Vaccination): { state: VaxState; overdueDays?: number } {
+function vaxState(v: Vaccination, superseded: boolean): { state: VaxState; overdueDays?: number } {
   const now = Date.now();
   if (!v.givenAt) return { state: "NO_RECORD" };
+  // A dose replaced by a later dose of the same vaccine is history: its old
+  // dueAt has passed by design and must never read as overdue.
+  if (superseded) return { state: "VALID" };
   if (!v.dueAt) return { state: "VALID" };
   const due = new Date(v.dueAt).getTime();
   if (!Number.isFinite(due)) return { state: "VALID" };
@@ -144,8 +153,15 @@ function VaccinationsModule({ vaccinations }: { vaccinations: Vaccination[] }) {
 
   const rows = React.useMemo(() => {
     const rank: Record<VaxState, number> = { OVERDUE: 0, DUE_SOON: 1, NO_RECORD: 2, VALID: 3 };
+    // Server-computed `isLatest` wins; older payloads fall back to the shared
+    // core reduction (latest dose per coded vaccine).
+    const latest = new Set(
+      latestDosePerVaccine(
+        vaccinations.map((v) => ({ ...v, name: v.nameEn, administeredAt: v.givenAt })),
+      ).map((d) => d.id),
+    );
     return vaccinations
-      .map((v) => ({ v, ...vaxState(v) }))
+      .map((v) => ({ v, ...vaxState(v, v.isLatest === false || (v.isLatest === undefined && !latest.has(v.id))) }))
       .sort((a, b) => rank[a.state] - rank[b.state]);
   }, [vaccinations]);
 
@@ -169,7 +185,7 @@ function VaccinationsModule({ vaccinations }: { vaccinations: Vaccination[] }) {
   return (
     <Section
       icon={Syringe}
-      title={isAr ? "التحصينات" : "Vaccinations"}
+      title={isAr ? "التطعيمات" : "Vaccinations"}
       subtitle={
         isAr
           ? "محسوبة من الجرعات المسجّلة ومواعيدها القادمة."
@@ -179,7 +195,7 @@ function VaccinationsModule({ vaccinations }: { vaccinations: Vaccination[] }) {
       {rows.length === 0 ? (
         <Empty
           isAr={isAr}
-          ar="لا سجل تحصين بعد. أول جرعة تُسجَّل هنا تُجدول تذكير المالك تلقائياً."
+          ar="لا سجل تطعيم بعد. أول جرعة تُسجَّل هنا تُجدول تذكير المالك تلقائياً."
           en="No vaccination record yet. The first dose recorded here schedules the owner's reminder automatically."
         />
       ) : (
@@ -344,20 +360,20 @@ function StandingModule({ alerts }: { alerts: MedicalAlert[] }) {
 
 // ── prescriptions ────────────────────────────────────────────────────────
 
-// Mirrors RX_TRANSITIONS in vet-records.service.ts. The portal previously knew
-// only ACTIVE/COMPLETED/CANCELLED — three values the API never sends — so every
-// real prescription fell through every branch and rendered unlabelled.
-const STATUS_FLOW: Record<PrescriptionStatus, PrescriptionStatus[]> = {
-  ISSUED: ["COLLECTED", "COMPLETED", "CANCELLED"],
-  COLLECTED: ["REFILLED", "COMPLETED", "CANCELLED"],
-  REFILLED: ["REFILLED", "COMPLETED", "CANCELLED"],
+// The ACTIONS the API accepts from each status — mirrors RX_TRANSITIONS +
+// ACTION_TARGET in vet-records.service.ts. The portal used to send `{status}`,
+// which the API never accepted, so no prescription could ever be dispensed.
+const ACTION_FLOW: Record<PrescriptionStatus, PrescriptionAction[]> = {
+  ISSUED: ["dispense", "complete", "cancel"],
+  COLLECTED: ["refill", "complete", "cancel"],
+  REFILLED: ["refill", "complete", "cancel"],
   COMPLETED: [],
   CANCELLED: [],
   EXPIRED: [],
 };
 
 const STATUS_LABEL: Record<PrescriptionStatus, { ar: string; en: string }> = {
-  ISSUED: { ar: "مصروفة", en: "Issued" },
+  ISSUED: { ar: "صدرت", en: "Issued" },
   COLLECTED: { ar: "استُلمت", en: "Collected" },
   REFILLED: { ar: "أُعيد صرفها", en: "Refilled" },
   COMPLETED: { ar: "اكتملت", en: "Completed" },
@@ -365,11 +381,11 @@ const STATUS_LABEL: Record<PrescriptionStatus, { ar: string; en: string }> = {
   EXPIRED: { ar: "منتهية", en: "Expired" },
 };
 
-const STATUS_BADGE: Record<PrescriptionStatus, "success" | "secondary" | "outline"> = {
-  ISSUED: "success",
+const STATUS_BADGE: Record<PrescriptionStatus, "success" | "info" | "outline"> = {
+  ISSUED: "info",
   COLLECTED: "success",
   REFILLED: "success",
-  COMPLETED: "secondary",
+  COMPLETED: "outline",
   CANCELLED: "outline",
   EXPIRED: "outline",
 };
@@ -394,13 +410,34 @@ function PrescriptionsModule({
   const api = useVetApi();
   const qc = useQueryClient();
   const canDispense = actor.can("prescription.dispense");
+  // Cancelling needs a reason — the owner deserves one, and the API requires it.
+  const [cancelFor, setCancelFor] = React.useState<string | null>(null);
+  const [cancelReason, setCancelReason] = React.useState("");
+  const [cancelError, setCancelError] = React.useState("");
 
   const advance = useMutation({
-    mutationFn: (v: { id: string; status: PrescriptionStatus }) =>
-      api.setPrescriptionStatus(v.id, v.status),
-    onSuccess: () => {
+    mutationFn: (v: { id: string; action: PrescriptionAction; reason?: string }) =>
+      api.setPrescriptionStatus(v.id, { action: v.action, reason: v.reason, notifyOwner: true }),
+    onSuccess: (res, v) => {
       void qc.invalidateQueries({ queryKey: ["vet-prescriptions", catId] });
-      toast({ variant: "success", title: isAr ? "حُدّثت الوصفة" : "Prescription updated" });
+      if (v.action === "cancel") {
+        setCancelFor(null);
+        setCancelReason("");
+      }
+      const missed = res.ownerNotification && !res.ownerNotification.delivered ? ownerDeliveryNotice(res.ownerNotification) : null;
+      toast({
+        variant: missed ? "info" : "success",
+        title: isAr ? "حُدّثت الوصفة" : "Prescription updated",
+        description: missed
+          ? isAr
+            ? missed.ar
+            : missed.en
+          : res.ownerNotification?.delivered
+            ? isAr
+              ? "وصل المالك إشعار داخل التطبيق."
+              : "The owner was notified in the app."
+            : undefined,
+      });
     },
     onError: (err) => {
       const f = vetFriendlyError(err, isAr);
@@ -430,7 +467,7 @@ function PrescriptionsModule({
       ) : (
         <ul className="space-y-2">
           {data.map((rx) => {
-            const next = STATUS_FLOW[rx.status] ?? [];
+            const next = (ACTION_FLOW[rx.status] ?? []).filter((a) => a !== "cancel" || cancelFor !== rx.id);
             const notes = isAr ? rx.notesAr : rx.notesEn;
             return (
               <li key={rx.id} className="rounded-xl border border-border p-3">
@@ -468,27 +505,74 @@ function PrescriptionsModule({
                 {notes && <p className="mt-1.5 text-sm leading-relaxed text-foreground">{notes}</p>}
                 {canDispense && next.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {next.map((s) => (
+                    {next.map((a) => (
                       <Button
-                        key={s}
+                        key={a}
                         size="sm"
-                        variant={s === "CANCELLED" ? "tertiary" : "secondary"}
+                        variant={a === "cancel" ? "tertiary" : a === "dispense" ? "primary" : "secondary"}
                         loading={
                           advance.isPending &&
                           advance.variables?.id === rx.id &&
-                          advance.variables?.status === s
+                          advance.variables?.action === a
                         }
-                        onClick={() => advance.mutate({ id: rx.id, status: s })}
+                        onClick={() => {
+                          if (a === "cancel") {
+                            setCancelFor(rx.id);
+                            setCancelReason("");
+                            setCancelError("");
+                            return;
+                          }
+                          advance.mutate({ id: rx.id, action: a });
+                        }}
                       >
-                        {isAr
-                          ? s === "COMPLETED"
-                            ? "علّمها مكتملة"
-                            : "ألغِ الوصفة"
-                          : s === "COMPLETED"
-                            ? "Mark completed"
-                            : "Cancel prescription"}
+                        {isAr ? PRESCRIPTION_ACTION_LABELS[a].ar : PRESCRIPTION_ACTION_LABELS[a].en}
                       </Button>
                     ))}
+                  </div>
+                )}
+                {canDispense && cancelFor === rx.id && (
+                  <div className="mt-3 rounded-xl border border-border bg-muted/40 p-3">
+                    <label htmlFor={`rx-cancel-${rx.id}`} className="block text-xs font-medium text-foreground">
+                      {isAr ? "سبب الإلغاء (يصل للمالك)" : "Reason for cancelling (the owner sees it)"}
+                      <span className="ms-1 text-destructive" aria-hidden>
+                        *
+                      </span>
+                    </label>
+                    <Input
+                      id={`rx-cancel-${rx.id}`}
+                      value={cancelReason}
+                      maxLength={500}
+                      onChange={(e) => {
+                        setCancelReason(e.target.value);
+                        setCancelError("");
+                      }}
+                      invalid={!!cancelError}
+                      className="mt-1"
+                    />
+                    {cancelError && (
+                      <p role="alert" className="mt-1 text-xs text-destructive">
+                        {cancelError}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        loading={advance.isPending && advance.variables?.action === "cancel"}
+                        onClick={() => {
+                          if (cancelReason.trim().length < 3) {
+                            setCancelError(isAr ? "اكتب سبباً واضحاً." : "Write a clear reason.");
+                            return;
+                          }
+                          advance.mutate({ id: rx.id, action: "cancel", reason: cancelReason.trim() });
+                        }}
+                      >
+                        {isAr ? "ألغِ الوصفة" : "Cancel prescription"}
+                      </Button>
+                      <Button size="sm" variant="tertiary" onClick={() => setCancelFor(null)}>
+                        {isAr ? "تراجع" : "Never mind"}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </li>
@@ -540,8 +624,8 @@ function ProceduresModule({
           {entries.slice(0, 12).map((e) => (
             <li key={e.id} className="rounded-xl border border-border p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{entryKindLabel(e.kind, isAr)}</Badge>
-                {(e.status === "DRAFT" || e.status === "AWAITING_COSIGN") && (
+                <Badge variant="outline">{entryKindLabel(e.kind, isAr)}</Badge>
+                {e.status === "DRAFT" && (
                   <Badge variant="warning">{isAr ? "مسودة" : "Draft"}</Badge>
                 )}
                 <time dateTime={e.at} className="ms-auto text-xs tabular-nums text-muted-foreground">

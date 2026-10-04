@@ -26,6 +26,7 @@ import {
   claimPath,
   claimSmsText,
   claimState,
+  latinizeDigits,
   normalizeSaudiPhone,
   phoneLast4,
 } from "@moraqat/core";
@@ -65,7 +66,8 @@ export class VetClaimsService {
   ) {}
 
   async createPatient(actor: VetActor, dto: CreatePatientDto) {
-    const phone = normalizeSaudiPhone(dto.ownerPhone);
+    // ٠٥٥… from an Arabic keyboard is the same number as 055… (R101, R115).
+    const phone = normalizeSaudiPhone(latinizeDigits(dto.ownerPhone));
     if (!phone) {
       throw vetBadRequest("VET_PAYLOAD_INVALID", "Owner phone is not a valid mobile number", {
         hint: { ar: "اكتبوا رقم جوال المالك بصيغة 05XXXXXXXX.", en: "Enter the owner's mobile as 05XXXXXXXX." },

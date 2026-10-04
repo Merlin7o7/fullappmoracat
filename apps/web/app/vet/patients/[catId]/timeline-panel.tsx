@@ -223,7 +223,9 @@ function TimelineRow({
   const [reasonError, setReasonError] = React.useState("");
 
   const retracted = entry.status === "RETRACTED";
-  const isDraft = entry.status === "DRAFT" || entry.status === "AWAITING_COSIGN";
+  const isDraft = entry.status === "DRAFT";
+  // Superseded by a correction — readable history, not something to amend again.
+  const superseded = entry.status === "AMENDED";
   const isRevision = !!entry.revisionOf;
   const ownClinic = !entry.orgId || entry.orgId === actor.orgId;
   const clinicName = (isAr ? entry.orgNameAr : entry.orgNameEn) ?? "";
@@ -271,8 +273,8 @@ function TimelineRow({
   });
 
   // Amend and retract are only offered on this clinic's own, non-retracted work.
-  const canAmend = ownClinic && !retracted && actor.can("record.write");
-  const canRetract = ownClinic && !retracted && actor.can("record.retract");
+  const canAmend = ownClinic && !retracted && !superseded && actor.can("record.write");
+  const canRetract = ownClinic && !retracted && !superseded && actor.can("record.retract");
   const canCosign = isDraft && !retracted && actor.can("record.cosign");
 
   return (
@@ -306,6 +308,12 @@ function TimelineRow({
             {isDraft && !retracted && (
               <Badge variant="warning">
                 {isAr ? "مسودة — بانتظار توقيع" : "Draft — awaiting co-signature"}
+              </Badge>
+            )}
+            {superseded && (
+              <Badge variant="outline">
+                <History className="size-3" aria-hidden />
+                {isAr ? "صُحِّح بنسخة أحدث" : "Superseded by a correction"}
               </Badge>
             )}
             {isRevision && (
@@ -461,7 +469,8 @@ function TimelineRow({
                 type: entry.kind === "VISIT" || entry.kind === "CONSENT" || entry.kind === "ATTACHMENT"
                   ? "NOTE"
                   : entry.kind,
-                note: body ?? undefined,
+                note: entry.note ?? undefined,
+                payload: entry.payload ?? null,
               }}
               onSaved={() => {
                 setAmending(false);

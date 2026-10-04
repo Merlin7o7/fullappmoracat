@@ -65,7 +65,7 @@ export function ClaimPanel({ catId, autoOpen }: { catId: string; autoOpen?: bool
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold">{isAr ? "بانتظار استلام المالك" : "Waiting for the owner to claim"}</h2>
-              <Badge variant={s.state === "valid" ? "warning" : "secondary"}>
+              <Badge variant={s.state === "valid" ? "warning" : "outline"}>
                 {s.state === "valid" ? (isAr ? "الرابط صالح" : "Link active") : s.state === "expired" ? (isAr ? "انتهى الرابط" : "Link expired") : (isAr ? "استُبدل الرابط" : "Link replaced")}
               </Badge>
             </div>

@@ -275,7 +275,7 @@ export function DevicesSection() {
                       <p className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
                         <span className="truncate">{d.name}</span>
                         {isThis && <Badge variant="default">{isAr ? "هذا الجهاز" : "This device"}</Badge>}
-                        {!d.active && <Badge variant="secondary">{isAr ? "ملغى" : "Revoked"}</Badge>}
+                        {!d.active && <Badge variant="outline">{isAr ? "ملغى" : "Revoked"}</Badge>}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {branchName(d.branch)}

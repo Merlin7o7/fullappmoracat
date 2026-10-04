@@ -8,27 +8,28 @@
  */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsBoolean, IsDateString, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
+import {
+  VET_VISIT_MODES,
+  VET_VISIT_REASONS,
+  type VetCloseVisitRequest,
+  type VetOpenVisitRequest,
+} from "@moraqat/core";
 import { VetPageQueryDto } from "./vet-patient.dto";
 
-export const VISIT_MODES = ["QUICK", "STANDARD", "EMERGENCY"] as const;
+export const VISIT_MODES = VET_VISIT_MODES;
 export type VisitModeName = (typeof VISIT_MODES)[number];
 
 export const VISIT_STATES = ["OPEN", "CLOSED"] as const;
 export type VisitStateName = (typeof VISIT_STATES)[number];
 
-/** The reason chips the front desk taps. `other` falls through to free text. */
-export const VISIT_REASONS = [
-  "vaccination",
-  "illness",
-  "follow-up",
-  "grooming",
-  "dental",
-  "surgery",
-  "emergency",
-  "other",
-] as const;
+/**
+ * The reason chips the front desk taps — stored as these CODES and rendered per
+ * locale (`visitReasonLabel`). `other` falls through to free text. Declared in
+ * @moraqat/core so the portal's chips and this list are one list.
+ */
+export const VISIT_REASONS = VET_VISIT_REASONS;
 
-export class OpenVisitDto {
+export class OpenVisitDto implements VetOpenVisitRequest {
   @ApiProperty({ description: "The cat being seen." })
   @IsString()
   @MaxLength(40)
@@ -40,7 +41,9 @@ export class OpenVisitDto {
   mode?: VisitModeName;
 
   @ApiPropertyOptional({
-    description: "A reason chip, or free text when the chips don't fit. Never required to start care.",
+    description:
+      "A reason code (checkup · vaccination · illness · follow-up · emergency · surgery · dental · " +
+      "sterilisation · grooming · other), or free text when the chips don't fit. Never required to start care.",
     example: "vaccination",
   })
   @IsOptional()
@@ -92,12 +95,13 @@ export class UpdateVisitDto {
   followUpAt?: string;
 }
 
-export class CloseVisitDto {
+export class CloseVisitDto implements VetCloseVisitRequest {
   @ApiPropertyOptional({
     description:
       "Why a visit is closing with no clinical entries on it. Required in that case — a chart " +
-      "that records nothing must at least say why.",
-    example: "Owner left before the consult; rebooked for Sunday.",
+      "that records nothing must at least say why. A code (no-show · consult-only · referred) or " +
+      "\"other — <text>\" / free text.",
+    example: "no-show",
   })
   @IsOptional()
   @IsString()

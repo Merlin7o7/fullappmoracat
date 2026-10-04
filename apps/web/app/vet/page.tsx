@@ -38,7 +38,6 @@ import { Badge, Button, Card, Skeleton, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/app/providers";
 import { formatDate, formatDateTime } from "@/lib/datetime";
-import { formatSAR } from "@/lib/money";
 import {
   readRecentLookups,
   useVetActor,
@@ -61,6 +60,8 @@ export default function VetTodayPage() {
   const api = useVetApi();
   const { orgId, org, branchId, can, counterMode, counterSession } = useVetActor();
 
+  // The query key only; the API bounds "today" as a RIYADH day and always
+  // includes visits still OPEN from earlier days (overnight cases).
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
   // Only a LIVE clinic has a queue, numbers or recall lists to show.
   const orgStatus = org?.org.status;
@@ -69,7 +70,7 @@ export default function VetTodayPage() {
 
   const visitsQuery = useQuery({
     queryKey: ["vet", "visits", orgId, branchId, today],
-    queryFn: () => api.listVisits({ date: today, branchId: branchId ?? undefined }),
+    queryFn: () => api.listVisits({ branchId: branchId ?? undefined }),
     enabled: !!orgId && isLive && can("visit.open"),
     refetchInterval: 60_000, // the queue is a live thing
   });
@@ -119,7 +120,11 @@ export default function VetTodayPage() {
             {isAr ? "امسح بطاقة" : "Scan a card"}
           </Button>
           {can("emergency.access") && (
-            <Button size="sm" variant="secondary" onClick={() => router.push("/vet/emergency")}>
+            // /vet/emergency alone never existed (only /vet/emergency/[catId]):
+            // the button 404'd. Emergencies start where every lookup starts —
+            // the scanner — in emergency intent, which routes one exact hit
+            // straight to break-glass.
+            <Button size="sm" variant="secondary" onClick={() => router.push("/vet/scan?intent=emergency")}>
               <ShieldAlert className="size-4" aria-hidden />
               {isAr ? "طوارئ" : "Emergency"}
             </Button>
@@ -192,18 +197,6 @@ export default function VetTodayPage() {
                   : `${summary.visitsToday.open} open · ${summary.visitsToday.completed} completed`
               }
               icon={ClipboardList}
-            />
-          )}
-          {summary.benefitHonouredThisMonth && (
-            <StatCard
-              label={isAr ? "أسعار الأعضاء المُكرَّمة هذا الشهر" : "Member rates honoured this month"}
-              value={formatSAR(summary.benefitHonouredThisMonth.amount, isAr)}
-              hint={
-                isAr
-                  ? `عبر ${summary.benefitHonouredThisMonth.visits} زيارة`
-                  : `across ${summary.benefitHonouredThisMonth.visits} visits`
-              }
-              icon={Users}
             />
           )}
           {typeof summary.newMembersNearby === "number" && (
@@ -441,16 +434,20 @@ function VisitRow({ visit, isAr }: { visit: VetVisit; isAr: boolean }) {
           <span className="truncate">
             {formatDateTime(visit.checkedInAt, loc, { hour: "2-digit", minute: "2-digit" })}
           </span>
-          {visit.reason && <span className="truncate">{visit.reason}</span>}
+          {(visit.reasonLabel || visit.reason) && (
+            <span className="truncate">{(isAr ? visit.reasonLabel?.ar : visit.reasonLabel?.en) ?? visit.reason}</span>
+          )}
           {visit.openedBy?.name && <span className="truncate">{visit.openedBy.name}</span>}
         </>
       }
       trailing={
         <span className="flex flex-col items-end gap-0.5">
-          <Badge variant={visit.state === "OPEN" ? "info" : "secondary"} dot>
-            {vetVisitStateLabel(visit.state, isAr)}
+          <Badge variant={visit.state === "OPEN" ? (visit.stale ? "warning" : "info") : "outline"} dot>
+            {visit.stale && visit.state === "OPEN"
+              ? staleLabel(visit.checkedInAt, isAr)
+              : vetVisitStateLabel(visit.state, isAr)}
           </Badge>
-          {visit.state === "OPEN" && (
+          {visit.state === "OPEN" && !visit.stale && (
             <span className="text-xs text-muted-foreground tabular">
               {isAr ? `${waitingMinutes} د` : `${waitingMinutes} min`}
             </span>
@@ -459,6 +456,19 @@ function VisitRow({ visit, isAr }: { visit: VetVisit; isAr: boolean }) {
       }
     />
   );
+}
+
+/**
+ * A visit left open past midnight stays in the queue and says so — it used to
+ * vanish at midnight UTC and nobody closed it.
+ */
+function staleLabel(checkedInAt: string, isAr: boolean): string {
+  const riyadhDay = (d: Date) => new Date(d.getTime() + 3 * 3_600_000).toISOString().slice(0, 10);
+  const then = riyadhDay(new Date(checkedInAt));
+  const yesterday = riyadhDay(new Date(Date.now() - 86_400_000));
+  if (then === yesterday) return isAr ? "مفتوحة منذ أمس" : "Open since yesterday";
+  const when = formatDate(checkedInAt, isAr ? "ar" : "en");
+  return isAr ? `مفتوحة منذ ${when}` : `Open since ${when}`;
 }
 
 function VisitSkeletons() {

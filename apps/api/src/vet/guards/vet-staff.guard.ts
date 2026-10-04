@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
-import { can, capabilitiesFor } from "@moraqat/core";
+import { can, capabilitiesFor, licenceStanding, LICENCE_HELD_CAPABILITIES } from "@moraqat/core";
 import type { VetCapability, VetRole } from "@moraqat/core";
 import { PrismaService } from "../../prisma/prisma.service";
 import { resolveJwtSecret } from "../../common/config/secrets";
@@ -15,10 +15,13 @@ import type { AuthUser } from "../../common/decorators/current-user.decorator";
 import { VET_CAPABILITY_KEY } from "../decorators/vet-capability.decorator";
 import type { VetActor } from "../decorators/vet-actor.decorator";
 
-/** Header carrying the org the caller is acting inside (the portal's org switcher). */
-export const VET_ORG_HEADER = "x-moracat-org";
-/** Header carrying a counter-mode (PIN) session token, when one is active. */
-export const VET_COUNTER_HEADER = "x-moracat-counter";
+/**
+ * Header carrying the org the caller is acting inside (the portal's org
+ * switcher), and the counter-mode (PIN) session token. Declared once in
+ * @moraqat/core so the portal sends exactly what this guard reads.
+ */
+export { VET_ORG_HEADER, VET_COUNTER_HEADER } from "@moraqat/core";
+import { VET_ORG_HEADER, VET_COUNTER_HEADER } from "@moraqat/core";
 
 /**
  * Machine-readable failures for every way a clinic request can be refused.
@@ -34,6 +37,7 @@ export type VetErrorCode =
   | "VET_STAFF_SUSPENDED"
   | "VET_INVITE_PENDING"
   | "VET_FORBIDDEN"
+  | "VET_LICENCE_REQUIRED"
   // ── Counter mode ──
   | "VET_COUNTER_SESSION_INVALID"
   | "VET_COUNTER_SESSION_EXPIRED"
@@ -174,7 +178,11 @@ export class VetStaffGuard implements CanActivate {
     ]);
     if (required?.length) {
       const missing = required.filter(
-        (capability) => !can({ role: actor.role, counterMode: actor.counterMode, orgStatus: actor.orgStatus }, capability)
+        (capability) =>
+          !can(
+            { role: actor.role, counterMode: actor.counterMode, orgStatus: actor.orgStatus, licence: actor.licence },
+            capability
+          )
       );
       // Refused only because the clinic isn't live yet? Say that — "your role
       // doesn't include this" would send a vet to argue with their manager.
@@ -189,6 +197,23 @@ export class VetStaffGuard implements CanActivate {
             "This clinic is still setting up — patient records open once Moracat switches it live.",
             { missing, status: actor.orgStatus, sandbox: true }
           )
+        );
+      }
+      // Refused only because a doctor's licence isn't on file? Say exactly that —
+      // the fix is a manager recording the licence, not a role change.
+      if (
+        missing.length > 0 &&
+        missing.every(
+          (capability) =>
+            LICENCE_HELD_CAPABILITIES.has(capability) &&
+            can({ role: actor.role, counterMode: actor.counterMode, orgStatus: actor.orgStatus }, capability)
+        )
+      ) {
+        throw new ForbiddenException(
+          vetError("VET_LICENCE_REQUIRED", "A practitioner licence must be on file for this action.", {
+            missing,
+            licence: actor.licence,
+          })
         );
       }
       if (missing.length > 0) {
@@ -232,6 +257,8 @@ export class VetStaffGuard implements CanActivate {
         orgId: true,
         role: true,
         status: true,
+        licenceNo: true,
+        licenceExpiresAt: true,
         org: { select: { status: true, suspendedAt: true, isDemo: true } },
         branches: { select: { id: true } },
       },
@@ -259,6 +286,11 @@ export class VetStaffGuard implements CanActivate {
       branchIds: staff.branches.map((b) => b.id),
       counterMode: false,
       deviceId: null,
+      licence: licenceStanding({
+        role: staff.role as VetRole,
+        licenceNo: staff.licenceNo,
+        licenceExpiresAt: staff.licenceExpiresAt,
+      }),
     });
   }
 
@@ -306,6 +338,8 @@ export class VetStaffGuard implements CanActivate {
           orgId: true,
           role: true,
           status: true,
+          licenceNo: true,
+          licenceExpiresAt: true,
           org: { select: { status: true, suspendedAt: true, isDemo: true } },
           branches: { select: { id: true } },
         },
@@ -348,6 +382,11 @@ export class VetStaffGuard implements CanActivate {
       branchIds: staff.branches.map((b) => b.id),
       counterMode: true,
       deviceId: device.id,
+      licence: licenceStanding({
+        role: staff.role as VetRole,
+        licenceNo: staff.licenceNo,
+        licenceExpiresAt: staff.licenceExpiresAt,
+      }),
     });
   }
 
@@ -398,6 +437,7 @@ export class VetStaffGuard implements CanActivate {
         role: base.role,
         counterMode: base.counterMode,
         orgStatus: base.orgStatus,
+        licence: base.licence,
       }),
     };
   }

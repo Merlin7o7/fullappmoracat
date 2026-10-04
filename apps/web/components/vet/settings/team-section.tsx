@@ -12,7 +12,7 @@ import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, MailPlus, RotateCw, UserPlus, Users } from "lucide-react";
 import { Badge, Button, Input, Skeleton, cn, useToast } from "@moraqat/ui";
-import type { VetRole } from "@moraqat/core";
+import { LICENCE_ON_INVITE_ROLES, latinizeDigits, type VetRole } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
 import { useVetActor, useVetFetch } from "@/lib/vet-api";
@@ -74,6 +74,11 @@ export function TeamSection() {
   const [email, setEmail] = React.useState("");
   const [role, setRole] = React.useState<string>("");
   const [title, setTitle] = React.useState("");
+  // Doctor roles prescribe and co-sign — licensed acts. The invitation carries
+  // the licence, or the API refuses it (audit 2026-10-04, #vet P1).
+  const [licenceNo, setLicenceNo] = React.useState("");
+  const [licenceExpiresAt, setLicenceExpiresAt] = React.useState("");
+  const needsLicence = (LICENCE_ON_INVITE_ROLES as readonly string[]).includes(role);
   const [inviting, setInviting] = React.useState(false);
   const [inviteError, setInviteError] = React.useState<Friendly>(null);
 
@@ -96,14 +101,32 @@ export function TeamSection() {
       return;
     }
     if (!role) return;
+    if (needsLicence) {
+      const exp = licenceExpiresAt ? new Date(licenceExpiresAt) : null;
+      if (!licenceNo.trim() || !exp || Number.isNaN(exp.getTime()) || exp.getTime() <= Date.now()) {
+        setInviteError(
+          isAr
+            ? { title: "ترخيص المزاولة مطلوب", message: "للأطباء: أدخل رقم ترخيص المزاولة وتاريخ انتهائه (تاريخ لم يمضِ بعد)." }
+            : { title: "A practitioner licence is needed", message: "For doctors: enter the practitioner licence number and its expiry (a date still ahead)." },
+        );
+        return;
+      }
+    }
     setInviting(true);
     try {
       await vetFetch("/vet/staff/invites", {
         method: "POST",
-        body: JSON.stringify({ email: address, role, ...(title.trim() ? { title: title.trim() } : {}) }),
+        body: JSON.stringify({
+          email: address,
+          role,
+          ...(title.trim() ? { title: title.trim() } : {}),
+          ...(needsLicence ? { licenceNo: latinizeDigits(licenceNo.trim()), licenceExpiresAt } : {}),
+        }),
       });
       setEmail("");
       setTitle("");
+      setLicenceNo("");
+      setLicenceExpiresAt("");
       setFormOpen(false);
       refreshAll();
       toast({
@@ -225,6 +248,47 @@ export function TeamSection() {
               : "Shown beside their name on what they write. Access covers every branch."}
           </p>
         </div>
+        {needsLicence && (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="invite-licence" className="text-sm font-medium">
+                {isAr ? "رقم ترخيص المزاولة" : "Practitioner licence number"}
+                <span className="ms-0.5 text-destructive" aria-hidden>
+                  *
+                </span>
+              </label>
+              <Input
+                id="invite-licence"
+                dir="ltr"
+                value={licenceNo}
+                onChange={(e) => setLicenceNo(e.target.value.slice(0, 80))}
+                autoComplete="off"
+                className="text-start"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="invite-licence-exp" className="text-sm font-medium">
+                {isAr ? "تاريخ انتهاء الترخيص" : "Licence expiry"}
+                <span className="ms-0.5 text-destructive" aria-hidden>
+                  *
+                </span>
+              </label>
+              <Input
+                id="invite-licence-exp"
+                type="date"
+                value={licenceExpiresAt}
+                onChange={(e) => setLicenceExpiresAt(e.target.value)}
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground sm:col-span-2">
+              {isAr
+                ? "الوصفات والتوقيع على سجلات المتدربين أعمال تحتاج ترخيصاً ساريًا. بدون ترخيص مسجّل تُحفظ كتابات الطبيب كمسودات."
+                : "Prescribing and co-signing trainees' records need a valid licence. Without one on file, a doctor's writing saves as drafts."}
+            </p>
+          </>
+        )}
       </div>
       <InlineError error={inviteError} />
       <div className="flex flex-wrap justify-end gap-2">
@@ -330,7 +394,7 @@ export function TeamSection() {
                           {statusLabel(p.status, isAr)}
                         </Badge>
                         {p.status === "ACTIVE" && (
-                          <Badge variant={p.hasCounterPin ? "secondary" : "outline"}>
+                          <Badge variant={p.hasCounterPin ? "outline" : "outline"}>
                             <KeyRound className="size-3" aria-hidden />
                             {p.hasCounterPin ? (isAr ? "الرمز معيّن" : "PIN set") : isAr ? "بلا رمز" : "No PIN"}
                           </Badge>

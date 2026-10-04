@@ -12,6 +12,7 @@
  */
 
 import type { VetRole } from "./vet-permissions";
+import { VET_PARTNER_AGREEMENT_2026_09_16, VET_PDPL_ADDENDUM_2026_09_16 } from "./vet-terms-archive";
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Lifecycle                                                                  */
@@ -402,12 +403,21 @@ export interface TermsDocument {
 
 /**
  * Bump when ANY word below changes. Stored on every acceptance so an old
- * signature is always read against the text that was actually shown.
+ * signature is always read against the text that was actually shown — every
+ * superseded version is frozen verbatim in `VET_PARTNER_TERMS_ARCHIVE`.
  *
  * DRAFT STATUS: written for launch, pending review by Saudi counsel before the
- * first real clinic signs (MRC-VET-002 §Terms).
+ * first real clinic signs (MRC-VET-002 §Terms). Counsel sign-off is still
+ * required before the first real invite.
+ *
+ * History:
+ *   2026-09-16 — first launch draft.
+ *   2026-10-04 — removed the obligation to honour advertised member benefits
+ *                and the suspension trigger tied to it: the product has no
+ *                benefit field, flow or display, so a clinic could not know
+ *                what it was promising (UX audit 2026-10-04, #vet P1).
  */
-export const VET_PARTNER_TERMS_VERSION = "2026-09-16";
+export const VET_PARTNER_TERMS_VERSION = "2026-10-04";
 export const VET_STAFF_CONFIDENTIALITY_VERSION = "2026-09-16";
 
 export const VET_PARTNER_AGREEMENT: TermsDocument = {
@@ -449,13 +459,11 @@ export const VET_PARTNER_AGREEMENT: TermsDocument = {
       bodyAr: [
         "الإبقاء على السجل التجاري وترخيص وزارة البيئة والمياه والزراعة وتراخيص الأطباء سارية، وإبلاغ مرقط خلال ٧ أيام بأي انتهاء أو إيقاف أو تغيير.",
         "صحة كل البيانات والمستندات المقدّمة، وتحديثها عند تغيّرها.",
-        "تقديم أي ميزة معلنة لأعضاء مرقط كما هي مكتوبة، دون شروط مخفية.",
         "أن يستخدم كل موظف حسابه الشخصي فقط؛ مشاركة الحسابات ممنوعة.",
       ],
       bodyEn: [
         "Keep the commercial registration, the MEWA veterinary licence and every practitioner's licence valid, and tell Moracat within 7 days of any expiry, suspension or change.",
         "Ensure every detail and document submitted is true, and update it when it changes.",
-        "Honour any advertised Moracat member benefit exactly as written, with no hidden conditions.",
         "Every staff member uses only their own account; sharing accounts is not allowed.",
       ],
     },
@@ -507,11 +515,11 @@ export const VET_PARTNER_AGREEMENT: TermsDocument = {
       titleAr: "٧. الإيقاف",
       titleEn: "7. Suspension",
       bodyAr: [
-        "يحق لمرقط إيقاف وصول العيادة فوراً عند: انتهاء أو إيقاف ترخيص، أو إساءة استخدام السجلات، أو تقديم بيانات غير صحيحة، أو عدم الالتزام بميزة معلنة للأعضاء.",
+        "يحق لمرقط إيقاف وصول العيادة فوراً عند: انتهاء أو إيقاف ترخيص، أو إساءة استخدام السجلات، أو تقديم بيانات غير صحيحة.",
         "يُبلَّغ سبب الإيقاف كتابةً، وتبقى السجلات الطبية محفوظة.",
       ],
       bodyEn: [
-        "Moracat may suspend the Clinic's access immediately for: an expired or suspended licence, misuse of records, false information, or failing to honour an advertised member benefit.",
+        "Moracat may suspend the Clinic's access immediately for: an expired or suspended licence, misuse of records, or false information.",
         "The reason is given in writing, and medical records are preserved.",
       ],
     },
@@ -649,4 +657,19 @@ export function canonicalTermsText(docs: TermsDocument[]): string {
       ].join("\n")
     )
     .join("\n\n");
+}
+
+/**
+ * Every superseded terms version, frozen verbatim, keyed by version. The API
+ * stores `termsVersion` + `contentHash` on each acceptance; this is what lets
+ * that hash be recomputed against the exact text that was shown.
+ */
+export const VET_PARTNER_TERMS_ARCHIVE: Readonly<Record<string, readonly TermsDocument[]>> = {
+  "2026-09-16": [VET_PARTNER_AGREEMENT_2026_09_16, VET_PDPL_ADDENDUM_2026_09_16],
+};
+
+/** The partner documents for a given terms version (current or archived), or null. */
+export function partnerTermsFor(version: string): readonly TermsDocument[] | null {
+  if (version === VET_PARTNER_TERMS_VERSION) return [VET_PARTNER_AGREEMENT, VET_PDPL_ADDENDUM];
+  return VET_PARTNER_TERMS_ARCHIVE[version] ?? null;
 }

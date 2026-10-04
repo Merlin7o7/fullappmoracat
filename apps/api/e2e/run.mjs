@@ -212,10 +212,21 @@ const catLifeCode = await runSuite({
   extraEnv: { COMMERCE_ENABLED: "true" },
 });
 
-const code = smokeCode || killSwitchCode || catLifeCode;
+// Pass 4 — the clinic's daily loop (audit 2026-10-04, Problem 1): scan → visit
+// → vaccinate → prescribe → dispense → close → owner summary → counter PIN
+// attribution → break-glass quarantine. Its own pass because its failure mode
+// is a clinic that cannot write a record, not a route returning the wrong shape.
+const vetLoopCode = await runSuite({
+  label: "vet clinical loop",
+  suiteFile: "vet-loop.mjs",
+  port: Number(port) + 300,
+  extraEnv: { COMMERCE_ENABLED: "true" },
+});
+
+const code = smokeCode || killSwitchCode || catLifeCode || vetLoopCode;
 console.log(
   code === 0
-    ? "\n✅ ALL SUITES PASSED (commerce on + commerce off + cat life)"
+    ? "\n✅ ALL SUITES PASSED (commerce on + commerce off + cat life + vet loop)"
     : "\n❌ SUITE FAILURES — see above"
 );
 process.exit(code);

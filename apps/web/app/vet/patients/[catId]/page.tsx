@@ -54,7 +54,14 @@ import {
   Award,
 } from "lucide-react";
 import { Badge, Button, buttonVariants, Card, Dialog, Input, Skeleton, cn, useToast } from "@moraqat/ui";
-import { VET_ROLE_LABELS } from "@moraqat/core";
+import {
+  VET_ROLE_LABELS,
+  VET_VISIT_REASONS,
+  VET_VISIT_REASON_LABELS,
+  composeReason,
+  ownerDeliveryNotice,
+  type VetVisitReason,
+} from "@moraqat/core";
 import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
 import { QueryError } from "@/components/query-error";
@@ -361,7 +368,7 @@ function Hero({
               <Badge variant="accent">{isAr ? "الرعاية مستمرة" : "Care continues"}</Badge>
             )}
             {typeof profile.weightKg === "number" && (
-              <Badge variant="secondary">
+              <Badge variant="outline">
                 <Weight className="size-3" aria-hidden />
                 <span className="font-mono tabular-nums">{profile.weightKg}</span>{" "}
                 {isAr ? "كجم" : "kg"}
@@ -492,13 +499,13 @@ const TIER_COPY: Record<
     en: "Tier 0 — identity & alerts",
     whatAr: "تشوف من هي، وما الذي قد يؤذيها. لا سجل طبي.",
     whatEn: "You see who she is, and what could harm her. No medical record.",
-    hiddenAr: ["ملخّص الرعاية", "التحصينات", "منحنى الوزن", "سجل العيادات الأخرى"],
+    hiddenAr: ["ملخّص الرعاية", "التطعيمات", "منحنى الوزن", "سجل العيادات الأخرى"],
     hiddenEn: ["Care summary", "Vaccinations", "Weight history", "Other clinics' records"],
   },
   T1: {
     ar: "المستوى 1 — ملخّص الرعاية",
     en: "Tier 1 — care summary",
-    whatAr: "التحصينات والحالات المعروفة والأدوية الحالية ومنحنى الوزن.",
+    whatAr: "التطعيمات والحالات المعروفة والأدوية الحالية ومنحنى الوزن.",
     whatEn: "Vaccinations, known conditions, current medications and the weight history.",
     hiddenAr: ["ملاحظات العيادات الأخرى", "تقارير المختبر والأشعة", "المستندات"],
     hiddenEn: ["Other clinics' notes", "Lab & imaging reports", "Documents"],
@@ -528,14 +535,33 @@ function ConsentBanner({ profile, catId }: { profile: PatientProfile; catId: str
 
   const ask = useMutation({
     mutationFn: () => api.requestConsent({ catId, tier: nextTier!, scope: "STANDING" }),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      // Three different outcomes, three different sentences — never "asked"
+      // when nobody was (an unclaimed cat has no owner to ask yet).
+      if (res.alreadyGranted) {
+        toast({
+          variant: "info",
+          title: isAr ? "لديكم هذا الإذن بالفعل" : "You already have this access",
+          description: isAr ? "حدّث الصفحة لرؤية ما يتيحه." : "Refresh the page to see what it opens.",
+        });
+        return;
+      }
+      if (!res.requested) {
+        const why = res.ownerNotification ? ownerDeliveryNotice(res.ownerNotification) : res.notice;
+        toast({
+          variant: "info",
+          title: isAr ? "لم يُرسل الطلب" : "The request wasn't sent",
+          description: why ? (isAr ? why.ar : why.en) : undefined,
+        });
+        return;
+      }
       setRequested(true);
       toast({
         variant: "success",
         title: isAr ? "وصل الطلب للمالك" : "The owner has been asked",
         description: isAr
-          ? "يظهر لهم إشعار باسم عيادتكم. لا شيء ينفتح قبل موافقتهم."
-          : "They get a notification naming your clinic. Nothing opens until they say yes.",
+          ? "يظهر لهم إشعار داخل التطبيق باسم عيادتكم. لا شيء ينفتح قبل موافقتهم."
+          : "They get an in-app notification naming your clinic. Nothing opens until they say yes.",
       });
     },
     onError: (err) => {
@@ -650,13 +676,11 @@ function ConsentBanner({ profile, catId }: { profile: PatientProfile; catId: str
 
 // ── quick actions ────────────────────────────────────────────────────────
 
-const REASONS: { value: string; ar: string; en: string }[] = [
-  { value: "VACCINATION", ar: "تحصين", en: "Vaccination" },
-  { value: "ILLNESS", ar: "مرض", en: "Illness" },
-  { value: "FOLLOW_UP", ar: "متابعة", en: "Follow-up" },
-  { value: "GROOMING", ar: "عناية", en: "Grooming" },
-  { value: "OTHER", ar: "أخرى", en: "Other" },
-];
+/** Stored as CODES; the label is rendered per locale wherever the visit shows. */
+const REASONS = VET_VISIT_REASONS.filter((r) => r !== "grooming").map((value) => ({
+  value,
+  ...VET_VISIT_REASON_LABELS[value],
+}));
 
 function QuickActions({ profile, catId }: { profile: PatientProfile; catId: string }) {
   const { locale } = useLocale();
@@ -667,22 +691,29 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
   const api = useVetApi();
 
   const [open, setOpen] = React.useState(false);
-  const [reason, setReason] = React.useState("VACCINATION");
+  const [reason, setReason] = React.useState<VetVisitReason>("checkup");
   const [otherReason, setOtherReason] = React.useState("");
   const [error, setError] = React.useState("");
 
   const start = useMutation({
-    mutationFn: () => {
-      const picked = REASONS.find((r) => r.value === reason);
-      return api.openVisit({
+    mutationFn: () =>
+      api.openVisit({
         catId,
-        reason: reason === "OTHER" ? otherReason.trim() : (picked ? picked.en : reason),
+        reason: reason === "other" ? composeReason("other", otherReason) : reason,
+        mode: reason === "emergency" ? "EMERGENCY" : undefined,
         branchId: actor.branchId ?? undefined,
-      });
-    },
-    onSuccess: (visit) => {
+      }),
+    // `{visit, resumed}` — an already-open visit is continued, never forked.
+    onSuccess: ({ visit, resumed }) => {
       setOpen(false);
-      router.push(`/vet/visits/${visit.id}`);
+      if (resumed) {
+        toast({
+          variant: "info",
+          title: isAr ? `زيارة ${profile.name} مفتوحة بالفعل` : `${profile.name} already has an open visit`,
+          description: isAr ? "تابعناها بدل فتح ملف ثانٍ." : "We've continued it rather than start a second chart.",
+        });
+      }
+      router.push(`/vet/visits/${encodeURIComponent(visit.id)}`);
     },
     onError: (err) => {
       const f = vetFriendlyError(err, isAr);
@@ -753,7 +784,7 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
               variant="primary"
               loading={start.isPending}
               onClick={() => {
-                if (reason === "OTHER" && otherReason.trim().length < 2) {
+                if (reason === "other" && otherReason.trim().length < 2) {
                   setError(isAr ? "اكتب السبب باختصار." : "Write the reason briefly.");
                   return;
                 }
@@ -790,7 +821,7 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
           </div>
         </fieldset>
 
-        {reason === "OTHER" && (
+        {reason === "other" && (
           <div className="mt-3">
             <label htmlFor="visit-other-reason" className="block text-xs font-medium text-foreground">
               {isAr ? "اكتب السبب" : "Describe the reason"}
@@ -799,7 +830,7 @@ function QuickActions({ profile, catId }: { profile: PatientProfile; catId: stri
               id="visit-other-reason"
               value={otherReason}
               onChange={(e) => setOtherReason(e.target.value)}
-              invalid={!!error && reason === "OTHER"}
+              invalid={!!error && reason === "other"}
               className="mt-1"
             />
           </div>

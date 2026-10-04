@@ -43,10 +43,17 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Cat, Phone, ShieldCheck, Siren } from "lucide-react";
 import { Button, Input, cn, useToast } from "@moraqat/ui";
-import { VET_ROLE_LABELS } from "@moraqat/core";
+import {
+  VET_EMERGENCY_REASONS,
+  VET_EMERGENCY_REASON_LABELS,
+  VET_ROLE_LABELS,
+  composeReason,
+  emergencyReasonLabel,
+} from "@moraqat/core";
 import { useLocale } from "@/app/providers";
 import { formatDateTime } from "@/lib/datetime";
 import { AlertsBand } from "@/components/vet/alerts-band";
@@ -58,16 +65,12 @@ import {
   type EmergencyPayload,
 } from "@/lib/vet-api";
 
-const PRESETS: { value: string; ar: string; en: string }[] = [
-  { value: "COLLAPSE", ar: "انهيار / فقدان وعي", en: "Collapse / unresponsive" },
-  { value: "TRAUMA", ar: "إصابة أو حادث", en: "Trauma or accident" },
-  { value: "BREATHING", ar: "ضيق تنفّس", en: "Respiratory distress" },
-  { value: "SEIZURE", ar: "تشنّج", en: "Seizure" },
-  { value: "POISONING", ar: "اشتباه تسمّم", en: "Suspected poisoning" },
-  { value: "URINARY", ar: "انسداد بولي", en: "Urinary obstruction" },
-  { value: "BLEEDING", ar: "نزيف", en: "Bleeding" },
-  { value: "OTHER", ar: "أخرى", en: "Other" },
-];
+/**
+ * Presets travel as CODES ("COLLAPSE — detail") and are rendered per locale by
+ * the API in the owner's notification. They used to travel as English prose,
+ * so an Arabic owner read «السبب المُعلن: Collapse / unresponsive».
+ */
+const PRESETS = VET_EMERGENCY_REASONS.map((value) => ({ value, ...VET_EMERGENCY_REASON_LABELS[value] }));
 
 export default function EmergencyAccessPage({ params }: { params: { catId: string } }) {
   const { catId } = params;
@@ -123,9 +126,13 @@ export default function EmergencyAccessPage({ params }: { params: { catId: strin
   if (!payload) {
     const picked = PRESETS.find((p) => p.value === preset);
     const reasonValue =
-      !picked || preset === "OTHER"
+      !picked
         ? freeText.trim()
-        : picked.en + (freeText.trim() ? ` — ${freeText.trim()}` : "");
+        : preset === "OTHER"
+          ? freeText.trim()
+            ? composeReason("OTHER", freeText)
+            : ""
+          : composeReason(picked.value, freeText);
 
     return (
       <main className="mx-auto flex min-h-[100dvh] max-w-2xl flex-col justify-center p-4 sm:p-6">
@@ -252,7 +259,9 @@ export default function EmergencyAccessPage({ params }: { params: { catId: strin
 function BreakGlassView({ payload }: { payload: EmergencyPayload }) {
   const { locale } = useLocale();
   const isAr = locale === "ar";
+  const router = useRouter();
   const { owner } = payload;
+  const reasonText = emergencyReasonLabel(payload.reason, isAr ? "ar" : "en");
 
   const contacts = [
     owner.phone
@@ -287,10 +296,16 @@ function BreakGlassView({ payload }: { payload: EmergencyPayload }) {
             </span>
           )}
         </p>
-        {payload.ownerNotified && (
+        {payload.ownerNotified ? (
           <p className="text-sm text-muted-foreground">
-            {isAr ? "· أُشعِر المالك باسم عيادتكم." : "· The owner was notified, naming your clinic."}
+            {isAr ? "· أُشعِر المالك داخل التطبيق باسم عيادتكم." : "· The owner was notified in the app, naming your clinic."}
           </p>
+        ) : (
+          // Only claim the owner was told when they were (an unclaimed cat has
+          // nobody to tell) — say what to do instead.
+          payload.auditNotice && (
+            <p className="w-full text-sm text-muted-foreground">{isAr ? payload.auditNotice.ar : payload.auditNotice.en}</p>
+          )
         )}
         {payload.accessId && (
           <p className="w-full font-mono text-xs text-muted-foreground">
@@ -409,21 +424,18 @@ function BreakGlassView({ payload }: { payload: EmergencyPayload }) {
         {/* Paperwork after the cat is safe — one calm exit, never a trap. */}
         <div className="mt-6 border-t border-border pt-4">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {payload.reason
+            {reasonText
               ? isAr
-                ? `سبب الفتح المسجّل: «${payload.reason}». الورق بعد ما يستقر القط — سجّل ما حدث متى ما قدرت.`
-                : `Recorded reason: “${payload.reason}”. Paperwork after the cat is stable — record what happened whenever you can.`
+                ? `سبب الفتح المسجّل: «${reasonText}». التوثيق بعد أن تستقر حالة القط — سجّل ما حدث متى ما استطعت.`
+                : `Recorded reason: “${reasonText}”. Paperwork after the cat is stable — record what happened whenever you can.`
               : isAr
-                ? "الورق بعد ما يستقر القط — سجّل ما حدث متى ما قدرت."
+                ? "التوثيق بعد أن تستقر حالة القط — سجّل ما حدث متى ما استطعت."
                 : "Paperwork after the cat is stable — record what happened whenever you can."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link
-              href={`/vet/patients/${payload.catId}`}
-              className="inline-flex min-h-[56px] items-center gap-2 rounded-full bg-primary px-6 text-base font-medium text-primary-foreground hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
+            <Button variant="primary" size="xl" onClick={() => router.push(`/vet/patients/${encodeURIComponent(payload.catId)}`)}>
               {isAr ? "الملف الكامل وفتح زيارة" : "Full profile & start a visit"}
-            </Link>
+            </Button>
           </div>
         </div>
       </div>

@@ -25,17 +25,35 @@ import {
   can as coreCan,
   capabilitiesFor,
   assertShape,
+  latinizeDigits as coreLatinizeDigits,
+  VET_COUNTER_HEADER,
+  VET_ORG_HEADER,
+  VET_VISIT_OPEN_EXISTS,
+  type ClinicalEntryType,
+  type DoseStanding,
+  type LicenceStanding,
+  type VaccineCode,
   type VetCapability,
   type VetRole,
   type Paginated,
   type RecordList,
   type VisitState as CoreVisitState,
   type PrescriptionStatus as CorePrescriptionStatus,
+  type VetCloseVisitRequest,
+  type VetCloseVisitResponse,
+  type VetCoSignState,
+  type VetCounterSessionResponse,
+  type VetCreateRecordRequest,
+  type VetOpenVisitRequest,
+  type VetOwnerDelivery,
+  type VetPrescriptionStatusRequest,
+  type VetReviseRecordRequest,
 } from "@moraqat/core";
 import { useAuth } from "@/lib/auth";
 import { ApiError, fetchWithTimeout, httpError } from "@/lib/http";
 import { friendlyError, type FriendlyError } from "@/lib/errors";
 import {
+  adaptCounterSession,
   adaptEmergencyPayload,
   adaptPatientProfile,
   adaptPrescription,
@@ -58,6 +76,13 @@ const ORG_STORAGE_KEY = "moraqat.vet.org";
 const BRANCH_STORAGE_KEY = "moraqat.vet.branch";
 const DEVICE_STORAGE_KEY = "moraqat.vet.device";
 const RECENTS_STORAGE_KEY = "moraqat.vet.recents";
+/**
+ * The counter (PIN) session lives in sessionStorage: it survives a reload of
+ * the terminal tab, dies with the tab, and is never shared across tabs.
+ */
+const COUNTER_STORAGE_KEY = "moraqat.vet.counter";
+/** Unsaved SOAP notes: one per visit AND per author (see vetDraftKey). */
+const DRAFT_KEY_PREFIX = "moraqat.vet.visitDraft.";
 /** Device-local lookup memory is deliberately short-lived (dossier §05). */
 const RECENTS_TTL_MS = 24 * 60 * 60 * 1000;
 const RECENTS_MAX = 10;
@@ -133,6 +158,9 @@ export interface VetMembership {
   hasCounterPin?: boolean;
   branches: VetBranch[];
   capabilities?: VetCapability[];
+  /** Practitioner-licence standing; MISSING / EXPIRED = prescribing held. */
+  licence?: LicenceStanding;
+  licenceNotice?: { ar: string; en: string } | null;
 }
 
 export interface VetAuthContext {
@@ -145,16 +173,30 @@ export interface VetCounterUnlockInput {
   pin: string;
 }
 
+/**
+ * VIEW MODEL of a counter (PIN) session — produced by `adaptCounterSession`
+ * from the API's `{counterToken, expiresAt, header, device, actor}`.
+ *
+ * The portal used to read `staffId`/`staffName` at the top level of a response
+ * that nests them under `actor`, never stored the token, and never sent the
+ * counter header — so every PIN'd action was attributed to whoever was signed
+ * in on the terminal, and the toast read "Welcome, undefined".
+ */
 export interface VetCounterSession {
   /** The identity now driving the shared terminal. */
   staffId: string;
-  staffName: string;
+  /** Null when the person has no name on file — callers fall back to the role. */
+  staffName: string | null;
   role: VetRole;
+  roleLabel: { ar: string; en: string } | null;
   orgId: string;
   deviceId: string;
   deviceName?: string;
-  /** ISO — the terminal re-locks itself at this moment (dossier §02: 2 min idle). */
-  expiresAt?: string;
+  /** ISO — the server stops honouring the token at this moment. */
+  expiresAt: string;
+  /** Sent as `x-moracat-counter` on every vet request while unlocked. */
+  counterToken: string;
+  licence?: LicenceStanding;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -175,6 +217,8 @@ export interface VetSearchResult {
   name: string;
   catIdNumber: string;
   photoUrl: string | null;
+  /** Shown in the household picker — two cats on one phone are told apart by sight. */
+  sex: VetSex;
   ownerName?: string | null;
   lastVisitAt?: string | null;
   /** True when this clinic has treated the cat before — the consented relationship. */
@@ -429,6 +473,11 @@ export interface VetVaccination {
   dueAt: string | null;
   /** Clinic that administered it, when the owner's consent tier reveals it. */
   administeredBy?: string | null;
+  vaccineCode?: VaccineCode;
+  /** Only the latest dose of each vaccine can be overdue (server-computed). */
+  isLatest?: boolean;
+  standing?: DoseStanding;
+  overdue?: boolean;
 }
 
 export interface VetWeightPoint {
@@ -537,8 +586,11 @@ export type VetTimelineKind =
   | "ATTACHMENT"
   | "CONSENT";
 
-/** Records are append-only: a correction is a new entry pointing at the old one. */
-export type VetEntryStatus = "DRAFT" | "AWAITING_COSIGN" | "FINAL" | "RETRACTED";
+/**
+ * Records are append-only: a correction is a new entry pointing at the old one,
+ * and the old one becomes AMENDED. Mirrors the core/Prisma enum exactly.
+ */
+export type VetEntryStatus = "DRAFT" | "FINAL" | "AMENDED" | "RETRACTED";
 
 export interface VetAttachment {
   id: string;
@@ -577,6 +629,10 @@ export interface VetTimelineEntry {
   orgNameAr?: string | null;
   /** Set when this entry supersedes an earlier one. */
   revisionOf?: string | null;
+  /** The stored clinical payload (null when retracted) — prefills an amendment. */
+  payload?: Record<string, unknown> | null;
+  /** The clinician's free-text note, as written. */
+  note?: string | null;
   cosignedBy?: string | null;
   cosignedAt?: string | null;
   attachments?: VetAttachment[];
@@ -679,7 +735,9 @@ export interface VetVisit {
   };
   mode: string;
   state: VetVisitState;
+  /** Stored code (or legacy free text). Render `reasonLabel`, never this. */
   reason: string | null;
+  reasonLabel?: { ar: string; en: string } | null;
   presentingComplaint: string | null;
   branch: { id: string; ar: string; en: string } | null;
   openedBy: { id: string; name: string; role: string } | null;
@@ -694,6 +752,8 @@ export interface VetVisit {
   waitMinutes: number | null;
   /** A calm nudge, not an alarm — amber at 10 minutes is the only escalation. */
   waitLevel: "calm" | "amber" | null;
+  /** OPEN since an earlier Riyadh day — still in today's queue, and labelled. */
+  stale?: boolean;
 }
 
 export type VetVisitListResponse = Paginated<VetVisit> & {
@@ -843,8 +903,6 @@ export interface VetOrgSummary {
   orgNameAr?: string;
   orgStatus?: VetOrgStatus;
   visitsToday?: { open: number; completed: number };
-  /** Member rates honoured this month, in SAR — the clinic's mirror of R041. */
-  benefitHonouredThisMonth?: { amount: number; visits: number };
   newMembersNearby?: number;
   /** Follow-ups the clinic promised and hasn't closed. */
   pendingFollowUps?: VetFollowUp[];
@@ -931,6 +989,8 @@ export const VET_ERROR_CODES = [
   "VET_SEARCH_SCOPED",
   "VET_INVITE_PENDING",
   "VET_DEVICE_NOT_REGISTERED",
+  "VET_LICENCE_REQUIRED",
+  "VET_COUNTER_SESSION_EXPIRED",
 ] as const;
 
 export type VetErrorCode = (typeof VET_ERROR_CODES)[number];
@@ -1018,6 +1078,26 @@ const VET_ERROR_COPY: Record<VetErrorCode, { ar: FriendlyError; en: FriendlyErro
       message: "Open the invitation link in your email and accept the confidentiality undertaking — then you're straight in.",
     },
   },
+  VET_LICENCE_REQUIRED: {
+    ar: {
+      title: "يلزم ترخيص مزاولة",
+      message: "هذا الإجراء يحتاج رقم ترخيص مزاولة ساري مسجّلاً لك في العيادة. يستطيع مدير العيادة تسجيله من الإعدادات ← الفريق.",
+    },
+    en: {
+      title: "A practitioner licence is needed",
+      message: "This needs a valid practitioner licence on file for you at this clinic. A clinic manager can record it under Settings → Team.",
+    },
+  },
+  VET_COUNTER_SESSION_EXPIRED: {
+    ar: {
+      title: "انتهت جلسة الكاونتر",
+      message: "قُفل الكاونتر تلقائياً. اضغط على اسمك وأدخل رمزك للمتابعة — لم يُحفظ شيء باسم شخص آخر.",
+    },
+    en: {
+      title: "The counter session ended",
+      message: "The counter locked itself. Tap your name and enter your PIN to carry on — nothing was saved under anyone else's name.",
+    },
+  },
   VET_DEVICE_NOT_REGISTERED: {
     ar: {
       title: "هذا الجهاز غير مسجّل ككاونتر",
@@ -1051,7 +1131,21 @@ export function vetErrorCode(err: unknown): VetErrorCode | undefined {
 export function vetFriendlyError(err: unknown, isAr: boolean): FriendlyError {
   const code = vetErrorCode(err);
   if (code) return { code, ...VET_ERROR_COPY[code][isAr ? "ar" : "en"] };
-  return friendlyError(err, isAr);
+  const base = friendlyError(err, isAr);
+  // Every clinical error from the vet API carries its own bilingual recovery
+  // line (`hint`). Prefer it to the generic fallback, so "an empty visit needs
+  // a reason" reads as exactly that rather than "something went wrong".
+  if (err instanceof ApiError && err.code?.startsWith("VET_")) {
+    const hint = err.extras?.hint as { ar?: string; en?: string } | undefined;
+    const line = isAr ? hint?.ar : hint?.en;
+    if (line) return { ...base, code: err.code, message: line };
+  }
+  return base;
+}
+
+/** True when the error is a 409 because the cat already has an open visit here. */
+export function isOpenVisitConflict(err: unknown): err is ApiError {
+  return err instanceof ApiError && err.code === VET_VISIT_OPEN_EXISTS;
 }
 
 /** Convenience: one string for toast bodies. */
@@ -1063,19 +1157,17 @@ export function vetFriendlyMessage(err: unknown, isAr: boolean): string {
  * Input detection — the omnibox brain (dossier §05)
  * ──────────────────────────────────────────────────────────────────────────*/
 
-/** Strip the noise a scanner, a keyboard, or a printed card introduces. */
+/**
+ * Strip the noise a scanner, a keyboard, or a printed card introduces —
+ * including Arabic-Indic digits, which an Arabic keyboard types and which the
+ * server would otherwise read as a NAME (R101, R115).
+ */
 export function normalizeVetQuery(raw: string): string {
-  return raw.trim().replace(/[‎‏]/g, "");
+  return coreLatinizeDigits(raw.trim()).replace(/[\u200e\u200f\u202a-\u202e]/g, "");
 }
 
-/** Arabic-Indic and Eastern-Arabic digits → Latin, so ٠٥٥ matches 055. */
-export function latinizeDigits(input: string): string {
-  return input.replace(/[٠-٩۰-۹]/g, (d) => {
-    const code = d.charCodeAt(0);
-    const base = code >= 0x06f0 ? 0x06f0 : 0x0660;
-    return String(code - base);
-  });
-}
+/** Arabic-Indic and Eastern-Arabic digits → Latin (the shared core helper). */
+export const latinizeDigits = coreLatinizeDigits;
 
 /** `mrc 7h2k 94qf` → `MRC-7H2K-94QF`. Hyphens, case and spaces are forgiven. */
 export function canonicalCatIdNumber(input: string): string | null {
@@ -1257,6 +1349,62 @@ export function setVetDeviceId(id: string | null): void {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
+ * Counter session + unsaved drafts — device-local, cleared on lock / sign-out
+ * ──────────────────────────────────────────────────────────────────────────*/
+
+function readStoredCounterSession(orgId: string | null): VetCounterSession | null {
+  if (typeof window === "undefined" || !orgId) return null;
+  try {
+    const raw = sessionStorage.getItem(COUNTER_STORAGE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as VetCounterSession;
+    // A token for another clinic, or one past its expiry, is not a session.
+    if (!s?.counterToken || s.orgId !== orgId) return null;
+    if (s.expiresAt && new Date(s.expiresAt).getTime() <= Date.now()) {
+      sessionStorage.removeItem(COUNTER_STORAGE_KEY);
+      return null;
+    }
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+function storeCounterSession(s: VetCounterSession | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (s) sessionStorage.setItem(COUNTER_STORAGE_KEY, JSON.stringify(s));
+    else sessionStorage.removeItem(COUNTER_STORAGE_KEY);
+  } catch {
+    /* private mode — the session simply won't survive a reload */
+  }
+}
+
+/**
+ * Where an unsaved SOAP note lives: per visit AND per author. Keyed by visit
+ * alone, the next person to PIN into the terminal after an auto-lock saved the
+ * first vet's words under their own name (audit 2026-10-04, #vet P1).
+ */
+export function vetDraftKey(visitId: string, staffId: string): string {
+  return `${DRAFT_KEY_PREFIX}${visitId}:${staffId}`;
+}
+
+/** Remove every unsaved note on this device — on counter lock and on sign-out. */
+export function clearVetDrafts(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const doomed: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(DRAFT_KEY_PREFIX)) doomed.push(k);
+    }
+    doomed.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* ignore */
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
  * Public (unauthenticated) endpoints
  * ──────────────────────────────────────────────────────────────────────────*/
 
@@ -1289,6 +1437,13 @@ export interface VetActorValue {
   orgId: string | null;
   org: VetMembership | null;
   role: VetRole | null;
+  /**
+   * The membership every write is attributed to RIGHT NOW: the PIN'd person
+   * on a counter terminal, otherwise the signed-in member of staff.
+   */
+  actingStaffId: string | null;
+  /** Licence standing of the acting person (null when not evaluated). */
+  licence: LicenceStanding | null;
   capabilities: VetCapability[];
   /** True on a shared terminal unlocked by PIN — capabilities are reduced. */
   counterMode: boolean;
@@ -1380,8 +1535,31 @@ export function VetActorProvider({ children }: { children: React.ReactNode }) {
     setBranchId(stored && org?.branches.some((b) => b.id === stored) ? stored : null);
   }, [orgId, memberships]);
 
+  // Restore a live counter session for this clinic after a reload of the tab.
+  React.useEffect(() => {
+    if (!orgId) return;
+    setCounterSession((current) => current ?? readStoredCounterSession(orgId));
+  }, [orgId]);
+
+  // Signing out of the terminal ends any PIN identity on it, and takes every
+  // unsaved note with it — the next person must never inherit either.
+  React.useEffect(() => {
+    if (authReady && !user) {
+      storeCounterSession(null);
+      clearVetDrafts();
+      setCounterSession(null);
+    }
+  }, [authReady, user]);
+
+  const applyCounterSession = React.useCallback((next: VetCounterSession | null) => {
+    if (!next) clearVetDrafts();
+    storeCounterSession(next);
+    setCounterSession(next);
+  }, []);
+
   const setOrg = React.useCallback((next: string) => {
     setOrgId(next);
+    storeCounterSession(null);
     setCounterSession(null); // a terminal identity never follows you to another clinic
     try {
       localStorage.setItem(ORG_STORAGE_KEY, next);
@@ -1410,20 +1588,23 @@ export function VetActorProvider({ children }: { children: React.ReactNode }) {
   );
   const role = org?.role ?? null;
   const counterMode = !!counterSession;
-  // A PIN identity outranks the personal one *for this terminal only*.
+  // A PIN identity outranks the personal one *for this terminal only* — its
+  // role, and its licence standing, are the ones the server applies.
   const effectiveRole = counterSession?.role ?? role;
+  const licence = counterSession ? counterSession.licence : org?.licence;
+  const orgStatus = org?.org.status;
 
   const capabilities = React.useMemo<VetCapability[]>(
-    () => (effectiveRole ? capabilitiesFor({ role: effectiveRole, counterMode }) : []),
-    [effectiveRole, counterMode],
+    () => (effectiveRole ? capabilitiesFor({ role: effectiveRole, counterMode, orgStatus, licence }) : []),
+    [effectiveRole, counterMode, orgStatus, licence],
   );
 
   const can = React.useCallback(
     (capability: VetCapability) =>
       // orgStatus applies the same setup sandbox the API guard does (MRC-VET-002):
       // a clinic that is not LIVE offers only setup + the test scan.
-      effectiveRole ? coreCan({ role: effectiveRole, counterMode, orgStatus: org?.org.status }, capability) : false,
-    [effectiveRole, counterMode, org?.org.status],
+      effectiveRole ? coreCan({ role: effectiveRole, counterMode, orgStatus, licence }, capability) : false,
+    [effectiveRole, counterMode, orgStatus, licence],
   );
 
   const branch = React.useMemo(
@@ -1440,6 +1621,8 @@ export function VetActorProvider({ children }: { children: React.ReactNode }) {
       orgId,
       org,
       role: effectiveRole,
+      actingStaffId: counterSession?.staffId ?? org?.staffId ?? null,
+      licence: licence ?? null,
       capabilities,
       counterMode,
       counterSession,
@@ -1449,11 +1632,11 @@ export function VetActorProvider({ children }: { children: React.ReactNode }) {
       setBranch,
       can,
       refresh: load,
-      applyCounterSession: setCounterSession,
+      applyCounterSession,
     }),
     [
-      ready, authReady, loading, error, memberships, orgId, org, effectiveRole, capabilities,
-      counterMode, counterSession, branchId, branch, setOrg, setBranch, can, load,
+      ready, authReady, loading, error, memberships, orgId, org, effectiveRole, licence, capabilities,
+      counterMode, counterSession, branchId, branch, setOrg, setBranch, can, load, applyCounterSession,
     ],
   );
 
@@ -1476,22 +1659,85 @@ export type VetFetch = <T = unknown>(path: string, init?: RequestInit) => Promis
  */
 export function useVetFetch(): VetFetch {
   const { authedFetch } = useAuth();
-  const { orgId } = useVetActor();
+  const { orgId, counterSession, applyCounterSession } = useVetActor();
+  const counterToken = counterSession?.counterToken ?? null;
 
   return React.useCallback<VetFetch>(
-    (path, init = {}) => {
+    async (path, init = {}) => {
       if (!orgId) {
-        return Promise.reject(
-          new ApiError("Choose a clinic first", "http", 400, "VET_ORG_REQUIRED"),
-        );
+        throw new ApiError("Choose a clinic first", "http", 400, "VET_ORG_REQUIRED");
       }
-      return authedFetch(path, {
-        ...init,
-        headers: { ...(init.headers ?? {}), "x-moracat-org": orgId },
-      });
+      try {
+        return await authedFetch(path, {
+          ...init,
+          headers: {
+            ...(init.headers ?? {}),
+            ...vetHeaders(orgId, counterToken),
+          },
+        });
+      } catch (err) {
+        // The server ended the PIN session (idle expiry, lock elsewhere, staff
+        // change): drop it here too, so the next action can't silently fall
+        // back to the signed-in person's identity.
+        if (
+          counterToken &&
+          err instanceof ApiError &&
+          (err.code === "VET_COUNTER_SESSION_EXPIRED" || err.code === "VET_COUNTER_SESSION_INVALID")
+        ) {
+          applyCounterSession(null);
+        }
+        throw err;
+      }
     },
-    [authedFetch, orgId],
+    [authedFetch, orgId, counterToken, applyCounterSession],
   );
+}
+
+/** The two headers every clinic request carries: the clinic, and the PIN'd person if any. */
+function vetHeaders(orgId: string | null, counterToken: string | null): Record<string, string> {
+  return {
+    ...(orgId ? { [VET_ORG_HEADER]: orgId } : {}),
+    ...(counterToken ? { [VET_COUNTER_HEADER]: counterToken } : {}),
+  };
+}
+
+/** A presented entry plus what the write did — the core write envelope, adapted. */
+export type VetRecordWrite = Omit<VetRecordWriteResponseView, "entry"> & { entry: VetTimelineEntry };
+interface VetRecordWriteResponseView {
+  entry: unknown;
+  sideEffects: Record<string, unknown> & { deferred: boolean };
+  coSign: VetCoSignState;
+  supersededEntryId?: string;
+  notice?: { ar: string; en: string };
+}
+
+export interface VetOpenVisitResult {
+  visit: VetVisit;
+  /** True when the cat's already-open visit was returned instead of a new one. */
+  resumed: boolean;
+}
+
+export type VetCloseVisitResult = VetCloseVisitResponse<VetVisit>;
+
+export interface VetConsentRequestResult {
+  requested: boolean;
+  alreadyGranted: boolean;
+  tier: VetConsentTier;
+  currentTier?: VetConsentTier;
+  notice: { ar: string; en: string } | null;
+  ownerNotification?: VetOwnerDelivery;
+}
+
+export interface VetOwnerSummaryResult {
+  visit: VetVisit;
+  delivered: boolean;
+  ownerNotification?: VetOwnerDelivery;
+}
+
+export interface VetPrescriptionStatusResult {
+  prescription: { id: string; status: VetPrescriptionStatus; medication: string };
+  transition: { from: VetPrescriptionStatus; to: VetPrescriptionStatus };
+  ownerNotification: VetOwnerDelivery | null;
 }
 
 export interface VetApi {
@@ -1499,8 +1745,8 @@ export interface VetApi {
   authContext: () => Promise<VetAuthContext>;
   /** POST /vet/auth/counter/unlock — PIN identity switch on a shared terminal. */
   counterUnlock: (input: VetCounterUnlockInput) => Promise<VetCounterSession>;
-  /** POST /vet/auth/counter/lock */
-  counterLock: () => Promise<void>;
+  /** POST /vet/auth/counter/lock — ends the given (or current) PIN session server-side. */
+  counterLock: (token?: string | null) => Promise<void>;
   /** GET /vet/patients/search?q= — the omnibox. */
   searchPatients: (q: string, opts?: { signal?: AbortSignal }) => Promise<VetSearchResponse>;
   /** POST /vet/patients — register a walk-in cat and get its claim link (T4). */
@@ -1524,10 +1770,13 @@ export interface VetApi {
   listVisits: (query?: VetVisitQuery) => Promise<VetVisitListResponse>;
   /** GET /vet/visits/:id — returns the visit WITH its entries. */
   getVisit: (id: string) => Promise<VetVisitDetail>;
-  /** POST /vet/visits — open a visit for a cat. */
-  openVisit: (input: { catId: string; reason?: string; branchId?: string }) => Promise<VetVisit>;
-  /** POST /vet/visits/:id/close */
-  closeVisit: (id: string) => Promise<VetVisit>;
+  /**
+   * POST /vet/visits — open a visit for a cat. Resumes the cat's already-open
+   * visit by default (`resumed: true`) rather than 409ing a second chart.
+   */
+  openVisit: (input: VetOpenVisitRequest) => Promise<VetOpenVisitResult>;
+  /** POST /vet/visits/:id/close — an EMPTY visit needs a reason. */
+  closeVisit: (id: string, input?: VetCloseVisitRequest) => Promise<VetCloseVisitResult>;
   /** GET /vet/org/summary — Today's numbers (T10). */
   getOrgSummary: () => Promise<VetOrgSummary | null>;
   /** POST /vet/records/:id/attachments (multipart) — bytes go to PRIVATE storage (T12). */
@@ -1539,7 +1788,7 @@ export interface VetApi {
   /** GET /vet/consent?catId= */
   listConsent: (catId?: string) => Promise<{ grants: VetConsentGrant[] }>;
   /** POST /vet/consent/request — ask the owner for a higher tier. */
-  requestConsent: (input: { catId: string; tier: VetConsentTier; scope: VetConsentScope }) => Promise<VetConsentGrant>;
+  requestConsent: (input: { catId: string; tier: VetConsentTier; scope: VetConsentScope }) => Promise<VetConsentRequestResult>;
   /** GET /vet/access-log */
   listAccessLog: (params?: { catId?: string; cursor?: string }) => Promise<{
     rows: VetAccessLogRow[];
@@ -1553,20 +1802,13 @@ export interface VetApi {
   // `deleteRecord`. A correction is a NEW entry that supersedes its
   // predecessor (`reviseRecord`); a withdrawal marks the entry retracted with
   // a reason. Medical history stays reconstructable forever.
-  /** POST /vet/records — author a clinical entry (DRAFT when the author is an intern). */
-  createRecord: (input: {
-    catId: string;
-    visitId?: string | null;
-    type: VetTimelineKind;
-    payload: Record<string, unknown>;
-    note?: string;
-    occurredAt?: string;
-  }) => Promise<VetTimelineEntry>;
+  /**
+   * POST /vet/records — author a clinical entry (DRAFT when the author must be
+   * co-signed). Returns `{entry, sideEffects, coSign}`; the entry is adapted.
+   */
+  createRecord: <T extends ClinicalEntryType>(input: VetCreateRecordRequest<T>) => Promise<VetRecordWrite>;
   /** POST /vet/records/:id/revise — supersede an entry with a corrected one. */
-  reviseRecord: (
-    entryId: string,
-    input: { payload: Record<string, unknown>; note?: string; reason?: string }
-  ) => Promise<VetTimelineEntry>;
+  reviseRecord: <T extends ClinicalEntryType>(entryId: string, input: VetReviseRecordRequest<T>) => Promise<VetRecordWrite>;
   /** POST /vet/records/:id/retract — withdraw an entry, reason required. */
   retractRecord: (entryId: string, input: { reason: string }) => Promise<VetTimelineEntry>;
   /** POST /vet/records/:id/cosign — a senior countersigns a trainee's draft. */
@@ -1576,10 +1818,10 @@ export interface VetApi {
     entryId: string,
     input: { fileUrl: string; fileName?: string; mime?: string; kind?: string }
   ) => Promise<VetAttachment>;
-  /** POST /vet/prescriptions/:id/status — dispense / complete / cancel. */
-  setPrescriptionStatus: (id: string, status: VetPrescriptionStatus) => Promise<VetPrescription>;
+  /** POST /vet/prescriptions/:id/status — dispense · refill · complete · cancel (cancel needs a reason). */
+  setPrescriptionStatus: (id: string, input: VetPrescriptionStatusRequest) => Promise<VetPrescriptionStatusResult>;
   /** POST /vet/visits/:id/owner-summary — the plain-language note the owner receives. */
-  sendOwnerSummary: (visitId: string, summary: string) => Promise<VetVisit>;
+  sendOwnerSummary: (visitId: string, summary: string) => Promise<VetOwnerSummaryResult>;
 }
 
 /**
@@ -1589,19 +1831,32 @@ export interface VetApi {
 export function useVetApi(): VetApi {
   const vetFetch = useVetFetch();
   const { authedUpload } = useAuth();
-  const { orgId } = useVetActor();
+  const { orgId, counterSession } = useVetActor();
+  const counterToken = counterSession?.counterToken ?? null;
 
   return React.useMemo<VetApi>(
     () => ({
       authContext: () => vetFetch<VetAuthContext>("/vet/auth/context", { method: "POST", body: "{}" }),
 
-      counterUnlock: (input) =>
-        vetFetch<VetCounterSession>("/vet/auth/counter/unlock", {
-          method: "POST",
-          body: JSON.stringify(input),
-        }),
+      // The unlock response nests the person under `actor` and carries the token
+      // the portal must send from now on; adapted once, here.
+      counterUnlock: async (input) =>
+        adaptCounterSession(
+          assertShape<VetCounterSessionResponse>(
+            await vetFetch("/vet/auth/counter/unlock", { method: "POST", body: JSON.stringify(input) }),
+            ["counterToken", "expiresAt", "device", "actor"],
+            "POST /vet/auth/counter/unlock",
+          ),
+        ),
 
-      counterLock: () => vetFetch<void>("/vet/auth/counter/lock", { method: "POST", body: "{}" }),
+      counterLock: async (token) => {
+        const t = token ?? counterToken;
+        if (!t) return;
+        await vetFetch<void>("/vet/auth/counter/lock", {
+          method: "POST",
+          body: JSON.stringify({ token: t }),
+        });
+      },
 
       // ── The wire crossing ────────────────────────────────────────────────
       // These four responses are nested on the server and flat on screen. The
@@ -1710,11 +1965,30 @@ export function useVetApi(): VetApi {
           "GET /vet/visits/:id",
         ),
 
-      openVisit: (input) =>
-        vetFetch<VetVisit>("/vet/visits", { method: "POST", body: JSON.stringify(input) }),
+      // The API answers `{visit, resumed}` — reading `.id` off that envelope is
+      // how "Start visit" used to land on /vet/visits/undefined.
+      openVisit: async (input) =>
+        assertShape<VetOpenVisitResult>(
+          await vetFetch("/vet/visits", {
+            method: "POST",
+            body: JSON.stringify({ resumeExisting: true, ...input }),
+          }),
+          ["visit", "resumed"],
+          "POST /vet/visits",
+        ),
 
-      closeVisit: (id) =>
-        vetFetch<VetVisit>(`/vet/visits/${encodeURIComponent(id)}/close`, { method: "POST", body: "{}" }),
+      closeVisit: async (id, input) =>
+        assertShape<VetCloseVisitResult>(
+          await vetFetch(`/vet/visits/${encodeURIComponent(id)}/close`, {
+            method: "POST",
+            body: JSON.stringify({
+              ...(input?.reason?.trim() ? { reason: input.reason.trim() } : {}),
+              ...(input?.followUpAt ? { followUpAt: input.followUpAt } : {}),
+            }),
+          }),
+          ["visit", "pendingCoSign", "nextStep"],
+          "POST /vet/visits/:id/close",
+        ),
 
       getOrgSummary: () => vetFetch<VetOrgSummary>("/vet/org/summary"),
 
@@ -1726,7 +2000,7 @@ export function useVetApi(): VetApi {
           `/vet/records/${encodeURIComponent(entryId)}/attachments`,
           fd,
           "POST",
-          orgId ? { "x-moracat-org": orgId } : {},
+          vetHeaders(orgId, counterToken),
         );
       },
 
@@ -1743,14 +2017,23 @@ export function useVetApi(): VetApi {
           `/vet/consent${catId ? `?catId=${encodeURIComponent(catId)}` : ""}`,
         ),
 
-      requestConsent: ({ catId, tier }) =>
-        vetFetch<VetConsentGrant>("/vet/consent/request", {
+      requestConsent: async ({ catId, tier }) => {
+        const r = await vetFetch<Partial<VetConsentRequestResult>>("/vet/consent/request", {
           method: "POST",
           // Only what RequestConsentDto declares: the API rejects unknown keys
           // (forbidNonWhitelisted), and `scope` is not one of them — sending it
           // turned every clinic request into a 400.
           body: JSON.stringify({ catId, tier }),
-        }),
+        });
+        return {
+          requested: !!r?.requested,
+          alreadyGranted: !!r?.alreadyGranted,
+          tier: (r?.tier ?? tier) as VetConsentTier,
+          currentTier: r?.currentTier,
+          notice: r?.notice ?? null,
+          ownerNotification: r?.ownerNotification,
+        };
+      },
 
       listAccessLog: (params) => {
         const qs = new URLSearchParams();
@@ -1773,17 +2056,28 @@ export function useVetApi(): VetApi {
         ),
 
       // ── Clinical authorship (append-only; no update, no delete) ─────────
-      createRecord: (input) =>
-        vetFetch<VetTimelineEntry>("/vet/records", {
-          method: "POST",
-          body: JSON.stringify(input),
-        }),
+      // The API returns `{entry, sideEffects, coSign}`. Reading `.id` off that
+      // envelope uploaded every attachment to /vet/records/undefined/….
+      createRecord: async (input) =>
+        adaptRecordWrite(
+          assertShape<VetRecordWriteResponseView>(
+            await vetFetch("/vet/records", { method: "POST", body: JSON.stringify(input) }),
+            ["entry", "sideEffects", "coSign"],
+            "POST /vet/records",
+          ),
+        ),
 
-      reviseRecord: (entryId, input) =>
-        vetFetch<VetTimelineEntry>(`/vet/records/${encodeURIComponent(entryId)}/revise`, {
-          method: "POST",
-          body: JSON.stringify(input),
-        }),
+      reviseRecord: async (entryId, input) =>
+        adaptRecordWrite(
+          assertShape<VetRecordWriteResponseView>(
+            await vetFetch(`/vet/records/${encodeURIComponent(entryId)}/revise`, {
+              method: "POST",
+              body: JSON.stringify(input),
+            }),
+            ["entry", "sideEffects", "coSign"],
+            "POST /vet/records/:id/revise",
+          ),
+        ),
 
       retractRecord: (entryId, input) =>
         vetFetch<VetTimelineEntry>(`/vet/records/${encodeURIComponent(entryId)}/retract`, {
@@ -1803,20 +2097,41 @@ export function useVetApi(): VetApi {
           body: JSON.stringify(input),
         }),
 
-      setPrescriptionStatus: (id, status) =>
-        vetFetch<VetPrescription>(`/vet/prescriptions/${encodeURIComponent(id)}/status`, {
-          method: "POST",
-          body: JSON.stringify({ status }),
-        }),
+      // `{action, reason}` — the API never accepted `{status}`, so dispensing
+      // a prescription from the portal was a 400 every time.
+      setPrescriptionStatus: async (id, input) =>
+        assertShape<VetPrescriptionStatusResult>(
+          await vetFetch(`/vet/prescriptions/${encodeURIComponent(id)}/status`, {
+            method: "POST",
+            body: JSON.stringify({
+              action: input.action,
+              ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
+              ...(input.notifyOwner !== undefined ? { notifyOwner: input.notifyOwner } : {}),
+            }),
+          }),
+          ["prescription", "transition"],
+          "POST /vet/prescriptions/:id/status",
+        ),
 
-      sendOwnerSummary: (visitId, summary) =>
-        vetFetch<VetVisit>(`/vet/visits/${encodeURIComponent(visitId)}/owner-summary`, {
-          method: "POST",
-          body: JSON.stringify({ summary }),
-        }),
+      sendOwnerSummary: async (visitId, summary) =>
+        assertShape<VetOwnerSummaryResult>(
+          await vetFetch(`/vet/visits/${encodeURIComponent(visitId)}/owner-summary`, {
+            method: "POST",
+            body: JSON.stringify({ summary }),
+          }),
+          ["visit", "delivered"],
+          "POST /vet/visits/:id/owner-summary",
+        ),
     }),
-    [vetFetch, authedUpload, orgId],
+    [vetFetch, authedUpload, orgId, counterToken],
   );
+}
+
+function adaptRecordWrite(w: VetRecordWriteResponseView): VetRecordWrite {
+  return {
+    ...w,
+    entry: adaptTimelineEntry(w.entry as VetWireTimelineEntry) as unknown as VetTimelineEntry,
+  };
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

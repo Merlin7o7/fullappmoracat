@@ -315,7 +315,7 @@ export function AlwaysVisibleNote({
           <p className="font-medium">{isAr ? "ما تراه كل عيادة موثّقة دائماً" : "What every verified clinic always sees"}</p>
           <p className="leading-relaxed text-muted-foreground">
             {isAr
-              ? `صورة ${cat} واسمه وسلالته وعمره ووزنه وحالة العضوية، واسمك الأول ورقم جوال مُخفى جزئياً — مع تنبيهات ${cat} الطبية مثل الحساسية.`
+              ? `صورة ${cat}، والاسم والسلالة والعمر والوزن وحالة خطة العناية، واسمك الأول ورقم جوال مُخفى جزئياً — مع تنبيهات ${cat} الطبية مثل الحساسية.`
               : `${cat}'s photo, name, breed, age, weight and membership status, your first name and a partly-hidden phone number — along with ${cat}'s medical alerts, like allergies.`}
           </p>
           <p className="leading-relaxed text-muted-foreground">

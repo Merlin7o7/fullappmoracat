@@ -47,7 +47,7 @@ import { Logo } from "@/components/logo";
 import { LangToggle, ThemeToggle } from "@/components/toggles";
 import { Omnibox } from "@/components/vet/omnibox";
 import { CounterLock, EmptyState, OrgSwitcher, RoleBadge } from "@/components/vet/vet-shell-bits";
-import { VetActorProvider, useVetActor, vetFriendlyError, type VetMembership } from "@/lib/vet-api";
+import { VetActorProvider, clearVetDrafts, useVetActor, vetFriendlyError, type VetMembership } from "@/lib/vet-api";
 import { visibleVetNav, type VetNavItem } from "./nav";
 
 /** Routes inside /vet that must work before anyone has an account or a clinic. */
@@ -119,9 +119,13 @@ function VetShell({ children }: { children: React.ReactNode }) {
   }, [authReady, user, router, pathname]);
 
   const handleLogout = React.useCallback(() => {
+    // End any PIN session on this terminal and drop every unsaved note before
+    // the account goes — the next person must inherit neither.
+    actor.applyCounterSession(null);
+    clearVetDrafts();
     void logout();
     router.push("/vet/login");
-  }, [logout, router]);
+  }, [actor, logout, router]);
 
   // `g` then a key — Linear's go-to grammar, kept for the desk, not the counter.
   const nav = React.useMemo<VetNavItem[]>(

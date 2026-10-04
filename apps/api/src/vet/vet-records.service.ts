@@ -20,7 +20,18 @@
  */
 import { Injectable } from "@nestjs/common";
 import { Prisma, type ClinicalEntryType, type PrescriptionStatus } from "@moraqat/db";
-import { requiresCoSign, deriveVaccinationStatus } from "@moraqat/core";
+import {
+  can,
+  deriveVaccinationStatus,
+  isVaccineCode,
+  latestDosePerVaccine,
+  licenceHoldNotice,
+  normalizeVaccineCode,
+  requiresCoSign,
+  VACCINE_CANONICAL_NAME,
+  type VetAllergyOverride,
+  type VetOwnerDelivery,
+} from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
 import { FilesService } from "../files/files.service";
@@ -139,6 +150,7 @@ export class VetRecordsService {
     // Authoring requires an encounter at THIS clinic. Consent governs read
     // depth, never the right to write facts onto someone else's patient.
     await this.patients.requireTreatmentRelationship(cat.id, actor.orgId);
+    this.assertMayAuthorType(actor, dto.type);
     const payload = this.parsePayload(dto.type, dto.payload);
     const occurredAt = this.parseOccurredAt(dto.occurredAt);
 
@@ -172,8 +184,10 @@ export class VetRecordsService {
 
     // The trainee rule: an intern's record is real, attributed, and not yet a
     // fact. It stays DRAFT — and fires no owner-facing side effects — until a
-    // clinician co-signs it.
-    const isDraft = requiresCoSign(actor.role);
+    // clinician co-signs it. A doctor whose licence isn't on file is held to
+    // the same rule.
+    const isDraft = requiresCoSign(actor.role, actor.licence);
+    const override = this.normalizeOverride(dto.allergyOverride);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const entry = await tx.clinicalEntry.create({
@@ -184,13 +198,16 @@ export class VetRecordsService {
           type: dto.type as ClinicalEntryType,
           status: isDraft ? "DRAFT" : "FINAL",
           payload: payload as Prisma.InputJsonValue,
-          note: dto.note ?? null,
+          note: this.noteWithOverride(dto.note ?? null, override),
           occurredAt,
           authorId: actor.staffId,
         },
         select: ENTRY_SELECT,
       });
-      const effects = isDraft ? { deferred: true as const } : await this.applySideEffects(tx, actor, entry);
+      const effects = isDraft
+        ? { deferred: true as const }
+        : await this.applySideEffects(tx, actor, entry, override);
+      if (override) await this.auditOverride(tx, actor, entry.id, cat.id, override);
       return { entry, effects };
     });
 
@@ -207,16 +224,79 @@ export class VetRecordsService {
     return {
       entry: this.patients.presentEntry(result.entry, actor.orgId),
       sideEffects: result.effects,
-      coSign: isDraft
-        ? {
-            required: true,
-            notice: {
-              ar: "حُفظ السجل كمسودة بانتظار توقيع طبيب. لن تُرسل تذكيرات للمالك قبل التوقيع.",
-              en: "Saved as a draft awaiting a clinician's co-signature. No owner reminders are scheduled until it's signed.",
-            },
-          }
-        : { required: false, notice: null },
+      coSign: this.coSignState(actor, isDraft),
     };
+  }
+
+  /** The co-sign envelope every write returns (create and revise alike). */
+  private coSignState(actor: VetActor, isDraft: boolean) {
+    if (!isDraft) return { required: false, notice: null };
+    return {
+      required: true,
+      notice: licenceHoldNotice(actor.licence) ?? {
+        ar: "حُفظ السجل كمسودة بانتظار توقيع طبيب. لن تُرسل تذكيرات للمالك قبل التوقيع.",
+        en: "Saved as a draft awaiting a clinician's co-signature. No owner reminders are scheduled until it's signed.",
+      },
+    };
+  }
+
+  /**
+   * A prescription is a licensed act whatever route it arrives by. The
+   * controller gates `record.write`; this adds `prescription.write` for the
+   * PRESCRIPTION type, so a role (or a doctor without a licence on file) that
+   * may write notes cannot issue a drug through the generic endpoint.
+   */
+  private assertMayAuthorType(actor: VetActor, type: string) {
+    if (type !== "PRESCRIPTION") return;
+    const ctx = { role: actor.role, counterMode: actor.counterMode, orgStatus: actor.orgStatus, licence: actor.licence };
+    if (can(ctx, "prescription.write")) return;
+    const heldByLicence = can({ ...ctx, licence: undefined }, "prescription.write");
+    throw vetForbidden(
+      heldByLicence ? "VET_LICENCE_REQUIRED" : "VET_FORBIDDEN",
+      heldByLicence ? "A practitioner licence must be on file to prescribe" : "Your role does not include prescribing",
+      {
+        missing: ["prescription.write"],
+        hint: heldByLicence
+          ? licenceHoldNotice(actor.licence) ?? undefined
+          : {
+              ar: "دورك لا يشمل كتابة الوصفات. يكتبها طبيب بيطري.",
+              en: "Your role doesn't include prescribing. A veterinarian writes prescriptions.",
+            },
+      }
+    );
+  }
+
+  private normalizeOverride(o: VetAllergyOverride | undefined | null): VetAllergyOverride | null {
+    if (!o) return null;
+    const justification = o.justification?.trim() ?? "";
+    if (!justification) return null;
+    return { matched: (o.matched ?? []).map((m) => m.trim()).filter(Boolean), justification };
+  }
+
+  /** The override is part of the record: appended to the entry's note, verbatim. */
+  private noteWithOverride(note: string | null, o: VetAllergyOverride | null): string | null {
+    if (!o) return note;
+    const line = `— allergy override (${o.matched.join(", ") || "recorded allergy"}): ${o.justification}`;
+    return [note, line].filter(Boolean).join("\n");
+  }
+
+  /** …and to the audit log, under the author's name. */
+  private async auditOverride(tx: Tx, actor: VetActor, entryId: string, catId: string, o: VetAllergyOverride) {
+    await tx.auditLog.create({
+      data: {
+        userId: actor.userId,
+        action: "vet.record.allergy_override",
+        entityType: "ClinicalEntry",
+        entityId: entryId,
+        metadata: {
+          orgId: actor.orgId,
+          staffId: actor.staffId,
+          catId,
+          matched: o.matched,
+          justification: o.justification,
+        } as Prisma.InputJsonValue,
+      },
+    });
   }
 
   // ── Co-sign ─────────────────────────────────────────────────────────────
@@ -294,9 +374,11 @@ export class VetRecordsService {
     }
 
     const type = entry.type as ClinicalEntryTypeName;
+    this.assertMayAuthorType(actor, type);
     const payload = this.parsePayload(type, dto.payload);
     const occurredAt = this.parseOccurredAt(dto.occurredAt ?? entry.occurredAt.toISOString());
-    const isDraft = requiresCoSign(actor.role);
+    const isDraft = requiresCoSign(actor.role, actor.licence);
+    const override = this.normalizeOverride(dto.allergyOverride);
 
     const result = await this.prisma.$transaction(async (tx) => {
       // Retire the predecessor's owner-facing projections first, so a corrected
@@ -311,9 +393,12 @@ export class VetRecordsService {
           type: entry.type,
           status: isDraft ? "DRAFT" : "FINAL",
           payload: payload as Prisma.InputJsonValue,
-          note: [dto.note ?? null, dto.reason ? `— revision reason: ${dto.reason}` : null]
-            .filter(Boolean)
-            .join("\n") || null,
+          note: this.noteWithOverride(
+            [dto.note ?? null, dto.reason ? `— revision reason: ${dto.reason}` : null]
+              .filter(Boolean)
+              .join("\n") || null,
+            override
+          ),
           occurredAt,
           authorId: actor.staffId,
           revisionOfId: entry.id,
@@ -328,7 +413,8 @@ export class VetRecordsService {
 
       const effects = isDraft
         ? { deferred: true as const }
-        : await this.applySideEffects(tx, actor, revision);
+        : await this.applySideEffects(tx, actor, revision, override);
+      if (override) await this.auditOverride(tx, actor, revision.id, entry.catId, override);
       return { revision, effects };
     });
 
@@ -336,6 +422,7 @@ export class VetRecordsService {
       entry: this.patients.presentEntry(result.revision, actor.orgId),
       supersededEntryId: entry.id,
       sideEffects: result.effects,
+      coSign: this.coSignState(actor, isDraft),
       notice: {
         ar: "أُنشئت نسخة مصحّحة. النسخة السابقة محفوظة ومقروءة كسجل تاريخي.",
         en: "A corrected version was created. The previous version is kept and stays readable.",
@@ -729,10 +816,11 @@ export class VetRecordsService {
       },
     });
 
+    let ownerNotification: VetOwnerDelivery | null = null;
     if (dto.notifyOwner) {
       const copy = this.rxOwnerCopy(dto.action, rx.cat.name, rx.medication, dto.reason);
       if (copy) {
-        await this.patients.notifyOwner({
+        ownerNotification = await this.patients.notifyOwner({
           userId: rx.cat.userId,
           category: "SYSTEM",
           type: `vet_prescription_${dto.action}`,
@@ -753,6 +841,8 @@ export class VetRecordsService {
         },
       },
       transition: { from: rx.status, to: target },
+      // What actually reached the owner — null when nobody was asked to be told.
+      ownerNotification,
     };
   }
 
@@ -800,7 +890,8 @@ export class VetRecordsService {
   private async applySideEffects(
     tx: Tx,
     actor: VetActor,
-    entry: { id: string; catId: string; orgId: string; type: string; payload: Prisma.JsonValue; occurredAt: Date }
+    entry: { id: string; catId: string; orgId: string; type: string; payload: Prisma.JsonValue; occurredAt: Date },
+    override: VetAllergyOverride | null = null
   ) {
     switch (entry.type) {
       case "VACCINATION":
@@ -808,7 +899,7 @@ export class VetRecordsService {
       case "WEIGHT":
         return this.writeWeight(tx, entry);
       case "PRESCRIPTION":
-        return this.writePrescription(tx, actor, entry);
+        return this.writePrescription(tx, actor, entry, override);
       default:
         return { deferred: false as const };
     }
@@ -876,11 +967,13 @@ export class VetRecordsService {
     // three-dose kitten series flipped the owner-facing badge green, and nothing
     // ever recomputed it when dueAt passed — so the status was only true at the
     // instant it was written. Recompute from the full record set instead.
+    // Only the latest dose of each vaccine counts: last year's booster, whose
+    // dueAt has passed, was superseded by this one and must not read overdue.
     const allDoses = await tx.catVaccination.findMany({
       where: { catId: entry.catId },
-      select: { administeredAt: true, dueAt: true },
+      select: { name: true, administeredAt: true, dueAt: true },
     });
-    const derived = deriveVaccinationStatus(allDoses);
+    const derived = deriveVaccinationStatus(latestDosePerVaccine(allDoses));
     await tx.cat.update({
       where: { id: entry.catId },
       // Cached projection of the derivation, refreshed on every clinical write
@@ -945,7 +1038,8 @@ export class VetRecordsService {
   private async writePrescription(
     tx: Tx,
     actor: VetActor,
-    entry: { id: string; catId: string; orgId: string; payload: Prisma.JsonValue }
+    entry: { id: string; catId: string; orgId: string; payload: Prisma.JsonValue },
+    override: VetAllergyOverride | null = null
   ) {
     const p = (entry.payload ?? {}) as {
       medication?: string;
@@ -979,7 +1073,12 @@ export class VetRecordsService {
         instructions: p.instructions ?? null,
         refillsAllowed: p.refillsAllowed ?? 0,
         expiresAt: p.expiresAt ? new Date(p.expiresAt) : null,
-        warnings: warnings.map((w) => w.text),
+        // The clinician's override sits on the prescription itself, beside the
+        // warning it overrode — answerable years later without a log dive.
+        warnings: [
+          ...warnings.map((w) => w.text),
+          ...(override ? [`ALLERGY_OVERRIDE: ${override.justification}`] : []),
+        ],
       },
       select: { id: true, medication: true, status: true, issuedAt: true, warnings: true },
     });
@@ -1088,7 +1187,28 @@ export class VetRecordsService {
         },
       });
     }
-    return parsed.value;
+    return type === "VACCINATION" ? this.normalizeVaccination(parsed.value) : parsed.value;
+  }
+
+  /**
+   * Every vaccination is stored with a code. A coded dose without a name gets
+   * the canonical one; a legacy name without a code gets its code derived, so
+   * old clients keep working and overdue logic can group doses either way.
+   */
+  private normalizeVaccination(p: Record<string, unknown>) {
+    const name = typeof p.vaccine === "string" ? p.vaccine.trim() : "";
+    const code = isVaccineCode(p.vaccineCode) ? p.vaccineCode : name ? normalizeVaccineCode(name) : null;
+    if (!code || (code === "OTHER" && !name)) {
+      throw vetBadRequest("VET_PAYLOAD_INVALID", "A vaccination needs a vaccine", {
+        type: "VACCINATION",
+        errors: [{ field: "vaccine", problems: ["Choose a vaccine, or name it when it is “Other”."] }],
+        hint: {
+          ar: "اختاروا اللقاح من القائمة، أو اكتبوا اسمه عند اختيار «أخرى».",
+          en: "Choose the vaccine from the list, or type its name when you pick “Other”.",
+        },
+      });
+    }
+    return { ...p, vaccineCode: code, vaccine: name || VACCINE_CANONICAL_NAME[code as Exclude<typeof code, "OTHER">] };
   }
 
   private parseOccurredAt(raw?: string) {

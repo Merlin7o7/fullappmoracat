@@ -8,7 +8,13 @@ import {
 import { randomBytes } from "node:crypto";
 import * as bcrypt from "bcryptjs";
 import { Prisma } from "@moraqat/db";
-import { assignableRoles, capabilitiesFor, VET_ROLE_LABELS } from "@moraqat/core";
+import {
+  assignableRoles,
+  capabilitiesFor,
+  LICENCE_ON_INVITE_ROLES,
+  licenceStanding,
+  VET_ROLE_LABELS,
+} from "@moraqat/core";
 import type { VetRole } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
@@ -78,6 +84,7 @@ export class VetStaffService {
           status: true,
           title: true,
           licenceNo: true,
+          licenceExpiresAt: true,
           pinHash: true,
           joinedAt: true,
           offboardedAt: true,
@@ -94,6 +101,7 @@ export class VetStaffService {
     return {
       items: rows.map((s) => {
         const role = s.role as VetRole;
+        const licence = licenceStanding({ role, licenceNo: s.licenceNo, licenceExpiresAt: s.licenceExpiresAt });
         return {
           id: s.id,
           role,
@@ -101,6 +109,9 @@ export class VetStaffService {
           status: s.status,
           title: s.title,
           licenceNo: s.licenceNo,
+          licenceExpiresAt: s.licenceExpiresAt,
+          /** MISSING / EXPIRED = prescribing and co-signing are held. */
+          licence,
           hasCounterPin: !!s.pinHash,
           joinedAt: s.joinedAt,
           offboardedAt: s.offboardedAt,
@@ -114,7 +125,7 @@ export class VetStaffService {
           },
           /** Empty = every branch in the org. */
           branches: s.branches,
-          capabilities: capabilitiesFor({ role }),
+          capabilities: capabilitiesFor({ role, licence }),
         };
       }),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
@@ -169,6 +180,7 @@ export class VetStaffService {
   async invite(actor: VetActor, dto: InviteStaffDto, meta: RequestMeta) {
     this.assertCanAssign(actor, dto.role);
     if (dto.branchIds?.length) await this.assertBranchesInOrg(actor, dto.branchIds);
+    const licence = this.requireDoctorLicence(dto.role, dto.licenceNo, dto.licenceExpiresAt, { needExpiry: true });
 
     const result = await this.createInvite({
       orgId: actor.orgId,
@@ -177,6 +189,9 @@ export class VetStaffService {
       invitedByUserId: actor.userId,
       branchIds: dto.branchIds,
       title: dto.title,
+      licenceNo: licence?.licenceNo ?? (dto.licenceNo?.trim() || null),
+      licenceExpiresAt:
+        licence?.licenceExpiresAt ?? (dto.licenceExpiresAt ? new Date(dto.licenceExpiresAt) : null),
     });
 
     await this.audit(actor, "vet.staff.invite", "PartnerInvite", result.inviteId, meta, {
@@ -271,6 +286,8 @@ export class VetStaffService {
           status: "INVITED",
           offboardedAt: null,
           ...(params.title !== undefined ? { title: params.title } : {}),
+          ...(params.licenceNo ? { licenceNo: params.licenceNo } : {}),
+          ...(params.licenceExpiresAt ? { licenceExpiresAt: params.licenceExpiresAt } : {}),
           ...(params.branchIds
             ? { branches: { set: params.branchIds.map((id) => ({ id })) } }
             : {}),
@@ -282,6 +299,8 @@ export class VetStaffService {
           status: "INVITED",
           invitedById: params.invitedByUserId ?? null,
           title: params.title ?? null,
+          licenceNo: params.licenceNo ?? null,
+          licenceExpiresAt: params.licenceExpiresAt ?? null,
           ...(params.branchIds?.length
             ? { branches: { connect: params.branchIds.map((id) => ({ id })) } }
             : {}),
@@ -398,6 +417,14 @@ export class VetStaffService {
     if (target.role === "OWNER" && dto.role !== "OWNER") {
       await this.assertNotLastOwner(actor.orgId, target.id);
     }
+    // Promoting someone into a doctor role needs a licence on file — the one
+    // already recorded, or one sent with the change.
+    this.requireDoctorLicence(
+      dto.role,
+      dto.licenceNo ?? target.licenceNo,
+      dto.licenceExpiresAt ?? target.licenceExpiresAt?.toISOString() ?? null,
+      { needExpiry: false }
+    );
 
     const updated = await this.prisma.partnerStaff.update({
       where: { id: staffId },
@@ -405,6 +432,7 @@ export class VetStaffService {
         role: dto.role,
         ...(dto.title !== undefined ? { title: dto.title } : {}),
         ...(dto.licenceNo !== undefined ? { licenceNo: dto.licenceNo } : {}),
+        ...(dto.licenceExpiresAt !== undefined ? { licenceExpiresAt: new Date(dto.licenceExpiresAt) } : {}),
         ...(dto.branchIds
           ? { branches: { set: dto.branchIds.map((id) => ({ id })) } }
           : {}),
@@ -580,7 +608,15 @@ export class VetStaffService {
   private async loadTarget(actor: VetActor, staffId: string) {
     const target = await this.prisma.partnerStaff.findFirst({
       where: { id: staffId, orgId: actor.orgId },
-      select: { id: true, userId: true, role: true, status: true, joinedAt: true },
+      select: {
+        id: true,
+        userId: true,
+        role: true,
+        status: true,
+        joinedAt: true,
+        licenceNo: true,
+        licenceExpiresAt: true,
+      },
     });
     if (!target) {
       throw new NotFoundException(
@@ -588,6 +624,49 @@ export class VetStaffService {
       );
     }
     return target;
+  }
+
+  /**
+   * Doctor roles carry prescribing and co-signing, which are licensed acts:
+   * an invitation (or promotion) into one needs a licence number and, for a
+   * new invitation, an in-date expiry. Staff invited after go-live used to
+   * default to Veterinarian with prescribing rights and no licence at all.
+   */
+  private requireDoctorLicence(
+    role: VetRole,
+    licenceNo: string | null | undefined,
+    licenceExpiresAt: string | null | undefined,
+    opts: { needExpiry: boolean }
+  ): { licenceNo: string; licenceExpiresAt: Date | null } | null {
+    if (!LICENCE_ON_INVITE_ROLES.includes(role)) return null;
+    const no = licenceNo?.trim();
+    const exp = licenceExpiresAt ? new Date(licenceExpiresAt) : null;
+    const missingExpiry = opts.needExpiry && !exp;
+    if (!no || missingExpiry) {
+      throw new BadRequestException(
+        vetError("VET_LICENCE_REQUIRED", "Doctor roles need a practitioner licence number and expiry.", {
+          role,
+          missing: [...(!no ? ["licenceNo"] : []), ...(missingExpiry ? ["licenceExpiresAt"] : [])],
+          hint: {
+            ar: "أدخلوا رقم ترخيص المزاولة وتاريخ انتهائه — الوصفات والتوقيع على السجلات أعمال تحتاج ترخيصاً.",
+            en: "Enter the practitioner licence number and its expiry — prescribing and co-signing records are licensed acts.",
+          },
+        })
+      );
+    }
+    if (exp && (Number.isNaN(exp.getTime()) || exp.getTime() <= Date.now())) {
+      throw new BadRequestException(
+        vetError("VET_LICENCE_REQUIRED", "That licence has already expired.", {
+          role,
+          missing: ["licenceExpiresAt"],
+          hint: {
+            ar: "تاريخ انتهاء الترخيص مضى. أدخلوا ترخيصاً سارياً.",
+            en: "That licence expiry has passed. Enter a licence that is still valid.",
+          },
+        })
+      );
+    }
+    return { licenceNo: no, licenceExpiresAt: exp };
   }
 
   /** Nobody escalates past themselves — the matrix decides, not the caller. */

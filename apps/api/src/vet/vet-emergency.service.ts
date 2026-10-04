@@ -17,6 +17,7 @@
  * minimal payload, no joins the counter doesn't need.
  */
 import { Injectable } from "@nestjs/common";
+import { emergencyReasonLabel, ownerDeliveryNotice } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   VetPatientsService,
@@ -49,10 +50,17 @@ export class VetEmergencyService {
       });
     }
 
+    // THE DEMO QUARANTINE, same as every other clinical path: a demo clinic
+    // resolves only demo cats and a real clinic never resolves one. Break-glass
+    // used to skip it, so a demo account could read a real owner's phone
+    // (audit 2026-10-04, #vet P1). The refusal is the ordinary not-found, so
+    // the boundary is not itself an information leak.
+    await this.patients.requireCat(catId, actor);
+
     // ONE round trip for everything the screen shows. Speed is a safety feature.
     const [cat, allergies, conditions, activeRx, contacts, lastClinic] = await Promise.all([
       this.prisma.cat.findFirst({
-        where: { id: catId, deletedAt: null },
+        where: { id: catId, deletedAt: null, isDemo: actor.orgIsDemo },
         select: {
           id: true,
           name: true,
@@ -161,17 +169,21 @@ export class VetEmergencyService {
     const clinicAr = org?.nameAr ?? "عيادة شريكة";
 
     // Transparency, never silence — the owner hears about this now, not later.
-    await this.patients.notifyOwner({
+    // The reason is stored as a preset code (or free text) and rendered in each
+    // language, so an Arabic owner never reads an English preset.
+    const reasonAr = emergencyReasonLabel(reason, "ar");
+    const reasonEn = emergencyReasonLabel(reason, "en");
+    const delivery = await this.patients.notifyOwner({
       userId: cat.user.id,
       category: "SYSTEM",
       type: "vet_emergency_access",
       ar: {
         title: `وصول طارئ لسجل ${cat.name}`,
-        body: `اطّلع ${clinicAr} على معلومات السلامة الأساسية لـ${cat.name} (الحساسيات، الحالات المزمنة، الأدوية الحالية، جهات الاتصال). السبب المُعلن: ${reason}`,
+        body: `اطّلع ${clinicAr} على معلومات السلامة الأساسية لـ${cat.name} (الحساسيات، الحالات المزمنة، الأدوية الحالية، جهات الاتصال). السبب المُعلن: ${reasonAr}`,
       },
       en: {
         title: `Emergency access to ${cat.name}'s safety information`,
-        body: `${clinicEn} opened ${cat.name}'s essential safety details (allergies, chronic conditions, current medications, emergency contacts). Stated reason: ${reason}`,
+        body: `${clinicEn} opened ${cat.name}'s essential safety details (allergies, chronic conditions, current medications, emergency contacts). Stated reason: ${reasonEn}`,
       },
       data: {
         catId: cat.id,
@@ -251,11 +263,19 @@ export class VetEmergencyService {
         grantId: grant.id,
         at: grant.grantedAt,
         reason,
-        ownerNotified: true,
-        notice: {
-          ar: "أُبلغ المالك فورًا بهذا الوصول الطارئ وسببه. هذا الاطلاع مقصور على معلومات السلامة فقط.",
-          en: "The owner has been told about this emergency access and its reason. It covers safety information only.",
-        },
+        reasonLabel: { ar: reasonAr, en: reasonEn },
+        // Only claim the owner was told when they were.
+        ownerNotified: delivery.delivered,
+        ownerNotification: delivery,
+        notice: delivery.delivered
+          ? {
+              ar: "أُبلغ المالك فورًا بهذا الوصول الطارئ وسببه. هذا الاطلاع مقصور على معلومات السلامة فقط.",
+              en: "The owner has been told about this emergency access and its reason. It covers safety information only.",
+            }
+          : {
+              ar: `سُجِّل هذا الوصول الطارئ. ${ownerDeliveryNotice(delivery)?.ar ?? ""} الاطلاع مقصور على معلومات السلامة فقط.`,
+              en: `This emergency access was recorded. ${ownerDeliveryNotice(delivery)?.en ?? ""} It covers safety information only.`,
+            },
       },
       nextStep: {
         action: "open-visit",

@@ -12,7 +12,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Check, ChevronDown, Lock, LockOpen, ShieldCheck } from "lucide-react";
+import { Cat, Check, ChevronDown, Lock, LockOpen, ShieldCheck } from "lucide-react";
 import { Badge, Button, Card, Dialog, cn, useToast } from "@moraqat/ui";
 import { VET_ROLE_LABELS, digitsOnly, type VetRole } from "@moraqat/core";
 import { useLocale } from "@/app/providers";
@@ -394,8 +394,13 @@ export function CounterLock({ className }: { className?: string }) {
         setOpen(false);
         setPin("");
         setStaffId("");
+        // Never "Welcome, undefined": a person with no name on file is greeted
+        // by their role, and the toast still says who now owns the terminal.
+        const who =
+          session.staffName ??
+          (session.roleLabel ? (isAr ? session.roleLabel.ar : session.roleLabel.en) : null);
         toast({
-          title: isAr ? `أهلاً ${session.staffName}` : `Welcome, ${session.staffName}`,
+          title: who ? (isAr ? `أهلاً ${who}` : `Welcome, ${who}`) : isAr ? "فُتح الكاونتر" : "Counter unlocked",
           description: isAr
             ? "كل إجراء من هذا الجهاز سيُسجَّل باسمك."
             : "Everything done on this terminal is now logged to you.",
@@ -478,6 +483,7 @@ export function CounterLock({ className }: { className?: string }) {
               value={pin}
               onChange={(e) => setPin(digitsOnly(e.target.value).slice(0, 6))}
               inputMode="numeric"
+              dir="ltr"
               autoComplete="off"
               required
               className="h-13 rounded-xl border border-input bg-background px-4 text-center font-mono text-lg tracking-[0.6em] shadow-e1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -541,7 +547,7 @@ export function PatientRow({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={photoUrl} alt="" className="size-full object-cover" loading="lazy" />
       ) : (
-        <span className="text-base">🐈</span>
+        <Cat className="size-5 text-muted-foreground" aria-hidden />
       )}
     </span>
   );

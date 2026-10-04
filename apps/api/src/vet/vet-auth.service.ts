@@ -9,7 +9,15 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { createHash, randomUUID } from "node:crypto";
 import * as bcrypt from "bcryptjs";
-import { capabilitiesFor, VET_ROLE_LABELS, VET_STAFF_CONFIDENTIALITY_VERSION } from "@moraqat/core";
+import {
+  capabilitiesFor,
+  licenceHoldNotice,
+  licenceStanding,
+  VET_COUNTER_HEADER,
+  VET_ORG_HEADER,
+  VET_ROLE_LABELS,
+  VET_STAFF_CONFIDENTIALITY_VERSION,
+} from "@moraqat/core";
 import type { VetRole } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
 import { resolveJwtSecret } from "../common/config/secrets";
@@ -83,6 +91,8 @@ export class VetAuthService {
         title: true,
         joinedAt: true,
         pinHash: true,
+        licenceNo: true,
+        licenceExpiresAt: true,
         org: {
           select: {
             id: true,
@@ -125,6 +135,8 @@ export class VetAuthService {
         title: true,
         joinedAt: true,
         pinHash: true,
+        licenceNo: true,
+        licenceExpiresAt: true,
         org: {
           select: {
             id: true,
@@ -179,7 +191,7 @@ export class VetAuthService {
     return {
       ...this.membershipView(membership),
       /** Echo the header the client must now send. */
-      header: { name: "x-moracat-org", value: orgId },
+      header: { name: VET_ORG_HEADER, value: orgId },
     };
   }
 
@@ -190,6 +202,8 @@ export class VetAuthService {
     title: string | null;
     joinedAt: Date | null;
     pinHash: string | null;
+    licenceNo?: string | null;
+    licenceExpiresAt?: Date | null;
     org: {
       id: string;
       slug: string;
@@ -204,6 +218,7 @@ export class VetAuthService {
     branches: { id: string; nameEn: string; nameAr: string }[];
   }) {
     const role = m.role as VetRole;
+    const licence = licenceStanding({ role, licenceNo: m.licenceNo, licenceExpiresAt: m.licenceExpiresAt });
     return {
       staffId: m.id,
       role,
@@ -225,8 +240,10 @@ export class VetAuthService {
       },
       /** Empty = org-wide scope, matching the schema's convention. */
       branches: m.branches,
-      // Same sandbox the guard applies — the portal renders exactly this.
-      capabilities: capabilitiesFor({ role, orgStatus: m.org.status }),
+      // Same sandbox and licence hold the guard applies — the portal renders exactly this.
+      capabilities: capabilitiesFor({ role, orgStatus: m.org.status, licence }),
+      licence,
+      licenceNotice: licenceHoldNotice(licence),
     };
   }
 
@@ -507,6 +524,8 @@ export class VetAuthService {
         status: true,
         title: true,
         pinHash: true,
+        licenceNo: true,
+        licenceExpiresAt: true,
         user: { select: { firstName: true, lastName: true, avatarUrl: true } },
       },
     });
@@ -578,10 +597,11 @@ export class VetAuthService {
     ]);
 
     const role = staff.role as VetRole;
+    const licence = licenceStanding({ role, licenceNo: staff.licenceNo, licenceExpiresAt: staff.licenceExpiresAt });
     return {
       counterToken: token,
       expiresAt,
-      header: { name: "x-moracat-counter", value: token },
+      header: { name: VET_COUNTER_HEADER, value: token },
       device: { id: device.id, name: device.name, branchId: device.branchId },
       actor: {
         staffId: staff.id,
@@ -593,7 +613,8 @@ export class VetAuthService {
         avatarUrl: staff.user.avatarUrl,
         counterMode: true,
         // Narrowed by counter mode — the UI renders exactly this and nothing more.
-        capabilities: capabilitiesFor({ role, counterMode: true, orgStatus: device.branch.org.status }),
+        capabilities: capabilitiesFor({ role, counterMode: true, orgStatus: device.branch.org.status, licence }),
+        licence,
       },
     };
   }
@@ -608,8 +629,12 @@ export class VetAuthService {
 
     let payload: CounterTokenPayload;
     try {
+      // Counter tokens are signed with their own key (see counterUnlock and
+      // VetStaffGuard). Verifying with the access secret always failed, which
+      // the idempotent branch below swallowed — so "lock" never revoked the
+      // session. Same key as the signer, or lock is a no-op.
       payload = await this.jwt.verifyAsync<CounterTokenPayload>(token, {
-        secret: resolveJwtSecret("JWT_ACCESS_SECRET"),
+        secret: resolveJwtSecret("JWT_COUNTER_SECRET"),
       });
     } catch {
       // Already expired is already locked — locking is idempotent by design so

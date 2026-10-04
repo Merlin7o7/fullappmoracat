@@ -105,3 +105,9 @@ export function assertEnum<T extends string>(
     `${context}: expected one of ${allowed.join(" | ")}, received ${JSON.stringify(value)}.`
   );
 }
+
+// The rest of the clinical contract lives in sibling modules so each stays
+// readable; re-exported here so `vet-contract` remains the one import.
+export * from "./vet-entry-contract";
+export * from "./vet-vaccines";
+export * from "./vet-visit-contract";

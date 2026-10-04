@@ -41,7 +41,16 @@
 //  nothing, and a chart that plots NaN is worse than both.
 // ════════════════════════════════════════════════════════════════════════
 
+import {
+  CLINICAL_ENTRY_TYPE_LABELS,
+  VET_ROLE_LABELS,
+  vaccineDisplayName,
+  type DoseStanding,
+  type VaccineCode,
+  type VetCounterSessionResponse,
+} from "@moraqat/core";
 import type {
+  VetCounterSession,
   VetConsentTier,
   VetEmergencyPayload,
   VetMedicalAlert,
@@ -122,14 +131,19 @@ export interface VetWireEmergencyContact {
 
 export interface VetWireVaccination {
   id: string;
-  /** ONE string. The API does not carry a bilingual vaccine name. */
+  /** The stored name (canonical for coded doses, typed for OTHER/legacy). */
   name: string;
   administeredAt: string | null;
   dueAt: string | null;
   vetName: string | null;
   clinic: string | null;
   batchNo: string | null;
+  /** Server-computed on the LATEST dose of each vaccine only. */
   overdue: boolean;
+  vaccineCode?: VaccineCode;
+  label?: { ar: string; en: string };
+  isLatest?: boolean;
+  standing?: DoseStanding;
 }
 
 export interface VetWireWeightRow {
@@ -381,16 +395,20 @@ function monthsSince(birthDate: string | null): number | null {
 }
 
 function adaptVaccination(v: VetWireVaccination): VetVaccination {
-  // The record carries one name, so both locales get the same string rather
-  // than a fabricated translation. A vaccine name is a proper noun anyway.
-  const name = v.name ?? "";
+  // Coded doses carry a bilingual label; a legacy/OTHER dose shows what was
+  // typed in both locales rather than a fabricated translation.
+  const label = v.label ?? vaccineDisplayName(v.name, v.vaccineCode);
   return {
     id: v.id,
-    nameEn: name,
-    nameAr: name,
+    nameEn: label.en,
+    nameAr: label.ar,
     givenAt: toIso(v.administeredAt),
     dueAt: toIso(v.dueAt),
     administeredBy: v.vetName ?? v.clinic ?? null,
+    vaccineCode: v.vaccineCode,
+    isLatest: v.isLatest,
+    standing: v.standing,
+    overdue: v.overdue,
   };
 }
 
@@ -474,6 +492,25 @@ export function adaptPatientProfile(w: VetWirePatientProfile): VetPatientProfile
   };
 }
 
+/**
+ * The server's detector says `qrToken`; the portal's chip vocabulary says `qr`.
+ * Unmapped, a scanned collar fell to the `default` arm and was labelled "Name".
+ */
+function toDetectedType(kind: string | null | undefined): VetSearchResponse["detectedType"] {
+  switch (kind) {
+    case "qrToken":
+    case "qr":
+      return "qr";
+    case "catId":
+    case "microchip":
+    case "phone":
+    case "email":
+      return kind;
+    default:
+      return "name";
+  }
+}
+
 export function adaptSearchResponse(w: VetWireSearchResponse): VetSearchResponse {
   const rows = Array.isArray(w?.results) ? w.results : [];
   return {
@@ -482,6 +519,7 @@ export function adaptSearchResponse(w: VetWireSearchResponse): VetSearchResponse
       name: r.name,
       catIdNumber: r.catIdNumber ?? "",
       photoUrl: r.photoUrl ?? null,
+      sex: toSex(r.gender),
       ownerName: r.owner?.displayName ?? null,
       lastVisitAt: toIso(r.clinicRelationship?.lastVisitHere),
       isOwnPatient: r.clinicRelationship?.isKnownPatient ?? false,
@@ -489,7 +527,7 @@ export function adaptSearchResponse(w: VetWireSearchResponse): VetSearchResponse
     })),
     scoped: w?.scope?.scopedToClinic ?? false,
     scopeNotice: w?.scope?.notice ?? null,
-    detectedType: (w?.query?.detectedAs ?? "name") as VetSearchResponse["detectedType"],
+    detectedType: toDetectedType(w?.query?.detectedAs),
     total: w?.total ?? rows.length,
     empty: w?.empty ?? null,
   };
@@ -606,6 +644,28 @@ export function adaptEmergencyPayload(w: VetWireEmergencyPayload): VetEmergencyP
   };
 }
 
+/**
+ * POST /vet/auth/counter/unlock. The person is nested under `actor`, and the
+ * token the portal must now send is top-level. Reading `staffName` off the
+ * envelope is what printed "Welcome, undefined" at the front desk.
+ */
+export function adaptCounterSession(w: VetCounterSessionResponse): VetCounterSession {
+  const a = w.actor;
+  const role = a.role;
+  return {
+    staffId: a.staffId,
+    staffName: (a.title && a.name ? `${a.title} ${a.name}` : a.name) ?? null,
+    role,
+    roleLabel: a.roleLabel ?? VET_ROLE_LABELS[role] ?? null,
+    orgId: a.orgId,
+    deviceId: w.device?.id ?? "",
+    deviceName: w.device?.name,
+    expiresAt: toIso(w.expiresAt) ?? "",
+    counterToken: w.counterToken,
+    licence: a.licence,
+  };
+}
+
 /* ════════════════════════════════════════════════════════════════════════
  *  Timeline rendering
  *
@@ -624,20 +684,9 @@ export function adaptEmergencyPayload(w: VetWireEmergencyPayload): VetEmergencyP
 
 /** The one source of truth for entry-kind wording; entry-composer re-exports it. */
 export const VET_ENTRY_KIND_LABELS: Record<string, VetWireBilingual> = {
-  EXAM: { ar: "فحص", en: "Examination" },
-  DIAGNOSIS: { ar: "تشخيص", en: "Diagnosis" },
-  VACCINATION: { ar: "تحصين", en: "Vaccination" },
-  TREATMENT: { ar: "علاج", en: "Treatment" },
-  PRESCRIPTION: { ar: "وصفة", en: "Prescription" },
-  LAB: { ar: "مختبر", en: "Lab" },
-  IMAGING: { ar: "أشعة", en: "Imaging" },
-  SURGERY: { ar: "عملية جراحية", en: "Surgery" },
-  DENTAL: { ar: "أسنان", en: "Dental" },
-  HOSPITALIZATION: { ar: "تنويم", en: "Hospitalisation" },
-  WEIGHT: { ar: "وزن", en: "Weight" },
-  NUTRITION: { ar: "تغذية", en: "Nutrition" },
-  SUPPLEMENT: { ar: "مكمّل غذائي", en: "Supplement" },
-  NOTE: { ar: "ملاحظة", en: "Note" },
+  // The fourteen clinical kinds come from the shared contract, so the
+  // composer, the timeline and the API's own docs use one wording («تطعيم»).
+  ...CLINICAL_ENTRY_TYPE_LABELS,
   VISIT: { ar: "زيارة", en: "Visit" },
   ATTACHMENT: { ar: "مرفق", en: "Attachment" },
   CONSENT: { ar: "موافقة", en: "Consent" },
@@ -678,14 +727,17 @@ function describeEntry(
   switch (type) {
     case "VACCINATION": {
       const vaccine = str(p.vaccine);
+      const code = str(p.vaccineCode);
+      const product = str(p.product);
       const batch = str(p.batchNo);
       const site = str(p.site);
-      if (!vaccine) return fallback(null, null);
+      if (!vaccine && !code) return fallback(null, null);
+      const name = vaccineDisplayName(vaccine, code);
       return {
-        titleAr: vaccine,
-        titleEn: vaccine,
-        bodyAr: joinParts([batch ? `دفعة ${batch}` : null, site, note]),
-        bodyEn: joinParts([batch ? `Batch ${batch}` : null, site, note]),
+        titleAr: name.ar,
+        titleEn: name.en,
+        bodyAr: joinParts([product, batch ? `التشغيلة ${batch}` : null, site, note]),
+        bodyEn: joinParts([product, batch ? `Batch ${batch}` : null, site, note]),
       };
     }
     case "WEIGHT": {
@@ -695,7 +747,7 @@ function describeEntry(
       return {
         titleAr: `${kg} كجم`,
         titleEn: `${kg} kg`,
-        bodyAr: joinParts([bcs ? `درجة السمنة ${bcs}/9` : null, note]),
+        bodyAr: joinParts([bcs ? `درجة حالة الجسم (BCS) ${bcs}/9` : null, note]),
         bodyEn: joinParts([bcs ? `BCS ${bcs}/9` : null, note]),
       };
     }
@@ -742,7 +794,7 @@ function describeEntry(
         [
           str(p.temperatureC) ? `${str(p.temperatureC)}°C` : null,
           str(p.heartRate) ? `HR ${str(p.heartRate)}` : null,
-          str(p.respRate) ? `RR ${str(p.respRate)}` : null,
+          str(p.respiratoryRate) ? `RR ${str(p.respiratoryRate)}` : null,
         ],
         " · "
       );
@@ -773,9 +825,18 @@ function describeEntry(
       };
     }
     default: {
-      // Every other kind: lead with whatever names it, then the note.
+      // Every other kind: lead with whatever names it (the contract's required
+      // field for that type), then the note.
       const salient =
-        str(p.procedure) ?? str(p.name) ?? str(p.title) ?? str(p.description) ?? str(p.summary);
+        str(p.procedure) ??
+        str(p.treatment) ??
+        str(p.name) ??
+        str(p.reason) ??
+        str(p.region) ??
+        str(p.dietType) ??
+        str(p.title) ??
+        str(p.description) ??
+        str(p.summary);
       return {
         titleAr: salient ?? kind.ar,
         titleEn: salient ?? kind.en,
@@ -804,6 +865,10 @@ export function adaptTimelineEntry(w: VetWireTimelineEntry) {
     orgNameEn: w.clinic?.en ?? null,
     orgNameAr: w.clinic?.ar ?? null,
     revisionOf: w.revision?.isRevisionOf ?? null,
+    // The raw clinical payload and note travel too: an amendment starts from
+    // what was actually written, not from a blank form (append-only R117).
+    payload: w.payload ?? null,
+    note: w.note ?? null,
     cosignedBy: w.coSignedBy?.name ?? null,
     cosignedAt: toIso(w.coSignedAt),
     // Metadata only crosses the wire; the object opens through the access-logged

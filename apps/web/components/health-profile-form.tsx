@@ -27,7 +27,7 @@ export function HealthProfileForm({ record, isAr }: { record: HealthRecord; isAr
 
   const clinics = useQuery({
     queryKey: ["vet-directory-picker", "branches"],
-    queryFn: () => authedFetch<{ items: { id: string; nameAr: string; nameEn: string; org: { nameAr: string; nameEn: string } }[] }>("/vet/directory?limit=100"),
+    queryFn: () => authedFetch<{ items: { id: string; nameAr: string; nameEn: string; org: { nameAr: string; nameEn: string } }[] }>("/vet/directory?limit=60"),
     enabled: editing,
   });
 

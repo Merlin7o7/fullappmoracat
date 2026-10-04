@@ -8,7 +8,7 @@
 
 import * as React from "react";
 import { ArrowRight, Languages, Send } from "lucide-react";
-import { Button, Card, cn } from "@moraqat/ui";
+import { BOTTOM_LAYER, BottomBar, Button, Card, cn } from "@moraqat/ui";
 import {
   REGISTRATION_STEPS,
   VET_PARTNER_AGREEMENT,
@@ -157,7 +157,9 @@ export function StepTerms({ orgId, state, api, isAr, onState, onBack, goTo }: St
       {error && !error.gaps?.length && <ErrorNote error={error} />}
 
       <div className="h-24 sm:hidden" aria-hidden />
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 pt-3 backdrop-blur pb-safe-6 sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      {/* Mobile: a bar in the shared bottom stack (never under the nav or a notice).
+          Desktop: the same controls, inline. A `sm:hidden` BottomBar measures 0. */}
+      <BottomBar layer={BOTTOM_LAYER.action} className="border-t border-border bg-background/95 px-4 pt-3 backdrop-blur pb-bar sm:hidden">
         {gaps.length > 0 && (
           <p className="mb-2 text-center text-xs text-muted-foreground sm:text-start">
             {isAr ? `أكمل ${gaps.length} من البنود أعلاه لتتمكن من الإرسال.` : `Complete the ${gaps.length} item${gaps.length === 1 ? "" : "s"} above to submit.`}
@@ -175,7 +177,26 @@ export function StepTerms({ orgId, state, api, isAr, onState, onBack, goTo }: St
             {resubmitting ? (isAr ? "أعد إرسال الطلب" : "Resubmit for review") : isAr ? "أرسل الطلب للمراجعة" : "Submit for review"}
           </Button>
         </div>
-      </div>
+            </BottomBar>
+      <div className="hidden sm:block">
+        {gaps.length > 0 && (
+          <p className="mb-2 text-center text-xs text-muted-foreground sm:text-start">
+            {isAr ? `أكمل ${gaps.length} من البنود أعلاه لتتمكن من الإرسال.` : `Complete the ${gaps.length} item${gaps.length === 1 ? "" : "s"} above to submit.`}
+          </p>
+        )}
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          {onBack && (
+            <Button type="button" variant="secondary" size="lg" onClick={onBack} className="shrink-0 px-5">
+              <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />
+              {isAr ? "رجوع" : "Back"}
+            </Button>
+          )}
+          <Button type="submit" size="lg" loading={busy} disabled={gaps.length > 0} className="flex-1 sm:ms-auto sm:flex-none sm:px-10">
+            {!busy && <Send className="size-4 rtl:-scale-x-100" aria-hidden />}
+            {resubmitting ? (isAr ? "أعد إرسال الطلب" : "Resubmit for review") : isAr ? "أرسل الطلب للمراجعة" : "Submit for review"}
+          </Button>
+        </div>
+            </div>
     </form>
   );
 }

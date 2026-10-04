@@ -52,11 +52,11 @@ export default function VetPartnershipsPage() {
       icon: HeartHandshake,
       ar: {
         title: "شراكة لا إعلان",
-        body: "العيادات الشريكة تكرّم أعضاء مرقط بميزة واضحة ومتفق عليها، وتحصل على بوابة عمل كاملة لفريقها: البحث بالبطاقة، والزيارات، والسجل الطبي بإذن المالك.",
+        body: "العيادات الشريكة تحصل على بوابة عمل كاملة لفريقها: التحقق من هوية القط بالبطاقة، والزيارات، والسجل الطبي بإذن المالك — دون رسوم في هذه المرحلة.",
       },
       en: {
         title: "A partnership, not an advert",
-        body: "Partner clinics honour a clear, agreed benefit for Moracat members, and their team gets a full working portal: card lookup, visits, and the medical record with the owner's permission.",
+        body: "Partner clinics get a full working portal for their team: Cat ID lookup by card, visits, and the medical record with the owner's permission — with no fees at this stage.",
       },
     },
   ];

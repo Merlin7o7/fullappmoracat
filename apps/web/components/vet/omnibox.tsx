@@ -27,7 +27,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, Loader2, Search, ShieldCheck, X } from "lucide-react";
+import { Cat, Clock, Loader2, Search, ShieldCheck, X } from "lucide-react";
 import { Badge, cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
 import { formatDate } from "@/lib/datetime";
@@ -109,7 +109,10 @@ export function Omnibox({
         setResults(res.results ?? []);
         setScoped(!!res.scoped);
         setServerType(res.detectedType ?? null);
-        setHighlight(0);
+        // With several cats (a household phone) nothing is pre-selected, so
+        // Enter can never open the alphabetically-first one by accident — the
+        // operator picks the cat by sight (wrong-patient risk, audit 2026-10-04).
+        setHighlight((res.results?.length ?? 0) === 1 ? 0 : -1);
         setStatus("done");
         setOpen(true);
 
@@ -262,13 +265,16 @@ export function Omnibox({
       return;
     }
     if (e.key === "Enter") {
-      const pick = options[highlight];
+      const pick = highlight >= 0 ? options[highlight] : undefined;
       if (pick) {
         e.preventDefault();
         openPatient(pick);
-      } else if (trimmed) {
+      } else if (trimmed && !(status === "done" && results.length > 1)) {
         e.preventDefault();
         void runSearch(trimmed, { navigateOnSingle: true });
+      } else {
+        e.preventDefault();
+        setOpen(true);
       }
       return;
     }
@@ -325,7 +331,7 @@ export function Omnibox({
 
         {trimmed && (
           <>
-            <Badge variant="secondary" className="hidden shrink-0 sm:inline-flex">
+            <Badge variant="outline" className="hidden shrink-0 sm:inline-flex">
               {vetDetectedTypeLabel(detected, isAr)}
             </Badge>
             <button
@@ -414,6 +420,13 @@ export function Omnibox({
 
           {!showRecents && status === "done" && results.length > 0 && (
             <>
+              {results.length > 1 && !scoped && (
+                <p className="px-2.5 py-1.5 text-xs font-medium text-foreground" role="status">
+                  {isAr
+                    ? `${results.length} قطط بهذا الرقم — اختر القط الذي أمامك.`
+                    : `${results.length} cats match — choose the one in front of you.`}
+                </p>
+              )}
               {scoped && (
                 <p className="flex items-start gap-1.5 px-2.5 py-1.5 text-xs leading-relaxed text-muted-foreground">
                   <ShieldCheck className="mt-px size-3 shrink-0" aria-hidden />
@@ -434,6 +447,9 @@ export function Omnibox({
                   photoUrl={r.photoUrl}
                   meta={
                     <>
+                      <span>
+                        {r.sex === "FEMALE" ? (isAr ? "أنثى" : "Female") : r.sex === "MALE" ? (isAr ? "ذكر" : "Male") : ""}
+                      </span>
                       {r.ownerName && <span className="truncate">{r.ownerName}</span>}
                       {r.lastVisitAt && (
                         <span className="truncate">
@@ -445,7 +461,7 @@ export function Omnibox({
                   }
                   trailing={
                     r.isOwnPatient ? (
-                      <Badge variant="secondary">{isAr ? "من مرضاك" : "Your patient"}</Badge>
+                      <Badge variant="outline">{isAr ? "من مرضاك" : "Your patient"}</Badge>
                     ) : null
                   }
                 />
@@ -536,7 +552,7 @@ function ResultRow({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photoUrl} alt="" className="size-full object-cover" loading="lazy" />
         ) : (
-          <span className="text-base">🐈</span>
+          <Cat className="size-5 text-muted-foreground" />
         )}
       </span>
       <span className="min-w-0 flex-1">

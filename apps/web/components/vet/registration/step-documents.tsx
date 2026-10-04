@@ -289,7 +289,7 @@ function DocSlot({
             </h4>
             {required && !done && <Badge variant="warning">{isAr ? "مطلوب" : "Required"}</Badge>}
             {done && (
-              <Badge variant={doc.verified ? "success" : "secondary"} dot>
+              <Badge variant={doc.verified ? "success" : "outline"} dot>
                 {doc.verified ? (isAr ? "تم التحقق" : "Verified") : isAr ? "مرفوع" : "Uploaded"}
               </Badge>
             )}

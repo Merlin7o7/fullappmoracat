@@ -11,7 +11,7 @@
 
 import * as React from "react";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Info, RotateCcw, TriangleAlert } from "lucide-react";
-import { Button, Dialog, Input, cn } from "@moraqat/ui";
+import { BOTTOM_LAYER, BottomBar, Button, Dialog, Input, cn } from "@moraqat/ui";
 import type { RegFriendlyError } from "@/lib/vet-registration";
 import { formatDate as coreFormatDate } from "@moraqat/core";
 
@@ -440,12 +440,8 @@ export function ActionBar({
     <>
       {/* Spacer so the fixed bar never covers the last field on mobile. */}
       <div className="h-24 sm:hidden" aria-hidden />
-      <div
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 pt-3 backdrop-blur pb-safe-6",
-          "sm:static sm:z-auto sm:mt-2 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none"
-        )}
-      >
+      {/* Mobile: a bar in the shared bottom stack. Desktop: the same controls inline. */}
+      <BottomBar layer={BOTTOM_LAYER.action} className="border-t border-border bg-background/95 px-4 pt-3 backdrop-blur pb-bar sm:hidden">
         {note && <div className="mb-2 text-center text-xs text-muted-foreground sm:text-start">{note}</div>}
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           {onBack && (
@@ -466,7 +462,29 @@ export function ActionBar({
             {!loading && <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />}
           </Button>
         </div>
-      </div>
+            </BottomBar>
+      <div className="mt-2 hidden sm:block">
+        {note && <div className="mb-2 text-center text-xs text-muted-foreground sm:text-start">{note}</div>}
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          {onBack && (
+            <Button type="button" variant="secondary" size="lg" onClick={onBack} className="shrink-0 px-5">
+              <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
+              {isAr ? "رجوع" : "Back"}
+            </Button>
+          )}
+          <Button
+            type={primaryType}
+            size="lg"
+            onClick={onPrimary}
+            loading={loading}
+            disabled={disabled}
+            className="flex-1 sm:ms-auto sm:flex-none sm:px-10"
+          >
+            {primaryLabel}
+            {!loading && <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />}
+          </Button>
+        </div>
+            </div>
     </>
   );
 }

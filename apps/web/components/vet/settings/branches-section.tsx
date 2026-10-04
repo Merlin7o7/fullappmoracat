@@ -218,14 +218,14 @@ function BranchCard({ branch: b, isAr }: { branch: OrgBranch; isAr: boolean }) {
           )}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {!b.isActive && <Badge variant="secondary">{isAr ? "مغلق" : "Closed"}</Badge>}
+          {!b.isActive && <Badge variant="outline">{isAr ? "مغلق" : "Closed"}</Badge>}
           {b.emergency24h && (
             <Badge variant="info">
               <Siren className="size-3" aria-hidden />
               {isAr ? "طوارئ 24 ساعة" : "24h emergency"}
             </Badge>
           )}
-          <Badge variant={b.directoryVisible ? "success" : "secondary"} dot>
+          <Badge variant={b.directoryVisible ? "success" : "outline"} dot>
             {b.directoryVisible
               ? isAr
                 ? "ظاهر في الدليل"

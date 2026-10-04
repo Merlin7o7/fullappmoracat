@@ -179,7 +179,7 @@ export default function GalleryPanel({ catId, className }: { catId: string; clas
         <h3 className="font-display text-base font-semibold tracking-tight">
           {isAr ? "الصور السريرية" : "Clinical images"}
         </h3>
-        <Badge variant="secondary">{visible.length}</Badge>
+        <Badge variant="outline">{visible.length}</Badge>
       </div>
 
       <div
@@ -470,7 +470,7 @@ function CompareView({
           ].map(({ img, ar, en }) => (
             <figure key={img.id} className="bg-card">
               <figcaption className="flex items-center gap-2 px-3 py-2">
-                <Badge variant="secondary">{isAr ? ar : en}</Badge>
+                <Badge variant="outline">{isAr ? ar : en}</Badge>
                 <span className="text-xs tabular-nums text-muted-foreground">
                   {formatDate(img.capturedAt, locale)}
                 </span>

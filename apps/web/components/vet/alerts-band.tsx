@@ -23,6 +23,7 @@
 // ════════════════════════════════════════════════════════════════════════
 
 import * as React from "react";
+import { latestDosePerVaccine } from "@moraqat/core";
 import { AlertTriangle, Ban, HandHeart, Pill, ShieldAlert, Syringe } from "lucide-react";
 import { cn } from "@moraqat/ui";
 import { useLocale } from "@/app/providers";
@@ -85,23 +86,23 @@ export function vaccinationStandingLabel(
   switch (standing) {
     case "WITHHELD":
       return {
-        text: isAr ? "التحصينات محجوبة" : "Vaccinations withheld",
+        text: isAr ? "التطعيمات محجوبة" : "Vaccinations withheld",
         variant: "outline",
       };
     case "NO_RECORD":
       return {
-        text: isAr ? "لا سجل تحصين" : "No vaccination record",
+        text: isAr ? "لا سجل تطعيم" : "No vaccination record",
         variant: "warning",
       };
     case "GAPS":
       return {
         text: isAr
-          ? `${missingCount} تحصين ناقص`
+          ? `${missingCount} تطعيم ناقص`
           : `${missingCount} vaccination gap${missingCount === 1 ? "" : "s"}`,
         variant: "warning",
       };
     default:
-      return { text: isAr ? "التحصينات سارية" : "Vaccinations current", variant: "success" };
+      return { text: isAr ? "التطعيمات سارية" : "Vaccinations current", variant: "success" };
   }
 }
 
@@ -112,7 +113,17 @@ export function deriveMissingVaccinations(
 ): MissingVaccination[] {
   const now = Date.now();
   const out: MissingVaccination[] = [];
-  for (const v of vaccinations ?? []) {
+  const list = vaccinations ?? [];
+  // Only the LATEST dose of each vaccine can be overdue or due. Last year's
+  // dose carries last year's dueAt — it was superseded by this year's
+  // booster, and flagging it painted every vaccinated cat red (audit
+  // 2026-10-04). The server marks `isLatest`; older payloads fall back to the
+  // shared core reduction by coded vaccine.
+  const latest = new Set(
+    latestDosePerVaccine(list.map((v) => ({ ...v, name: v.nameEn, administeredAt: v.givenAt }))).map((d) => d.id)
+  );
+  for (const v of list) {
+    if (v.isLatest === false || (v.isLatest === undefined && !latest.has(v.id))) continue;
     const name = isAr ? v.nameAr : v.nameEn;
     if (!v.givenAt) {
       out.push({ id: v.id, vaccine: name, status: "NO_RECORD", dueAt: v.dueAt });
@@ -251,7 +262,7 @@ export function AlertsBand({
       out.push({
         key: "vaccinations",
         icon: Syringe,
-        labelAr: "تحصينات ناقصة",
+        labelAr: "تطعيمات ناقصة",
         labelEn: "Missing vaccinations",
         weight: missingVaccinations.some((v) => v.status === "OVERDUE") ? "steady" : "calm",
         items: missingVaccinations.map((v) => ({

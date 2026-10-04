@@ -162,7 +162,7 @@ export default function ChartsPanel({ catId, className }: { catId: string; class
             </span>
           </p>
         </div>
-        <Badge variant={dir === "STABLE" ? "secondary" : "info"}>
+        <Badge variant={dir === "STABLE" ? "outline" : "info"}>
           <TrendIcon className="size-3" aria-hidden />
           {trendSentence}
         </Badge>

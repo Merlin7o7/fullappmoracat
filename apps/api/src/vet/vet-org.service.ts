@@ -7,7 +7,7 @@ import {
 import { Prisma } from "@moraqat/db";
 import { SAUDI_CITIES, findSaudiCity } from "@moraqat/core";
 import { PrismaService } from "../prisma/prisma.service";
-import { riyadhDayBounds } from "@moraqat/core";
+import { latestDosePerVaccine, riyadhDayBounds, vaccineDisplayName, vaccineKey, visitReasonLabel } from "@moraqat/core";
 import { EventsService } from "../events/events.service";
 import { vetError } from "./guards/vet-staff.guard";
 import type { VetActor } from "./decorators/vet-actor.decorator";
@@ -318,7 +318,8 @@ export class VetOrgService {
 
     const [open, completed, followUps, due, newMembersNearby, drafts, unclaimed, expiringConsents, remindersSent, reminderClicks] =
       await Promise.all([
-        this.prisma.visit.count({ where: { orgId: actor.orgId, checkedInAt: { gte: day.start, lt: day.end }, state: "OPEN" } }),
+        // Every OPEN visit is today's work, whatever day it began (overnight cases).
+        this.prisma.visit.count({ where: { orgId: actor.orgId, state: "OPEN" } }),
         this.prisma.visit.count({ where: { orgId: actor.orgId, checkedInAt: { gte: day.start, lt: day.end }, state: "CLOSED" } }),
         canSeePatients
           ? this.prisma.visit.findMany({
@@ -336,8 +337,8 @@ export class VetOrgService {
                 cat: { deletedAt: null, status: "ACTIVE", claimStatus: "CLAIMED" },
               },
               orderBy: { dueAt: "asc" },
-              take: 15,
-              select: { name: true, dueAt: true, cat: { select: { id: true, name: true, photoUrl: true, user: { select: { firstName: true } } } } },
+              take: 40,
+              select: { name: true, administeredAt: true, dueAt: true, catId: true, cat: { select: { id: true, name: true, photoUrl: true, user: { select: { firstName: true } } } } },
             })
           : Promise.resolve([]),
         cityCodes.length
@@ -391,6 +392,27 @@ export class VetOrgService {
       });
     }
 
+    // A dose is only "due" if it is still the LATEST dose of that vaccine for
+    // that cat. Last year's dose whose booster was already given here or
+    // anywhere else is history, not a recall (audit 2026-10-04, #vet P1).
+    const dueCatIds = [...new Set(due.map((d) => d.catId))];
+    const allDoses = dueCatIds.length
+      ? await this.prisma.catVaccination.findMany({
+          where: { catId: { in: dueCatIds } },
+          select: { catId: true, name: true, administeredAt: true, dueAt: true },
+        })
+      : [];
+    const latestKeys = new Set(
+      dueCatIds.flatMap((catId) =>
+        latestDosePerVaccine(allDoses.filter((d) => d.catId === catId)).map(
+          (d) => `${catId}|${vaccineKey(d.name)}|${d.administeredAt.getTime()}`
+        )
+      )
+    );
+    const stillDue = due
+      .filter((d) => latestKeys.has(`${d.catId}|${vaccineKey(d.name)}|${d.administeredAt.getTime()}`))
+      .slice(0, 15);
+
     this.events.emit("clinic_summary_viewed", { userId: actor.userId, orgId: actor.orgId });
 
     return {
@@ -405,16 +427,16 @@ export class VetOrgService {
         catName: v.cat.name,
         catPhotoUrl: v.cat.photoUrl,
         dueAt: v.followUpAt!.toISOString(),
-        reasonEn: v.reason,
-        reasonAr: v.reason,
+        reasonEn: v.reason ? visitReasonLabel(v.reason, "en") : null,
+        reasonAr: v.reason ? visitReasonLabel(v.reason, "ar") : null,
         assignedStaffName: v.closedBy?.user.firstName ?? null,
       })),
-      vaccinationsDue: due.map((d) => ({
+      vaccinationsDue: stillDue.map((d) => ({
         catId: d.cat.id,
         catName: d.cat.name,
         catPhotoUrl: d.cat.photoUrl,
-        vaccineEn: d.name,
-        vaccineAr: d.name,
+        vaccineEn: vaccineDisplayName(d.name).en,
+        vaccineAr: vaccineDisplayName(d.name).ar,
         dueAt: d.dueAt!.toISOString(),
         ownerName: d.cat.user?.firstName ?? null,
       })),

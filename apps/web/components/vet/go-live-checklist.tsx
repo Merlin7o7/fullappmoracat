@@ -87,7 +87,7 @@ export function GoLiveChecklist({ className }: { className?: string }) {
           </p>
         </div>
         {data && (
-          <Badge variant={data.ready ? "success" : "secondary"} className="tabular">
+          <Badge variant={data.ready ? "success" : "outline"} className="tabular">
             {isAr
               ? `${formatNumber(doneRequired, "ar")} من ${formatNumber(required.length, "ar")} مطلوبة`
               : `${doneRequired} of ${required.length} required`}

@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
-import type { VetCapability, VetRole } from "@moraqat/core";
+import type { LicenceStanding, VetCapability, VetRole } from "@moraqat/core";
 
 /**
  * The resolved clinic-side identity for one request — MRC-VET-001 §02/§14.
@@ -42,6 +42,12 @@ export interface VetActor {
   branchIds: string[];
   /** True when this session was unlocked by PIN on a registered counter device. */
   counterMode: boolean;
+  /**
+   * Practitioner-licence standing for this membership. A doctor role without a
+   * licence on file has prescribing and co-signing held and authors drafts
+   * (`capabilitiesFor` / `requiresCoSign` in @moraqat/core).
+   */
+  licence: LicenceStanding;
   /** CounterDevice.id when `counterMode`, otherwise null. */
   deviceId: string | null;
   /**

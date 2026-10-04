@@ -130,13 +130,19 @@ function VisitGroup({
                   <span className="truncate">
                     {formatDateTime(v.checkedInAt, locale, { hour: "2-digit", minute: "2-digit" })}
                   </span>
-                  {v.reason && <span className="truncate">{v.reason}</span>}
+                  {(v.reasonLabel || v.reason) && (
+                    <span className="truncate">{(isAr ? v.reasonLabel?.ar : v.reasonLabel?.en) ?? v.reason}</span>
+                  )}
                 </>
               }
               trailing={
                 <span className="flex flex-col items-end gap-0.5">
-                  <Badge variant={v.state === "OPEN" ? "info" : "secondary"} dot>
-                    {vetVisitStateLabel(v.state, isAr)}
+                  <Badge variant={v.state === "OPEN" ? (v.stale ? "warning" : "info") : "outline"} dot>
+                    {v.state === "OPEN" && v.stale
+                      ? isAr
+                        ? "مفتوحة منذ يوم سابق"
+                        : "Open since an earlier day"
+                      : vetVisitStateLabel(v.state, isAr)}
                   </Badge>
                   {v.state === "OPEN" && v.waitMinutes !== null && (
                     <span className="text-xs text-muted-foreground tabular">
