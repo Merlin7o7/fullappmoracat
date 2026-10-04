@@ -3,13 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Camera, Mail } from "lucide-react";
 import { Button, IdBand, Seal, cn } from "@moraqat/ui";
 import { useAuth } from "@/lib/auth";
 import { Field } from "@/components/field";
 import { Illo3D } from "@/components/illo-3d";
 import { OtpBoxes } from "@/components/otp-boxes";
-import { GoogleButton, googleEnabled } from "@/components/google-button";
+import { PhoneField, nationalNumberOk } from "@/components/phone-field";
 import { useCaptureSource } from "@/lib/source";
 import { readFirstTouch } from "@/lib/first-touch";
 
@@ -26,21 +26,29 @@ const AGES: { key: string; months: number | null; ar: string; en: string }[] = [
 ];
 
 /**
- * «4 inputs before the ceremony» (UX reassessment W8, R002).
+ * Sign-up (founder, 2026-10-04): no choices, only "next".
  *
- *   1 · the cat's name   2 · sex   3 · age   4 · an email (+ the code it gets)
+ *   1 · the cat — name, sex, age and a PHOTO (required: the cat joins the
+ *       community at once, and a card without a face is an empty frame)
+ *   2 · the owner — full name and mobile (the number that brings a lost cat home)
+ *   3 · an email + the 6-digit code it gets (no password)
  *
- * No password, no phone, no city, no photo before the reveal — each of those
- * comes after, in the profile's "complete the file" list, once the member has
- * something to protect. The draft cat travels in sessionStorage to the issue
- * step, which creates it and plays the ceremony.
+ * The draft (photo as a compressed data URL) travels in sessionStorage to the
+ * issue step, which uploads the photo, issues the ID — shared to the community,
+ * the platform default — and plays the reveal; then About Moracat → the card
+ * designer → completing the profile.
  */
 export function StartFlow({ isAr }: { isAr: boolean }) {
   const router = useRouter();
-  const { user, ready, adoptSession, loginWithGoogle } = useAuth();
+  const { user, ready, adoptSession } = useAuth();
   const t = (ar: string, en: string) => (isAr ? ar : en);
 
-  const [step, setStep] = React.useState<"cat" | "email" | "code">("cat");
+  const [step, setStep] = React.useState<"cat" | "owner" | "email" | "code">("cat");
+  const [photo, setPhoto] = React.useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = React.useState(false);
+  const [ownerName, setOwnerName] = React.useState("");
+  const [dialCode, setDialCode] = React.useState("+966");
+  const [phone, setPhone] = React.useState("");
   const [name, setName] = React.useState("");
   const [sex, setSex] = React.useState<Sex | "">("");
   const [age, setAge] = React.useState<string>("");
@@ -67,11 +75,15 @@ export function StartFlow({ isAr }: { isAr: boolean }) {
     }
   }, []);
 
-  const catReady = name.trim().length >= 1 && !!sex && !!age;
+  const catReady = name.trim().length >= 1 && !!sex && !!age && !!photo;
+  const ownerReady = ownerName.trim().split(/\s+/).filter(Boolean).length >= 1 && nationalNumberOk(dialCode, phone);
   const saveDraft = () => {
     const months = AGES.find((a) => a.key === age)?.months ?? null;
     try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ name: name.trim(), gender: sex, ageMonths: months }));
+      sessionStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ name: name.trim(), gender: sex, ageMonths: months, photo, ownerName: ownerName.trim(), dialCode, phone: phone.trim() })
+      );
       sessionStorage.removeItem("moraqat.pendingCatName");
     } catch {
       /* private mode: the issue step falls back to its own form */
@@ -142,25 +154,43 @@ export function StartFlow({ isAr }: { isAr: boolean }) {
     }
   }
 
-  const progress = step === "cat" ? 1 : 2;
+  const progress = step === "cat" ? 1 : step === "owner" ? 2 : 3;
+
+  async function pickPhoto(file: File | undefined) {
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      setPhoto(await compressPhoto(file));
+    } catch {
+      setError(t("ما قدرنا نقرأ الصورة — جرّب صورة ثانية.", "We couldn't read that photo — try another."));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-md space-y-6">
       {/* The artifact being made, from the first second: a blank ID band. */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <IdBand kind={t("هوية مرقط", "Moracat ID")} serial="MRC-····-····" seal={<Seal label={t("تُصدر بعد قليل", "Issued in a moment")} />} />
-        <div className="px-5 py-6">
+        <div className="flex items-center gap-4 px-5 py-6">
+          {photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo} alt="" className="size-16 shrink-0 rounded-2xl object-cover" />
+          )}
+          <div className="min-w-0">
           <p className="font-display text-4xl leading-tight">{name.trim() || t("اسم قطك", "Your cat's name")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {[sex === "FEMALE" ? t("أنثى", "Female") : sex === "MALE" ? t("ذكر", "Male") : null, AGES.find((a) => a.key === age)?.[isAr ? "ar" : "en"] ?? null]
               .filter(Boolean)
-              .join(" · ") || t("خطوتين وتصير الهوية جاهزة", "Two steps and the ID is ready")}
+              .join(" · ") || t("ثلاث خطوات وتصير الهوية جاهزة", "Three steps and the ID is ready")}
           </p>
+          </div>
         </div>
       </div>
 
       <p className="text-sm text-muted-foreground" aria-live="polite">
-        {t(`الخطوة ${progress} من 2`, `Step ${progress} of 2`)}
+        {t(`الخطوة ${progress} من 3`, `Step ${progress} of 3`)}
       </p>
 
       {step === "cat" && (
@@ -168,9 +198,7 @@ export function StartFlow({ isAr }: { isAr: boolean }) {
           onSubmit={(e) => {
             e.preventDefault();
             if (!catReady) return;
-            saveDraft();
-            if (user) toIssue();
-            else setStep("email");
+            setStep("owner");
           }}
           className="space-y-5"
         >
@@ -227,8 +255,59 @@ export function StartFlow({ isAr }: { isAr: boolean }) {
             )}
           </fieldset>
 
-          <Button type="submit" size="lg" className="w-full" disabled={!catReady || !ready}>
-            {user ? t("أصدر الهوية", "Issue the ID") : t("التالي", "Next")}
+          <div>
+            <p className="mb-2 text-sm font-medium">{t("صورة قطك", "A photo of your cat")} <span className="text-destructive">*</span></p>
+            <label className="flex min-h-[96px] cursor-pointer items-center gap-4 rounded-2xl border-2 border-dashed border-border bg-card p-4 transition-colors hover:border-primary/50">
+              {photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photo} alt="" className="size-16 rounded-xl object-cover" />
+              ) : (
+                <span className="grid size-16 place-items-center rounded-xl bg-muted"><Camera className="size-6 text-muted-foreground" aria-hidden /></span>
+              )}
+              <span className="text-sm">
+                <span className="block font-medium">{photo ? t("غيّر الصورة", "Change the photo") : t("أضف صورة", "Add a photo")}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {t("تظهر على هويته وفي مجتمع مرقط.", "It goes on their ID and in the Moracat community.")}
+                </span>
+              </span>
+              <input type="file" accept="image/*" className="sr-only" onChange={(e) => void pickPhoto(e.target.files?.[0])} />
+            </label>
+          </div>
+          {error && step === "cat" && <p role="alert" className="text-sm text-destructive">{error}</p>}
+
+          <Button type="submit" size="lg" className="w-full" loading={photoBusy} disabled={!catReady || !ready}>
+            {t("التالي", "Next")}
+            <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
+          </Button>
+        </form>
+      )}
+
+      {step === "owner" && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!ownerReady) return;
+            saveDraft();
+            if (user) toIssue();
+            else setStep("email");
+          }}
+          className="space-y-5"
+        >
+          <Field label={t("اسمك", "Your name")} required value={ownerName} onChange={setOwnerName} autoFocus autoComplete="name" />
+          <PhoneField
+            label={t("رقم جوالك", "Your mobile")}
+            dialCode={dialCode}
+            onDialCode={setDialCode}
+            value={phone}
+            onValue={setPhone}
+            required
+            isAr={isAr}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("لو ضاع قطك، نوصلك من يلقاه برسالة — رقمك ما يظهر لأحد.", "If your cat is ever lost, whoever finds them reaches you by message — your number is never shown.")}
+          </p>
+          <Button type="submit" size="lg" className="w-full" disabled={!ownerReady || !ready}>
+            {t("التالي", "Next")}
             <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
           </Button>
         </form>
@@ -259,33 +338,13 @@ export function StartFlow({ isAr }: { isAr: boolean }) {
               <Mail className="size-4" aria-hidden /> {t("أرسل الرمز", "Send the code")}
             </Button>
           </form>
-          {googleEnabled && (
-          <>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            {t("أو", "or")}
-            <span className="h-px flex-1 bg-border" />
-          </div>
-          <GoogleButton
-            isAr={isAr}
-            onCredential={async (idToken) => {
-              try {
-                await loginWithGoogle(idToken, true);
-                toIssue();
-              } catch {
-                setError(t("تعذّر الدخول بحساب Google.", "Couldn't continue with Google."));
-              }
-            }}
-          />
-          </>
-          )}
           <p className="text-xs leading-relaxed text-muted-foreground">
             {t("بالمتابعة أنت توافق على ", "By continuing you agree to the ")}
             <Link href="/legal/terms" className="underline underline-offset-4">{t("الشروط", "Terms")}</Link>
             {t(" و", " and ")}
             <Link href="/legal/privacy" className="underline underline-offset-4">{t("سياسة الخصوصية", "Privacy Policy")}</Link>.
           </p>
-          <button type="button" onClick={() => setStep("cat")} className="min-h-11 text-sm text-muted-foreground underline-offset-4 hover:underline">
+          <button type="button" onClick={() => setStep("owner")} className="min-h-11 text-sm text-muted-foreground underline-offset-4 hover:underline">
             {t("رجوع", "Back")}
           </button>
         </div>
@@ -322,4 +381,29 @@ export function StartFlow({ isAr }: { isAr: boolean }) {
       </p>
     </div>
   );
+}
+
+/**
+ * Shrink a photo to ≤ 1200 px on its long side as a JPEG data URL — small
+ * enough to carry through sessionStorage to the issue step (where it is
+ * uploaded), large enough for the card and the community page.
+ */
+async function compressPhoto(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const scale = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.85);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

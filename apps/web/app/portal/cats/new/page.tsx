@@ -10,7 +10,7 @@ import { useLocale } from "@/app/providers";
 import { Field, SelectField } from "@/components/field";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { PhoneField, composePhone, nationalNumberOk } from "@/components/phone-field";
-import { CatIdCeremony, type ShareChoice } from "@/components/cat-id-ceremony";
+import { CatIdCeremony } from "@/components/cat-id-ceremony";
 import { CatIdCard } from "@/components/cat-id-card";
 import { CatOnboardingJourney } from "@/components/cat-onboarding-journey";
 import { IlloPaw, IlloHeart, Sticker } from "@/components/illustrations";
@@ -255,7 +255,7 @@ function ShareNotice({
 
 function IssueIdFlow() {
   const router = useRouter();
-  const { authedFetch, user, updateUser } = useAuth();
+  const { authedFetch, user, updateUser, uploadImage } = useAuth();
   const { locale } = useLocale();
   const { toast } = useToast();
   const isAr = locale === "ar";
@@ -341,11 +341,17 @@ function IssueIdFlow() {
   // «4 inputs before the ceremony» (W8): a cat drafted on /register arrives
   // here already named, sexed and aged — issue it at once, no second form.
   const [fromStart, setFromStart] = React.useState(false);
+  // The sign-up photo arrives as a data URL; it is uploaded before the ID is
+  // issued so the cat joins the community with its face (founder, 2026-10-04).
+  const [photoPending, setPhotoPending] = React.useState(false);
   React.useEffect(() => {
     try {
       const raw = sessionStorage.getItem("moraqat.draftCat");
       if (!raw) return;
-      const d = JSON.parse(raw) as { name?: string; gender?: string; ageMonths?: number | null };
+      const d = JSON.parse(raw) as {
+        name?: string; gender?: string; ageMonths?: number | null;
+        photo?: string | null; ownerName?: string; dialCode?: string; phone?: string;
+      };
       if (!d.name || !d.gender) return;
       sessionStorage.removeItem("moraqat.draftCat");
       setF((s) => ({
@@ -354,11 +360,27 @@ function IssueIdFlow() {
         gender: d.gender!,
         ageYears: typeof d.ageMonths === "number" ? String(Math.floor(d.ageMonths / 12)) : "",
         ageMonths: typeof d.ageMonths === "number" ? String(d.ageMonths % 12) : "",
+        ...(d.ownerName ? { ownerName: d.ownerName } : {}),
+        ...(d.phone ? { ownerPhone: d.phone, ownerDialCode: d.dialCode || "+966" } : {}),
+        // Sign-up never asks: the cat is shared, as the platform default.
+        sharePublicly: true,
       }));
+      if (d.photo && d.photo.startsWith("data:image/")) {
+        setPhotoPending(true);
+        const file = dataUrlToFile(d.photo, `${d.name}.jpg`);
+        uploadImage<{ url: string }>("/uploads/image", file, { filename: file.name })
+          .then((r) => setF((s) => ({ ...s, photoUrl: r.url })))
+          .catch(() => {
+            /* the ID never waits on a photo — it can be added on the profile */
+          })
+          .finally(() => setPhotoPending(false));
+      }
       setFromStart(true);
     } catch {
       /* ignore — the form below still works */
     }
+    // Runs once, on arrival from /register.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // The emergency contact is one of the Cat ID's four jobs (safety — "bring my
@@ -382,7 +404,21 @@ function IssueIdFlow() {
         if (attempt > 0) {
           toast({ title: isAr ? "تم حفظ رقم التواصل" : "Contact number saved", variant: "success" });
         }
-      } catch {
+      } catch (err) {
+        // A number already on another account must not cost the member their
+        // name: save the name alone and say plainly what to do (R115).
+        if ((err as { code?: string }).code === "PHONE_ALREADY_REGISTERED") {
+          await authedFetch("/account/profile", {
+            method: "PATCH",
+            body: JSON.stringify({ firstName: parts[0] || undefined, lastName: parts.slice(1).join(" ") || undefined }),
+          }).catch(() => undefined);
+          toast({
+            title: isAr ? "رقم الجوال مسجّل في حساب آخر" : "That mobile is on another account",
+            description: isAr ? "حفظنا اسمك — أضف رقماً ثانياً من حسابي › الإعدادات." : "We saved your name — add a different number in Account › Settings.",
+            variant: "error",
+          });
+          return;
+        }
         if (attempt === 0) {
           toast({
             title: isAr ? "ما قدرنا نحفظ رقم التواصل" : "Couldn't save your contact number",
@@ -521,10 +557,10 @@ function IssueIdFlow() {
   // A drafted cat is issued as soon as its fields land in state — once.
   const autoIssued = React.useRef(false);
   React.useEffect(() => {
-    if (!fromStart || autoIssued.current || !catName || !f.gender) return;
+    if (!fromStart || autoIssued.current || !catName || !f.gender || photoPending) return;
     autoIssued.current = true;
     create.mutate();
-  }, [fromStart, catName, f.gender, create]);
+  }, [fromStart, catName, f.gender, photoPending, create]);
 
   // The member's first name — offered in the ceremony's share fork ("appear as
   // my first name"). Prefer what they just typed; fall back to the account.
@@ -908,34 +944,10 @@ function IssueIdFlow() {
           // member gets the warm, familiar mini welcome (R031/R009).
           variant={firstIssue ? "full" : "mini"}
           ownerFirstName={ownerFirstName || null}
-          // The cat was (usually) published at creation — the ceremony
-          // celebrates the fact and offers customize/keep-private (opt-out
-          // default, decision 2026-08-14).
+          // No choices at the reveal (founder, 2026-10-04): the cat is already
+          // in the community, visibility lives in the cat's community settings.
           initiallyPublic={Boolean(ceremonyCat.isPublic)}
           consentDone={Boolean(ceremonyCat.isPublic && ceremonyCat.photoUrl)}
-          onShareChoice={
-            firstIssue
-              ? async (choice: ShareChoice) => {
-                  const body: Record<string, unknown> = { isPublic: choice.public };
-                  if (choice.public) {
-                    // PDPL attestation (R106): sent only when the ceremony
-                    // actually gathered it (not when it was already stamped at
-                    // creation); the server mints shareConsentAt itself.
-                    if (choice.consent) body.consent = true;
-                    body.showOwnerName = choice.appearance != null && choice.appearance !== "anonymous";
-                    if (choice.nickname) body.ownerNickname = choice.nickname;
-                  }
-                  // No catch here on purpose: a failure must reach the ceremony
-                  // so it can say so and offer a retry — never close pretending
-                  // the choice was saved (R115/R117).
-                  await authedFetch(`/cats/${ceremonyCat.id}/visibility`, {
-                    method: "PATCH",
-                    body: JSON.stringify(body),
-                  });
-                  qc.invalidateQueries({ queryKey: ["visibility", ceremonyCat.id] });
-                }
-              : undefined
-          }
           onClose={() =>
             // After the reveal, every new Cat ID flows into the Product Intro →
             // questionnaire wizard (/portal/subscribe): first we explain that
@@ -1011,4 +1023,14 @@ function NoCatYetDoor({ isAr }: { isAr: boolean }) {
       </Button>
     </div>
   );
+}
+
+/** A data: URL → File, decoded in memory (the CSP forbids fetch(data:)). */
+function dataUrlToFile(dataUrl: string, name: string): File {
+  const [head, b64 = ""] = dataUrl.split(",");
+  const mime = /data:([^;]+)/.exec(head ?? "")?.[1] ?? "image/jpeg";
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new File([bytes], name, { type: mime });
 }

@@ -154,9 +154,7 @@ export function CatIdCeremony({
               ownerFirstName={ownerFirstName}
               initiallyPublic={initiallyPublic}
               consentDone={consentDone}
-              // Watch again (R031): replay is pure theatre, so it only exists
-              // where the theatre does — hidden under reduced motion (R075).
-              onReplay={reduced ? undefined : () => setAct("stamping")}
+              // No replay link: the reveal ends on one share and "next" (founder, 2026-10-04).
             />
           )}
         </AnimatePresence>
@@ -505,7 +503,7 @@ function RevealAct({
               {/* Pride comes first: walk away holding the story (Wrapped). */}
               <Button ref={ctaRef} size="lg" className="w-full" loading={storyBusy} onClick={saveStory}>
                 {!storyBusy && <ImageDown className="size-4" aria-hidden />}
-                {isAr ? `احفظ قصة ${cat.name}` : `Save ${cat.name}'s story`}
+                {isAr ? `شارك هوية ${cat.name} ✨` : `Share ${cat.name}'s ID ✨`}
               </Button>
 
               {onShareChoice && (
@@ -563,9 +561,9 @@ function RevealAct({
                 type="button"
                 onClick={finishToPlan}
                 disabled={saving !== null}
-                className="mt-2 inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-full text-sm text-white/60 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:opacity-50"
+                className="mt-1 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-full border border-white/40 text-base font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:opacity-50"
               >
-                {isAr ? `التالي: خطة ${cat.name}` : `Next: ${cat.name}'s plan`}
+                {isAr ? "التالي" : "Next"}
                 <span aria-hidden className="rtl:rotate-180">→</span>
               </button>
             </motion.div>

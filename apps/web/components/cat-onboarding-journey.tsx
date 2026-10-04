@@ -68,7 +68,14 @@ export function CatOnboardingJourney({ catId, startOnDesign = false }: { catId: 
   });
 
   const [draft, setDraft] = React.useState<Draft>(() => emptyDraft());
-  const [step, setStep] = React.useState<number>(startOnDesign ? STEP.personalize : 0);
+  // The chapter ORDER: from sign-up the card comes first, then completing the
+  // profile, then the celebration (founder, 2026-10-04).
+  const order = React.useMemo<number[]>(
+    () => (startOnDesign ? [STEP.personalize, STEP.about, STEP.celebrate] : [STEP.about, STEP.personalize, STEP.celebrate]),
+    [startOnDesign]
+  );
+  const [pos, setPos] = React.useState(0);
+  const step = order[pos]!;
   const [dir, setDir] = React.useState<1 | -1>(1);
   const [celebrating, setCelebrating] = React.useState(false);
   const filled = React.useRef(false);
@@ -119,14 +126,15 @@ export function CatOnboardingJourney({ catId, startOnDesign = false }: { catId: 
     },
   });
 
-  const chapters = React.useMemo(() => buildChapters(dispName, isAr), [dispName, isAr]);
-  const atLast = step === chapters.length - 1;
+  const allChapters = React.useMemo(() => buildChapters(dispName, isAr), [dispName, isAr]);
+  const chapters = React.useMemo(() => order.map((i) => allChapters[i]!), [order, allChapters]);
+  const atLast = pos === chapters.length - 1;
 
   async function go(next: number) {
     // Save progress every time we move forward — data is never at risk (R117).
-    if (next > step) { try { await persist.mutateAsync(); } catch { /* soft — kept locally */ } }
-    setDir(next > step ? 1 : -1);
-    setStep(Math.max(0, Math.min(chapters.length - 1, next)));
+    if (next > pos) { try { await persist.mutateAsync(); } catch { /* soft — kept locally */ } }
+    setDir(next > pos ? 1 : -1);
+    setPos(Math.max(0, Math.min(chapters.length - 1, next)));
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
   }
 
@@ -165,7 +173,7 @@ export function CatOnboardingJourney({ catId, startOnDesign = false }: { catId: 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_minmax(0,21rem)]">
         {/* ── Left: the chaptered experience ── */}
         <div className="order-2 lg:order-1">
-          <Stepper chapters={chapters} step={step} onJump={go} isAr={isAr} />
+          <Stepper chapters={chapters} step={pos} onJump={go} isAr={isAr} />
 
           <div className="relative mt-4 overflow-hidden">
             <AnimatePresence mode="wait" custom={dir}>
@@ -192,9 +200,8 @@ export function CatOnboardingJourney({ catId, startOnDesign = false }: { catId: 
 
           {/* Nav — one clear action, always (R005). */}
           <div className="mt-6 flex items-center justify-between gap-3">
-            {/* Arriving straight on the designer, "later" goes home to the profile. */}
-            {step > 0 && !(startOnDesign && step === STEP.personalize) ? (
-              <Button variant="tertiary" size="sm" onClick={() => go(step - 1)} disabled={persist.isPending}>
+            {pos > 0 ? (
+              <Button variant="tertiary" size="sm" onClick={() => go(pos - 1)} disabled={persist.isPending}>
                 <ArrowLeft className="size-4 rtl:rotate-180" /> {isAr ? "رجوع" : "Back"}
               </Button>
             ) : (
@@ -207,7 +214,7 @@ export function CatOnboardingJourney({ catId, startOnDesign = false }: { catId: 
                 <Sparkles className="size-4" /> {isAr ? `اكمل ملف ${dispName}` : `Complete ${dispName}'s profile`}
               </Button>
             ) : (
-              <Button size="lg" onClick={() => go(step + 1)} loading={persist.isPending}>
+              <Button size="lg" onClick={() => go(pos + 1)} loading={persist.isPending}>
                 {isAr ? "التالي" : "Continue"} <ArrowRight className="size-4 rtl:rotate-180" />
               </Button>
             )}
